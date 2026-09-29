@@ -358,8 +358,7 @@ def check_settlement(voc: Vocabulary, kind: str, level: str, population,
     if level not in LADDER:
         out.append(finding(
             "settlement.level", True,
-            f"{level or '(nothing)'} is not a settlement level. The six are "
-            + ", ".join(LADDER) + ", for a castle as much as for a city."))
+            _i18n.msg("eng.stratedit.is_not_a_settlement_level_the_six", "{level} is not a settlement level. The six are {levels}, for a castle as much as for a city.", level=level or '(nothing)', levels=", ".join(LADDER))))
     for slot, value in (("population", population),
                         ("year_founded", year_founded)):
         text = "" if value is None else str(value).strip()
@@ -446,11 +445,9 @@ def settlement_detail(facts, region: str) -> dict:
                 "factions": _faction_rows(sf, facts)}
     if node is None:
         raise MapError(
-            f"no settlement in {facts.campaign}'s descr_strat.txt stands in "
-            f"{region!r}"
-            + (". The province is declared and nobody starts holding it, which "
-               "is legal: it opens as unclaimed wilderness."
-               if rf is not None else "."))
+            _i18n.msg("eng.stratedit.no_settlement_stands_in_region_unclaimed", "no settlement in {campaign}'s descr_strat.txt stands in {region}. The province is declared and nobody starts holding it, which is legal: it opens as unclaimed wilderness.", campaign=facts.campaign, region=repr(region))
+            if rf is not None else
+            _i18n.msg("eng.stratedit.no_settlement_stands_in_region", "no settlement in {campaign}'s descr_strat.txt stands in {region}.", campaign=facts.campaign, region=repr(region)))
     faction = faction_of(sf, node)
     voc = Vocabulary(facts, sf)
     kind = str(node.get("settlement_type") or "city")
@@ -1212,7 +1209,7 @@ def apply_settlement(p: StratPlan) -> dict:
     from .logutil import file_op, log
 
     if p.errors:
-        raise ValueError("cannot apply: " + "; ".join(p.errors))
+        raise ValueError(_i18n.msg("eng.stratedit.cannot_apply", "cannot apply: {why}", why="; ".join(p.errors)))
     if not p.text:
         raise ValueError(_i18n.msg("eng.stratedit.nothing_to_change", "nothing to change"))
     mod = p.mod
@@ -1453,9 +1450,7 @@ def plan_copy_settlement(src_mod, src_facts, dst_mod, dst_facts, body: dict) -> 
     p.changes.append(("+ " if added else "") + f"{p.region}: the {snap['level']} from "
                      f"{getattr(src_mod, 'name', '?')}, {len(kept)} building(s)")
     if dropped:
-        p.warnings.append(f"{len(dropped)} building(s) left out, because "
-                          f"{getattr(dst_mod, 'name', '?')}'s buildings do not declare them: "
-                          + ", ".join(f"{a} {b}" for a, b in dropped[:8]))
+        p.warnings.append(_i18n.msg("eng.stratedit.buildings_left_out_not_declared", "{count} building(s) left out, because {mod}'s buildings do not declare them: {buildings}", count=len(dropped), mod=getattr(dst_mod, 'name', '?'), buildings=", ".join(f"{a} {b}" for a, b in dropped[:8])))
     p.text = "" if text == sf.serialise() else text
     if not p.text and not p.errors:
         p.errors.append(_i18n.msg("eng.stratedit.nothing_to_change", "nothing to change"))

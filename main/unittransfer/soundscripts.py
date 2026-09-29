@@ -413,7 +413,7 @@ def _check_attrs(p: ScriptPlan, where: str, attrs: str, vocab: dict) -> None:
         p.errors.append(f"{where}: {b}")
     odd = [k for k, v in pairs if v == "?"]
     if odd:
-        p.warnings.append(_i18n.msg("eng.soundscripts.not_an_attribute_any_sound_script", "{where}: {and_list} {x} not an attribute any sound script here writes", where=where, and_list=kb.and_list(odd), x='is' if len(odd) == 1 else 'are'))
+        p.warnings.append(_i18n.msgN("eng.soundscripts.attrs_not_an_attribute_any_script_writes", len(odd), "{where}: {and_list} is not an attribute any sound script here writes", "{where}: {and_list} are not an attribute any sound script here writes", where=where, and_list=kb.and_list(odd)))
     for k, v in pairs:
         if k in WORD_KEYS and v and vocab["prefs"] and v.upper() not in vocab["prefs"]:
             p.warnings.append(_i18n.msg("eng.soundscripts.pref_is_not_one_this_mod", "{where}: pref {v} is not one this mod uses ({and_list})", where=where, v=v, and_list=kb.and_list(sorted(vocab['prefs']))))
@@ -436,19 +436,19 @@ def _check_selector(p: ScriptPlan, sc: Script, n: Node, value: str,
         known = _mod_factions(mod)
         odd = [v for v in vals if known and v not in known]
         if odd:
-            p.warnings.append(_i18n.msg("eng.soundscripts.in_this_mod", "{where}: {and_list} {x} in this mod", where=where, and_list=kb.and_list(odd), x='is not a faction' if len(odd) == 1 else 'are not factions'))
+            p.warnings.append(_i18n.msgN("eng.soundscripts.not_a_faction_in_this_mod", len(odd), "{where}: {and_list} is not a faction in this mod", "{where}: {and_list} are not factions in this mod", where=where, and_list=kb.and_list(odd)))
         for other in sc.nodes:
             if other is n or other.kw.lower() != "factions":
                 continue
             twice = sorted(set(vals) & set(_values(other.value)))
             if twice:
                 acc = other.parent.label if other.parent else "another accent"
-                p.warnings.append(_i18n.msg("eng.soundscripts.also_under_and_a_faction_speaks", "{where}: {and_list} {x} also under {acc}, and a faction speaks with one accent", where=where, and_list=kb.and_list(twice), x='is' if len(twice) == 1 else 'are', acc=acc))
+                p.warnings.append(_i18n.msgN("eng.soundscripts.values_also_under_another_accent", len(twice), "{where}: {and_list} is also under {acc}, and a faction speaks with one accent", "{where}: {and_list} are also under {acc}, and a faction speaks with one accent", where=where, and_list=kb.and_list(twice), acc=acc))
         return
     seen = vocab["values"].get(kw, set())
     odd = [v for v in vals if seen and v not in seen]
     if odd:
-        p.warnings.append(_i18n.msg("eng.soundscripts.not_a_any_sound_script_in", "{where}: {and_list} {x} not a {kw} any sound script in this mod names", where=where, and_list=kb.and_list(odd), x='is' if len(odd) == 1 else 'are', kw=n.kw))
+        p.warnings.append(_i18n.msgN("eng.soundscripts.values_not_a_kw_any_script_names", len(odd), "{where}: {and_list} is not a {kw} any sound script in this mod names", "{where}: {and_list} are not a {kw} any sound script in this mod names", where=where, and_list=kb.and_list(odd), kw=n.kw))
 
 
 def plan(mod, body: dict) -> ScriptPlan:
@@ -618,7 +618,7 @@ def plan(mod, body: dict) -> ScriptPlan:
 
 def apply(p: ScriptPlan) -> Dict:
     if p.errors:
-        raise ValueError("cannot apply: " + "; ".join(p.errors))
+        raise ValueError(_i18n.msg("eng.soundscripts.cannot_apply", "cannot apply: {why}", why="; ".join(p.errors)))
     if not p.text:
         raise ValueError(_i18n.msg("eng.soundscripts.nothing_to_change", "nothing to change"))
     mod = p.mod

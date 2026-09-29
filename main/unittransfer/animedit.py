@@ -330,7 +330,9 @@ def apply_save(p: SavePlan) -> Dict:
     from .logutil import file_op, log
 
     if p.errors or not p.data:
-        raise ValueError("cannot save: " + ("; ".join(p.errors) or "nothing planned"))
+        raise ValueError(_i18n.msg(
+            "eng.animedit.cannot_save", "cannot save: {why}",
+            why="; ".join(p.errors) or _i18n.msg("eng.animedit.nothing_planned", "nothing planned")))
     mod = p.mod
     data = Path(mod.data)
     tid = config.new_transfer_id()

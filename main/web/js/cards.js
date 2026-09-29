@@ -95,11 +95,11 @@ const cdShownNote=(shown,all)=>shown.length===all.length?''
 function renderCards(){
   if(!state.cards||state.cards.a.mod!==state.src)return loadCards();
   const c=state.cards,a=c.a;
-  count.textContent=`${a.kinds.reduce((n,k)=>n+k.file_count,0)} files`;
+  count.textContent=ttN('cards.files_total',a.kinds.reduce((n,k)=>n+k.file_count,0));
   main.innerHTML=bmdbTabsHtml(tt('cards.data_ui_units_data_ui_unit'))+`
     <div class="dbhead">
       <h2>${tt('cards.unit_and_info_cards',{mod:esc(a.mod)})}</h2>
-      <span class="count">${tt('cards.unit_in_the_mod_could_stop',{units:a.units,units2:a.units===1?'':'s',kinds:a.kinds.map(k=>`${k.file_count} ${esc(k.label)}${k.file_count===1?'':'s'}`).join(' · '),x:MB(cdFreeable())})}</span>
+      <span class="count">${ttN('cards.mod_units_summary',a.units,{kinds:a.kinds.map(k=>ttN('cards.kind_files',k.file_count,{label:esc(k.label)})).join(' · '),x:MB(cdFreeable())})}</span>
     </div>
     <div class="cardsbody">
       <fieldset><legend>${tt('cards.where_the_removed_cards_go')}</legend>
@@ -137,7 +137,7 @@ function cdTally(){
   const parts=state.cards.a.kinds.map(k=>{
     const p=cdPick(k.kind);
     const n=p.remove.size+p.cons.size+Object.keys(p.choose).length;
-    return `${n} ${esc(k.label)}${n===1?'':'s'}`;
+    return ttN('cards.kind_files',n,{label:esc(k.label)});
   });
   return tt('cards.frees',{parts:parts.join(' · '),x:MB(cdFreeable())});
 }
@@ -158,7 +158,7 @@ function cdKindHtml(k){
       ${open?`<div class="b">${body()}</div>`:''}</div>`;
   };
   return `<section class="cardkind">
-    <h3>${tt('cards.s_data_faction_falls_back_to',{x:CARD_KIND_ICON[k.kind]||'🖼',label:esc(k.label),base:esc(k.base),merc:esc(k.merc),dictionaries:k.dictionaries,dictionaries2:k.dictionaries===1?'':'s',file_count:k.file_count,file_count2:k.file_count===1?'':'s',x2:MB(k.bytes),already:k.already?` ${tt('cards.already_live_only_in',{already:k.already})} <code>${esc(k.merc)}</code>`:''})}</h3>
+    <h3>${tt('cards.kind_heading',{x:CARD_KIND_ICON[k.kind]||'🖼',label:esc(k.label),base:esc(k.base),merc:esc(k.merc),units:ttN('cards.units_have_one',k.dictionaries),files:ttN('cards.in_files',k.file_count),x2:MB(k.bytes),already:k.already?` ${tt('cards.already_live_only_in_merc',{already:k.already,merc:esc(k.merc)})}`:''})}</h3>
     ${sec('unused',tt('cards.for_units_that_are_gone'),()=>cdUnusedBody(k))}
     ${sec('dups',tt('cards.the_same_picture_in_several_folders'),()=>cdDupBody(k))}
     ${sec('vars',tt('cards.different_pictures_per_faction_your_call'),()=>cdVarBody(k))}
@@ -195,7 +195,7 @@ function cdUnusedBody(k){
       <img class="cdthumb" loading="lazy" onerror="this.style.visibility='hidden'"
         src="/icon?mod=${enc(state.src)}&kind=modfile&rel=${enc(u.showing)}${iconBust()}" alt="">
       <div class="grow"><span class="nm">${esc(u.name)}</span>
-        <div class="sub">${tt('cards.folder',{folders_n:u.folders.length,folders:u.folders.length===1?'':'s',folders2:esc(u.folders.slice(0,8).join(', ')),folders3:u.folders.length>8?` +${u.folders.length-8}`:''})}</div></div>
+        <div class="sub">${ttN('cards.unit_folders',u.folders.length,{list:esc(u.folders.slice(0,8).join(', ')),more:u.folders.length>8?` +${u.folders.length-8}`:''})}</div></div>
       <span class="count">${MB(u.bytes)}</span></div>`).join('')}</div>`;
 }
 
@@ -215,7 +215,7 @@ function cdDupBody(k){
         src="/icon?mod=${enc(state.src)}&kind=modfile&rel=${enc(d.options[0].rel)}${iconBust()}" alt="">
       <div class="grow"><span class="nm">${esc(d.name)}</span>
         <span class="badge">${esc(d.unit)}</span>
-        <div class="sub">${tt('cards.identical_cop',{folders_n:d.folders.length,folders:d.folders.length===1?'y':'ies',folders2:esc(d.folders.slice(0,8).join(', ')),folders3:d.folders.length>8?` +${d.folders.length-8}`:'',x:d.options[0].in_merc?' - one of them is already the merc copy':''})}</div></div>
+        <div class="sub">${ttN('cards.identical_copies',d.folders.length,{list:esc(d.folders.slice(0,8).join(', ')),more:d.folders.length>8?` +${d.folders.length-8}`:'',x:d.options[0].in_merc?tt('cards.one_is_the_merc_copy'):''})}</div></div>
       <span class="count">−${MB(d.bytes_saved)}</span></div>`).join('')}</div>`;
 }
 
@@ -261,9 +261,9 @@ function cdVarBody(k){
    page is that it never guesses about art it is about to delete. */
 function cdNotesHtml(k){
   const bits=[];
-  if(k.stray_count)bits.push(tt('cards.file_in_these_folders_not_shaped',{stray_count:k.stray_count,stray_count2:k.stray_count===1?'':'s',stray_count3:k.stray_count===1?'is':'are',label:esc(k.label),x:MB(k.stray_bytes)}));
-  if(k.pinned.length)bits.push(tt('cards.unit_pin_their_to_a_folder',{pinned_n:k.pinned.length,pinned:k.pinned.length===1?'':'s',label:esc(k.label),kind:k.kind==='card'?'card_pic_dir':'info_pic_dir'}));
-  if(k.lua_kept.length)bits.push(tt('cards.belong_to_a_dictionary_no_unit',{lua_kept_n:k.lua_kept.length,label:esc(k.label),lua_kept:k.lua_kept.length===1?'':'s',lua_kept2:k.lua_kept.length===1?tt('common.it_is'):tt('common.they_are')}));
+  if(k.stray_count)bits.push(ttN('cards.stray_files',k.stray_count,{label:esc(k.label),x:MB(k.stray_bytes)}));
+  if(k.pinned.length)bits.push(ttN('cards.units_pin_to_folder',k.pinned.length,{label:esc(k.label),kind:k.kind==='card'?'card_pic_dir':'info_pic_dir'}));
+  if(k.lua_kept.length)bits.push(ttN('cards.lua_kept_not_offered',k.lua_kept.length,{label:esc(k.label)}));
   return bits.length?`<div class="count cardnotes">${bits.map(b=>`<div>· ${b}</div>`).join('')}</div>`:'';
 }
 
@@ -353,19 +353,14 @@ async function cdApply(){
   if(!r)return;
   if(r.errors&&r.errors.length){toast(r.errors[0]);return;}
   if(!r.delete_count&&!r.copy_count){toast(tt('common.nothing_is_ticked'));return;}
-  if(!confirm(tt('cards.move_card_file_s_out_of',{delete_count:r.delete_count,mod:c.a.mod})+
-      tt('cards.mb_they_are_copied_to',{freed:(r.freed/1048576).toFixed(1),target:r.target})+
-      `${r.consolidated?tt('cards.card_s_are_folded_into_the',{consolidated:r.consolidated})+
-        tt('cards.where_the_game_looks_when_a'):''}`+
-      tt('cards.everything_touched_is_backed_up_first')))return;
+  if(!confirm(tt(r.consolidated?'cards.confirm_move_folded':'cards.confirm_move',{delete_count:r.delete_count,mod:c.a.mod,freed:(r.freed/1048576).toFixed(1),target:r.target,consolidated:r.consolidated})))return;
   const job=newJob();
   const res=await runJob(job,tt('cards.tidying_the_cards'),
     tt('cards.copying_file_s_out_writing_into',{export_count:r.export_count,copy_count:r.copy_count,delete_count:r.delete_count,mod:esc(c.a.mod)}),
     ()=>api.post('/api/cards/apply',{...cdPayload(),job}));
-  if(res.error){toast(tt('cards.card_cleanup_failed')+res.error);renderCards();return;}
+  if(res.error){toast(tt('cards.card_cleanup_failed_error',{error:res.error}));renderCards();return;}
   closeModal();
-  toast(tt('cards.card_file_s_moved_out',{delete_count:res.plan.delete_count,x:(res.plan.freed/1048576).toFixed(1)})
-       +tt('cards.mb_freed_undo_in_log'),5200);
+  toast(tt('cards.card_files_moved_out',{delete_count:res.plan.delete_count,freed:(res.plan.freed/1048576).toFixed(1)}),5200);
   // The lists were built from an audit taken BEFORE this ran, so the mod on disk
   // has changed and the page has to change with it.
   state.cards=null; state.destData=null;

@@ -533,9 +533,14 @@ def plan(mod, body: dict) -> NewMapPlan:
 def _check_size(mod, p: NewMapPlan, w: int, h: int) -> None:
     side_max = 2048 if getattr(mod, "m2ex", False) else MAX_SIDE
     if not (MIN_SIDE <= w <= side_max and MIN_SIDE <= h <= side_max):
-        p.errors.append(f"a map is {MIN_SIDE} to {side_max} tiles a side"
-                        + ("" if side_max > MAX_SIDE else
-                           " on the stock engine; M2EX goes further"))
+        if side_max > MAX_SIDE:
+            p.errors.append(_i18n.msg("eng.mapnew.a_map_is_to_tiles_a_side",
+                                      "a map is {lowest} to {highest} tiles a side",
+                                      lowest=MIN_SIDE, highest=side_max))
+        else:
+            p.errors.append(_i18n.msg("eng.mapnew.a_map_is_to_tiles_a_side_stock",
+                                      "a map is {lowest} to {highest} tiles a side on the stock engine; M2EX goes further",
+                                      lowest=MIN_SIDE, highest=side_max))
 
 
 def _setup(mod, body: dict, p: NewMapPlan, n: int):
@@ -547,7 +552,7 @@ def _setup(mod, body: dict, p: NewMapPlan, n: int):
     picked = [str(f).strip() for f in (body.get("factions") or []) if str(f).strip()]
     bad = [f for f in picked if f.lower() not in slots or f.lower() == "slave"]
     if bad:
-        p.errors.append("not a faction of this mod: " + ", ".join(bad))
+        p.errors.append(_i18n.msg("eng.mapnew.not_a_faction_of_this_mod", "not a faction of this mod: {names}", names=", ".join(bad)))
     if not picked:
         p.errors.append(_i18n.msg("eng.mapnew.pick_at_least_one_faction_to", "pick at least one faction to play"))
     if len(picked) > n:
@@ -663,7 +668,7 @@ def apply(p: NewMapPlan) -> dict:
     from .logutil import file_op, log
 
     if p.errors or p.cp is None:
-        raise ValueError("cannot apply: " + "; ".join(p.errors or ["no plan"]))
+        raise ValueError(_i18n.msg("eng.mapnew.cannot_apply", "cannot apply: {why}", why="; ".join(p.errors) or _i18n.msg("eng.mapnew.no_plan", "no plan")))
     cp, mod = p.cp, p.cp.mod
     tid = config.new_transfer_id()
     backup_root = config.backup_root_for(tid)

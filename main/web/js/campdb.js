@@ -96,7 +96,7 @@ function renderCampDb(){
         const on = !q && c.sel === s.name;
         return `<button class="trrow${on?' on':''}" onclick="cdbSection('${q1(esc(s.name))}')">
           <div class="nm">${esc(s.name)}</div>
-          <div class="sub">${q ? tt('campdb.of_match',{rows_n:rows.length,x:n}) : `${n} tag${n===1?'':'s'}`}${
+          <div class="sub">${q ? tt('campdb.of_match',{rows_n:rows.length,x:n}) : ttN('campdb.tag_count', n)}${
             ch ? ` ${tt('campdb.changed',{ch})}` : ''}</div></button>`;
       }).join('') || `<div class="count" style="padding:8px">${tt('campdb.no_tag_matches')}</div>`}</div>
     </div>
@@ -112,7 +112,7 @@ function cdbMainHtml(secs){
     <div>${tt('campdb.descr_campaign_db_xml_read_once')}</div>
     <span style="flex:1"></span>
     <button onclick="cdbRevert()" id="cdbRevert" ${n?'':'disabled'}>${tt('common.revert')}</button>
-    <button class="primary" onclick="cdbSave()" id="cdbSave" ${n?'':'disabled'}>${tt('campdb.save_change',{x:n||'',x2:n===1?'':'s'})}</button>
+    <button class="primary" onclick="cdbSave()" id="cdbSave" ${n?'':'disabled'}>${ttN('campdb.save_changes', n)}</button>
   </div>`;
   return head + shown.map(({s, rows}) => {
     const missing = q ? [] : c.missing.filter(m => m.section === s.name);
@@ -166,7 +166,7 @@ function cdbSet(key, value, el){
 function cdbPaintButtons(){
   const n = cdbChanged(), s = document.getElementById('cdbSave'),
         r = document.getElementById('cdbRevert');
-  if(s){ s.disabled = !n; s.textContent = tt('campdb.save_change',{x:n||'',x2:n===1?'':'s'}); }
+  if(s){ s.disabled = !n; s.textContent = ttN('campdb.save_changes', n); }
   if(r) r.disabled = !n;
 }
 
@@ -209,12 +209,10 @@ async function cdbSave(){
   if(plan.error){ toast('✗ ' + plan.error, 8000); return; }
   const p = plan.plan || {};
   const lines = (p.changes || []).slice(0, 16);
-  if(!confirm(tt('campdb.write_change_s_to_descr_campaign',{n:(p.changes||[]).length})
-    + lines.join('\n')
-    + ((p.changes || []).length > 16 ? tt('campdb.and_more',{changes:p.changes.length - 16}) : '')
-    + ((p.warnings || []).length ? '\n\n⚠ ' + p.warnings.slice(0, 4).join('\n⚠ ') : '')
-    + tt('campdb.it_is_read_when_a_campaign')
-    + tt('campdb.backed_up_first_and_log_can'))) return;
+  if(!confirm(tt('campdb.write_changes_confirm',{n:(p.changes||[]).length,
+    changes:lines.join('\n'),
+    more:(p.changes || []).length > 16 ? tt('campdb.and_more',{changes:p.changes.length - 16}) : '',
+    warnings:(p.warnings || []).length ? '\n\n⚠ ' + p.warnings.slice(0, 4).join('\n⚠ ') : ''}))) return;
   c.busy = true;
   let res;
   try{ res = await api.post('/api/campdb/apply', body); }

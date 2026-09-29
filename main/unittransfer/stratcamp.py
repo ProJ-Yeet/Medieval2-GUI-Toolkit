@@ -329,8 +329,7 @@ def check_globals(values: Dict[str, object], flags: Sequence[str]) -> List[dict]
             years[key] = int(year)
         if season and season.lower() not in SEASONS:
             out.append(finding("camp.season", True,
-                               f"{key} says {season!r}; the engine's two "
-                               f"seasons are " + " and ".join(SEASONS)))
+                               _i18n.msg("eng.stratcamp.says_the_engine_s_two_seasons_are", "{key} says {season}; the engine's two seasons are {seasons}", key=key, season=repr(season), seasons=" and ".join(SEASONS))))
         elif not season:
             out.append(finding("camp.season", False,
                                _i18n.msg("eng.stratcamp.names_a_year_and_no_season", "{key} names a year and no season. All three installed campaigns write both", key=key)))
@@ -360,8 +359,7 @@ def check_globals(values: Dict[str, object], flags: Sequence[str]) -> List[dict]
                                _i18n.msg("eng.stratcamp.is_not_a_word_the_engine", "{name} is not a word the engine reads - the one it reads is marian_reforms_disabled - so this line does nothing. Third Age Reforged ships it too", name=name)))
         elif name not in FLAGS:
             out.append(finding("camp.flag", True,
-                               f"{name} is not one of the campaign header's "
-                               f"flags: " + ", ".join(FLAGS)))
+                               _i18n.msg("eng.stratcamp.is_not_one_of_the_header_flags", "{name} is not one of the campaign header's flags: {flags}", name=name, flags=", ".join(FLAGS))))
     return out
 
 
@@ -411,10 +409,9 @@ def check_rosters(voc: Vocabulary,
     if not rosters.get("playable"):
         made_here = before is not None and bool(before.get("playable"))
         out.append(finding("camp.no_playable", made_here,
-                           "no faction is playable, so the campaign cannot be "
-                           "started from the menu"
-                           + (", and this save is what empties the list"
-                              if made_here else "")))
+                           _i18n.msg("eng.stratcamp.no_faction_is_playable_save_empties", "no faction is playable, so the campaign cannot be started from the menu, and this save is what empties the list")
+                           if made_here else
+                           _i18n.msg("eng.stratcamp.no_faction_is_playable", "no faction is playable, so the campaign cannot be started from the menu")))
     return out
 
 
@@ -457,8 +454,7 @@ def check_relations(voc: Vocabulary, faction: str,
                                _i18n.msg("eng.stratcamp.is_put_in_a_relationship_with", "{faction} is put in a relationship with {who}, which has no faction block in this campaign", faction=faction, who=who)))
         if str(how).lower() not in RELATIONS:
             out.append(finding("camp.relation_word", True,
-                               f"{how!r} is not a relationship the engine "
-                               f"reads. The two are " + " and ".join(RELATIONS)))
+                               _i18n.msg("eng.stratcamp.is_not_a_relationship_the_engine_reads", "{how} is not a relationship the engine reads. The two are {relations}", how=repr(how), relations=" and ".join(RELATIONS))))
         if who.lower() == faction.lower():
             out.append(finding("camp.relation_self", False,
                                _i18n.msg("eng.stratcamp.is_put_in_a_relationship_with_2", "{faction} is put in a relationship with itself", faction=faction)))
@@ -905,16 +901,11 @@ def check_holdings(sf: StratFile, node: Node) -> List[dict]:
         return []
     what = []
     if towns:
-        what.append(f"{len(towns)} settlement(s) - "
-                    + ", ".join(t.name for t in towns[:4])
-                    + (", …" if len(towns) > 4 else ""))
+        what.append(_i18n.msg("eng.stratcamp.settlements_held", "{count} settlement(s) - {names}", count=len(towns), names=", ".join(t.name for t in towns[:4]) + (", …" if len(towns) > 4 else "")))
     if people:
-        what.append(f"{len(people)} character(s)")
+        what.append(_i18n.msg("eng.stratcamp.characters_held", "{count} character(s)", count=len(people)))
     return [finding("camp.delete_holds", True,
-                    f"{node.name} still holds " + " and ".join(what)
-                    + ". Deleting the block would take them with it, so move "
-                      "them first: the settlement panel changes an owner and "
-                      "the people panel moves a character")]
+                    _i18n.msg("eng.stratcamp.still_holds_deleting_takes_them", "{name} still holds {holds}. Deleting the block would take them with it, so move them first: the settlement panel changes an owner and the people panel moves a character", name=node.name, holds=" and ".join(what)))]
 
 
 def _create_splice(sf: StratFile, p: CampPlan, body: dict):
@@ -932,8 +923,7 @@ def _create_splice(sf: StratFile, p: CampPlan, body: dict):
         return sf.lines
     roster = str(body.get("roster") or "playable").lower()
     if roster not in ROSTERS:
-        p.errors.append(f"{roster!r} is not one of the three lists: "
-                        + ", ".join(ROSTERS))
+        p.errors.append(_i18n.msg("eng.stratcamp.is_not_one_of_the_three_lists", "{roster} is not one of the three lists: {rosters}", roster=repr(roster), rosters=", ".join(ROSTERS)))
         return sf.lines
 
     inserts: Dict[int, List[str]] = {}
@@ -1427,8 +1417,7 @@ def plan_campaign(mod, facts, body: dict) -> CampPlan:
     p = CampPlan(mod=mod, campaign=campaign, what=what,
                  faction=str(body.get("faction") or "").strip())
     if what not in WHAT:
-        p.errors.append(f"no such save {what!r}. The five are "
-                        + ", ".join(WHAT))
+        p.errors.append(_i18n.msg("eng.stratcamp.no_such_save_the_five_are", "no such save {what}. The five are {saves}", what=repr(what), saves=", ".join(WHAT)))
         return p
     try:
         sf = campstrat.read_strat(mod, campaign)
@@ -1443,10 +1432,7 @@ def plan_campaign(mod, facts, body: dict) -> CampPlan:
         node = sf.faction(p.faction)
         if node is None:
             p.errors.append(
-                (p.faction or "(nothing)") + " has no faction block in "
-                + campaign + "'s descr_strat.txt. Creating one is the second "
-                "half of 16j; cloning one that already works is what the "
-                "Factions screen does today")
+                _i18n.msg("eng.stratcamp.has_no_faction_block_in_strat", "{faction} has no faction block in {campaign}'s descr_strat.txt. Creating one is the second half of 16j; cloning one that already works is what the Factions screen does today", faction=p.faction or "(nothing)", campaign=campaign))
             return p
         p.faction = node.name
     elif what == "create":
@@ -1565,7 +1551,7 @@ def apply_campaign(p: CampPlan) -> dict:
     from .logutil import file_op, log
 
     if p.errors:
-        raise ValueError("cannot apply: " + "; ".join(p.errors))
+        raise ValueError(_i18n.msg("eng.stratcamp.cannot_apply", "cannot apply: {why}", why="; ".join(p.errors)))
     if not p.text:
         raise ValueError(_i18n.msg("eng.stratcamp.nothing_to_change", "nothing to change"))
     mod = p.mod

@@ -344,11 +344,13 @@ def plan(mod: Mod, req: DupeRequest) -> DupePlan:
         if lost:
             # not a warning about the write, a warning about what it means: an
             # identical copy costs nothing to drop, a different one is a model
-            p.warnings.append(
-                f"{len(lost)} of the removed block(s) is not a copy of the entry the "
-                "game reads, so a model goes with it: "
-                + "; ".join(f"{r['name']} ({', '.join(r['differs'][:2]) or 'differs'})"
-                            for r in lost[:4]))
+            p.warnings.append(_i18n.msg(
+                "eng.dupes.removed_block_is_not_a_copy",
+                "{count} of the removed block(s) is not a copy of the entry the "
+                "game reads, so a model goes with it: {names}",
+                count=len(lost),
+                names="; ".join(f"{r['name']} ({', '.join(r['differs'][:2]) or 'differs'})"
+                                for r in lost[:4])))
     if p.renames:
         p.changes.append(
             f"{len(p.renames)} duplicate block(s) renamed: "
@@ -357,10 +359,11 @@ def plan(mod: Mod, req: DupeRequest) -> DupePlan:
             _i18n.msg("eng.dupes.a_renamed_block_is_a_real", "a renamed block is a real entry now, but nothing in the mod names it yet. Point a unit's `soldier` line at it, or the next cleanup will offer to remove it as unused"))
         idle = [r for r in p.renames if r["identical"]]
         if idle:
-            p.warnings.append(
-                f"{len(idle)} of the renamed block(s) is byte-identical to the entry the "
-                "game already reads, so this makes a second name for the same model: "
-                + ", ".join(r["name"] for r in idle[:4]))
+            p.warnings.append(_i18n.msg(
+                "eng.dupes.renamed_block_is_byte_identical",
+                "{count} of the renamed block(s) is byte-identical to the entry the "
+                "game already reads, so this makes a second name for the same model: {names}",
+                count=len(idle), names=", ".join(r["name"] for r in idle[:4])))
 
     p.text = _text(mod, acts)
     return p
@@ -414,7 +417,8 @@ def path_for(mod: Mod) -> Path:
 def apply(p: DupePlan) -> Dict:
     """Write the plan, with the same backup and undo record as any other job."""
     if p.errors:
-        raise ValueError("cannot apply: " + "; ".join(p.errors))
+        raise ValueError(_i18n.msg("eng.dupes.cannot_apply", "cannot apply: {why}",
+                                   why="; ".join(p.errors)))
     if not p.touched():
         raise ValueError(_i18n.msg("eng.dupes.nothing_to_change", "nothing to change"))
 

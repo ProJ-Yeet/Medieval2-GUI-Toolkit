@@ -797,7 +797,7 @@ def apply(p: FactionPlan) -> Dict:
     from .logutil import file_op, log
 
     if p.errors:
-        raise ValueError("cannot apply: " + "; ".join(p.errors))
+        raise ValueError(_i18n.msg("eng.factions.cannot_apply", "cannot apply: {why}", why="; ".join(p.errors)))
     if not p.touched():
         raise ValueError(_i18n.msg("eng.factions.nothing_to_change", "nothing to change"))
     mod = p.mod

@@ -1,4 +1,4 @@
-"""Phase 88a-88b: the interface language.
+"""Phase 88a-88c: the interface language.
 
     python -m tests.test_i18n
 
@@ -9,6 +9,10 @@
 2. The lint: no string a person reads is left outside the catalogue, in any
    module under web/js, in index.html, or among the engine's messages (the
    extractors' own rules, so the lint and the move agree by construction).
+   88c: every sentence whole - none joined with + or built of fragments, no
+   plural made with an 's', no engine message built with + or % - and every
+   call passing exactly the names its string uses (dev/checks/i18n_joins.py,
+   i18n_params.py).
 3. The engine: msg() is the English string, as an f-string would have made it,
    and remembers its ID; annotate() marks it in a reply; the language picked
    from Settings, then Accept-Language, then English, never a pseudo-locale.
@@ -56,9 +60,16 @@ check(f"en.json parses: {len(cat)} strings, marked as the source", meta.get("sta
 check("every ID is <namespace>.<words>, lower case",
       all(re.fullmatch(r"[a-z0-9_]+(\.[a-z0-9_]+)+", k) for k in cat))
 used = {}
+# an ID is asked for as tt('id'), or picked first: tt(on ? 'a.shown' : 'a.hidden'), so
+# every quoted literal shaped like an ID in a module's namespace counts
+namespaces = {f.stem for f in (WEB / "js").glob("*.js")} | {"common", "app", "i18n"}
 for f in sorted((WEB / "js").glob("*.js")):
-    for m in re.finditer(r"(?<![\w$.])tt[AN]?\('([^']+)'", f.read_text(encoding="utf-8")):
+    src = f.read_text(encoding="utf-8")
+    for m in re.finditer(r"(?<![\w$.])tt[AN]?\('([^']+)'", src):
         used.setdefault(m.group(1), f.name)
+    for m in re.finditer(r"'([a-z][a-z0-9_]*(?:\.[a-z0-9_]+)+)'", src):
+        if m.group(1).split(".")[0] in namespaces:
+            used.setdefault(m.group(1), f.name)
 html = (WEB / "index.html").read_text(encoding="utf-8")
 for m in re.finditer(r'data-i18n(?:-[\w-]+)?="([^"]+)"', html):
     used.setdefault(m.group(1), "index.html")
@@ -68,9 +79,9 @@ if missing:
     print("     missing:", missing[:10])
 eng_calls = {}
 for f in sorted((ROOT / "unittransfer").glob("*.py")):
-    src = f.read_text(encoding="utf-8")
-    for m in re.finditer(r'_i18n\.msg\(("(?:[^"\\]|\\.)*"), ("(?:[^"\\]|\\.)*")', src):
-        eng_calls[json.loads(m.group(1))] = (json.loads(m.group(2)), f.name)
+    # msg(id, template) and msgN(id, n, one, other), the catalogue holding {"one", "other"}
+    for k, tpl in px.catalogued(f.read_text(encoding="utf-8")).items():
+        eng_calls[k] = (tpl, f.name)
 check(f"every engine message's ID is in en.json ({len(eng_calls)})",
       all(k in cat for k in eng_calls))
 drift = [k for k, (tpl, _f) in eng_calls.items() if cat.get(k) != tpl]
@@ -113,6 +124,22 @@ for f in sorted((ROOT / "unittransfer").glob("*.py")):
 check("unittransfer: every message the engine raises or reports has an ID", not py_left)
 for k, v in list(py_left.items())[:8]:
     print(f"     {k}: {v}")
+
+# 88c: the sentences whole, the plurals by category
+import i18n_joins as jn  # noqa: E402
+join_sites = jn.scan_tree()
+check("web/js: no sentence is joined with + and no plural is made with an 's'", not join_sites)
+for st in join_sites[:6]:
+    print(f"     {st.file}:{st.line} [{st.kind}] {st.text[:90]}")
+import i18n_params as ip  # noqa: E402
+param_gaps = ip.check_tree() + ip.check_engine()
+check("every call passes each {name} its string uses, and uses each name it passes", not param_gaps)
+for g in param_gaps[:6]:
+    print(f"     {g}")
+eng_sites = jn.scan_py()
+check("unittransfer: no message is built with + or %, and no plural is a parameter", not eng_sites)
+for st in eng_sites[:6]:
+    print(f"     {st.file}:{st.line} [{st.kind}] {st.text[:90]}")
 
 # ---- 3) the engine --------------------------------------------------------------------------
 print("\n3) the engine's side")

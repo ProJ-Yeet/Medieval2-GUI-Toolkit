@@ -394,10 +394,20 @@ def plan_bring(mod, skeleton: str, slot: int, source_mod, source_skeleton: str =
                 p.notes.append(shift)
             p.data, p.scale = pack_for(packs, sk, p.slot, moved), sk.scale or 1.0
             loose_anim = on_frames(moved)
-            p.notes.append(f"{_se.name} in {source_mod.name} has other bones than {p.skeleton} here, "
-                           f"so the animation is carried across bone by bone, by name"
-                           + (f"; {len(missing)} bone(s) it does not move hold their bind pose: "
-                              f"{', '.join(missing[:6])}{'...' if len(missing) > 6 else ''}" if missing else ""))
+            if missing:
+                held = _i18n.msg("eng.animslot.bone_s_it_does_not_move_hold",
+                                 "{missing_n} bone(s) it does not move hold their bind pose: {names}",
+                                 missing_n=len(missing),
+                                 names=f"{', '.join(missing[:6])}{'...' if len(missing) > 6 else ''}")
+                p.notes.append(_i18n.msg("eng.animslot.has_other_bones_than_here_so_held",
+                                         "{name} in {mod} has other bones than {skeleton} here, so the animation "
+                                         "is carried across bone by bone, by name; {held}",
+                                         name=_se.name, mod=source_mod.name, skeleton=p.skeleton, held=held))
+            else:
+                p.notes.append(_i18n.msg("eng.animslot.has_other_bones_than_here_so",
+                                         "{name} in {mod} has other bones than {skeleton} here, so the animation "
+                                         "is carried across bone by bone, by name",
+                                         name=_se.name, mod=source_mod.name, skeleton=p.skeleton))
     except (SlotError, animpack.PackError, casanim.AnimError, animloose.LooseError,
             ValueError, TypeError) as exc:
         p.errors.append(str(exc))
@@ -437,7 +447,7 @@ def apply(p: SlotPlan) -> dict:
     from .logutil import file_op, log
 
     if not p.ok:
-        raise SlotError("cannot save: " + ("; ".join(p.errors) or "nothing planned"))
+        raise SlotError(_i18n.msg("eng.animslot.cannot_save", "cannot save: {why}", why="; ".join(p.errors) or _i18n.msg("eng.animslot.nothing_planned", "nothing planned")))
     running = animpack.game_running()
     if running:
         raise SlotError(_i18n.msg("eng.animslot.is_running_and_holds_the_packs", "{running} is running and holds the packs open; close the game first", running=', '.join(running)))
@@ -563,10 +573,16 @@ def plan_skeleton(mod, source_mod, name: str, entry: str = "", entry_skeleton: s
     elif row.action == "reuse_as":
         out.notes.append(_i18n.msg("eng.animslot.has_these_bytes_already_as", "{name} has these bytes already, as {dest_name}", name=mod.name, dest_name=row.dest_name))
     elif row.action == "rename":
-        out.notes.append(f"{mod.name}'s pack has another skeleton called {row.name}, so this one "
-                         f"comes in as {row.dest_name}"
-                         + (f", and {entry} is pointed at it" if entry else
-                            "; nothing plays it until a model entry asks for it"))
+        if entry:
+            out.notes.append(_i18n.msg("eng.animslot.pack_has_another_skeleton_called_so",
+                                       "{name}'s pack has another skeleton called {row_name}, so this one "
+                                       "comes in as {dest_name}, and {entry} is pointed at it",
+                                       name=mod.name, row_name=row.name, dest_name=row.dest_name, entry=entry))
+        else:
+            out.notes.append(_i18n.msg("eng.animslot.pack_has_another_skeleton_called_so_2",
+                                       "{name}'s pack has another skeleton called {row_name}, so this one "
+                                       "comes in as {dest_name}; nothing plays it until a model entry asks for it",
+                                       name=mod.name, row_name=row.name, dest_name=row.dest_name))
     if keep_rebuildable and row.appends:
         out.loose = animloose.for_port(out.port, source_mod.data)
         out.notes += out.loose.notes
@@ -605,9 +621,10 @@ def apply_skeleton(sp: SkeletonPort, mod, source_mod) -> dict:
     from .logutil import file_op, log
 
     if sp.errors or sp.port is None or not sp.port.ok:
-        raise SlotError("cannot port: " + "; ".join(sp.errors or ["nothing planned"]))
+        raise SlotError(_i18n.msg("eng.animslot.cannot_port", "cannot port: {why}",
+                                  why="; ".join(sp.errors or [_i18n.msg("eng.animslot.nothing_planned", "nothing planned")])))
     if not any(s.appends for s in sp.port.skeletons) and not sp.modeldb_text:
-        raise SlotError("nothing to write: " + "; ".join(sp.notes))
+        raise SlotError(_i18n.msg("eng.animslot.nothing_to_write", "nothing to write: {why}", why="; ".join(sp.notes)))
     data = Path(mod.data)
     tid = config.new_transfer_id()
     backup_root = config.backup_root_for(tid)

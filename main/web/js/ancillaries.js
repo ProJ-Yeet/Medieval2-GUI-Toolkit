@@ -86,8 +86,8 @@ function anRowHtml(r){
     <span class="antxt">
       <span class="nm">${esc(r.label)}</span>
       <span class="sub">${esc(r.type||tt('ancillaries.no_type'))}${r.unique?tt('ancillaries.unique'):''}${
-        r.effects?tt('ancillaries.effect',{effects:r.effects,effects2:r.effects===1?'':'s'}):''}${
-        r.triggers?tt('ancillaries.trigger',{triggers:r.triggers,triggers2:r.triggers===1?'':'s'})
+        r.effects?ttN('ancillaries.effect_count',r.effects):''}${
+        r.triggers?ttN('ancillaries.trigger_count',r.triggers)
                   :r.lua_gives?tt('ancillaries.given_by_a_script')
                   :` ${tt('ancillaries.nothing_grants_it',{lua_names:r.lua_names?tt('ancillaries.a_script_names_it'):''})}`}${
         r.findings?` <span class="w-warn">· ${r.findings}⚠</span>`:''}</span>
@@ -151,7 +151,7 @@ function anPaintForm(){
 /* ---- the detail pane ---- */
 function anDetailHtml(){
   const a = state.an, d = a.d;
-  if(!a.sel && !a.adding) return `<div class="empty">${tt('ancillaries.pick_an_ancillary_on_the_left',{count:a.count,count2:a.count===1?'y':'ies',triggers:a.triggers,triggers2:a.triggers===1?'':'s',file:esc(a.file)})}</div>`;
+  if(!a.sel && !a.adding) return `<div class="empty">${tt('ancillaries.pick_an_ancillary_on_the_left_counts',{ancillaries:ttN('ancillaries.ancillary_count',a.count),triggers:ttN('ancillaries.trigger_count_plain',a.triggers),file:esc(a.file)})}</div>`;
   if(!d) return `<div class="empty">${tt('ancillaries.reading_the_ancillary')}</div>`;
   if(d.error) return `<div class="empty"><span class="w-bad">✗ ${esc(d.error)}</span></div>`;
   return `<div class="trbar">
@@ -400,8 +400,7 @@ function anAddTrigger(){
 }
 function anDelTrigger(i){
   const d = state.an.d, row = d.trigs[i];
-  if(!row.added && !confirm(tt('ancillaries.remove_trigger',{name:row.name})
-    + tt('common.it_is_written_out_of_the'))) return;
+  if(!row.added && !confirm(tt('ancillaries.remove_trigger_written_out',{name:row.name}))) return;
   if(row.ui) trgDrop(row.ui);
   d.trigs.splice(i, 1);
   d.removed = (d.removed || []).concat(row.added ? [] : [row.name]);
@@ -479,10 +478,9 @@ async function anApply(body, what){
   const p = plan.plan || {};
   const lines = (p.changes || []).slice(0, 14);
   const found = (p.findings || []).map(f => '⚠ ' + f.message);
-  if(!confirm(tt('ancillaries.write',{what}) + (lines.join('\n') || tt('common.no_visible_change'))
-    + ((p.changes || []).length > 14 ? tt('ancillaries.and_more',{changes:p.changes.length - 14}) : '')
-    + (found.length ? '\n\n' + found.slice(0, 4).join('\n') : '')
-    + tt('common.backed_up_first_and_log_can'))) return;
+  if(!confirm(tt('ancillaries.write_changes_backed_up',{what,changes:lines.join('\n') || tt('common.no_visible_change'),
+      more:(p.changes || []).length > 14 ? tt('ancillaries.and_more',{changes:p.changes.length - 14}) : '',
+      found:found.length ? '\n\n' + found.slice(0, 4).join('\n') : ''}))) return;
   a.busy = true;
   let res;
   try{ res = await api.post('/api/ancillaries/apply', body); }

@@ -152,9 +152,9 @@ async function mgnApply(kind){
   const k = state.mgn;
   const p = k && k.plan[kind];
   if(!p || !p.ok || k.busy) return;
-  if(!confirm(`${MGN_TITLES[kind][0]}?\n\n${(p.changes || []).join('\n')}`
-    + ((p.warnings || []).length ? '\n\n' + p.warnings.map(x => '⚠ ' + x).join('\n') : '')
-    + tt('mapgen.one_backup_log_can_undo_it'))) return;
+  if(!confirm(tt('mapgen.apply_confirm',{title:MGN_TITLES[kind][0],
+    changes:(p.changes || []).join('\n')
+      + ((p.warnings || []).length ? '\n\n' + p.warnings.map(x => '⚠ ' + x).join('\n') : '')}))) return;
   k.busy = kind; mgnPaint();
   let r;
   try{ r = await api.post('/api/map/gen_apply', mgnBody(kind), {label: tt('mapgen.writing_the_layer')}); }
@@ -290,7 +290,7 @@ function mgnHtml(){
         ${d.climates.map(c => `<option value="${esc(c.code)}"${o.climates.mapping[g] === c.code ? ' selected' : ''}>${esc(c.name)}</option>`).join('')}
       </select></div>`).join('')}</div>`}`;
   const features = `<div class="brow" style="flex-wrap:wrap;gap:6px">
-      <label class="mszbox">${tt('mapgen.rivers',{sel:sel('features', 'detail', [['major', 'rivers'], ['medium', tt('mapgen.rivers_and_canals')], ['all', tt('mapgen.rivers_canals_and_streams')]])})}</label>
+      <label class="mszbox">${tt('mapgen.rivers',{sel:sel('features', 'detail', [['major', tt('mapgen.rivers_only')], ['medium', tt('mapgen.rivers_and_canals')], ['all', tt('mapgen.rivers_canals_and_streams')]])})}</label>
       <label class="mszbox">${tt('mapgen.the_old_ones',{sel:sel('features', 'mode', [['replace', tt('mapgen.cleared_first')], ['add', tt('mapgen.kept_and_joined')]])})}</label>
     </div>`;
   return `${head}

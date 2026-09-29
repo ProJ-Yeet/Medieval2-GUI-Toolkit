@@ -90,6 +90,10 @@ def looks_like_prose(s: str, classes: Set[str]) -> bool:
     if re.fullmatch(r"[\w.\-/\\:*?]+\.(txt|tga|dds|cas|mesh|json|xml|bin|dat|idx|db|modeldb|"
                     r"sd|png|zip|lua|log|bat|py|js|html|wav|mp3|ogg|bik)", t, re.I):
         return False                                      # a file name
+    if re.fullmatch(r"[a-z][a-z0-9_]*:", t):
+        return False                                      # a key's prefix: 'minor:' + tab (88c)
+    if re.fullmatch(r"""(\s*[\w:-]+\s*=\s*"[^"\w]*")+\s*""", t):
+        return False                                      # attributes whose values are expressions (88c)
     words = t.split()
     if len(words) == 1:
         w = words[0].strip(".,:;!?…()")

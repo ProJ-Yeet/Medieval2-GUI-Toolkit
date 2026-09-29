@@ -1306,7 +1306,7 @@ def plan_cleanup(mod: Mod, req: CleanupRequest) -> CleanupPlan:
             plan.warnings.append(_i18n.msg("eng.bmdb.is_not_in_this_mods_modeldb", "'{name}' is not in this mod's modeldb - skipped", name=name))
             continue
         if e.first_entry_pad:
-            plan.warnings.append(edit.PAD_ENTRY_KEPT.format(name=name))
+            plan.warnings.append(edit.pad_entry_kept(name))
             continue
         held = mentions.get(name)
         if held:
@@ -1320,11 +1320,18 @@ def plan_cleanup(mod: Mod, req: CleanupRequest) -> CleanupPlan:
                 slots = users.get(name) or {}
                 only_mounts = bool(slots.get("mount")) and not any(
                     slots.get(k) for k in SLOT_KINDS if k != "mount")
-                plan.warnings.append(
-                    f"'{name}' is still {used} - kept, removing it would stop the game "
-                    + ("loading. Tick that mount for removal too and the entry comes "
-                       "free with it." if only_mounts else
-                       "loading. Re-scan the mod to pick it up as a merge."))
+                if only_mounts:
+                    plan.warnings.append(_i18n.msg(
+                        "eng.bmdb.still_used_kept_tick_mount",
+                        "'{name}' is still {used} - kept, removing it would stop the game "
+                        "loading. Tick that mount for removal too and the entry comes "
+                        "free with it.", name=name, used=used))
+                else:
+                    plan.warnings.append(_i18n.msg(
+                        "eng.bmdb.still_used_kept_rescan",
+                        "'{name}' is still {used} - kept, removing it would stop the game "
+                        "loading. Re-scan the mod to pick it up as a merge.",
+                        name=name, used=used))
             continue
         doomed.append(name)
 
@@ -1344,7 +1351,7 @@ def plan_cleanup(mod: Mod, req: CleanupRequest) -> CleanupPlan:
             plan.errors.append(_i18n.msg("eng.bmdb.is_not_in_this_mods_modeldb_3", "'{into}' is not in this mod's modeldb", into=into))
             continue
         if entries[name].first_entry_pad:
-            plan.warnings.append(edit.PAD_ENTRY_KEPT.format(name=name))
+            plan.warnings.append(edit.pad_entry_kept(name))
             continue
         if into == name or into in merging or into in doomed:
             # Repointing a soldier line at something this same cleanup deletes
@@ -1587,7 +1594,8 @@ folder is a copy and is never touched by Undo, so it is safe to keep or delete.
 def apply_cleanup(plan: CleanupPlan, progress: Progress = None) -> Dict:
     """Write the cleanup: export first, then rewrite the mod (with backups)."""
     if plan.errors:
-        raise ValueError("cannot apply: " + "; ".join(plan.errors))
+        raise ValueError(_i18n.msg("eng.bmdb.cannot_apply", "cannot apply: {why}",
+                                   why="; ".join(plan.errors)))
     mod, target = plan.mod, plan.target
     if target is None:
         raise ValueError(_i18n.msg("eng.bmdb.cannot_apply_no_export_folder", "cannot apply: no export folder"))
@@ -2026,7 +2034,8 @@ def recheck(mod: Mod, progress: Progress = None) -> dict:
             why = []
             described = describe_users(users, name)
             if described:
-                why.append("still referenced as " + described)
+                why.append(_i18n.msg("eng.bmdb.still_referenced_as", "still referenced as {described}",
+                                     described=described))
             row = mentions.get(name)
             if row:
                 why.append(_i18n.msg("eng.bmdb.named_by_2", "named by {file}", file=row['file']))
@@ -2163,9 +2172,14 @@ def revert_recheck(mod: Mod, picks: Sequence[dict], progress: Progress = None) -
         "applied": True,
         "undone": False,
         "note": "",
-        "summary": (f"put {len(restored)} thing(s) back into {mod.name} that a past "
-                    f"cleanup removed"
-                    + (f"\n  ! {len(failed)} could not be restored" if failed else "")),
+        "summary": (_i18n.msg("eng.bmdb.put_things_back_some_failed",
+                              "put {restored} thing(s) back into {mod} that a past "
+                              "cleanup removed\n  ! {failed} could not be restored",
+                              restored=len(restored), mod=mod.name, failed=len(failed))
+                    if failed else
+                    _i18n.msg("eng.bmdb.put_things_back",
+                              "put {restored} thing(s) back into {mod} that a past "
+                              "cleanup removed", restored=len(restored), mod=mod.name)),
         "warnings": list(failed),
         "manifest": manifest,
         "backup_root": str(backup_root),

@@ -770,14 +770,19 @@ SNAPPED = ("obj.sea", "obj.ground", "obj.marker", "obj.shared", "obj.mixed",
            "res.sea", "res.ground", "res.province")
 
 
-def _others(total: int, n: int, what: str, me: Optional[Node],
-            mine: set) -> str:
-    """``This campaign has 8 others like it, of 1,130.``"""
+def _others(total: int, n: int, me: Optional[Node], mine: set) -> str:
+    """``This campaign has 8 others like it, of 1,130 resources.``"""
     if me is not None:
         total -= 1
         n -= me.start in mine
-    return (f" This campaign has {'no other' if not n else f'{n:,} other'}"
-            f"{'s' if n > 1 else ''} like it, of {total:,} {what}.")
+    if not n:
+        return _i18n.msg("eng.stratobj.campaign_has_no_other_like_it",
+                         "This campaign has no other like it, of {total:,} resources.",
+                         total=total)
+    return _i18n.msgN("eng.stratobj.campaign_has_others_like_it", n,
+                      "This campaign has {count:,} other like it, of {total:,} resources.",
+                      "This campaign has {count:,} others like it, of {total:,} resources.",
+                      total=total)
 
 
 def check_object(voc: Vocabulary, spec: Spec, sf: StratFile,
@@ -793,8 +798,9 @@ def check_object(voc: Vocabulary, spec: Spec, sf: StratFile,
     out: List[dict] = []
     what = spec.kind
     if spec.kind not in KINDS:
-        return [finding("obj.kind", True, f"{spec.kind!r} is not one of "
-                        + ", ".join(KINDS) + ".")]
+        return [finding("obj.kind", True, _i18n.msg(
+            "eng.stratobj.kind_is_not_one_of", "{kind} is not one of {kinds}.",
+            kind=repr(spec.kind), kinds=", ".join(KINDS)))]
     cen = cen if cen is not None else census(sf, voc)
     if spec.kind == "resource":
         out += _name_findings(voc, spec)
@@ -859,13 +865,23 @@ def _name_findings(voc: Vocabulary, spec: Spec) -> List[dict]:
                         _i18n.msg("eng.stratobj.a_resource_line_names_the_resource", "A resource line names the resource first, and this one names nothing."))]
     if voc.resources is not None and spec.name not in voc.resources:
         low = [r for r in voc.resources if r.lower() == spec.name.lower()]
+        if low:
+            return [finding(
+                "res.name", True,
+                _i18n.msg("eng.stratobj.not_a_resource_it_writes",
+                          "{name} is not a resource {rel} declares - it writes {writes}. The "
+                          "{declared} it does are {names}. All 2,813 resource lines on the four "
+                          "campaigns measured name one of their own mod's.",
+                          name=spec.name, rel=RESOURCES.rel, writes=low[0],
+                          declared=len(voc.resources), names=", ".join(voc.resources)))]
         return [finding(
             "res.name", True,
-            f"{spec.name} is not a resource {RESOURCES.rel} declares"
-            + (f" - it writes {low[0]}" if low else "") + f". The "
-            f"{len(voc.resources)} it does are " + ", ".join(voc.resources)
-            + ". All 2,813 resource lines on the four campaigns measured name "
-            "one of their own mod's.")]
+            _i18n.msg("eng.stratobj.not_a_resource_declared",
+                      "{name} is not a resource {rel} declares. The "
+                      "{declared} it does are {names}. All 2,813 resource lines on the four "
+                      "campaigns measured name one of their own mod's.",
+                      name=spec.name, rel=RESOURCES.rel,
+                      declared=len(voc.resources), names=", ".join(voc.resources)))]
     return []
 
 
@@ -891,23 +907,29 @@ def _resource_tile(voc: Vocabulary, spec: Spec, sf: StratFile, heading: str,
         if f["code"] == "sea":
             out.append(finding(
                 "res.sea", False,
-                f"This {name} is {f['tail']} Nothing on land can reach it."
-                + _others(total, len(cen.sea), "resources", me, cen.sea),
+                _i18n.msg("eng.stratobj.nothing_on_land_can_reach_it",
+                          "This {name} is {tail} Nothing on land can reach it. {others}",
+                          name=name, tail=f['tail'],
+                          others=_others(total, len(cen.sea), me, cen.sea)),
                 x=gx, y=gy))
     if not any(f["code"] == "res.sea" for f in out):
         g = voc.ground(gx, gy)
         if g is not None and g["code"] == "impassable_land":
             out.append(finding(
                 "res.ground", False,
-                f"{gx},{gy} is {g['name']}, which no army can walk onto."
-                + _others(total, len(cen.rough), "resources", me, cen.rough),
+                _i18n.msg("eng.stratobj.which_no_army_can_walk_onto",
+                          "{gx},{gy} is {ground}, which no army can walk onto. {others}",
+                          gx=gx, gy=gy, ground=g['name'],
+                          others=_others(total, len(cen.rough), me, cen.rough)),
                 x=gx, y=gy))
         if not here:
             out.append(finding(
                 "res.province", False,
-                f"{gx},{gy} is in no declared province, so no settlement owns "
-                f"this {name} and nobody trades it."
-                + _others(total, len(cen.lost), "resources", me, cen.lost),
+                _i18n.msg("eng.stratobj.no_declared_province_nobody_trades_it",
+                          "{gx},{gy} is in no declared province, so no settlement owns "
+                          "this {name} and nobody trades it. {others}",
+                          gx=gx, gy=gy, name=name,
+                          others=_others(total, len(cen.lost), me, cen.lost)),
                 x=gx, y=gy))
     out += _mixed(sf, me, gx, gy, cen, SECTIONED)
     return out
@@ -935,12 +957,22 @@ def _tile_findings(voc: Vocabulary, spec: Spec, sf: StratFile, section: str,
         good, total = cen.placed
         if me is not None and section_of(sf, me) is not None:
             total -= 1               # the record being judged is not its own evidence
-        out.append(finding(
-            "obj.section", False,
-            (f"{gx},{gy} is in {here}" if here else f"{gx},{gy} is in no "
-             f"declared province") + f", and this {what} is filed under "
-            f"{section}. {good} of the {total} in this campaign stand in the "
-            f"province they are filed under.", x=gx, y=gy, province=here))
+        if here:
+            said = _i18n.msg(
+                "eng.stratobj.is_in_and_this_is_filed_under",
+                "{gx},{gy} is in {here}, and this {what} is filed under "
+                "{section}. {good} of the {total} in this campaign stand in the "
+                "province they are filed under.",
+                gx=gx, gy=gy, here=here, what=what, section=section,
+                good=good, total=total)
+        else:
+            said = _i18n.msg(
+                "eng.stratobj.is_in_no_declared_province_and_this_is_filed_under",
+                "{gx},{gy} is in no declared province, and this {what} is filed under "
+                "{section}. {good} of the {total} in this campaign stand in the "
+                "province they are filed under.",
+                gx=gx, gy=gy, what=what, section=section, good=good, total=total)
+        out.append(finding("obj.section", False, said, x=gx, y=gy, province=here))
     if voc.sea(gx, gy) is True:
         out.append(finding(
             "obj.sea", False,
@@ -973,18 +1005,28 @@ def _tile_findings(voc: Vocabulary, spec: Spec, sf: StratFile, section: str,
 def _fort_findings(voc: Vocabulary, spec: Spec, sf: StratFile) -> List[dict]:
     out: List[dict] = []
     if bool(spec.type) != bool(spec.culture):
-        out.append(finding(
-            "fort.half", False,
-            "A fort writes both a type and a culture, or neither: DaC's 206 "
-            "write both and vanilla's short form writes neither. This one has "
-            + ("a type and no culture." if spec.type else
-               "a culture and no type.")))
+        if spec.type:
+            said = _i18n.msg(
+                "eng.stratobj.fort_writes_both_type_and_no_culture",
+                "A fort writes both a type and a culture, or neither: DaC's 206 "
+                "write both and vanilla's short form writes neither. This one has "
+                "a type and no culture.")
+        else:
+            said = _i18n.msg(
+                "eng.stratobj.fort_writes_both_culture_and_no_type",
+                "A fort writes both a type and a culture, or neither: DaC's 206 "
+                "write both and vanilla's short form writes neither. This one has "
+                "a culture and no type.")
+        out.append(finding("fort.half", False, said))
     if spec.culture and voc.cultures is not None \
             and spec.culture not in voc.cultures:
         out.append(finding(
             "fort.culture", True,
-            f"{spec.culture} is not a culture {CULTURES_REL} declares. The "
-            f"{len(voc.cultures)} are " + ", ".join(voc.cultures) + "."))
+            _i18n.msg("eng.stratobj.not_a_culture_declared",
+                      "{culture} is not a culture {rel} declares. The "
+                      "{declared} are {names}.",
+                      culture=spec.culture, rel=CULTURES_REL,
+                      declared=len(voc.cultures), names=", ".join(voc.cultures))))
     if spec.type and voc.folders is not None \
             and spec.type.lower() not in voc.folders:
         named = sum(n for (t, _), n in voc.pairs.items() if t)
@@ -1135,12 +1177,14 @@ def plan(mod, facts, body: dict) -> ObjPlan:
     kind = str(body.get("kind") or "").strip().lower()
     p = ObjPlan(mod=mod, campaign=campaign, kind=kind, action=action)
     if action not in ACTIONS:
-        p.errors.append(f"no such action {action!r}. The four are "
-                        + ", ".join(ACTIONS))
+        p.errors.append(_i18n.msg("eng.stratobj.no_such_action",
+                                  "no such action {action}. The four are {actions}",
+                                  action=repr(action), actions=", ".join(ACTIONS)))
         return p
     if kind not in KINDS:
-        p.errors.append(f"{kind or '(nothing)'} is not one of "
-                        + ", ".join(KINDS))
+        p.errors.append(_i18n.msg("eng.stratobj.kind_is_not_one_of_plain",
+                                  "{kind} is not one of {kinds}",
+                                  kind=kind or '(nothing)', kinds=", ".join(KINDS)))
         return p
     try:
         sf = campstrat.read_strat(mod, campaign)
@@ -1161,11 +1205,18 @@ def plan(mod, facts, body: dict) -> ObjPlan:
               and len(at) == 2 and all(is_int(v) for v in at) else None)
         node = find_object(sf, kind, int(body.get("line") or 0), at)
         if node is None:
-            p.errors.append(
-                f"there is no {kind} "
-                + (f"at {at[0]},{at[1]} " if at else "")
-                + f"in {campaign}'s descr_strat.txt any more. Something else "
-                  f"changed the file; read it again")
+            if at:
+                p.errors.append(_i18n.msg(
+                    "eng.stratobj.there_is_no_kind_at_any_more",
+                    "there is no {kind} at {x},{y} in {campaign}'s descr_strat.txt "
+                    "any more. Something else changed the file; read it again",
+                    kind=kind, x=at[0], y=at[1], campaign=campaign))
+            else:
+                p.errors.append(_i18n.msg(
+                    "eng.stratobj.there_is_no_kind_any_more",
+                    "there is no {kind} in {campaign}'s descr_strat.txt "
+                    "any more. Something else changed the file; read it again",
+                    kind=kind, campaign=campaign))
             return p
         before = read_spec(node)
     spec = spec_from_body(body, before)
@@ -1334,7 +1385,8 @@ def apply(p: ObjPlan) -> dict:
     from .logutil import file_op, log
 
     if p.errors:
-        raise ValueError("cannot apply: " + "; ".join(p.errors))
+        raise ValueError(_i18n.msg("eng.stratobj.cannot_apply", "cannot apply: {why}",
+                                   why="; ".join(p.errors)))
     if not p.text:
         raise ValueError(_i18n.msg("eng.stratobj.nothing_to_change", "nothing to change"))
     mod = p.mod

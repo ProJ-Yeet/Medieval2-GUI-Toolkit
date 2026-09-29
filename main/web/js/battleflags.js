@@ -29,7 +29,7 @@ const BNX_SECTIONS = [
 
 async function loadBanners(){
   const mod = state.src;
-  main.innerHTML = `<div class="empty">${tt('common.reading')} ` + esc(mod) + `${tt('battleflags.s_battle_banners')}</div>`;
+  main.innerHTML = `<div class="empty">${tt('battleflags.reading_mods_battle_banners',{mod:esc(mod)})}</div>`;
   let r;
   try{ r = await api.get('/api/battleflags?mod=' + enc(mod)); }
   catch(e){ if(stale('banners', mod)) return;
@@ -63,7 +63,7 @@ function renderBanners(){
           return `<div class="trnote"><b>${s.label}</b>${s.edu ? ` <span class="count"><code>${s.edu}</code></span>` : ''}</div>`
             + list.map(b => `<button class="trrow${c.sel === String(b.id) ? ' on' : ''}" onclick="bnxPick('${b.id}')">
               <div class="nm">${esc(b.name)}</div>
-              <div class="sub">${b.rows.length} row(s)${s.edu ? tt('battleflags.unit_s_carry_it',{units:b.units}) : ''}${bnxDirty(b) ? ` ${tt('common.changed')}` : ''}</div></button>`).join('');
+              <div class="sub">${tt('battleflags.rows_units_changed',{n:b.rows.length,units:s.edu ? tt('battleflags.unit_s_carry_it',{units:b.units}) : '',changed:bnxDirty(b) ? ` ${tt('common.changed')}` : ''})}</div></button>`).join('');
         }).join('');
   main.innerHTML = strip + `<div class="trwrap">
     <div class="trlist">
@@ -74,7 +74,7 @@ function renderBanners(){
       <div class="cdbhead"><div>${tt('battleflags.descr_banners_new_xml_the_banner')}</div>
         <span style="flex:1"></span>
         <button onclick="bnxRevert()" ${n ? '' : 'disabled'}>${tt('common.revert')}</button>
-        <button class="primary" onclick="bnxSave()" ${n ? '' : 'disabled'}>${tt('battleflags.save_change',{x:n || '',x2:n === 1 ? '' : 's'})}</button>
+        <button class="primary" onclick="bnxSave()" ${n ? '' : 'disabled'}>${ttN('battleflags.save_changes',n)}</button>
       </div>
       ${c.trailing_lines ? `<div class="trnote">${tt('battleflags.line_s_follow_banners_the_game',{trailing_lines:c.trailing_lines})}
         <button onclick="bnxTrim()">${c.w.trim ? tt('battleflags.keep_them') : tt('battleflags.cut_them_off_on_save')}</button></div>` : ''}
@@ -188,9 +188,9 @@ async function bnxSave(){
   finally{ c.busy = false; }
   if(plan.error){ toast('✗ ' + plan.error, 8000); return; }
   const p = plan.plan || {};
-  if(!confirm(tt('battleflags.write_change_s',{n:(p.changes || []).length}) + (p.changes || []).slice(0, 16).join('\n')
-    + ((p.warnings || []).length ? '\n\n⚠ ' + p.warnings.slice(0, 5).join('\n⚠ ') : '')
-    + tt('common.backed_up_first_and_log_can'))) return;
+  if(!confirm(tt('battleflags.write_changes_confirm',{n:(p.changes || []).length,
+    changes:(p.changes || []).slice(0, 16).join('\n')
+      + ((p.warnings || []).length ? '\n\n⚠ ' + p.warnings.slice(0, 5).join('\n⚠ ') : '')}))) return;
   let res;
   try{ res = await api.post('/api/battleflags/apply', body); }
   catch(e){ res = {error: errText(e)}; }

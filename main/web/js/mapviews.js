@@ -283,12 +283,7 @@ function cvwAdd(){
     k.err = tt('mapviews.saved_views_is_the_limit_delete',{CVW_MAX});
     return cvwPaint();
   }
-  const name = prompt(tt('mapviews.save_this_view_as')
-    + tt('mapviews.which_layers_are_drawn_in_what')
-    + tt('mapviews.punched_out_of_each_the_terrain')
-    + tt('mapviews.and_heights_readings_the_settlement')
-    + tt('mapviews.names_and_the_colouring_over_the')
-    + tt('mapviews.those_are_about_a_place'),
+  const name = prompt(tt('mapviews.save_view_prompt'),
     `${CVW_NAME} ${list.length + 1}`);
   if(name === null) return;
   const clean = String(name).trim();
@@ -330,8 +325,7 @@ function cvwRename(i){
 function cvwDelete(i){
   const list = cvwList(), v = list[i];
   if(!v) return;
-  if(!confirm(tt('mapviews.delete_the_saved_view',{name:v.name})
-    + tt('mapviews.it_is_a_set_of_switches'))) return;
+  if(!confirm(tt('mapviews.confirm_delete_view',{name:v.name}))) return;
   list.splice(i, 1);
   activity(tt('mapviews.map_views'), tt('mapviews.deleted_the_view',{name:v.name}));
   cvwStore();
@@ -350,13 +344,13 @@ function cvwPaint(){
 //: draws, and whether it carries a colouring.
 function cvwSummary(v){
   const on = Object.keys((v && v.on) || {}).filter(code => v.on[code]);
-  const bits = [`${on.length} layer${on.length === 1 ? '' : 's'}`];
+  const bits = [ttN('mapviews.layers_count', on.length)];
   if(v.river && v.river.on) bits.push(tt('mapviews.rivers_only'));
   if(v.height_alpha) bits.push(tt('mapviews.heights_as_transparency'));
   if(v.theme) bits.push(tt('mapviews.coloured_by',{x:v.theme.replace(/_/g, ' ')}));
   const hidden = Object.values((v && v.hide) || {})
     .reduce((n, a) => n + (Array.isArray(a) ? a.length : 0), 0);
-  if(hidden) bits.push(tt('mapviews.colour_punched_out',{hidden,hidden2:hidden === 1 ? '' : 's'}));
+  if(hidden) bits.push(ttN('mapviews.colours_punched_out', hidden));
   return bits.join(' · ');
 }
 

@@ -8,6 +8,8 @@ back where it stood:
 * ``${tt('id',{a:expr})}`` in a template  ->  the English, ``{a}`` as ``${expr}``
 * ``tt('id')`` elsewhere                  ->  ``'English'``
 * ``tt('id',{a:expr})`` elsewhere         ->  ```English ${expr}```
+* ``ttN('id', n, {...})``                 ->  the form for ``n``, chosen when it runs
+* ``tt(on ? 'a' : 'b', {...})``           ->  ``(on ? English a : English b)`` (88c)
 
 and index.html without its ``data-i18n`` attributes. So a check written
 against the source before 88 reads the same after it.
@@ -111,42 +113,93 @@ def _fill_tpl(text: str, params: Dict[str, str]) -> str:
                   if m.group(1) in params else m.group(0), text)
 
 
+_ANY_CALL = re.compile(r"(?<![\w$.])(tt|ttA|ttN)\(")
+_ID = re.compile(r"'([a-z][a-z0-9_]*(?:\.[a-z0-9_]+)+)'")
+
+
+def _split(body: str) -> List[str]:
+    """A call's arguments, split at its top-level commas."""
+    parts, cur, depth, j = [], [], 0, 0
+    while j < len(body):
+        c = body[j]
+        if c in "'\"`":
+            k = _skip_str(body, j)
+            cur.append(body[j:k])
+            j = k
+            continue
+        if c in "([{":
+            depth += 1
+        elif c in ")]}":
+            depth -= 1
+        if c == "," and depth == 0:
+            parts.append("".join(cur).strip())
+            cur = []
+        else:
+            cur.append(c)
+        j += 1
+    if "".join(cur).strip():
+        parts.append("".join(cur).strip())
+    return parts
+
+
+def _expr(mid: str, params: Dict[str, str], n_expr: str = "") -> str:
+    """The English of ``mid`` as a JavaScript expression. A plural chooses its
+    form when it runs, as ttN does, the count read once."""
+    v = cat().get(mid, mid)
+    if isinstance(v, str) or not n_expr:
+        text = _english(mid)
+        if params:
+            return "`" + _fill_tpl(text, params) + "`"
+        return "'" + text.replace("\\", "\\\\").replace("'", "\\'").replace("\n", "\\n") + "'"
+    p = dict(params, count="__c")
+    one = "`" + _fill_tpl(v.get("one", v.get("other", "")), p) + "`"
+    other = "`" + _fill_tpl(v.get("other", ""), p) + "`"
+    pick = f"__c===1?{one}:{other}"
+    if "zero" in v:
+        pick = f"__c===0?`{_fill_tpl(v['zero'], p)}`:" + pick
+    return f"((__c)=>{pick})({n_expr})"
+
+
 def english(src: str, only=None) -> str:
     """``src`` with each call's English put back; ``only``, a set of IDs,
     limits it to those."""
     out: List[str] = []
     pos = 0
-    for m in _CALL.finditer(src):
-        if m.start() < pos or (only is not None and m.group(2) not in only):
+    for m in _ANY_CALL.finditer(src):
+        if m.start() < pos:
             continue
-        open_at = src.index("(", m.start())
+        open_at = m.end() - 1
         end = _close(src, open_at, "(", ")")
         if end < 0:
             continue
-        args = src[open_at + 1:end]
-        rest = args[len(f"'{m.group(2)}'"):].strip()
-        params = {}
-        if rest.startswith(","):
-            rest = rest[1:].strip()
-            if m.group(1) == "ttN":           # ttN('id', n, {...})
-                n_expr, _, rest = rest.partition(",")
-                params["count"] = n_expr.strip()
-                rest = rest.strip()
-            if rest.startswith("{"):
-                params.update(_params(rest))
-        en = _english(m.group(2))
+        args = _split(src[open_at + 1:end])
+        if not args:
+            continue
+        ids = _ID.findall(args[0])
+        if not ids or (only is not None and not set(ids) & set(only)):
+            continue
+        plural = m.group(1) == "ttN"
+        n_expr = args[1] if plural and len(args) > 1 else ""
+        pidx = 2 if plural else 1
+        params = _params(args[pidx]) if len(args) > pidx and args[pidx].startswith("{") else {}
+        simple = args[0] == f"'{ids[0]}'"
         in_tpl = src[max(0, m.start() - 2):m.start()] == "${" and src[end + 1:end + 2] == "}"
-        if in_tpl:
-            out.append(src[pos:m.start() - 2])
-            out.append(_fill_tpl(en, params))
-            pos = end + 2
-        else:
+        if simple and not plural:
+            en = _english(ids[0])
+            if in_tpl:
+                out.append(src[pos:m.start() - 2])
+                out.append(_fill_tpl(en, params))
+                pos = end + 2
+                continue
             out.append(src[pos:m.start()])
-            if params:
-                out.append("`" + _fill_tpl(en, params) + "`")
-            else:
-                out.append("'" + en.replace("\\", "\\\\").replace("'", "\\'").replace("\n", "\\n") + "'")
+            out.append(_expr(ids[0], params))
             pos = end + 1
+            continue
+        # a plural, or an ID chosen when it runs: tt(on ? 'a.shown' : 'a.hidden', {...})
+        expr = _ID.sub(lambda i: _expr(i.group(1), params, n_expr), args[0])
+        out.append(src[pos:m.start()])
+        out.append(f"({expr})")
+        pos = end + 1
     out.append(src[pos:])
     return "".join(out)
 

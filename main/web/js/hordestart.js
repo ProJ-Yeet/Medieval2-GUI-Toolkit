@@ -177,12 +177,11 @@ async function hzSave(){
   const p = plan.plan || {};
   const lines = (p.changes || []).slice(0, 16);
   const warn = (p.warnings || []).slice(0, 4).map(x => '⚠ ' + x);
-  if(!confirm(tt('hordestart.write_a_horde_start_for',{faction:k.faction})
-    + (lines.join('\n') || tt('common.no_visible_change'))
+  if(!confirm(tt('hordestart.write_confirm',{faction:k.faction,
+    changes:(lines.join('\n') || tt('common.no_visible_change'))
     + ((p.changes || []).length > 16 ? tt('hordestart.and_more',{changes:p.changes.length - 16}) : '')
-    + (warn.length ? '\n\n' + warn.join('\n') : '')
-    + tt('hordestart.files_backed_up_first_and_log',{files:(p.files || []).join(', ')})
-    + tt('hordestart.undoes_all_of_them_at_once'))) return;
+    + (warn.length ? '\n\n' + warn.join('\n') : ''),
+    files:(p.files || []).join(', ')}))) return;
   z.busy = true;
   let res;
   try{ res = await api.post('/api/map/horde_apply', body); }
@@ -220,10 +219,10 @@ function hzHtml(){
   if(z.err) return `<div class="w-warn">${esc(z.err)}</div>`;
   const v = z.v, w = z.w;
   if(!v.empty){
-    const held = [];
-    if(v.holds.settlements) held.push(`${v.holds.settlements} settlement${v.holds.settlements === 1 ? '' : 's'}`);
-    if(v.holds.characters) held.push(`${v.holds.characters} character${v.holds.characters === 1 ? '' : 's'}`);
-    return `<div class="count">${tt('hordestart.holds_a_horde_start_fills_a',{x:esc(v.label || v.faction),held:held.join(' and ')})}</div>
+    const heldS = v.holds.settlements ? ttN('hordestart.settlement_count', v.holds.settlements) : '';
+    const heldC = v.holds.characters ? ttN('hordestart.character_count', v.holds.characters) : '';
+    const held = heldS && heldC ? tt('hordestart.held_both',{settlements:heldS,characters:heldC}) : heldS || heldC;
+    return `<div class="count">${tt('hordestart.holds_a_horde_start_fills_a',{x:esc(v.label || v.faction),held})}</div>
       ${v.events.length ? hzEventsHtml(v) : ''}`;
   }
   const mode = (id, label, note) => `<label class="hzmode${w.mode === id ? ' on' : ''}">
@@ -322,8 +321,7 @@ function hzHordeHtml(){
   return `<details class="hzhorde"${v.complete_horde ? '' : ' open'}>
     <summary>${tt('hordestart.horde_settings')} <span class="count">${v.complete_horde
       ? tt('hordestart.descr_sm_factions_txt_already_has')
-      : tt('hordestart.descr_sm_factions_txt_has_none') + (used === 'vanilla'
-        ? 'vanilla’s' : esc(used) + '’s')}</span></summary>
+      : tt('hordestart.descr_sm_factions_txt_has_none_source',{source:used === 'vanilla' ? 'vanilla' : esc(used)})}</span></summary>
     <div class="hzkeys">${v.horde_keys.map(key => `<div class="cmfield">
       <label>${esc(key.replace(/^horde_/, '').replace(/_/g, ' '))}</label>
       <input type="number" value="${esc(w.horde[key] || '')}"

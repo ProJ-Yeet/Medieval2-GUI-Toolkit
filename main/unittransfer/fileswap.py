@@ -152,7 +152,7 @@ def apply_put(p: PutPlan) -> Dict:
     from .logutil import file_op, log
 
     if p.errors or not p.data:
-        raise ValueError("cannot apply: " + ("; ".join(p.errors) or "nothing to put"))
+        raise ValueError(_i18n.msg("eng.fileswap.cannot_apply", "cannot apply: {why}", why="; ".join(p.errors) or _i18n.msg("eng.fileswap.nothing_to_put", "nothing to put")))
     mod = p.mod
     data_dir = Path(mod.data)
     tid = config.new_transfer_id()

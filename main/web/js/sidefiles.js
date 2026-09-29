@@ -24,7 +24,7 @@ const SDX_TABS = [
 
 async function loadSideFiles(){
   const mod = state.src;
-  main.innerHTML = `<div class="empty">${tt('common.reading')} ` + esc(mod) + `${tt('sidefiles.s_animals_standards_and_advice')}</div>`;
+  main.innerHTML = `<div class="empty">${tt('sidefiles.reading_mod_animals_standards_and_advice',{mod:esc(mod)})}</div>`;
   let r;
   try{ r = await api.get('/api/sidefiles?mod=' + enc(mod)); }
   catch(e){ if(stale('sidefiles', mod)) return;
@@ -74,7 +74,7 @@ function renderSideFiles(){
           advice: tt('sidefiles.the_advisors_threads_and_the_triggers')}[c.tab]}</span></div>
         <span style="flex:1"></span>
         <button onclick="sdxRevert()" ${n ? '' : 'disabled'}>${tt('common.revert')}</button>
-        <button class="primary" onclick="sdxSave()" ${n ? '' : 'disabled'}>${tt('sidefiles.save_change',{x:n || '',x2:n === 1 ? '' : 's'})}</button>
+        <button class="primary" onclick="sdxSave()" ${n ? '' : 'disabled'}>${ttN('sidefiles.save_changes',n)}</button>
       </div>
       ${body}
     </div>
@@ -129,8 +129,8 @@ function sdxAnimalsHtml(){
       <td class="count">${k === 'model' && a.model_known === false ? `<span class="w-warn">${tt('sidefiles.not_in_the_battle_modeldb')}</span>`
         : k === 'x_radius' ? tt('sidefiles.optional_the_other_radius_of_an') : ''}</td></tr>`).join('')}
     </table>
-    <div class="count">${a.units.length ? tt('sidefiles.units_carrying_it') + a.units.map(esc).join(', ') : tt('sidefiles.no_units_animal_line_names_it')}</div>
-    <button onclick="sdxAnimalRemove('${q1(esc(a.name))}')">${gone ? tt('common.keep_it') : tt('sidefiles.remove') + esc(a.name)}</button></div>`;
+    <div class="count">${a.units.length ? tt('sidefiles.units_carrying_it_list',{units:a.units.map(esc).join(', ')}) : tt('sidefiles.no_units_animal_line_names_it')}</div>
+    <button onclick="sdxAnimalRemove('${q1(esc(a.name))}')">${gone ? tt('common.keep_it') : tt('sidefiles.remove_animal',{name:esc(a.name)})}</button></div>`;
 }
 function sdxAnimalSet(name, k, v){
   const c = state.sdx, a = c.animals.find(x => x.name === name);
@@ -244,9 +244,8 @@ async function sdxSave(){
   finally{ c.busy = false; }
   if(plan.error){ toast('✗ ' + plan.error, 8000); return; }
   const p = plan.plan || {};
-  if(!confirm(tt('sidefiles.write_change_s',{n:(p.changes || []).length}) + (p.changes || []).slice(0, 16).join('\n')
-    + ((p.warnings || []).length ? '\n\n⚠ ' + p.warnings.slice(0, 5).join('\n⚠ ') : '')
-    + tt('common.backed_up_first_and_log_can'))) return;
+  if(!confirm(tt('sidefiles.write_confirm',{n:(p.changes || []).length,changes:(p.changes || []).slice(0, 16).join('\n')
+    + ((p.warnings || []).length ? '\n\n⚠ ' + p.warnings.slice(0, 5).join('\n⚠ ') : '')}))) return;
   let res;
   try{ res = await api.post('/api/sidefiles/apply', body); }
   catch(e){ res = {error: errText(e)}; }

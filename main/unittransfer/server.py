@@ -4763,9 +4763,7 @@ class Handler(BaseHTTPRequestHandler):
             return {"error": str(e)}
         held = campaint.peek(name)
         if held is not None and held.unsaved:
-            return {"error": "the paint tool has unsaved strokes on "
-                             + ", ".join(held.state()["files"])
-                             + " - save or discard them on the Paint tab first"}
+            return {"error": _i18n.msg("eng.server.paint_tool_has_unsaved_strokes", "the paint tool has unsaved strokes on {files} - save or discard them on the Paint tab first", files=", ".join(held.state()["files"]))}
         try:
             plan = mapresize.plan(mod, body)
             out = {"plan": plan.payload()}
@@ -4796,9 +4794,7 @@ class Handler(BaseHTTPRequestHandler):
             return {"error": str(e)}
         held = campaint.peek(name)
         if held is not None and held.unsaved:
-            return {"error": "the paint tool has unsaved strokes on "
-                             + ", ".join(held.state()["files"])
-                             + " - save or discard them on the Paint tab first"}
+            return {"error": _i18n.msg("eng.server.paint_tool_has_unsaved_strokes", "the paint tool has unsaved strokes on {files} - save or discard them on the Paint tab first", files=", ".join(held.state()["files"]))}
         try:
             plan = mapgen.plan(mod, cm, body)
             out = {"plan": plan.payload()}

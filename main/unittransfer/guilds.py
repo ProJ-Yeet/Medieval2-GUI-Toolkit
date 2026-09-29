@@ -342,8 +342,9 @@ def check_guild(g: Guild, buildings: Optional[set] = None) -> List[Dict]:
     bad = [v for v in levels if not kb.is_int(v)]
     if bad:
         out.append(finding("levels_not_numbers", True,
-                           "`levels` takes whole numbers of guild points - "
-                           + kb.and_list(bad) + " is not one", value=" ".join(levels)))
+                           _i18n.msg("eng.guilds.levels_takes_whole_numbers",
+                                     "`levels` takes whole numbers of guild points - {bad} is not one",
+                                     bad=kb.and_list(bad)), value=" ".join(levels)))
         return out
     nums = [int(v) for v in levels]
     if len(nums) != LEVEL_COUNT:
@@ -354,8 +355,10 @@ def check_guild(g: Guild, buildings: Optional[set] = None) -> List[Dict]:
     if any(b <= a for a, b in zip(nums, nums[1:])):
         out.append(finding(
             "levels_order", False,
-            "`levels` counts upward - " + " ".join(levels) + " does not, so a "
-            "later tier is reached before an earlier one",
+            _i18n.msg("eng.guilds.levels_counts_upward",
+                      "`levels` counts upward - {levels} does not, so a "
+                      "later tier is reached before an earlier one",
+                      levels=" ".join(levels)),
             value=" ".join(levels)))
     if any(n < 0 for n in nums):
         out.append(finding("levels_negative", False,
@@ -410,9 +413,12 @@ def check_file(gf: GuildFile, tf: Optional[triggers.TriggerFile] = None,
         if a.scope and a.scope not in SCOPES:
             out.append(finding(
                 "unknown_scope", False,
-                f"`Guild {a.guild} {a.scope} {a.points}` - the scope letter is "
-                + kb.and_list(sorted(SCOPES)) + " in every one of the 507 real "
-                "lines measured", guild=a.guild, line=a.line + 1))
+                _i18n.msg("eng.guilds.the_scope_letter_is",
+                          "`Guild {guild} {scope} {points}` - the scope letter is "
+                          "{scopes} in every one of the 507 real lines measured",
+                          guild=a.guild, scope=a.scope, points=a.points,
+                          scopes=kb.and_list(sorted(SCOPES))),
+                guild=a.guild, line=a.line + 1))
         elif a.points and not kb.is_int(a.points):
             out.append(finding(
                 "points_not_number", False,
@@ -741,7 +747,8 @@ def apply(p: GuildPlan) -> Dict:
     from .logutil import file_op, log
 
     if p.errors:
-        raise ValueError("cannot apply: " + "; ".join(p.errors))
+        raise ValueError(_i18n.msg("eng.guilds.cannot_apply", "cannot apply: {why}",
+                                   why="; ".join(p.errors)))
     if not p.text:
         raise ValueError(_i18n.msg("eng.guilds.nothing_to_change", "nothing to change"))
     mod = p.mod

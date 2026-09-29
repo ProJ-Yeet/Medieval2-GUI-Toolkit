@@ -280,9 +280,9 @@ def _parse(text: str, what: str, keys: Sequence[str], named: bool) -> BlockFile:
             continue
         cur.end = i + 1
         if word not in keys:
-            bf.warnings.append(
-                f"line {i + 1}: `{parts[0]}` is not one of "
-                + kb.and_list(list(keys)))
+            bf.warnings.append(_i18n.msg("eng.campevents.is_not_one_of_the_words_an_event_reads",
+                                         "line {line}: `{word}` is not one of {keys}",
+                                         line=i + 1, word=parts[0], keys=kb.and_list(list(keys))))
             continue
         cur.lines.setdefault(word, []).append(i)
         cur.values.setdefault(word, []).append(rest)
@@ -762,9 +762,11 @@ def _event_text_findings(bf: BlockFile, mod) -> List[Dict]:
                    if f"{b.name.upper()}_{k}" not in pairs]
         if missing:
             _finding(out, "no_text", False,
-                     f"`{b.name}` has no "
-                     + kb.and_list([f"{{{b.name.upper()}_{k}}}" for k in missing])
-                     + f" in {EVENT_TEXT_REL}, so the message it shows is blank",
+                     _i18n.msg("eng.campevents.has_no_text_so_the_message_is_blank",
+                               "`{name}` has no {texts} in {rel}, so the message it shows is blank",
+                               name=b.name,
+                               texts=kb.and_list([f"{{{b.name.upper()}_{k}}}" for k in missing]),
+                               rel=EVENT_TEXT_REL),
                      name=b.name, line=b.head_line + 1)
     return out
 
@@ -787,13 +789,17 @@ def _event_picture_findings(bf: BlockFile, mod) -> List[Dict]:
         if not absent:
             continue
         rel = [str(d.relative_to(Path(mod.data))).replace("\\", "/") for d in absent]
-        _finding(out, "no_picture", True,
-                 f"`{b.name}` has no picture in "
-                 + kb.and_list(rel[:3])
-                 + (f" and {len(rel) - 3} more" if len(rel) > 3 else "")
-                 + " - a missing event picture crashes the campaign when the "
-                   "event fires",
-                 name=b.name, line=b.head_line + 1)
+        if len(rel) > 3:
+            said = _i18n.msg("eng.campevents.has_no_picture_in_and_more",
+                             "`{name}` has no picture in {folders} and {more} more - a missing event picture "
+                             "crashes the campaign when the event fires",
+                             name=b.name, folders=kb.and_list(rel[:3]), more=len(rel) - 3)
+        else:
+            said = _i18n.msg("eng.campevents.has_no_picture_in",
+                             "`{name}` has no picture in {folders} - a missing event picture "
+                             "crashes the campaign when the event fires",
+                             name=b.name, folders=kb.and_list(rel[:3]))
+        _finding(out, "no_picture", True, said, name=b.name, line=b.head_line + 1)
     return out
 
 
@@ -1173,7 +1179,7 @@ def apply(p: CampEventPlan) -> Dict:
     from .logutil import file_op, log
 
     if p.errors:
-        raise ValueError("cannot apply: " + "; ".join(p.errors))
+        raise ValueError(_i18n.msg("eng.campevents.cannot_apply", "cannot apply: {why}", why="; ".join(p.errors)))
     if not p.text or p.path is None:
         raise ValueError(_i18n.msg("eng.campevents.nothing_to_change", "nothing to change"))
     mod = p.mod

@@ -521,19 +521,18 @@ def _r_extra_markers(ck: Check) -> Iterable[Finding]:
         owner = _marker_owner(idx, at, "settlement")
         yield Finding(
             "marker.extra", "fatal",
-            f"a second settlement pixel at {at[0]},{at[1]}"
-            + (f", in {owner}" if owner else "")
-            + ". A region gets one city, and the engine takes the first it "
-              "scans and leaves the other standing in nothing.",
+            _i18n.msg("eng.mapcheck.second_settlement_pixel_in_owner", "a second settlement pixel at {x},{y}, in {owner}. A region gets one city, and the engine takes the first it scans and leaves the other standing in nothing.", x=at[0], y=at[1], owner=owner)
+            if owner else
+            _i18n.msg("eng.mapcheck.second_settlement_pixel", "a second settlement pixel at {x},{y}. A region gets one city, and the engine takes the first it scans and leaves the other standing in nothing.", x=at[0], y=at[1]),
             file=ck.rel("map_regions.tga"), tile=at,
             what=f"settlement|{at[0]},{at[1]}")
     for at in idx.extra_ports[:ROW_MAX]:
         owner = _marker_owner(idx, at, "port")
         yield Finding(
             "marker.extra", "warn",
-            f"a second port pixel at {at[0]},{at[1]}"
-            + (f", for {owner}" if owner else "")
-            + ". Only one of them will ever be a port.",
+            _i18n.msg("eng.mapcheck.second_port_pixel_for_owner", "a second port pixel at {x},{y}, for {owner}. Only one of them will ever be a port.", x=at[0], y=at[1], owner=owner)
+            if owner else
+            _i18n.msg("eng.mapcheck.second_port_pixel", "a second port pixel at {x},{y}. Only one of them will ever be a port.", x=at[0], y=at[1]),
             file=ck.rel("map_regions.tga"), tile=at,
             what=f"port|{at[0]},{at[1]}")
 
@@ -771,7 +770,7 @@ def _unknown_colours(ck: Check, code: str, namer, label: str, rule_code: str,
         where = _find(data, ck.width, rgb, limit=1)
         yield Finding(
             rule_code, severity,
-            _i18n.msg("eng.mapcheck.rgb_is_on_count_tile_of", "rgb({rgb}, {rgb2}, {rgb3}) is on {count:,} tile{x} of {file} and {label}. The engine reads it as whatever it happens to fall nearest to, which is not a decision anybody made.", rgb=rgb[0], rgb2=rgb[1], rgb3=rgb[2], count=count, x='' if count == 1 else 's', file=LAYER_BY_CODE[code]['file'], label=label),
+            _i18n.msgN("eng.mapcheck.rgb_is_on_tiles_of_file", count, "rgb({red}, {green}, {blue}) is on {count:,} tile of {file} and {label}. The engine reads it as whatever it happens to fall nearest to, which is not a decision anybody made.", "rgb({red}, {green}, {blue}) is on {count:,} tiles of {file} and {label}. The engine reads it as whatever it happens to fall nearest to, which is not a decision anybody made.", red=rgb[0], green=rgb[1], blue=rgb[2], file=LAYER_BY_CODE[code]['file'], label=label),
             file=ck.rel(LAYER_BY_CODE[code]['file']),
             tile=where[0] if where else None, count=count,
             what=f"{rgb[0]},{rgb[1]},{rgb[2]}")
@@ -1367,7 +1366,7 @@ def position_faults(cm: CampaignMap, x: int, gy: int,
     iy = cm.terrain.image_y(gy)
     if not (0 <= x < w and 0 <= iy < h):
         return [{"code": "off", "fatal": True, "near": None,
-                 "tail": f"at {x},{gy}, which is off a {w}x{h} map altogether."}]
+                 "tail": _i18n.msg("eng.mapcheck.tail_off_the_map", "at {x},{y}, which is off a {w}x{h} map altogether.", x=x, y=gy, w=w, h=h)}]
     try:
         sea = cm.sea if sea is None else sea
     except MapError:
@@ -1377,7 +1376,7 @@ def position_faults(cm: CampaignMap, x: int, gy: int,
     at = mapsnap.nearest(w, h, x, iy, lambda tx, ty: not sea[ty * w + tx])
     near = cm.game_xy(*at) if at is not None else None
     return [{"code": "sea", "fatal": False, "near": near,
-             "tail": f"at {x},{gy}, on a tile the engine reads as sea."}]
+             "tail": _i18n.msg("eng.mapcheck.tail_on_a_sea_tile", "at {x},{y}, on a tile the engine reads as sea.", x=x, y=gy)}]
 
 
 def _land_clause(f: dict, start: Tuple[int, int]) -> str:
@@ -1405,9 +1404,9 @@ def _r_resource_position(ck: Check) -> Iterable[Finding]:
             off = f["code"] == "off"
             yield Finding(
                 "strat.resource_position", "fatal" if f["fatal"] else "warn",
-                f"`{n.name}` is {f['tail']}"
-                + ("" if off else " Nothing on land can reach it.")
-                + _land_clause(f, (x, gy)),
+                _i18n.msg("eng.mapcheck.resource_is_tail", "`{name}` is {tail}", name=n.name, tail=f['tail'])
+                if off else
+                _i18n.msg("eng.mapcheck.resource_is_tail_unreachable", "`{name}` is {tail} Nothing on land can reach it.{land}", name=n.name, tail=f['tail'], land=_land_clause(f, (x, gy))),
                 file=ck.strat_rel, line=n.start + 1,
                 tile=None if off else (x, iy), fix="resource_position",
                 what=f"{n.name.lower()}|{x},{gy}|{f['code']}")
@@ -1557,9 +1556,9 @@ def _r_event_position(ck: Check) -> Iterable[Finding]:
                 off = f["code"] == "off"
                 yield Finding(
                     "event.position", "fatal" if f["fatal"] else "warn",
-                    f"`{label}` is placed {f['tail']}"
-                    + ("" if off else " A settlement event there reaches nobody.")
-                    + _land_clause(f, (p.x, p.y)),
+                    _i18n.msg("eng.mapcheck.label_is_placed_tail", "`{label}` is placed {tail}", label=label, tail=f['tail'])
+                    if off else
+                    _i18n.msg("eng.mapcheck.label_is_placed_tail_unreached", "`{label}` is placed {tail} A settlement event there reaches nobody.{land}", label=label, tail=f['tail'], land=_land_clause(f, (p.x, p.y))),
                     file=rel, line=p.line + 1,
                     tile=None if off else (p.x, ck.cm.terrain.image_y(p.y)),
                     what=f"{label.lower()}|{p.x},{p.y}|{f['code']}")
@@ -1981,8 +1980,7 @@ def plan_fix(mod, codes: Sequence[str], cm: Optional[CampaignMap] = None,
     p = FixPlan(mod=mod, codes=[c for c in codes if c in FIXES])
     unknown = [str(c) for c in codes if c not in FIXES]
     if unknown:
-        p.errors.append("no such fix: " + ", ".join(unknown)
-                        + ". The fixes are " + ", ".join(sorted(FIXES)) + ".")
+        p.errors.append(_i18n.msg("eng.mapcheck.no_such_fix_the_fixes_are", "no such fix: {unknown}. The fixes are {fixes}.", unknown=", ".join(unknown), fixes=", ".join(sorted(FIXES))))
         return p
     if not p.codes:
         p.errors.append(_i18n.msg("eng.mapcheck.no_fix_was_chosen", "no fix was chosen"))
@@ -2165,7 +2163,7 @@ def apply_fix(p: FixPlan) -> dict:
     from .logutil import file_op, log
 
     if p.errors:
-        raise ValueError("cannot apply: " + "; ".join(p.errors))
+        raise ValueError(_i18n.msg("eng.mapcheck.cannot_apply", "cannot apply: {why}", why="; ".join(p.errors)))
     if not p.data and not p.text:
         raise ValueError(_i18n.msg("eng.mapcheck.nothing_to_fix", "nothing to fix"))
     mod = p.mod

@@ -337,17 +337,18 @@ async function cevSave(action){
   const p = plan.plan || {};
   k.preview = p;
   cevPaint();
-  const what = k.tab === 'events' ? 'event' : 'disaster';
-  const verb = body.action === 'add' ? tt('common.add_2') : body.action === 'delete'
-    ? tt('common.delete') : tt('campevents.write');
-  if(!confirm(`${verb} the ${what} ${body.name}`
-    + (k.tab === 'events' ? ` in ${k.campaign || tt('campevents.this_campaign')}` : '') + '?\n\n'
-    + ((p.changes || []).slice(0, 14).join('\n') || tt('common.no_visible_change'))
-    + ((p.changes || []).length > 14
-       ? tt('campevents.and_more',{changes:p.changes.length - 14}) : '')
-    + ((p.warnings || []).length
-       ? '\n\n' + (p.warnings || []).slice(0, 4).map(x => '⚠ ' + x).join('\n') : '')
-    + tt('common.backed_up_first_and_log_can'))) return;
+  const hp = {name:body.name, campaign:k.campaign || tt('campevents.this_campaign')};
+  const head = k.tab === 'events'
+    ? (body.action === 'add' ? tt('campevents.confirm_add_event', hp)
+      : body.action === 'delete' ? tt('campevents.confirm_delete_event', hp) : tt('campevents.confirm_write_event', hp))
+    : (body.action === 'add' ? tt('campevents.confirm_add_disaster', hp)
+      : body.action === 'delete' ? tt('campevents.confirm_delete_disaster', hp) : tt('campevents.confirm_write_disaster', hp));
+  if(!confirm(tt('campevents.confirm_changes',{head,
+    changes:(p.changes || []).slice(0, 14).join('\n') || tt('common.no_visible_change'),
+    more:(p.changes || []).length > 14
+       ? tt('campevents.and_more',{changes:p.changes.length - 14}) : '',
+    warnings:(p.warnings || []).length
+       ? '\n\n' + (p.warnings || []).slice(0, 4).map(x => '⚠ ' + x).join('\n') : ''}))) return;
   k.busy = true;
   let res;
   try{ res = await api.post('/api/campevents/apply', body); }
@@ -387,7 +388,7 @@ function cevHtml(){
     <button class="cptog${k.open ? ' on' : ''}" onclick="cevToggle()"
       title="${ttA('campevents.descr_events_txt_and_descr_disasters')}">
       ${tt('campevents.events',{open:k.open ? ' ✓' : ''})}</button>
-    ${k.ev ? `<span class="count">${tt('campevents.block',{x:n,x2:n === 1 ? '' : 's'})}</span>` : ''}
+    ${k.ev ? `<span class="count">${ttN('campevents.block_count', n)}</span>` : ''}
     ${k.busy ? `<span class="count">${tt('common.working_2')}</span>` : ''}
   </div>`;
   if(!k.open) return head;
@@ -423,7 +424,7 @@ function cevWarnHtml(){
   const bad = ((d && d.findings) || []).filter(f => f.fatal).length;
   const warn = ((d && d.findings) || []).length - bad;
   return rows.map(w => `<div class="w-warn">${esc(w)}</div>`).join('')
-    + (bad || warn ? `<div class="count">${tt('campevents.thing_to_look_at_listed_against',{bad:bad ? tt('campevents.fatal',{bad}) : '',warn,warn2:warn === 1 ? '' : 's'})}</div>` : '');
+    + (bad || warn ? `<div class="count">${ttN('campevents.things_to_look_at', warn, {bad:bad ? tt('campevents.fatal',{bad}) : ''})}</div>` : '');
 }
 
 /* One row per block, with what is wrong with it counted beside it.
@@ -447,7 +448,7 @@ function cevListHtml(){
     return `<div class="cxrow${k.sel === name && !k.adding ? ' on' : ''}"
       onclick="cevPick('${esc(name).replace(/'/g, "\\'")}')">
       <b>${esc(name || '(unnamed)')}</b>
-      <span class="count">${where}${pos ? tt('campevents.position',{pos,pos2:pos === 1 ? '' : 's'}) : ''}</span>
+      <span class="count">${where}${pos ? ttN('campevents.position_count', pos) : ''}</span>
       ${bad ? `<span class="w-bad">${bad}</span>`
         : mine.length ? `<span class="w-warn">${mine.length}</span>` : ''}
     </div>`;
@@ -557,8 +558,7 @@ function cevEventFormHtml(){
       <div class="csbtns"><button onclick="cevListAdd('dates', '')">${tt('campevents.add')}</button></div>
     </div>
     ${cevPositionsHtml()}
-    ${cevWordsHtml('regions', tt('campevents.regions'), 'an alternative to positions - the '
-      + tt('campevents.file_header_allows_either'), [])}
+    ${cevWordsHtml('regions', tt('campevents.regions'), tt('campevents.regions_alternative_to_positions'), [])}
     <div class="cmfield"><label>${tt('campevents.movie')}</label>
       <input value="${esc(w.movie)}" placeholder="event/gunpowder_invented.bik"
         oninput="cevSet('movie', this.value)">
@@ -614,7 +614,7 @@ function cevDisasterFormHtml(){
         : tt('campevents.descr_climates_txt_is_not_on'),
       d.climates || [])}
     ${cevWordsHtml('regions', tt('campevents.regions'),
-      `<code>${esc(d.sea_region || tt('campevents.the_sea'))}</code> ${tt('campevents.is_the_one_value_that_is')}`,
+      tt('campevents.sea_is_the_one_value',{sea:esc(d.sea_region || tt('campevents.the_sea'))}),
       [])}
     ${cevPositionsHtml()}
     ${cevFindingsHtml()}

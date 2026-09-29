@@ -181,10 +181,10 @@ function cvHtml(cv){
       ${cv.canTidy?`<button class="${cvTidyOn()?'on':''}" title="${ttA('codeview.line_every_value_up_in_one')}"
         onclick="cvTidyToggle(cvOf('${cv.uid}'))">${tt('codeview.tidy_layout')}</button>`:''}
       ${(cv.canHide&&cv.comments)?`<button class="${cvHideOn()?'on':''}" title="${ttA('codeview.leave_the_lines_that_are_nothing')}"
-        onclick="cvCommentsToggle(cvOf('${cv.uid}'))">${tt('codeview.comment_line',{comments:cv.comments,x:cv.comments===1?'':'s'})}</button>`:''}
+        onclick="cvCommentsToggle(cvOf('${cv.uid}'))">${ttN('codeview.comment_line_count',cv.comments)}</button>`:''}
       <button class="${cvFollowOn()?'on':''}" data-cvfollow title="${ttA('codeview.scroll_the_text_to_a_boxs')}"
         onclick="cvFollowToggle()">${tt('codeview.follow_hover')}</button>
-      <span class="count">${tt('codeview.line',{x:n,x2:n===1?'':'s'})}</span>
+      <span class="count">${ttN('codeview.line_count',n)}</span>
     </div>
     <div class="cvwrap">
       <div class="cvgutter"><div class="cvshift" id="cvgut-${cv.uid}">${cvGutter(cv)}</div></div>
@@ -394,8 +394,7 @@ async function cvTidy(cv){
 async function cvTidyToggle(cv){
   const on=cvTidyOn();
   if(on&&cv.base!==cv.pristine&&cv.base!==cv.auto
-     &&!confirm(tt('codeview.reading_the_record_back_from_the')
-       +tt('codeview.the_boxes_keep_their_own_changes')))return;
+     &&!confirm(tt('codeview.reading_the_record_back_confirm')))return;
   cvSetSetting('code_view_tidy',!on);
   if(!on)return cvTidy(cv);            // turning it on: line up what is here now
   await cvReload(cv);
@@ -504,8 +503,7 @@ async function cvUndoStep(cv,redo){
   cv.busy=true; cv.err=null;
   cvRedrawLines(cv); cvPaintStatus(cv);
   await cvParse(cv);                          // the boxes follow the text, as ever
-  toast((redo?tt('codeview.redone'):tt('codeview.undone'))
-    +tt('codeview.in_the_text_more_to_undo',{uPast_n:cv.uPast.length}),1400);
+  toast(tt('codeview.what_in_the_text_more_to_undo',{what:redo?tt('codeview.redone'):tt('codeview.undone'),uPast_n:cv.uPast.length}),1400);
   return true;
 }
 // The pane the caret is in, if it is in one that can be typed into.

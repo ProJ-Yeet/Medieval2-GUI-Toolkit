@@ -113,12 +113,11 @@ async function cnwApply(){
   const k = state.cnw;
   if(!k || k.busy || !k.plan || !k.plan.ok) return;
   const p = k.plan;
-  if(!confirm(tt('campnew.make_out_of',{name:p.name,source:p.source})
-    + (p.changes || []).join('\n')
+  if(!confirm(tt('campnew.make_confirm',{name:p.name,source:p.source,
+    changes:(p.changes || []).join('\n')
     + ((p.warnings || []).length
-       ? '\n\n' + p.warnings.map(x => '⚠ ' + x).join('\n') : '')
-    + tt('campnew.file_s_nothing_existing_is_written',{files:p.files,x:cnwSize(p.bytes)})
-    + tt('campnew.over_and_log_can_undo_it'))) return;
+       ? '\n\n' + p.warnings.map(x => '⚠ ' + x).join('\n') : ''),
+    files:p.files,size:cnwSize(p.bytes)}))) return;
   k.busy = true;
   cbrPaint();
   let res;
@@ -131,8 +130,7 @@ async function cnwApply(){
     cbrPaint();
     return;
   }
-  toast(tt('campnew.made_from_file_s',{name:res.name,source:p.source,files:res.files})
-    + tt('common.log_can_undo_it'), 7000);
+  toast(tt('campnew.made_from_toast',{name:res.name,source:p.source,files:res.files}), 7000);
   activity(tt('campnew.new_campaign'), tt('campnew.copied_from',{mod:k.mod,name:res.name,source:p.source}));
   k.plan = null; k.name = ''; k.title = ''; k.blurb = '';
   k.d = null;
@@ -178,7 +176,7 @@ function cnwHtml(){
         ${rows.map(r => `<option value="${esc(r.campaign)}"${
           r.campaign === k.source ? ' selected' : ''}>${tt('campnew.files',{x:esc(r.title || r.leaf),files:r.files,x2:cnwSize(r.bytes)})}</option>`).join('')}
       </select></span></div>
-    ${src.layers && src.layers.length ? `<div class="count">${tt('campnew.it_ships_map_layer_of_its',{layers_n:src.layers.length,x:src.layers.length === 1 ? '' : 's'})}</div>` : ''}
+    ${src.layers && src.layers.length ? `<div class="count">${ttN('campnew.map_layers_note',src.layers.length)}</div>` : ''}
     <div class="cmtrow"><span class="cmtval">
       <span class="cmtnm">${tt('campnew.folder')}</span>
       <input value="${esc(k.name)}" placeholder="My_Campaign"
@@ -210,7 +208,7 @@ function cnwPlanHtml(k){
   if((p.errors || []).length) return `<div class="w-bad">
     ${p.errors.map(e => esc(e)).join('<br>')}</div>`;
   return `<div class="cbrrow">
-    <div class="k">${tt('campnew.file_into',{files:p.files,files2:p.files === 1 ? '' : 's',x:cnwSize(p.bytes),folder:esc(p.folder)})}</div>
+    <div class="k">${ttN('campnew.files_into_folder',p.files,{size:cnwSize(p.bytes),folder:esc(p.folder)})}</div>
     ${(p.changes || []).map(x => `<div class="count">${esc(x)}</div>`).join('')}
     ${(p.warnings || []).map(x => `<div class="w-warn">${esc(x)}</div>`).join('')}
     <div class="cmbar2">

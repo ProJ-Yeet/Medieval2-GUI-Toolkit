@@ -258,7 +258,7 @@ def check_animals(animals: List[Animal], models: Optional[set],
         if name not in seen:
             have = ", ".join(a.name for a in animals) or "nothing"
             out.append(finding("undeclared", "warn",
-                               _i18n.msg("eng.sidefiles.carr_animal_and_this_file_does", "{units}{x} carr{x2} `animal {name}`, and this file does not declare it (it declares {have})", units=', '.join(units[:3]), x=' and more' if len(units) > 3 else '', x2='ies' if len(units) == 1 else 'y', name=name, have=have),
+                               _i18n.msgN("eng.sidefiles.units_carry_an_undeclared_animal", len(units), "{units}{and_more} carries `animal {name}`, and this file does not declare it (it declares {have})", "{units}{and_more} carry `animal {name}`, and this file does not declare it (it declares {have})", units=', '.join(units[:3]), and_more=_i18n.msg("eng.sidefiles.and_more", " and more") if len(units) > 3 else '', name=name, have=have),
                                f"animals/{name}", 0))
     return out
 
@@ -835,7 +835,7 @@ def apply(p: SidePlan) -> Dict:
     from . import config
     from .logutil import file_op, log
     if p.errors or not p.texts:
-        raise ValueError("cannot apply: " + ("; ".join(p.errors) or "nothing to change"))
+        raise ValueError(_i18n.msg("eng.sidefiles.cannot_apply", "cannot apply: {why}", why="; ".join(p.errors) or _i18n.msg("eng.sidefiles.nothing_to_change", "nothing to change")))
     mod = p.mod
     tid = config.new_transfer_id()
     backup_root = config.backup_root_for(tid)

@@ -29,23 +29,23 @@
    ========================================================================= */
 const UNDO_SCOPES=[
   // the building editor: one working copy of every level in the line
-  {id:()=>(modalOpen()&&state.bld&&state.bld.work)?tt('undo.bld')+state.bld.mod+':'+state.bld.line:'',
+  {id:()=>(modalOpen()&&state.bld&&state.bld.work)?tt('undo.bld')+state.bld.mod+':'+state.bld.line:'', // i18n-ok: undo scope key, never shown
    get:()=>state.bld.work, set:v=>{state.bld.work=v;}, draw:()=>renderBuildingEditor()},
   // the unit editor and the bmdb editor share state.ed
   {id:()=>(modalOpen()&&state.ed)
-      ?(state.ed.bmdb?tt('undo.bmdb'):tt('undo.ed'))+state.ed.mod+':'+(state.ed.unit||edBmdbName()):'',
+      ?(state.ed.bmdb?tt('undo.bmdb'):tt('undo.ed'))+state.ed.mod+':'+(state.ed.unit||edBmdbName()):'', // i18n-ok: undo scope key, never shown
    get:edSnap, set:edRestore,
    draw:()=>state.ed.bmdb?renderBmdbEditor():renderEditor()},
   // the transfer composer: one config per unit being sent across
   {id:()=>(modalOpen()&&!state.ed&&!(state.bld&&state.bld.work)&&state.editing&&composerList.length)
-      ?tt('undo.cfg')+state.src+'>'+state.dst:'',
+      ?tt('undo.cfg')+state.src+'>'+state.dst:'', // i18n-ok: undo scope key, never shown
    get:cfgSnap, set:cfgRestore, draw:()=>renderComposer()},
   // sounds mode stages its changes on the page itself, with no dialog
-  {id:()=>(!modalOpen()&&state.mode==='sounds'&&state.snd)?tt('undo.snd')+state.src:'',
+  {id:()=>(!modalOpen()&&state.mode==='sounds'&&state.snd)?tt('undo.snd')+state.src:'', // i18n-ok: undo scope key, never shown
    get:()=>state.snd.ops, set:v=>{state.snd.ops=v;}, draw:()=>renderSounds()},
   // 47a: the six sound banks stage event edits the same way, one file at a time
   {id:()=>(!modalOpen()&&(state.mode==='soundbanks'||state.mode==='soundscripts')&&state.sbk)
-      ?tt('undo.sbk')+state.mode+':'+state.src+':'+state.sbk.file:'',
+      ?tt('undo.sbk')+state.mode+':'+state.src+':'+state.sbk.file:'', // i18n-ok: undo scope key, never shown
    get:()=>state.sbk.w, set:v=>{state.sbk.w=v;}, draw:()=>renderSoundBanks()},
 
   /* The editors built after this file. Every one of them was undoable in
@@ -61,16 +61,16 @@ const UNDO_SCOPES=[
      clears the stack instead of letting Ctrl+Z pour one record's values into
      another. */
   {id:()=>(!modalOpen()&&state.mode==='traits'&&state.tr&&state.tr.d&&state.tr.d.w)
-      ?tt('undo.tr')+state.src+':'+(state.tr.sel||'(new)'):'',
+      ?tt('undo.tr')+state.src+':'+(state.tr.sel||'(new)'):'', // i18n-ok: undo scope key, never shown
    get:()=>state.tr.d.w, set:v=>{state.tr.d.w=v;}, draw:()=>trPaint()},
   {id:()=>(!modalOpen()&&state.mode==='ancillaries'&&state.an&&state.an.d&&state.an.d.w)
-      ?tt('undo.an')+state.src+':'+(state.an.sel||'(new)'):'',
+      ?tt('undo.an')+state.src+':'+(state.an.sel||'(new)'):'', // i18n-ok: undo scope key, never shown
    get:()=>state.an.d.w, set:v=>{state.an.d.w=v;}, draw:()=>anPaint()},
   {id:()=>(!modalOpen()&&state.mode==='factions'&&state.fac&&state.fac.d&&state.fac.d.w)
-      ?tt('undo.fac')+state.src+':'+(state.fac.sel||''):'',
+      ?tt('undo.fac')+state.src+':'+(state.fac.sel||''):'', // i18n-ok: undo scope key, never shown
    get:()=>state.fac.d.w, set:v=>{state.fac.d.w=v;}, draw:()=>facPaint()},
   {id:()=>(!modalOpen()&&mfMode()&&state.mf&&state.mf.d&&state.mf.d.w)
-      ?tt('undo.mf')+state.src+':'+(state.mf.tab||'')+':'+(state.mf.sel||'(new)'):'',
+      ?tt('undo.mf')+state.src+':'+(state.mf.tab||'')+':'+(state.mf.sel||'(new)'):'', // i18n-ok: undo scope key, never shown
    get:()=>state.mf.d.w, set:v=>{state.mf.d.w=v;}, draw:()=>mfPaint()},
   // The campaign map's region panel (16d). It is a page editor like the four
   // above, and its working copy is `state.cmap.det.w` - the record's editable
@@ -79,13 +79,13 @@ const UNDO_SCOPES=[
   // region changes the key, which clears the stack rather than letting Ctrl+Z
   // pour one province's religions into another's.
   {id:()=>(!modalOpen()&&state.mode==='campmap'&&state.cmap&&state.cmap.det
-      &&state.cmap.det.w)?tt('undo.cmap')+state.cmap.mod+':'+state.cmap.det.name:'',
+      &&state.cmap.det.w)?tt('undo.cmap')+state.cmap.mod+':'+state.cmap.det.name:'', // i18n-ok: undo scope key, never shown
    get:()=>state.cmap.det.w, set:v=>{state.cmap.det.w=v;},
    draw:()=>cmapRegionPaint()},
   // Strings is the odd one out: its working copy is the map of pending edits,
   // keyed by row id, not a cloned record.
   {id:()=>(!modalOpen()&&state.mode==='strings'&&state.str&&state.str.rows)
-      ?tt('undo.str')+state.src+':'+(state.str.file||''):'',
+      ?tt('undo.str')+state.src+':'+(state.str.file||''):'', // i18n-ok: undo scope key, never shown
    // 48: new and removed rows are part of the same staging
    get:()=>({e:state.str.edits,a:state.str.adds,r:state.str.removes}),
    set:v=>{state.str.edits=v.e||{};state.str.adds=v.a||[];state.str.removes=v.r||{};},
@@ -209,7 +209,7 @@ function undoFocus(){
       .map(a=>`[${a.name}="${cssq(a.value)}"]`).join('');
     if(!own)return '';
     const row=el.closest('[data-cap]');
-    return (row?tt('undo.data_cap',{x:cssq(row.dataset.cap)}):'')+el.tagName.toLowerCase()+own;
+    return (row?tt('undo.data_cap',{x:cssq(row.dataset.cap)}):'')+el.tagName.toLowerCase()+own; // i18n-ok: a CSS selector used to find the box again, never shown
   })();
   const path=[];
   for(let n=el;n&&n!==document.body;n=n.parentElement)
@@ -364,7 +364,7 @@ function undoStep(redo){
   paintDirty();
   // a re-draw that replaces images can settle a frame later and shift things
   requestAnimationFrame(()=>scrollRestore(scrolled));
-  toast((redo?tt('undo.redone'):tt('undo.undone'))+tt('undo.more_to_undo',{past_n:undo.past.length}),1400);
+  toast(redo?ttN('undo.redone_more',undo.past.length):ttN('undo.undone_more',undo.past.length),1400);
   return true;
 }
 document.addEventListener('input',e=>undoTick(undoKeyOf(e.target)));

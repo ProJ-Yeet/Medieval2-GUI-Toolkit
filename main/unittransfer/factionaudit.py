@@ -746,11 +746,18 @@ def repair_plan(mod, body: dict) -> fc.ClonePlan:
             p.errors.append(_i18n.msg("eng.factionaudit.there_is_no_check_called", "there is no check called {cid}", cid=cid))
             continue
         if chk.fix != "clone":
-            p.errors.append(f"{chk.label} is not repaired by copying - "
-                            + ("the campaign screen's New faction tab makes it"
-                               if chk.fix == "strat" else
-                               "the campaign screen's Winning tab adds it"
-                               if chk.fix == "wins" else "nothing copies it"))
+            if chk.fix == "strat":
+                p.errors.append(_i18n.msg("eng.factionaudit.is_not_repaired_by_copying_new_faction_tab",
+                                          "{label} is not repaired by copying - "
+                                          "the campaign screen's New faction tab makes it", label=chk.label))
+            elif chk.fix == "wins":
+                p.errors.append(_i18n.msg("eng.factionaudit.is_not_repaired_by_copying_winning_tab",
+                                          "{label} is not repaired by copying - "
+                                          "the campaign screen's Winning tab adds it", label=chk.label))
+            else:
+                p.errors.append(_i18n.msg("eng.factionaudit.is_not_repaired_by_copying_nothing_copies_it",
+                                          "{label} is not repaired by copying - "
+                                          "nothing copies it", label=chk.label))
             continue
         if mine[cid]["state"] == "ok":
             p.notes.append(_i18n.msg("eng.factionaudit.already_has_it", "{label}: {faction} already has it", label=chk.label, faction=faction))
@@ -779,11 +786,17 @@ def repair_plan(mod, body: dict) -> fc.ClonePlan:
                          f"{_plural(edit.count, 'entry', 'entries')} copied from "
                          f"{template}")
         if cid == "units":
-            p.warnings.append(
-                _i18n.msg("eng.factionaudit.joins_every_ownership_line_is_on", "{faction} joins every ownership line {template_} is on - {plural}. That is {template_2}'s whole roster; the Unit Editor takes any of them back out.", faction=faction, template_=template, plural=_plural(edit.count, 'unit'), template_2=template))
+            p.warnings.append(_i18n.msgN(
+                "eng.factionaudit.joins_every_ownership_line_is_on_units", edit.count,
+                "{faction} joins every ownership line {template_} is on - {count} unit. That is {template_2}'s whole roster; the Unit Editor takes any of them back out.",
+                "{faction} joins every ownership line {template_} is on - {count} units. That is {template_2}'s whole roster; the Unit Editor takes any of them back out.",
+                faction=faction, template_=template, template_2=template))
         if cid == "buildings":
-            p.warnings.append(
-                _i18n.msg("eng.factionaudit.joins_it_builds_and_recruits_wherever", "{faction} joins {plural} - it builds and recruits wherever {template_} does.", faction=faction, plural=_plural(edit.count, 'requires factions clause'), template_=template))
+            p.warnings.append(_i18n.msgN(
+                "eng.factionaudit.joins_it_builds_and_recruits_wherever_clauses", edit.count,
+                "{faction} joins {count} requires factions clause - it builds and recruits wherever {template_} does.",
+                "{faction} joins {count} requires factions clauses - it builds and recruits wherever {template_} does.",
+                faction=faction, template_=template))
     if not p.errors and not p.written():
         p.errors.append(_i18n.msg("eng.factionaudit.nothing_to_repair_is_missing_nothing", "nothing to repair: {faction} is missing nothing {template_} can give it", faction=faction, template_=template))
     return p

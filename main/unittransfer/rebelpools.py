@@ -317,9 +317,16 @@ def plan(mod, cm: Optional[campmap.CampaignMap], body: dict) -> RebelPlan:
 
     missing = [n for n in want if rf.by_name(n) is None]
     if missing:
-        p.errors.append("no such province in " + p.rel + ": "
-                        + ", ".join(missing[:6])
-                        + (f" (+{len(missing) - 6} more)" if len(missing) > 6 else ""))
+        if len(missing) > 6:
+            p.errors.append(_i18n.msg(
+                "eng.rebelpools.no_such_province_and_more",
+                "no such province in {rel}: {names} (+{more} more)",
+                rel=p.rel, names=", ".join(missing[:6]), more=len(missing) - 6))
+        else:
+            p.errors.append(_i18n.msg(
+                "eng.rebelpools.no_such_province",
+                "no such province in {rel}: {names}",
+                rel=p.rel, names=", ".join(missing[:6])))
         return p
 
     # back to front, so every span is still true when it is used
@@ -340,9 +347,10 @@ def plan(mod, cm: Optional[campmap.CampaignMap], body: dict) -> RebelPlan:
     p.changes.reverse()          # back into the order the person picked them
     p.text = "" if text == rf.serialise() else text
     if not p.text and not p.errors:
-        p.errors.append(
-            "nothing to change - every province picked already names "
-            + p.rebel)
+        p.errors.append(_i18n.msg(
+            "eng.rebelpools.nothing_to_change_already_names",
+            "nothing to change - every province picked already names {rebel}",
+            rebel=p.rebel))
     return p
 
 
@@ -363,7 +371,8 @@ def apply(p: RebelPlan) -> dict:
     from .logutil import file_op, log
 
     if p.errors:
-        raise ValueError("cannot apply: " + "; ".join(p.errors))
+        raise ValueError(_i18n.msg("eng.rebelpools.cannot_apply", "cannot apply: {why}",
+                                   why="; ".join(p.errors)))
     if not p.text:
         raise ValueError(_i18n.msg("eng.rebelpools.nothing_to_change", "nothing to change"))
     mod = p.mod

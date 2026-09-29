@@ -807,18 +807,20 @@ def _verify(p: SortPlan, before: str, after: str) -> None:
     lost = {u.type for u in a.main_units} - {u.type for u in b.main_units}
     gained = {u.type for u in b.main_units} - {u.type for u in a.main_units}
     if lost:
-        p.errors.append(f"{len(lost)} unit(s) would be lost: "
-                        + ", ".join(sorted(lost)[:5]))
+        p.errors.append(_i18n.msg("eng.edusort.units_would_be_lost", "{count} unit(s) would be lost: {names}",
+                                  count=len(lost), names=", ".join(sorted(lost)[:5])))
     if gained:
-        p.errors.append(f"{len(gained)} unit(s) would appear from nowhere: "
-                        + ", ".join(sorted(gained)[:5]))
+        p.errors.append(_i18n.msg("eng.edusort.units_would_appear_from_nowhere",
+                                  "{count} unit(s) would appear from nowhere: {names}",
+                                  count=len(gained), names=", ".join(sorted(gained)[:5])))
 
     fields_a = {u.type: edu_mod.block_fields(u.raw) for u in a.main_units}
     changed = [u.type for u in b.main_units
                if u.type in fields_a and edu_mod.block_fields(u.raw) != fields_a[u.type]]
     if changed:
-        p.errors.append(f"{len(changed)} unit(s) would have fields changed: "
-                        + ", ".join(sorted(changed)[:5]))
+        p.errors.append(_i18n.msg("eng.edusort.units_would_have_fields_changed",
+                                  "{count} unit(s) would have fields changed: {names}",
+                                  count=len(changed), names=", ".join(sorted(changed)[:5])))
 
     def comments(text: str) -> collections.Counter:
         return collections.Counter(
@@ -827,8 +829,9 @@ def _verify(p: SortPlan, before: str, after: str) -> None:
 
     dropped = comments(before) - comments(after)
     if dropped:
-        p.errors.append(f"{sum(dropped.values())} comment line(s) would be lost: "
-                        + "; ".join(list(dropped)[:3]))
+        p.errors.append(_i18n.msg("eng.edusort.comment_lines_would_be_lost",
+                                  "{count} comment line(s) would be lost: {lines}",
+                                  count=sum(dropped.values()), lines="; ".join(list(dropped)[:3])))
 
 
 def apply(p: SortPlan) -> Dict:
@@ -840,7 +843,8 @@ def apply(p: SortPlan) -> Dict:
     from .logutil import file_op, log
 
     if p.errors:
-        raise ValueError("cannot apply: " + "; ".join(p.errors))
+        raise ValueError(_i18n.msg("eng.edusort.cannot_apply", "cannot apply: {why}",
+                                   why="; ".join(p.errors)))
     if not p.touched():
         raise ValueError(_i18n.msg("eng.edusort.nothing_to_change", "nothing to change"))
 

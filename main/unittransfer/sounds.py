@@ -585,7 +585,7 @@ def apply_sounds(plan: SoundPlan) -> Dict:
     🕑 Log -> Undo restores the voice bank byte-exact.
     """
     if plan.errors:
-        raise ValueError("cannot apply: " + "; ".join(plan.errors))
+        raise ValueError(_i18n.msg("eng.sounds.cannot_apply", "cannot apply: {why}", why="; ".join(plan.errors)))
     mod = plan.mod
     tid = config.new_transfer_id()
     backup_root = config.backup_root_for(tid)

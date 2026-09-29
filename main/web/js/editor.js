@@ -115,8 +115,7 @@ function edCvUserEdited(){
 function edCvBlocked(){
   const cv=state.ed&&state.ed.cv;
   if(!cv||!cv.err)return '';
-  return tt('editor.the_code_view_cant_be_read')+cv.err+
-    tt('editor.fix_the_line_or_undo_your');
+  return tt('editor.code_view_unreadable_fix',{err:cv.err});
 }
 /* ---- what each touched bmdb entry sends ----
    Texture paths go by faction + kind, never by span index: ticking a faction on
@@ -210,7 +209,7 @@ function renderEditor(){
         <img onerror="iconRetry(this)" src="${iconUrl(e.mod,e.unit)}">
         <div><div class="nm">${esc(e.loc.name||d.type)}${
           d.eop?`<span class="badge eop" style="margin-left:6px;vertical-align:middle">${tt('editor.eop')}</span>`:''}</div>
-          <div class="count">${tt('editor.dictionary_model_entr',{type:esc(d.type),dictionary:esc(d.dictionary),models_n:d.models.length,models:d.models.length===1?'y':'ies'})}</div>
+          <div class="count">${ttN('editor.dictionary_model_entries',d.models.length,{type:esc(d.type),dictionary:esc(d.dictionary)})}</div>
           <div class="count">${d.eop
             ? tt('editor.m2tweop_unit_saves_are_written_to',{eop_file:esc(d.eop_file)})
             : tt('editor.defined_in_data_export_descr_unit')}</div></div>
@@ -395,7 +394,7 @@ function edPrevFull(){
   const go = el.requestFullscreen || el.webkitRequestFullscreen;
   if(!go){ toast(tt('common.this_browser_will_not_go_full'), 3000); return; }
   Promise.resolve(go.call(el)).catch(e =>
-    toast(tt('common.full_screen_was_refused') + ((e && e.message) || e), 4000));
+    toast(tt('editor.full_screen_refused_because',{why:(e && e.message) || e}), 4000));
 }
 function edRenderTab(){
   const e=state.ed,b=document.getElementById('edBody');
@@ -462,8 +461,7 @@ function edWireModels(){
     cvBindHover(e.mcv,document.getElementById('edmGui'+idx));
   }
   // any box on this tab moves the pane's text with it
-  document.querySelectorAll('#edBody input[data-entry],#edBody input[data-def],'
-    +tt('editor.edbody_input_data_fac')).forEach(inp=>{
+  document.querySelectorAll('#edBody input[data-entry],#edBody input[data-def],#edBody input[data-fac]').forEach(inp=>{
       const prev=inp.oninput;
       inp.oninput=ev=>{if(prev)prev.call(inp,ev); cvFromGui(state.ed.mcv);};
     });
@@ -532,15 +530,12 @@ function edIdentity(){
         <input id="edType" value="${esc(e.newType||d.type)}"></label>
         <div class="count" style="margin-top:4px">${docPoints(
           tt('editor.renaming_it_follows_the_unit_through'),[
-          `${tt('editor.rewritten_export_descr_buildings_txt_every')} `
-            +`${tt('editor.descr_strat_txt_and_campaign_script')} `
-            +tt('editor.descr_mercenaries_txt_and_the_mods'),
+          tt('editor.rename_rewrote_list'),
           tt('editor.probe_lists_every_file_and_how'),
-          tt('editor.spellings_that_differ_only_in_capitalisation')
-            +tt('editor.things_share_these_files')])}</div></div>
+          tt('editor.spellings_differ_other_things')])}</div></div>
       <div><label>${tt('editor.dictionary_localisation_unit_card_key')}
         <input id="edDict" value="${esc(e.newDict||d.dictionary)}"></label>
-        <div class="count" style="margin-top:4px">${tt('editor.renaming_it_moves_the_text_entry',{icons_n:d.icons.length,icons:d.icons.length===1?'':'s'})}
+        <div class="count" style="margin-top:4px">${ttN('editor.renaming_moves_text_entry',d.icons.length)}
           <label class="chk" style="margin-top:4px"><input type="checkbox" id="edRmIcons"
             ${e.removeOldIcons?'checked':''}> ${tt('editor.delete_the_old_icon_files')}</label></div></div>
     </div>
@@ -562,8 +557,7 @@ function edIdentity(){
         edOwnFolders().length
           ?tt('editor.right_now_that_is_folder_s',{n:edOwnFolders().length,edOwnFolders:edOwnFolders().map(esc).join('</code> <code>')})
           :tt('editor.this_unit_has_no_ownership_so'),
-        `${tt('editor.a_png_jpg_is_converted_to')} `
-          +tt('editor.nothing_else')])}</div>
+        tt('editor.card_png_converted_engine_reads_nothing_else')])}</div>
       <div class="icoprev">${edIconSlot('card')}${edIconSlot('info')}</div>
       ${edCardVariants('card',tt('editor.unit_cards_on_disk'))}
       ${edCardVariants('info',tt('editor.info_cards_on_disk'))}
@@ -630,8 +624,9 @@ function edCardVariants(kind,title){
   const e=state.ed;
   const rows=((e.d.icon_variants||{})[kind])||[];
   if(rows.length<2)return '';           // one picture for everyone: nothing to say
+  const nFac=rows.reduce((n,r)=>n+r.factions.length,0);
   return `<div class="cardvars" data-kind="${kind}">
-    <div class="k">${tt('editor.different_picture_across_faction_folder',{title:esc(title),rows_n:rows.length,rows:rows.length===1?'':'s',x:rows.reduce((n,r)=>n+r.factions.length,0),x2:rows.reduce((n,r)=>n+r.factions.length,0)===1?'':'s'})}</div>
+    <div class="k">${tt('editor.different_picture_across_faction_folders',{title:esc(title),pictures:ttN('editor.different_picture_count',rows.length),folders:ttN('editor.faction_folder_count',nFac)})}</div>
     <div class="cardvarlist">${rows.map(r=>{
       // one variant is ONE file, so it can be swapped on its own - which is the
       // point of the list: the whole reason it exists is that these differ.
@@ -760,7 +755,7 @@ function edIcoRender(key){
         <div class="barrow">
           <button onclick="edIcoAll('${key}',true)">${tt('editor.replace_for_all')}</button>
           <button onclick="edIcoAll('${key}',false)">${tt('common.none_2')}</button>
-          <span class="count">${tt('editor.of_folder_ticked',{x:n,folders_n:folders.length,folders:folders.length===1?'':'s'})}</span>
+          <span class="count">${tt('editor.folders_ticked_of',{n,folders:ttN('editor.folder_count',folders.length)})}</span>
         </div>
         <div class="edicofolders">${folders.map(f=>`
           <label class="edicofold${sel.has(f)?' on':''}">
@@ -897,10 +892,8 @@ function edTierBox(){
     </div>
     <div class="count" style="margin-top:6px">${docPoints(
       tt('editor.the_game_never_reads_this_it'),[
-      `${tt('editor.it_is_stored_as_a_comment')} `+
-        tt('editor.m2gt_tier_3_variant_aor_so'),
-      `${tt('editor.it_exists_so_clean_up_the')} `+
-        tt('editor.hand_organised_export_descr_unit_txt'),
+      tt('editor.tier_comment_stored_variant'),
+      tt('editor.tier_comment_exists_roster'),
       tt('editor.the_list_holds_every_variant_this')])}</div>
   </fieldset>`;
 }
@@ -1441,8 +1434,7 @@ function edUgCloneLast(){
   if(!edUgAppend([last],null,{repeat:true}).length)return;
   e.ug=null; edRenderTab(); edPreview();
   const lv=csv(edFieldVal('armour_ug_levels')).slice(-1)[0];
-  toast(tt('editor.repeated_as_the_next_tier',{last,lv:lv?tt('editor.armour_level',{lv}):''})
-       +tt('editor.it_upgrades_the_stats_and_keeps'),4200);
+  toast(lv?tt('editor.repeated_next_tier_armour',{last,lv}):tt('editor.repeated_next_tier',{last}),4200);
 }
 // Where a cloned tier comes from and what it gets called: `<stem>_ug<n>`, with n
 // walked up until nothing in the mod (or pending) has that name.
@@ -1568,7 +1560,7 @@ function edUgTakeUnit(){
   if(!names.length){toast(tt('editor.nothing_ticked_to_import'));return;}
   const added=edUgAppend(names,levels,{repeat:true}),from=u.unit;
   e.ug=null; edRenderTab(); edPreview();
-  toast(tt('editor.tier_taken_from',{added_n:added.length,added:added.length===1?'':'s',x:from}));
+  toast(ttN('editor.tiers_taken_from',added.length,{from}));
 }
 
 /* -- mode 3: search the whole modeldb -- */
@@ -1596,7 +1588,7 @@ function edUgBrowseHits(){
                                  :tt('editor.click_to_add_as_the_next')}</span>
       </div>`;}).join('')
       ||`<div class="ugrow have"><span class="count">${tt('editor.no_entry_matches')}</span></div>`}</div>
-    <div class="count" style="margin-top:6px">${tt('editor.of_entr',{hits_n:hits.length,all_n:all.length,all:all.length===1?'y':'ies',x:hits.length>shown.length
+    <div class="count" style="margin-top:6px">${ttN('editor.hits_of_entries',all.length,{hits:hits.length,x:hits.length>shown.length
         ? tt('editor.showing_the_first_keep_typing',{shown_n:shown.length}):''})}</div>`;
 }
 // Only the results are redrawn - re-rendering the tab would take the focus out
@@ -1708,7 +1700,7 @@ function edModels(){
       <b>${esc(n.name)}</b>${tt('editor.new_entry_cloned_from',{clone_from:q1(esc(n.clone_from)),clone_from2:esc(n.clone_from),assign_to:n.assign_to?` → <code>${esc(n.assign_to)}</code>`:'',_tier:n._tier?` <span class="count">${tt('editor.next_armour_tier')}</span>`:''})}
       <div class="count">${esc(n.dest_dir||tt('editor.no_folder'))} · ${n.mesh_src?esc(n.mesh_src.split(/[\\\/]/).pop()):tt('editor.clone_mesh')}
         · ${n.texture_src?esc(n.texture_src.split(/[\\\/]/).pop()):tt('editor.clone_texture')}${
-        n.attach_texture_src?tt('editor.attach')+esc(n.attach_texture_src.split(/[\\\/]/).pop())
+        n.attach_texture_src?tt('editor.attach_file',{file:esc(n.attach_texture_src.split(/[\\\/]/).pop())})
           :n.apply_to_attach?tt('editor.attachments_follow_the_main_texture'):''}
         <button style="padding:1px 7px;font-size:11px;margin-left:6px" onclick="edEditNew(${i})">${tt('editor.edit')}</button></div></div>`).join('');
   const entries=d.models.map((m,i)=>edModelCard(m,i)).join('');
@@ -1738,8 +1730,8 @@ function edModelCard(m,idx){
   return `<div class="mentry" data-entry="${esc(m.name)}">
     <div class="mhead" onclick="edToggle('${q1(esc(m.name))}')">
       <span>${open?'▾':'▸'}</span><span class="mn">${esc(m.name)}</span>
-      <span class="grow count">${tt('editor.lod_skin',{x:m.slots.map(esc).join(', ')
-        ||(e.bmdb?`<span class="w-warn">${tt('common.nothing_references_it')}</span>`:tt('editor.referenced_by_this_unit')),lods_n:m.lods.length,lods:m.lods.length===1?'':'s',facs_n:facs.length,facs:facs.length===1?'':'s'})}</span>
+      <span class="grow count">${tt('editor.slots_lods_skins',{slots:m.slots.map(esc).join(', ')
+        ||(e.bmdb?`<span class="w-warn">${tt('common.nothing_references_it')}</span>`:tt('editor.referenced_by_this_unit')),lods:ttN('editor.lod_count',m.lods.length),skins:ttN('editor.skin_count',facs.length)})}</span>
       <button title="${ttA('editor.draw_this_model_its_parts_its')}"
         onclick="event.stopPropagation();v3Open('${q1(esc(e.mod||state.src))}','${q1(esc(m.name))}')"
         >${tt('editor.view_model')}</button>
@@ -1789,7 +1781,7 @@ function edSharedDrop(m){
   if(!users.length)return `<span class="count">${bm?tt('editor.used_by_nothing'):tt('editor.only_this_unit')}</span>`;
   return `<details class="drop" onclick="event.stopPropagation()">
     <summary class="${bm?'':'w-warn'}">${bm?tt('editor.used_by',{users_n:users.length})
-      :tt('editor.shared_with_other',{users_n:users.length,users:users.length===1?'':'s'})} ▾</summary>
+      :ttN('editor.shared_with_others',users.length)} ▾</summary>
     <div class="dropbody" style="position:absolute;z-index:5;min-width:230px">
       <div class="count" style="margin-bottom:5px">${tt('editor.editing_this_entry_changes',{bm:bm?tt('editor.every_one_of_them')
         :tt('editor.them_too_use_new_entry_from')})}</div>
@@ -1804,7 +1796,7 @@ function edNameHint(m,val){
   if(e.d.model_names.includes(v)||e.newModels.some(n=>n.name===v))
     return `<span class="w-bad">${tt('editor.taken_another_entry_in_this_mod')}</span>`;
   const n=(m.used_by||[]).length+1;
-  return tt('editor.available_unit_reference_will_be_rewritten',{x:n,x2:n===1?'':'s'});
+  return ttN('editor.available_references_rewritten',n);
 }
 
 /* ---- the default texture set every faction inherits ---- */
@@ -1931,7 +1923,7 @@ function edFolderCheckHtml(m,chk){
     <div class="movelist">${chk.moves.map(x=>`<div>${esc(x.old)} → <b>${esc(x.new)}</b>${
       x.missing?` <span class="w-warn">${tt('editor.not_on_disk')}</span>`:''}</div>`).join('')}</div>
     ${missing.length?`<div class="count w-warn" style="margin-top:5px">${tt('editor.of_them_arent_on_disk_those',{missing_n:missing.length})}</div>`:''}
-    ${shared.length?`<div class="count w-warn" style="margin-top:6px">${tt('editor.other_model_entr_these_files_moving',{shared_n:shared.length,shared:shared.length===1?tt('editor.y_also_uses'):tt('editor.ies_also_use'),shared2:shared.map(n=>`<code>${esc(n)}</code>`).join(', ')})}</div>
+    ${shared.length?`<div class="count w-warn" style="margin-top:6px">${ttN('editor.other_model_entries_share_files',shared.length,{names:shared.map(n=>`<code>${esc(n)}</code>`).join(', ')})}</div>
       <div class="barrow">
         <button class="primary" onclick="edFolderApply('${q1(esc(m.name))}',true)">${tt('editor.edit_and_move_anyway_updating_all',{shared_n:shared.length})}</button>
         <button onclick="edFolderApply('${q1(esc(m.name))}',false)">${tt('editor.move_only_this_entry')}</button>
@@ -2175,7 +2167,7 @@ function edAddNewModel(){
   entry._named=moved.length?entry.name:(prev?prev:entry._named||'');
   e.form=null; edRenderTab(); edPreview();
   if(moved.length)
-    toast(tt('editor.renamed_to_and_follow_it',{name:entry.name,moved:moved.join(' and '),moved2:moved.length===1?'s':''}),4200);
+    toast(ttN('editor.renamed_and_follows',moved.length,{name:entry.name,moved:moved.join(' and ')}),4200);
 }
 // Discarding a pending entry has to undo what adding it changed - an armour tier
 // also wrote armour_ug_models / armour_ug_levels.
@@ -2261,7 +2253,7 @@ async function edSave(){
   let r=null,cr=null;
   if(one){
     r=await api.post(edApi('plan'),edPayload());
-    if(r.error){toast(tt('editor.error')+r.error);return;}
+    if(r.error){toast(tt('editor.error_reason',{error:r.error}));return;}
     if(r.errors&&r.errors.length){
       document.getElementById('edPreview').innerHTML=edPlanHtml(r);
       toast(r.errors[0]);return;}
@@ -2276,8 +2268,8 @@ async function edSave(){
   // problem in it is found while nothing has been touched.
   if(rec){
     const rp=await api.post('/api/buildings/plan',edRecPayload());
-    if(rp.error){toast(tt('editor.recruitment')+rp.error,5000);return;}
-    if(rp.errors&&rp.errors.length){toast(tt('editor.recruitment')+rp.errors[0],5000);return;}
+    if(rp.error){toast(tt('editor.recruitment_error',{error:rp.error}),5000);return;}
+    if(rp.errors&&rp.errors.length){toast(tt('editor.recruitment_error',{error:rp.errors[0]}),5000);return;}
   }
   const what=bm?e.d.models[0].name:e.unit;
   const writing=[one?what:null,two?e.cmp.unit:null,
@@ -2289,12 +2281,12 @@ async function edSave(){
   let res=null;
   if(one){
     res=await api.post(edApi('apply'),edPayload({clear_strings_bin:clearBinOn()}));
-    if(res.error){toast(tt('editor.save_failed')+res.error);bm?renderBmdbEditor():renderEditor();return;}
+    if(res.error){toast(tt('editor.save_failed_reason',{error:res.error}));bm?renderBmdbEditor():renderEditor();return;}
   }
   if(two){
     const res2=await api.post('/api/edit/apply',edCmpPayload({clear_strings_bin:clearBinOn()}));
     if(res2.error){
-      toast(tt('editor.saving_failed',{x:one?tt('editor.saved')+what+tt('editor.but'):'',unit:e.cmp.unit,error:res2.error}),5000);
+      toast(one?tt('editor.saved_but_saving_failed',{what,unit:e.cmp.unit,error:res2.error}):tt('editor.saving_failed_alone',{unit:e.cmp.unit,error:res2.error}),5000);
       renderEditor(); return;}
     if(!res)res=res2;
     e.cmp.ov={}; e.cmp.rm=new Set(); e.cmp.added=new Set();
@@ -2304,7 +2296,7 @@ async function edSave(){
     pools=edRecChangeCount();
     const res3=await api.post('/api/buildings/apply',edRecPayload());
     if(res3.error){
-      toast(tt('editor.recruit_pools_failed',{x:(one||two)?tt('editor.the_unit_was_saved_but_the'):tt('editor.the'),error:res3.error}),6000);
+      toast(tt((one||two)?'editor.unit_saved_recruit_pools_failed':'editor.the_recruit_pools_failed',{error:res3.error}),6000);
       // the unit's own save landed; the tab has to stop showing what did not
       await edRecReload();
       renderEditor(); return;
@@ -2323,7 +2315,8 @@ async function edSave(){
   closeModal();
   const saved=[one?(bm?what:res.plan.resolved_type):null,two?e.cmp.unit:null].filter(Boolean);
   const note=saved.length
-    ? tt('editor.saved_2',{saved:saved.map(s=>'“'+s+'”').join(' and '),pools:pools?tt('editor.and_recruit_pool_s',{pools}):''})
+    ? tt(pools?'editor.saved_names_and_pools':'editor.saved_names',{pools,
+        saved:saved.length>1?tt('editor.name_and_name',{a:saved[0],b:saved[1]}):tt('editor.name_quoted',{a:saved[0]})})
     : tt('editor.saved_recruit_pool_s',{pools});
   toast(tt('editor.undo_in_log',{note,x:binMsg(res)}),4200);
   state.destData=null; state.bmdb=null;

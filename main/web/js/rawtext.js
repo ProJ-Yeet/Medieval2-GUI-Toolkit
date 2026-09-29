@@ -138,7 +138,7 @@ async function rtRead(rel, line){
   if(state.rt !== k || k.rel !== rel) return;
   k.loading = false;
   k.doc = d;
-  activity(tt('rawtext.opened_raw_file'), `${rel} in ${k.mod}`);
+  activity(tt('rawtext.opened_raw_file'), tt('rawtext.file_in_mod',{rel,mod:k.mod}));
   rtPaintMain(); rtPaintList();
   if(line) rtGoLine(line);
 }
@@ -342,7 +342,7 @@ async function rtApply(){
     rtPaintPlan(); toast('✗ ' + r.error, 8000); return;
   }
   toast(tt('rawtext.saved_data_log_can_undo_it',{rel:k.rel}));
-  activity(tt('rawtext.raw_save'), `${k.rel} in ${k.mod}`);
+  activity(tt('rawtext.raw_save'), tt('rawtext.file_in_mod',{rel:k.rel,mod:k.mod}));
   rtForget(k.rel);
   const box = document.getElementById('rtBox');
   const top = box ? box.scrollTop : 0, at = box ? box.selectionStart : 0;
@@ -374,8 +374,7 @@ function rtForget(rel){
 let rtPutTarget = null;
 
 function rtPutAny(){
-  const rel = (prompt(tt('rawtext.where_in_the_mod_should_it')
-                      + 'ui/units/england/#english_archers.tga', '') || '').trim();
+  const rel = (prompt(tt('rawtext.put_where_prompt',{example:'ui/units/england/#english_archers.tga'}), '') || '').trim();
   if(!rel) return;
   rtPutTarget = {rel: rel.replace(/^data\//i, ''), replace: false};
   const i = document.getElementById('rtPutFile');
@@ -406,9 +405,8 @@ async function rtPutChosen(input){
   }
   if(r.error){ toast('✗ ' + r.error, 8000); return; }
   const p = r.plan || {};
-  if(!confirm(tt('rawtext.put_at_data',{name:f.name,rel:p.rel,changes:(p.changes || []).join('\n')})
-    + ((p.warnings || []).length ? '\n\n⚠ ' + p.warnings.join('\n⚠ ') : '')
-    + tt('rawtext.backed_up_first_and_log_undoes'))) return;
+  if(!confirm(tt('rawtext.put_confirm',{name:f.name,rel:p.rel,changes:(p.changes || []).join('\n'),
+    warnings:(p.warnings || []).length ? '\n\n⚠ ' + p.warnings.join('\n⚠ ') : ''}))) return;
   let w;
   try{ w = await api.post('/api/file/put_apply', body); }
   catch(e){ w = {error: errText(e)}; }

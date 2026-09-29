@@ -399,18 +399,16 @@ async function doForgetPacks(id){
   const r=await api.post('/api/packs/forget',{id});
   if(r.error){toast(r.error);return;}
   toast(tt('settings.old_packs_deleted_mb_freed',{freed:(r.freed/1048576).toFixed(0)}));openLog();}
-async function doUndo(id){const r=await api.post('/api/undo',{id});if(r.error){toast(tt('settings.undo_error')+r.error);return;}
+async function doUndo(id){const r=await api.post('/api/undo',{id});if(r.error){toast(tt('settings.undo_error_message',{error:r.error}));return;}
   toast(tt('settings.undone_2'));state.destData=null;openLog();if(state.data)loadSource();}
 async function doRevert(id){
   const e=(state.logView.entries||[]).find(x=>x.id===id); if(!e){toast(tt('settings.log_entry_not_found'));return;}
   // counted by the server, which is the only place that has the whole log
   const newer=e.newer_count||0;
   if(!newer){toast(tt('settings.already_at_this_stage_there_is'));return;}
-  if(!confirm(tt('settings.revert_to_its_state_right_after',{dest:e.dest})+
-      tt('settings.this_undoes_newer_transfer_s_to',{newer,dest:e.dest})+
-      tt('settings.all_backed_up_files_edu_localisation'))) return;
+  if(!confirm(tt('settings.revert_to_its_state_right_after_this_transfer',{dest:e.dest,newer}))) return;
   const r=await api.post('/api/revert',{id});
-  if(r.error){toast(tt('settings.revert_error')+r.error);return;}
+  if(r.error){toast(tt('settings.revert_error_message',{error:r.error}));return;}
   toast(tt('settings.reverted_to_this_stage_transfer_s',{count:r.count}));
   state.destData=null; openLog(); if(state.data)loadSource();}
 

@@ -587,7 +587,7 @@ def _plan_start(p: HordePlan, sf, node, facts, body, keys, roster,
     names = pick_names(pool, taken, count, body.get("names") or ())
     if len(names) < count:
         p.errors.append(
-            _i18n.msg("eng.hordestart.s_pool_in_descr_names_txt", "{faction}'s pool in descr_names.txt gives {names_n} unused name{x} for {count} people - add names to the pool, or type them in", faction=p.faction, names_n=len(names), x='' if len(names) == 1 else 's', count=count))
+            _i18n.msg("eng.hordestart.pool_gives_unused_names_for_people", "{faction}'s pool in descr_names.txt gives {names} for {people} - add names to the pool, or type them in", faction=p.faction, names=_i18n.msgN("eng.hordestart.unused_names", len(names), "{count} unused name", "{count} unused names"), people=_i18n.msgN("eng.hordestart.people", count, "{count} people", "{count} people")))
         return sf.lines
     family = count >= 2 and body.get("family", True) is not False
     wife = str(body.get("wife") or "").strip()
@@ -801,7 +801,7 @@ def apply(p: HordePlan) -> dict:
     from .logutil import file_op, log
 
     if p.errors:
-        raise ValueError("cannot apply: " + "; ".join(p.errors))
+        raise ValueError(_i18n.msg("eng.hordestart.cannot_apply", "cannot apply: {why}", why="; ".join(p.errors)))
     if not p.texts:
         raise ValueError(_i18n.msg("eng.hordestart.nothing_to_change", "nothing to change"))
     mod = p.mod

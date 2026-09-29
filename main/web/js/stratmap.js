@@ -81,8 +81,8 @@ function renderStratmap(){
   main.innerHTML=bmdbTabsHtml('data/descr_model_strat.txt')+`<div class="bmsplit" id="stmSplit">
     <div class="bmmain">
     <div class="dbhead">
-      <h2>${tt('stratmap.strat_map_model',{src:esc(state.src),names:s.names,names2:s.names===1?'':'s'})}</h2>
-      ${tt('stratmap.referenced_by_nothing',{nUnused,nUnused2:nUnused?tt('stratmap.clean_up_strat_map_moves_them'):'',dupes:dupes?tt('stratmap.duplicate_block_share_a_name_with',{dupes,dupes2:dupes===1?'':'s'}):''})}
+      <h2>${ttN('stratmap.strat_map_model_count',s.names,{src:esc(state.src)})}</h2>
+      ${tt('stratmap.referenced_by_nothing',{nUnused,nUnused2:nUnused?tt('stratmap.clean_up_strat_map_moves_them'):'',dupes:dupes?ttN('stratmap.duplicate_blocks_share_a_name',dupes):''})}
       <button class="${stmPrevNode?'on':''}" onclick="stmPrevToggle()"
         title="${ttA('stratmap.draw_a_campaign_map_model_beside')}">${tt('stratmap.view_in_3d')}</button>
     </div>
@@ -106,7 +106,7 @@ function stmRow(e){
       stmPrevRel&&cas===stmPrevRel?' showing':''}" data-name="${esc(e.name)}">
     <span class="en">${esc(e.name)}</span>
     <span class="use">${use}</span>
-    ${tt('stratmap.model_texture',{models:e.models,models2:e.models===1?'':'s',skins:e.skins,skins2:e.skins===1?'':'s',missing:e.missing.length?` ${tt('stratmap.not_shipped',{missing_n:e.missing.length})}`:'',x:cas?`<button class="db3d" title="${ttA('stratmap.draw_in_the_panel_beside_the',{x:esc(cas.split('/').pop())})}"
+    ${tt('stratmap.model_texture_line',{models:ttN('stratmap.model_count',e.models),skins:ttN('stratmap.texture_count',e.skins),missing:e.missing.length?` ${tt('stratmap.not_shipped',{missing_n:e.missing.length})}`:'',x:cas?`<button class="db3d" title="${ttA('stratmap.draw_in_the_panel_beside_the',{x:esc(cas.split('/').pop())})}"
       onclick="event.stopPropagation();stmPrevOpen('${q1(esc(cas))}','${q1(esc(e.name))}')">🧊</button>`
       :'<span class="db3d" style="visibility:hidden">🧊</span>'})}
   </div>`;
@@ -220,7 +220,7 @@ function stmPrevFull(){
   const go = el.requestFullscreen || el.webkitRequestFullscreen;
   if(!go){ toast(tt('common.this_browser_will_not_go_full'), 3000); return; }
   Promise.resolve(go.call(el)).catch(e =>
-    toast(tt('common.full_screen_was_refused') + ((e && e.message) || e), 4000));
+    toast(tt('stratmap.full_screen_was_refused',{reason:(e && e.message) || e}), 4000));
 }
 
 /* One entry, read-only: the block exactly as the file stores it, and what each
@@ -307,7 +307,7 @@ function renderStratCleanup(){
   document.getElementById('modal').innerHTML=`
     <h2>${tt('stratmap.clean_up_s_strat_map_2',{mod:esc(a.mod)})}</h2>
     <div class="mbody">
-      <div class="count" style="margin-bottom:10px">${tt('stratmap.model_in_scanned_against_game_file',{entry_count:a.entry_count,entry_count2:a.entry_count===1?'':'s',file:esc(a.file),scanned_n:a.scanned.length,scanned:a.scanned.length===1?'':'s',lua_files:a.lua_files,lua_files2:a.lua_files===1?'':'s'})}</div>
+      <div class="count" style="margin-bottom:10px">${tt('stratmap.models_in_scanned_against_game_files',{models:ttN('stratmap.model_count',a.entry_count),file:esc(a.file),game_files:ttN('stratmap.game_file_count',a.scanned.length),scripts:ttN('stratmap.lua_script_count',a.lua_files)})}</div>
 
       <fieldset><legend>${tt('stratmap.where_the_removed_assets_go')}</legend>
         <div class="cltarget">
@@ -347,7 +347,7 @@ function stmUnusedBody(){
         onchange="stmPick('entries','${q1(esc(u.entry))}',this.checked)">
       <div class="grow"><span class="nm">${esc(u.entry)}</span>
         ${u.skeleton?`<span class="badge">${esc(u.skeleton)}</span>`:''}
-        <div class="sub">${tt('stratmap.model_texture_file_named_on_disk',{models:u.models,models2:u.models===1?'':'s',skins:u.skins,skins2:u.skins===1?'':'s',files_n:u.files.length,files:u.files.length===1?'':'s',on_disk:u.on_disk})}</div></div>
+        <div class="sub">${tt('stratmap.model_texture_files_named_on_disk',{models:ttN('stratmap.model_count',u.models),skins:ttN('stratmap.texture_count',u.skins),files:ttN('stratmap.file_count',u.files.length),on_disk:u.on_disk})}</div></div>
       <span class="count">${MB(u.bytes)}</span>
     </div>`).join('')}</div>`;
 }
@@ -371,12 +371,12 @@ function stmOrphanBody(){
 function stmLuaBox(a){
   const kept=a.lua_kept||[], scanned=a.lua_files||0;
   if(!scanned) return '';
-  if(!kept.length) return `<div class="count">${tt('stratmap.read_lua_script_in_the_mod',{scanned,scanned2:scanned===1?'':'s'})}</div>`;
+  if(!kept.length) return `<div class="count">${tt('stratmap.read_lua_scripts_in_the_mod',{scripts:ttN('stratmap.lua_script_count_bold',scanned)})}</div>`;
   const rows=kept.slice(0,60).map(m=>`<div class="frow"><span class="fp">${esc(m.entry)}</span><span class="fs">${
     esc(m.file)}${m.in_comment?tt('stratmap.in_a_comment_and_still_protected'):''}</span></div>`).join('');
   return `<fieldset class="assetconf" style="margin-top:10px;border-color:var(--good)">
     <legend class="w-good">${tt('stratmap.protected_by_the_mods_lua_scripts')}</legend>
-    <div class="count"><b>${kept.length}</b> ${tt('stratmap.model_named_by_one_of_this',{kept:kept.length===1?' is':tt('common.s_are'),scanned,scanned2:scanned===1?'':'s',kept2:kept.length===1?tt('common.it_is'):tt('common.they_are')})}</div>
+    <div class="count">${ttN('stratmap.models_named_by_lua_scripts',kept.length,{scripts:ttN('stratmap.lua_script_count_bold',scanned)})}</div>
     <div class="flist" style="margin-top:6px">${rows}${
       kept.length>60?`<div class="count">${tt('stratmap.and_more',{kept:kept.length-60})}</div>`:''}</div>
   </fieldset>`;
@@ -435,16 +435,13 @@ async function stmApply(){
   if(!r)return;
   if(r.errors&&r.errors.length){toast(r.errors[0]);return;}
   if(!r.entry_deletes.length&&!r.export_count){toast(tt('common.nothing_is_ticked'));return;}
-  if(!confirm(tt('stratmap.move_strat_model',{entry_deletes_n:r.entry_deletes.length,entry_deletes:r.entry_deletes.length===1?'':'s'})+
-      tt('stratmap.and_file_s_out_of_they',{export_count:r.export_count,mod:c.a.mod,target:r.target})+
-      tt('stratmap.everything_touched_is_backed_up_first')))return;
+  if(!confirm(ttN('stratmap.move_strat_models_confirm',r.entry_deletes.length,{export_count:r.export_count,mod:c.a.mod,target:r.target})))return;
   const job=newJob();
   const res=await runJob(job,tt('stratmap.cleaning_up_the_strat_map'),
     tt('stratmap.copying_file_s_out_then_rewriting',{export_count:r.export_count,mod:esc(c.a.mod)}),
     ()=>api.post('/api/stratmap/cleanup_apply',{...stmPayload(),job}));
-  if(res.error){toast(tt('stratmap.cleanup_failed')+res.error);renderStratCleanup();return;}
-  toast(tt('stratmap.removed_strat_model_s_and',{entry_deletes_n:res.plan.entry_deletes.length})+
-        tt('stratmap.file_s_undo_in_log',{export_count:res.plan.export_count}),5200);
+  if(res.error){toast(tt('stratmap.cleanup_failed_error',{error:res.error}));renderStratCleanup();return;}
+  toast(tt('stratmap.removed_strat_models_and_files',{entry_deletes_n:res.plan.entry_deletes.length,export_count:res.plan.export_count}),5200);
   // The lists in this dialog were built from an audit taken BEFORE the cleanup,
   // so the mod on disk has changed and the answer on screen has to change with
   // it - re-run rather than leave stale rows up inviting a second tick.

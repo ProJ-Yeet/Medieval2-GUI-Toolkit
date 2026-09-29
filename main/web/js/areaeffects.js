@@ -74,7 +74,7 @@ function renderAreaEffects(){
       <div class="cdbhead"><div>${tt('areaeffects.descr_area_effects_xml_what_a')}</div>
         <span style="flex:1"></span>
         <button onclick="aexRevert()" ${n ? '' : 'disabled'}>${tt('common.revert')}</button>
-        <button class="primary" onclick="aexSave()" ${n ? '' : 'disabled'}>${tt('areaeffects.save_change',{x:n || '',x2:n === 1 ? '' : 's'})}</button>
+        <button class="primary" onclick="aexSave()" ${n ? '' : 'disabled'}>${n ? ttN('areaeffects.save_changes_n',n) : tt('areaeffects.save_changes')}</button>
       </div>
       ${c.error ? '' : aexEffectHtml()}
     </div>
@@ -82,9 +82,9 @@ function renderAreaEffects(){
 }
 function aexUsedText(e){
   const bits = [];
-  if(e.used.length) bits.push(`${e.used.length} ${e.used.length === 1 ? 'user' : 'users'}`);
+  if(e.used.length) bits.push(ttN('areaeffects.user_count',e.used.length));
   if(e.in_sets.length) bits.push(tt('areaeffects.in_set_s',{in_sets_n:e.in_sets.length}));
-  if(e.members.length) bits.push(`${e.members.length} member(s)`);
+  if(e.members.length) bits.push(tt('areaeffects.member_s',{n:e.members.length}));
   return bits.join(' · ') || tt('areaeffects.named_by_nothing');
 }
 
@@ -163,16 +163,17 @@ function aexEffectHtml(){
       return `<tr${mg ? ' style="opacity:.45"' : ''}><td><select onchange="aexSet(${m.id}, this.value, '${q1(esc(m.name))}')">${
           opts.map(o => `<option${o === v ? ' selected' : ''}>${esc(o)}</option>`).join('')}</select></td>
         <td>${m.delay !== '' ? `<input style="width:60px" value="${esc(d)}" onchange="aexSetDelay(${m.id}, this.value, '${q1(esc(m.delay))}')">` : ''}</td>
-        <td><button onclick="aexDrop(${m.id})">${mg ? 'keep' : '✕'}</button></td></tr>`;
+        <td><button onclick="aexDrop(${m.id})">${mg ? tt('areaeffects.keep_member') : '✕'}</button></td></tr>`;
     }).join('')}
     ${w.copy.filter(x => e.members.some(m => m.id === x.like)).map(x =>
-      `<tr><td colspan="3" class="count">${tt('areaeffects.on_save_2',{value:esc(x.value),attrs:x.attrs ? tt('areaeffects.after_s',{delay:esc(x.attrs.delay)}) : ''})}</td></tr>`).join('')}
+      `<tr><td colspan="3" class="count">${x.attrs ? tt('areaeffects.on_save_after_delay',{value:esc(x.value),delay:esc(x.attrs.delay)}) : tt('areaeffects.on_save_plain',{value:esc(x.value)})}</td></tr>`).join('')}
     </table>
-    ${e.members.length ? `<div class="trnote">${tt('common.add_2')} <select id="aexMember">${names.map(o => `<option>${esc(o)}</option>`).join('')}</select>
-      ${tt('areaeffects.after')} <input id="aexDelay" style="width:60px" value="${esc(e.members[e.members.length - 1].delay || '')}"> s
+    ${e.members.length ? `<div class="trnote">${tt('areaeffects.add_member_after_delay',{
+        member:`<select id="aexMember">${names.map(o => `<option>${esc(o)}</option>`).join('')}</select>`,
+        delay:`<input id="aexDelay" style="width:60px" value="${esc(e.members[e.members.length - 1].delay || '')}">`})}
       <button onclick="aexAddMember(${e.members[e.members.length - 1].id})">${tt('common.add')}</button></div>` : ''}</div>` : '';
   const used = e.used.map(u => `<div class="count"><code>${esc(u.file)}:${u.line}</code> ${esc(u.who)}</div>`).join('')
-    + e.in_sets.map(s => `<div class="count">${tt('areaeffects.a_member_of')} <a class="ulink" onclick="aexOpen('name/${q1(esc(s))}')">${esc(s)}</a></div>`).join('');
+    + e.in_sets.map(s => `<div class="count">${tt('areaeffects.a_member_of_set',{set:`<a class="ulink" onclick="aexOpen('name/${q1(esc(s))}')">${esc(s)}</a>`})}</div>`).join('');
   return `<div class="cdbsec"><h3>${tt('areaeffects.line',{name:esc(e.name),type:esc(e.type),line:e.line})}
       <button onclick="aexDrop(${e.id})">${gone ? tt('common.keep_it') : tt('areaeffects.remove_area_effect')}</button></h3>
     ${gone && (e.used.length || e.in_sets.length) ? `<div class="trnote">${tt('areaeffects.thing_s_name_it_and_will',{n:e.used.length + e.in_sets.length})}</div>` : ''}
@@ -221,9 +222,8 @@ async function aexSave(){
   finally{ c.busy = false; }
   if(plan.error){ toast('✗ ' + plan.error, 8000); return; }
   const p = plan.plan || {};
-  if(!confirm(tt('areaeffects.write_change_s',{n:(p.changes || []).length}) + (p.changes || []).slice(0, 16).join('\n')
-    + ((p.warnings || []).length ? '\n\n⚠ ' + p.warnings.slice(0, 5).join('\n⚠ ') : '')
-    + tt('common.backed_up_first_and_log_can'))) return;
+  if(!confirm(tt('areaeffects.write_confirm',{n:(p.changes || []).length,changes:(p.changes || []).slice(0, 16).join('\n'),
+    warnings:(p.warnings || []).length ? '\n\n⚠ ' + p.warnings.slice(0, 5).join('\n⚠ ') : ''}))) return;
   let res;
   try{ res = await api.post('/api/areaeffects/apply', body); }
   catch(e){ res = {error: errText(e)}; }

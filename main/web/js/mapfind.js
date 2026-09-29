@@ -203,7 +203,7 @@ function cfdHtml(){
     <button class="cptog${k.open ? ' on' : ''}" onclick="cfdToggle()"
       title="${ttA('mapfind.type_a_province_a_settlement_or')}"
       >${tt('mapfind.find',{open:k.open ? ' ✓' : ''})}</button>
-    ${k.open && k.q ? `<span class="count">${tt('mapfind.match',{of:k.of,of2:k.of === 1 ? '' : 'es'})}</span>` : ''}
+    ${k.open && k.q ? `<span class="count">${ttN('mapfind.match_count',k.of)}</span>` : ''}
   </div>`;
   if(!k.open) return head;
   const n = (c.man.regions || []).filter(r => r.name).length;
@@ -211,7 +211,7 @@ function cfdHtml(){
     <input type="search" id="cfdBox" value="${esc(k.q)}" autocomplete="off"
       spellcheck="false" aria-label="${ttA('mapfind.search_regions_and_settlements')}" placeholder="${ttA('mapfind.search_regions_settlements')}">
     <div id="cfdRes">${cfdResHtml()}</div>
-    <div class="count">${tt('mapfind.province_on_this_map_each_searchable',{x:n,x2:n === 1 ? '' : 's'})}</div>
+    <div class="count">${ttN('mapfind.provinces_on_this_map',n)}</div>
   </div>`;
 }
 

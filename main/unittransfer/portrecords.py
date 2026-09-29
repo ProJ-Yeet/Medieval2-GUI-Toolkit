@@ -327,8 +327,11 @@ def _port_triggers(p: PortPlan, k: Kind, text: str, stf, name: str, row: Dict) -
         others = sorted({e.args[0] for e in trig.effects
                          if e.keyword == k.keyword and e.args and e.args[0] != name})
         if others:
-            p.warnings.append(
-                _i18n.msg("eng.portrecords.trigger_also_gives_port_too_or", "{name}: trigger `{name2}` also gives {and_list} - port {x} too, or the trigger names something this mod has not got", name=name, name2=trig.name, and_list=kb.and_list(others), x='those' if len(others) > 1 else 'that'))
+            p.warnings.append(_i18n.msgN(
+                "eng.portrecords.trigger_also_gives_port_that_too_or", len(others),
+                "{name}: trigger `{name2}` also gives {and_list} - port that too, or the trigger names something this mod has not got",
+                "{name}: trigger `{name2}` also gives {and_list} - port those too, or the trigger names something this mod has not got",
+                name=name, name2=trig.name, and_list=kb.and_list(others)))
     if not row["triggers"] and p.with_triggers:
         p.warnings.append(_i18n.msg("eng.portrecords.no_trigger_in_gives_it_so", "{name}: no trigger in {name2} gives it, so nothing in the destination will either", name=name, name2=p.source.name))
     return text
@@ -445,7 +448,7 @@ def apply(p: PortPlan) -> Dict:
     from .logutil import file_op
 
     if p.errors:
-        raise ValueError("cannot apply: " + "; ".join(p.errors))
+        raise ValueError(_i18n.msg("eng.portrecords.cannot_apply", "cannot apply: {why}", why="; ".join(p.errors)))
     if not p.text and not p.loc_writes:
         raise ValueError(_i18n.msg("eng.portrecords.nothing_to_change", "nothing to change"))
     k = p.kind

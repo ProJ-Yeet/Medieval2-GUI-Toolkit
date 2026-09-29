@@ -104,9 +104,9 @@ function hlHeadHtml(r){
       <button style="margin-left:auto" onclick="loadHealth()">${tt('health.run_again')}</button></h4>
     <div class="trnote">${tt('health.every_check_the_toolkit_has_over')}</div>
     <div class="hlcounts">
-      ${tt('health.fatal_warning',{fatal:c.fatal,warn:c.warn,warn2:c.warn === 1 ? '' : 's'})}
+      ${tt('health.fatal_and_warnings',{fatal:c.fatal,warnings:ttN('health.warning_count',c.warn)})}
       <label class="chk"><input type="checkbox" ${h.notes ? 'checked' : ''}
-        onchange="state.hl.notes=this.checked;hlPaint()"> ${tt('health.note',{note:c.note,note2:c.note === 1 ? '' : 's'})}</label>
+        onchange="state.hl.notes=this.checked;hlPaint()"> ${ttN('health.note_count',c.note)}</label>
       ${base ? `<label class="chk" title="${ttA('health.the_campaign_map_screen_can_stamp',{base})}"><input type="checkbox"
         ${h.base ? 'checked' : ''} onchange="state.hl.base=this.checked;hlPaint()">
         ${tt('health.hide_that_were_already_there',{base})}</label>` : ''}

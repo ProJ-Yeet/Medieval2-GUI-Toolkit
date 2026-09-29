@@ -469,7 +469,11 @@ def _check_event(p: SoundBankPlan, where: str, attrs: str, body: List[str],
         p.warnings.append(_i18n.msg("eng.soundbanks.event_attributes_come_in_pairs_priority", "{where}: event attributes come in pairs (priority 120 volume -10); {attrs} has an odd one", where=where, attrs=repr(attrs)))
     odd = [k for k in keys if k.lower() not in known]
     if odd:
-        p.warnings.append(_i18n.msg("eng.soundbanks.not_used_by_any_event_in", "{where}: {and_list} {x} not used by any event in this mod's sound banks", where=where, and_list=kb.and_list(odd), x='is' if len(odd) == 1 else 'are'))
+        p.warnings.append(_i18n.msgN(
+            "eng.soundbanks.attributes_not_used_by_any_event", len(odd),
+            "{where}: {and_list} is not used by any event in this mod's sound banks",
+            "{where}: {and_list} are not used by any event in this mod's sound banks",
+            where=where, and_list=kb.and_list(odd)))
 
 
 def _known_attrs(mod) -> set:
@@ -597,7 +601,8 @@ def plan(mod, body: dict) -> SoundBankPlan:
 
 def apply(p: SoundBankPlan) -> Dict:
     if p.errors:
-        raise ValueError("cannot apply: " + "; ".join(p.errors))
+        raise ValueError(_i18n.msg("eng.soundbanks.cannot_apply", "cannot apply: {why}",
+                                   why="; ".join(p.errors)))
     if not p.text:
         raise ValueError(_i18n.msg("eng.soundbanks.nothing_to_change", "nothing to change"))
     mod = p.mod

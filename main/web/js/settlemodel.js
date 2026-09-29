@@ -95,11 +95,9 @@ async function smiApply(){
   const k = state.smi;
   if(!k || k.busy || !k.plan || !k.plan.ok) return;
   const p = k.plan;
-  if(!confirm(tt('settlemodel.put_on',{model:p.model,culture:k.culture,target:k.target})
-    + (p.changes || []).join('\n')
-    + ((p.warnings || []).length ? '\n\n' + p.warnings.map(x => '⚠ ' + x).join('\n') : '')
-    + tt('settlemodel.the_culture_is_read_again_from')
-    + tt('settlemodel.is_not_saved_yet_is_dropped'))) return;
+  if(!confirm(tt('settlemodel.put_on_confirm',{model:p.model,culture:k.culture,target:k.target,
+    changes:(p.changes || []).join('\n')
+      + ((p.warnings || []).length ? '\n\n' + p.warnings.map(x => '⚠ ' + x).join('\n') : '')}))) return;
   k.busy = true; mfPaintForm();
   let res;
   try{ res = await api.post('/api/settlemodel/apply', smiBody(),

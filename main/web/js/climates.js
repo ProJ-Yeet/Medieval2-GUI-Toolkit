@@ -170,15 +170,10 @@ async function cclApply(){
   const k = state.ccl;
   if(!k || k.busy || !k.plan || !k.plan.ok) return;
   const p = k.plan;
-  if(!confirm(`${p.mode === 'add' ? tt('climates.declare') : tt('climates.take_over')} climate ${p.code}`
-    + tt('climates.in',{mod:k.mod})
-    + (p.changes || []).join('\n')
-    + ((p.warnings || []).length
-       ? '\n\n' + p.warnings.map(x => '⚠ ' + x).join('\n\n') : '')
-    + tt('climates.file_s_backed_up_first_and',{n:(p.files || []).length,x:p.keys && p.keys.length
-        ? tt('climates.and_the_display_name') : ''})
-    + tt('climates.can_undo_it_map_climates_tga')
-    + tt('climates.climate_once_it_is_declared'))) return;
+  if(!confirm(tt(p.mode === 'add' ? 'climates.declare_climate_in_mod' : 'climates.take_over_climate_in_mod',{code:p.code,mod:k.mod,
+      changes:(p.changes || []).join('\n'),
+      warnings:(p.warnings || []).length ? '\n\n' + p.warnings.map(x => '⚠ ' + x).join('\n\n') : '',
+      files:tt(p.keys && p.keys.length ? 'climates.n_files_and_the_display_name' : 'climates.n_files',{n:(p.files || []).length})}))) return;
   k.busy = true;
   cclPaint();
   let res;
@@ -191,11 +186,9 @@ async function cclApply(){
     cclPaint();
     return;
   }
-  toast(`${p.code} ${p.mode === 'add' ? 'declared' : tt('climates.taken_over')}, `
-    + tt('climates.file_s_written_paint_it_with',{n:(res.files || []).length})
-    + tt('climates.layer_log_can_undo_it'), 7000);
+  toast(tt(p.mode === 'add' ? 'climates.declared_files_written' : 'climates.taken_over_files_written',{code:p.code,n:(res.files || []).length}), 7000);
   activity('climates',
-           `${k.mod}: ${p.mode === 'add' ? 'declared' : tt('climates.took_over')} ${p.code}`);
+           tt(p.mode === 'add' ? 'climates.activity_declared' : 'climates.activity_took_over',{mod:k.mod,code:p.code}));
   k.plan = null;
   await loadCampmap();
 }
@@ -249,9 +242,9 @@ function cclSlotsHtml(d){
     <span class="cclsw" style="background:${cclHex(s.rgb)}"></span>
     <span class="cclnm">${esc(s.label || s.code)}${
       s.spare ? `<span class="cclfree">${tt('climates.spare')}</span>` : ''}</span>
-    <span class="count">${tt('climates.tile',{tiles:s.tiles.toLocaleString(),tiles2:s.tiles === 1 ? '' : 's',aerial:s.aerial ? '' : tt('climates.no_textures')})}</span>
+    <span class="count">${ttN(s.aerial ? 'climates.tile_count' : 'climates.tile_count_no_textures',s.tiles)}</span>
   </button>`).join('')}</div>
-  ${(d.free || []).length ? `<div class="count">${tt('climates.spare_by_name_and_on_no',{free:d.free.map(c => `<code>${esc(c)}</code>`).join(' and '),free2:d.free.length === 1 ? 'is' : 'are',free3:d.free.length === 1 ? 'it' : 'one'})}</div>`
+  ${(d.free || []).length ? `<div class="count">${ttN('climates.spare_by_name_and_on_no_tile',d.free.length,{free:d.free.map(c => `<code>${esc(c)}</code>`).join(' and ')})}</div>`
   : `<div class="count">${tt('climates.both_spare_names_are_already_painted')}</div>`}
   <div class="cmbar2">
     <button class="${k.adding ? 'on' : ''}" onclick="cclAdd()"
@@ -265,7 +258,7 @@ function cclSlotsHtml(d){
 //: above is the first answer.
 function cclGeogHtml(d){
   const g = d.geography || {};
-  if(g.have) return `<div class="count"><code>${esc(g.file)}</code> ${tt('climates.gives_a_block_to_climate_by',{names_n:g.names.length,names:g.names.length === 1 ? '' : 's'})}</div>`;
+  if(g.have) return `<div class="count"><code>${esc(g.file)}</code> ${ttN('climates.gives_a_block_to_climates_by_name',g.names.length)}</div>`;
   return `<div class="w-warn">${tt('climates.taking_over_one_of_the_twelve',{problem:esc(g.problem || '')})}</div>`;
 }
 
@@ -305,7 +298,7 @@ function cclFormHtml(k, d){
       <span class="cmtnm">${tt('climates.textures_copied_from')}</span>
       <select onchange="cclSet('donor', this.value)">
         ${(d.donors || []).map(x => `<option value="${esc(x.code)}"${
-          x.code === k.donor ? ' selected' : ''}>${tt('climates.ground_type',{code:esc(x.code),grounds:x.grounds,grounds2:x.grounds === 1 ? '' : 's'})}</option>`
+          x.code === k.donor ? ' selected' : ''}>${ttN('climates.code_ground_types',x.grounds,{code:esc(x.code)})}</option>`
           ).join('')}
       </select></span></div>
     <div class="count">${tt('climates.a_climate_with_no_textures_is')}</div>
@@ -343,7 +336,7 @@ function cclPlanHtml(k){
   // agree with the rows under it.
   const n = (p.files || []).length + ((p.keys || []).length ? 1 : 0);
   return `<div class="cbrpanel">
-    <div class="k">${tt('climates.file_would_change_ground_types',{x:n,x2:n === 1 ? '' : 's',mode:p.mode === 'add' ? tt('climates.a_new_name') : tt('climates.a_slot_taken_over'),n:(p.grounds || []).length})}</div>
+    <div class="k">${ttN('climates.files_would_change_ground_types',n,{mode:p.mode === 'add' ? tt('climates.a_new_name') : tt('climates.a_slot_taken_over'),grounds:(p.grounds || []).length})}</div>
     ${(p.changes || []).map(x => `<div class="count">${esc(x)}</div>`).join('')}
     ${(p.warnings || []).map(x => `<div class="w-warn">${esc(x)}</div>`).join('')}
     <div class="cmbar2">

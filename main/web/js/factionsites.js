@@ -19,7 +19,7 @@
 
 async function loadFactionSites(){
   const mod = state.src;
-  main.innerHTML = `<div class="empty">${tt('common.reading')} ` + esc(mod) + `${tt('factionsites.s_populace_and_off_map_models')}</div>`;
+  main.innerHTML = `<div class="empty">${tt('factionsites.reading_mod_populace_and_off_map_models',{mod:esc(mod)})}</div>`;
   let r;
   try{ r = await api.get('/api/factionsites?mod=' + enc(mod)); }
   catch(e){ if(stale('factionsites', mod)) return;
@@ -56,7 +56,7 @@ function renderFactionSites(){
       }).join('') + fsxAddLbcHtml()
     : off.filter(b => b.depth === 0).map(b => `<button class="trrow${c.sel === b.path ? ' on' : ''}"
           onclick="fsxPick('${q1(esc(b.path))}')"><div class="nm">${esc(b.path)}</div>
-          <div class="sub">${off.filter(x => x.path.startsWith(b.path + '/') && x.depth === 1).length} block(s)</div></button>`).join('');
+          <div class="sub">${tt('factionsites.block_s',{n:off.filter(x => x.path.startsWith(b.path + '/') && x.depth === 1).length})}</div></button>`).join('');
   main.innerHTML = strip + `<div class="trwrap">
     <div class="trlist">
       <div class="fsxtabs">
@@ -74,7 +74,7 @@ function renderFactionSites(){
           : tt('factionsites.a_factions_fleets_and_a_cultures')}</span></div>
         <span style="flex:1"></span>
         <button onclick="fsxRevert()" ${n ? '' : 'disabled'}>${tt('common.revert')}</button>
-        <button class="primary" onclick="fsxSave()" ${n ? '' : 'disabled'}>${tt('factionsites.save_change',{x:n || '',x2:n === 1 ? '' : 's'})}</button>
+        <button class="primary" onclick="fsxSave()" ${n ? '' : 'disabled'}>${ttN('factionsites.save_changes',n)}</button>
       </div>
       ${c.tab === 'lbc' ? fsxLbcHtml() : fsxOffHtml()}
     </div>
@@ -201,9 +201,8 @@ async function fsxSave(){
   finally{ c.busy = false; }
   if(plan.error){ toast('✗ ' + plan.error, 8000); return; }
   const p = plan.plan || {};
-  if(!confirm(tt('factionsites.write_change_s',{n:(p.changes || []).length}) + (p.changes || []).slice(0, 16).join('\n')
-    + ((p.warnings || []).length ? '\n\n⚠ ' + p.warnings.slice(0, 5).join('\n⚠ ') : '')
-    + tt('common.backed_up_first_and_log_can'))) return;
+  if(!confirm(tt('factionsites.write_confirm',{n:(p.changes || []).length,changes:(p.changes || []).slice(0, 16).join('\n')
+    + ((p.warnings || []).length ? '\n\n⚠ ' + p.warnings.slice(0, 5).join('\n⚠ ') : '')}))) return;
   let res;
   try{ res = await api.post('/api/factionsites/apply', body); }
   catch(e){ res = {error: errText(e)}; }

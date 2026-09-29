@@ -180,7 +180,7 @@ async function cqExport(what){
   if(!r.error){
     k.exported = r;
     activity(tt('mapquery.map_export'), tt('mapquery.file_s_kb',{count:r.count,bytes:Math.round(r.bytes / 1024)}));
-    toast(tt('mapquery.file_written_to',{count:r.count,count2:r.count === 1 ? '' : 's',folder:r.folder}), 7000);
+    toast(ttN('mapquery.files_written_to',r.count,{folder:r.folder}), 7000);
   }
   cqPaint();
 }
@@ -565,13 +565,13 @@ function cqResultHtml(){
   if(!res) return '';
   const rows = res.regions.slice(0, CQ_ROWS);
   return `<div class="cqres">
-    <div class="k">${tt('mapquery.province_of_tiles_ms',{count:res.count,x:res.count === 1 ? '' : 's',of:res.of,tiles:res.tiles.toLocaleString(),ms:res.ms})}</div>
+    <div class="k">${ttN('mapquery.provinces_of_tiles_ms',res.count,{of:res.of,tiles:res.tiles.toLocaleString(),ms:res.ms})}</div>
     ${res.off.length ? res.off.map(o => `<div class="w-warn">
       <b>${esc(o.label || o.code)}</b> ${tt('mapquery.was_not_asked',{why:esc(o.why)})}</div>`).join('') : ''}
     ${res.count ? rows.map(r => `<div class="cqrow" onclick='cqGo(${
         JSON.stringify({name: r.name, tile: r.tile}).replace(/'/g, "&#39;")})'>
         <b>${esc(r.shown || r.name)}</b>
-        <span class="count">${tt('mapquery.tiles',{name:esc(r.name),x:r.owner ? ' · ' + esc(r.owner) : '',pixels:r.pixels.toLocaleString()})}</span>
+        <span class="count">${r.owner ? tt('mapquery.name_owner_tiles',{name:esc(r.name),owner:esc(r.owner),pixels:r.pixels.toLocaleString()}) : tt('mapquery.name_tiles',{name:esc(r.name),pixels:r.pixels.toLocaleString()})}</span>
         <div class="count">${r.why.map(esc).join(' · ')}</div>
       </div>`).join('')
       : `<div class="count">${tt('mapquery.nothing_on_this_map_answers_all')}</div>`}
@@ -627,10 +627,10 @@ function cqMapsHtml(){
 function cqLegendHtml(col){
   const k = state.cq;
   return `<div class="cqleg">
-    <div class="k">${tt('mapquery.group',{label:esc(col.label),groups_n:col.groups.length,x:col.groups.length === 1 ? '' : 's',x2:col.ungrouped ? tt('mapquery.province_s_in_none',{ungrouped:col.ungrouped}) : ''})}</div>
+    <div class="k">${ttN('mapquery.legend_groups',col.groups.length,{label:esc(col.label),none:col.ungrouped ? tt('mapquery.province_s_in_none',{ungrouped:col.ungrouped}) : ''})}</div>
     ${col.note ? `<div class="count">${esc(col.note)}</div>` : ''}
     ${(col.substituted || []).length ? `<div class="w-warn">
-      ${tt('mapquery.faction_declare_a_colour_too_close',{substituted_n:col.substituted.length,x:col.substituted.length === 1 ? '' : 's',x2:col.substituted.length === 1 ? 'is' : 'are',x3:col.substituted.map(s => tt('mapquery.rgb_the_same_as',{value:esc(s.value),declared:s.declared.join(', '),clash:esc(s.clash)})).join('; ')})}</div>` : ''}
+      ${ttN('mapquery.factions_colour_too_close',col.substituted.length,{list:col.substituted.map(s => tt('mapquery.rgb_the_same_as',{value:esc(s.value),declared:s.declared.join(', '),clash:esc(s.clash)})).join('; ')})}</div>` : ''}
     <div class="cqswatches">
       ${col.groups.map(g => `<div class="cqsw" title="${esc(g.names.join(', '))}">
         <i style="background:rgb(${g.rgb.join(',')})"></i>
@@ -678,10 +678,10 @@ function cqExportHtml(){
     </div>
     <div class="count">${tt('mapquery.a_tsv_for_a_spreadsheet_or')}</div>
     ${k.exporting ? `<div class="count">${tt('common.writing')}</div>` : ''}
-    ${done ? `<div class="cqres"><div class="k">${tt('mapquery.file_kb_ms',{count:done.count,x:done.count === 1 ? '' : 's',x2:Math.round(done.bytes / 1024).toLocaleString(),ms:done.ms})}</div>
+    ${done ? `<div class="cqres"><div class="k">${ttN('mapquery.files_kb_ms',done.count,{kb:Math.round(done.bytes / 1024).toLocaleString(),ms:done.ms})}</div>
       <div class="count">${esc(done.folder)}</div>
-      ${done.files.slice(0, 40).map(f => `<div class="count">${tt('mapquery.province_s',{name:esc(f.name),label:esc(f.label),regions:f.regions,x:f.rows ? tt('mapquery.rows',{rows:f.rows.toLocaleString()})
-          + (f.too_many_for_a_sheet ? ` <b class="w-warn">${tt('mapquery.more_than_a_spreadsheet_holds_in')}</b>` : '') : ''})}</div>`).join('')}
+      ${done.files.slice(0, 40).map(f => `<div class="count">${f.rows ? tt('mapquery.file_provinces_rows',{name:esc(f.name),label:esc(f.label),regions:f.regions,rows:f.rows.toLocaleString(),
+          warn:f.too_many_for_a_sheet ? ` <b class="w-warn">${tt('mapquery.more_than_a_spreadsheet_holds_in')}</b>` : ''}) : tt('mapquery.file_provinces',{name:esc(f.name),label:esc(f.label),regions:f.regions})}</div>`).join('')}
       ${done.files.length > 40 ? `<div class="count">${tt('mapquery.and_more',{x:done.files.length - 40})}</div>` : ''}
     </div>` : ''}
     ${(done && done.skipped || []).map(s => `<div class="w-warn">

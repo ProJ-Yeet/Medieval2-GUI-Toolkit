@@ -141,16 +141,14 @@ async function imgPick(url, after){
      before the user looked away is no better than silence. */
   let waiting = true;
   const nag = () => { if(waiting) toast(
-    tt('images.a_file_picker_is_open_pick')
-    + tt('images.the_taskbar_windows_sometimes_opens_it'), 4000); };
+    tt('images.file_picker_open'), 4000); };
   nag();
   const nagger = setInterval(nag, 4000);
   let f;
   try{
     f = await api.post('/api/browse_file',
-      {title: tt('images.pick_the_picture_to_use_for') + p.label,
-       filter: tt('images.images_tga_dds_png_jpg_jpeg')
-             + tt('images.tga_dds_png_jpg_jpeg_bmp')});
+      {title: tt('images.pick_picture_for',{label:p.label}),
+       filter: tt('images.file_filter')});
   }catch(e){ return toast(''+e); }
   finally{ waiting = false; clearInterval(nagger); }
   if(!f.path) return;
@@ -190,10 +188,10 @@ function imgDialog(url, mod, src, p, after){
       ${p.note ? `<div class="count" style="margin-top:10px">${esc(p.note)}</div>` : ''}
       ${(p.warnings||[]).map(w =>
         `<div class="w-warn" style="margin-top:8px">⚠ ${esc(w)}</div>`).join('')}
-      ${(p.replaces||[]).length ? `<div class="count" style="margin-top:10px">${tt('images.every_one_of_them_is_backed',{x:docPoints(tt('images.this_writes_file_under_the_mods',{replaces_n:p.replaces.length,replaces:p.replaces.length===1?'':'s'}),
-          p.replaces.map(r => `<code>${esc(r.rel)}</code> - ${
-            r.exists ? 'overwritten' : `<b>${tt('images.created')}</b>`}${
-            r.drops.length ? tt('images.and_removed',{drops:r.drops.map(esc).join('</code> <code>')}) : ''}`))})}</div>` : ''}
+      ${(p.replaces||[]).length ? `<div class="count" style="margin-top:10px">${tt('images.every_one_of_them_is_backed',{x:docPoints(ttN('images.writes_files_under_mod', p.replaces.length),
+          p.replaces.map(r => tt(r.exists ? (r.drops.length ? 'images.file_overwritten_removing' : 'images.file_overwritten')
+              : (r.drops.length ? 'images.file_created_removing' : 'images.file_created'),
+              {rel:esc(r.rel),drops:r.drops.map(esc).join('</code> <code>')})))})}</div>` : ''}
     </div>
     <div class="foot">
       <button onclick="imgCancel()">${tt('common.cancel')}</button>

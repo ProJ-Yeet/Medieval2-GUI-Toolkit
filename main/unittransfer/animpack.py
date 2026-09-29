@@ -1008,10 +1008,10 @@ def apply_port(plan: PortPlan, backup_root) -> dict:
     appended to, and the manifest's ``appended`` rows are what
     :func:`undo_appended` truncates them back with. Returns the manifest."""
     if not plan.ok:
-        raise PackError("cannot port: " + "; ".join(plan.errors))
+        raise PackError(_i18n.msg("eng.animpack.cannot_port", "cannot port: {why}", why="; ".join(plan.errors)))
     why = check_writable(plan)
     if why:
-        raise PackError("cannot port: " + "; ".join(why))
+        raise PackError(_i18n.msg("eng.animpack.cannot_port", "cannot port: {why}", why="; ".join(why)))
     src, _whose = packs_for(plan.source_dir)
     dst = open_packs(plan.anim_dir)
     data_dir = Path(plan.dest_dir)

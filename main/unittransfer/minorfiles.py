@@ -1725,7 +1725,7 @@ def new_any(tab_id: str, edits: Dict) -> str:
         return new_religion(edits)
     if tab_id == "names":
         return new_names(edits)
-    raise MinorError(REFUSED.get(tab_id, f"{tab_id} records cannot be created here"))
+    raise MinorError(REFUSED[tab_id] if tab_id in REFUSED else _i18n.msg("eng.minorfiles.records_cannot_be_created_here", "{tab} records cannot be created here", tab=tab_id))
 
 
 def parse_block_any(tab_id: str, text: str):
@@ -2200,9 +2200,9 @@ def _plan_culture_needs(p: MinorPlan, mod, source: str) -> None:
         want = new + k[len(src):] if k == src else k.replace(f"EMT_{src}_", f"EMT_{new}_", 1)
         have = want in loc
         p.needs.append({"what": "text key",
-                        "detail": f"{{{want}}} in text/expanded.txt"
-                                  + (" - already there" if have
-                                     else f" - {source} has {{{k}}} \"{loc[k]}\"")})
+                        "detail": _i18n.msg("eng.minorfiles.key_in_text_expanded_already_there", "{{key}} in text/expanded.txt - already there", key=want)
+                                  if have else
+                                  _i18n.msg("eng.minorfiles.key_in_text_expanded_source_has", "{{key}} in text/expanded.txt - {source} has {{source_key}} \"{text}\"", key=want, source=source, source_key=k, text=loc[k])})
     if not keys:
         p.needs.append({"what": "text key",
                         "detail": _i18n.msg("eng.minorfiles.and_emt_priest_in_text_expanded", "{{new}} and EMT_{new2}_PRIEST in text/expanded.txt ({source} has none here, so the game's own are used)", new=new, new2=new, source=source)})
@@ -2517,7 +2517,7 @@ def apply(p: MinorPlan) -> Dict:
     from .logutil import file_op, log
 
     if p.errors:
-        raise ValueError("cannot apply: " + "; ".join(p.errors))
+        raise ValueError(_i18n.msg("eng.minorfiles.cannot_apply", "cannot apply: {why}", why="; ".join(p.errors)))
     if not p.touched():
         raise ValueError(_i18n.msg("eng.minorfiles.nothing_to_change", "nothing to change"))
     mod = p.mod

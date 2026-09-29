@@ -965,12 +965,9 @@ def build_index(regions_img: Image.Image, sea: bytes,
     region_keys = {k for k in by_record if k not in marker_keys}
     if len(region_keys) > limit:
         raise MapError(
-            f"descr_regions.txt declares {len(region_keys)} regions and this map "
-            f"is read at {limit}"
-            + (f", the engine's own ceiling being {mapvocab.MAX_REGION_COLOURS}. "
-               f"M2EX replaces that ceiling: if this mod runs on it, mark it as "
-               f"M2EX on its Home card and the map will be read in full."
-               if limit <= 256 else "."))
+            _i18n.msg("eng.campmap.declares_regions_read_at_ceiling", "descr_regions.txt declares {count} regions and this map is read at {limit}, the engine's own ceiling being {ceiling}. M2EX replaces that ceiling: if this mod runs on it, mark it as M2EX on its Home card and the map will be read in full.", count=len(region_keys), limit=limit, ceiling=mapvocab.MAX_REGION_COLOURS)
+            if limit <= 256 else
+            _i18n.msg("eng.campmap.declares_regions_read_at", "descr_regions.txt declares {count} regions and this map is read at {limit}.", count=len(region_keys), limit=limit))
 
     labels, colours, counts = _label_image(rgb)
 
@@ -1960,7 +1957,7 @@ def layer_legend(cm: "CampaignMap", code: str) -> dict:
         notes.append(_i18n.msg("eng.campmap.distinct_colours_in_the_largest_are", "{census_n} distinct colours in {file}; the {cap} largest are listed. A layer carrying this many is a magnitude rather than a vocabulary.", census_n=len(census), file=ly['file'], cap=cap))
     unknown = sum(1 for c in out["colours"] if c["code_name"] is None)
     if unknown:
-        notes.append(_i18n.msg("eng.campmap.of_the_colours_listed_no_table", "{unknown} of the colours listed {x} no table this toolkit has names.", unknown=unknown, x='is one' if unknown == 1 else 'are ones'))
+        notes.append(_i18n.msgN("eng.campmap.colours_listed_no_table_names", unknown, "{count} of the colours listed is one no table this toolkit has names.", "{count} of the colours listed are ones no table this toolkit has names."))
     out["note"] = " ".join(notes)
     return out
 
@@ -2238,8 +2235,7 @@ def parse_block(text: str) -> RegionRecord:
                 return retry
         raise MapError(_i18n.msg("eng.campmap.this_is_not_a_region_record", "this is not a region record - no unindented region name line to start it"))
     if len(real) > 1:
-        raise MapError(f"this is {len(real)} region records, not one: "
-                       + ", ".join(r.name for r in real[:4]))
+        raise MapError(_i18n.msg("eng.campmap.this_is_region_records_not_one", "this is {count} region records, not one: {names}", count=len(real), names=", ".join(r.name for r in real[:4])))
     return real[0]
 
 
@@ -2915,7 +2911,7 @@ def apply_region(p: RegionPlan) -> dict:
     from .logutil import file_op, log
 
     if p.errors:
-        raise ValueError("cannot apply: " + "; ".join(p.errors))
+        raise ValueError(_i18n.msg("eng.campmap.cannot_apply", "cannot apply: {why}", why="; ".join(p.errors)))
     if not p.text:
         raise ValueError(_i18n.msg("eng.campmap.nothing_to_change", "nothing to change"))
     mod = p.mod

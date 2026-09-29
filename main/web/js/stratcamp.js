@@ -406,19 +406,19 @@ async function cjSave(extra){
   // Capped: a new faction declares a run for every other faction's diplomacy
   // row, which on the largest campaign installed is 25 of them and not a
   // sentence anybody reads.
-  const runs = (p.spans || []).map(s => s[0] >= s[1] ? `line ${s[0]}`
-    : `lines ${s[0]}-${s[1]}`);
-  const spans = runs.slice(0, 6).join(', ')
-    + (runs.length > 6 ? tt('stratcamp.and_more_runs',{runs:runs.length - 6}) : '');
-  if(!confirm(tt('stratcamp.write',{what:body.what})
-    + (body.faction ? ` for ${body.faction}` : '')
-    + tt('stratcamp.in',{campaign:k.d.campaign})
-    + (lines.join('\n') || tt('common.no_visible_change'))
-    + ((p.changes || []).length > 14
-       ? tt('stratcamp.and_more',{changes:p.changes.length - 14}) : '')
-    + (warn.length ? '\n\n' + warn.join('\n') : '')
-    + (spans ? tt('stratcamp.only_change',{spans}) : '')
-    + tt('common.backed_up_first_and_log_can'))) return;
+  const runs = (p.spans || []).map(s => s[0] >= s[1] ? tt('stratcamp.run_line',{from:s[0]})
+    : tt('stratcamp.run_lines',{from:s[0],to:s[1]}));
+  const spans = runs.length > 6
+    ? tt('stratcamp.runs_and_more',{runs:runs.slice(0, 6).join(', '),more:runs.length - 6})
+    : runs.join(', ');
+  if(!confirm(tt('stratcamp.write_confirm',{
+    head:body.faction ? tt('stratcamp.write_for_in',{what:body.what,faction:body.faction,campaign:k.d.campaign})
+      : tt('stratcamp.write_in',{what:body.what,campaign:k.d.campaign}),
+    changes:lines.join('\n') || tt('common.no_visible_change'),
+    more:(p.changes || []).length > 14
+       ? tt('stratcamp.and_more',{changes:p.changes.length - 14}) : '',
+    warnings:warn.length ? '\n\n' + warn.join('\n') : '',
+    only:spans ? tt('stratcamp.only_change',{spans}) : ''}))) return;
   k.busy = true;
   let res;
   try{ res = await api.post('/api/map/campaign_apply', body); }
@@ -448,10 +448,9 @@ async function cjWinSave(extra){
   k.preview = p;
   cjPaint();
   const warn = (p.warnings || []).slice(0, 4).map(x => '⚠ ' + x);
-  if(!confirm(tt('stratcamp.write_the_win_conditions_for',{action:body.action,faction:body.faction})
-    + '\n\n' + ((p.changes || []).join('\n') || tt('common.no_visible_change'))
-    + (warn.length ? '\n\n' + warn.join('\n') : '')
-    + tt('common.backed_up_first_and_log_can'))) return;
+  if(!confirm(tt('stratcamp.write_wins_confirm',{action:body.action,faction:body.faction,
+    changes:(p.changes || []).join('\n') || tt('common.no_visible_change'),
+    warnings:warn.length ? '\n\n' + warn.join('\n') : ''}))) return;
   k.busy = true;
   let res;
   try{ res = await api.post('/api/map/wins_apply', body); }
@@ -547,7 +546,7 @@ function cjGlobalsHtml(){
     ${note ? `<div class="count">${note}</div>` : ''}</div>`;
   return `<div class="cxform">
     <div class="csrow2">
-      ${box('start_date', tt('stratcamp.starts'), tt('stratcamp.a_year_and') + v.seasons.join(' or '))}
+      ${box('start_date', tt('stratcamp.starts'), tt('stratcamp.a_year_and_season',{seasons:v.seasons.join(' or ')}))}
       ${box('end_date', tt('stratcamp.ends'), '')}
     </div>
     <div class="csrow2">
@@ -735,7 +734,9 @@ function cjPresHtml(){
         : ''}
     </div>
     <div class="cjsm">
-      <div class="cjsmhead">${tt('stratcamp.movies_a_separate_file_and_a',{x:esc(mv && mv.file || 'descr_faction_movies.xml'),x2:mv && mv.have ? tt('stratcamp.paths_under_data') + esc(mv.fmv) : ''})}</div>
+      <div class="cjsmhead">${mv && mv.have
+        ? tt('stratcamp.movies_file_paths_under_data',{file:esc(mv && mv.file || 'descr_faction_movies.xml'),fmv:esc(mv.fmv)})
+        : tt('stratcamp.movies_file_only',{file:esc(mv && mv.file || 'descr_faction_movies.xml')})}</div>
       ${!mv || !mv.have
         ? `<div class="count">${esc((mv && mv.problem)
             || tt('stratcamp.this_campaign_has_no_movie_file'))}</div>`
@@ -781,14 +782,13 @@ async function cjPresApply(body, what){
   finally{ p.busy = false; }
   if(plan.error){ toast('✗ ' + plan.error, 7000); return; }
   const q = plan.plan || {};
-  if(!confirm(tt('stratcamp.write_2',{what})
-    + ((q.changes || []).slice(0, 10).join('\n') || tt('common.no_visible_change'))
-    + ((q.warnings || []).length ? '\n\n' + (q.warnings || []).slice(0, 3)
-        .map(x => '⚠ ' + x).join('\n') : '')
-    + (q.loc_new && q.loc_new.length
+  if(!confirm(tt('stratcamp.write_files_confirm',{what,
+    changes:(q.changes || []).slice(0, 10).join('\n') || tt('common.no_visible_change'),
+    warnings:(q.warnings || []).length ? '\n\n' + (q.warnings || []).slice(0, 3)
+        .map(x => '⚠ ' + x).join('\n') : '',
+    keys:q.loc_new && q.loc_new.length
         ? tt('stratcamp.text_key_s_this_file_has',{loc_new_n:q.loc_new.length})
-        : '')
-    + tt('common.backed_up_first_and_log_can'))) return;
+        : ''}))) return;
   p.busy = true;
   let res;
   try{ res = await api.post('/api/campfiles/apply', body); }
@@ -810,7 +810,7 @@ function cjCampFactionHtml(f, w, v){
     <datalist id="cjl-label">${(v.ai_labels || []).map(x =>
     `<option value="${esc(x)}">`).join('')}</datalist>`;
   return `<div class="cjsmhead">${tt('stratcamp.the_campaign_descr_strat_txt_what')}</div>
-    <div class="count">${tt('stratcamp.line_settlement_character',{line:f.line,settlements:f.settlements,x:f.settlements === 1 ? '' : 's',characters:f.characters,x2:f.characters === 1 ? '' : 's',x3:f.roster ? ' · ' + f.roster : ''})}</div>
+    <div class="count">${tt('stratcamp.line_settlements_characters',{line:f.line,settlements:ttN('stratcamp.settlement_count',f.settlements),characters:ttN('stratcamp.character_count',f.characters),roster:f.roster ? ' · ' + f.roster : ''})}</div>
     <div class="csrow2">
       <div class="cmfield"><label>${tt('stratcamp.ai_personality')}</label>
         <input list="cjl-ai" value="${esc(w.scalars.ai)}"
@@ -891,8 +891,7 @@ function cjCreateHtml(){
         <input value="${esc(m.name)}" placeholder="${ttA('stratcamp.burgundy')}"
           oninput="cjMade('name', this.value)">
         <div class="count">${tt('stratcamp.the_name_the_rest_of_the',{slots_known:v.slots_known
-          ? tt('stratcamp.descr_sm_factions_txt_has_to')
-            + tt('stratcamp.factions_screen')
+          ? tt('stratcamp.sm_factions_has_to_declare_it')
           : ''})}</div></div>
       <div class="cmfield"><label>${tt('stratcamp.cloned_from')}</label>
         <select onchange="cjMade('donor', this.value)">
@@ -949,7 +948,7 @@ function cjWinsHtml(){
     return `<div class="cxrow${r.faction === k.winPick ? ' on' : ''}"
       onclick="cjWinPick('${esc(r.faction)}')">
       <b>${esc(r.faction)}</b>
-      ${tt('stratcamp.hold_take',{n:(r.hold || []).length,take:r.take || 0,x:r.short_take ? tt('stratcamp.short') + r.short_take : '',bad:bad ? `<span class="w-bad">${bad}</span>` : '',warn:warn ? `<span class="w-warn">${warn}</span>` : ''})}
+      ${tt('stratcamp.hold_take',{n:(r.hold || []).length,take:r.take || 0,x:r.short_take ? tt('stratcamp.short_take',{short_take:r.short_take}) : '',bad:bad ? `<span class="w-bad">${bad}</span>` : '',warn:warn ? `<span class="w-warn">${warn}</span>` : ''})}
     </div>`;
   }).join('');
   const box = (slot, label, note) => `<div class="cmfield"><label>${label}</label>

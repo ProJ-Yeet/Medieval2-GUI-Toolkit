@@ -51,7 +51,7 @@ function renderDupes(){
     <h2>${tt('dupes.duplicate_entries_in_s_battle_models',{mod:esc(a.mod)})}</h2>
     <div class="mbody">
       ${n?`<div class="count" style="margin-bottom:10px">
-        <b>${n}</b> ${tt('dupes.name_appear_more_than_once_which',{x:n===1?'':'s',x2:n===1?'s':'',x3:x,x4:x===1?'':'s',x5:dupBytes(a.extra_bytes)})}</div>
+        ${tt('dupes.names_repeated_blocks_never_read',{names:ttN('dupes.names_appear_more_than_once',n),blocks:ttN('dupes.extra_entry_blocks',x),size:dupBytes(a.extra_bytes)})}</div>
 
       <div class="count" style="margin-bottom:10px">${tt('dupes.two_ways_out_per_block_rename')}</div>
 
@@ -71,7 +71,7 @@ function renderDupes(){
       <button class="primary" onclick="dupApply()">${tt('common.apply')}</button>`:''}
     </div>`;
 }
-const dupBytes=n=>n<1024?`${n} bytes`:n<1048576?`${(n/1024).toFixed(1)} KB`:`${(n/1048576).toFixed(1)} MB`;
+const dupBytes=n=>n<1024?tt('dupes.size_bytes',{n}):n<1048576?tt('dupes.size_kb',{n:(n/1024).toFixed(1)}):tt('dupes.size_mb',{n:(n/1048576).toFixed(1)});
 
 /* One name. The first block is a row like the others but with no controls on
    it, because seeing WHAT the game reads is half of deciding what to do with
@@ -95,7 +95,7 @@ function dupBlockHtml(r,b){
     : b.identical
       ? tt('dupes.an_exact_copy_of_it_removing')
       : tt('dupes.a_different_model',{differs:esc(b.differs.join('; '))});
-  const facts=tt('dupes.line_lod_skin_file_of_them',{line:b.line,lods:b.lods,lods2:b.lods===1?'':'s',skins:b.skins,skins2:b.skins===1?'':'s',files_n:b.files.length,files:b.files.length===1?'':'s',on_disk:b.on_disk});
+  const facts=tt('dupes.line_lods_skins_files_on_disk',{line:b.line,lods:ttN('dupes.lod_count',b.lods),skins:ttN('dupes.skin_count',b.skins),files:ttN('dupes.file_count',b.files.length),on_disk:b.on_disk});
   if(b.first) return `<div class="clrow"><span class="stext">
       <b>#${b.ordinal}</b> ${what}<br><span class="count">${facts}</span></span></div>`;
   return `<div class="clrow"><span class="stext">
@@ -163,13 +163,12 @@ async function dupApply(){
   if(r.plan.errors&&r.plan.errors.length){toast(r.plan.errors[0]);return;}
   const rm=r.removes.length,rn=r.renames.length;
   const lost=r.removes.filter(x=>!x.identical).length;
-  if(!confirm(tt('dupes.rewrite_s_battle_models_modeldb',{mod:state.dup.a.mod})+
-      `${rn?tt('dupes.block_s_renamed_each_becomes_a',{rn}):''}`+
-      `${rm?tt('dupes.block_s_removed',{rm}):''}`+
-      `${lost?tt('dupes.of_the_removed_block_s_is',{lost}):''}`+
-      tt('dupes.the_file_is_backed_up_first')))return;
+  if(!confirm(tt('dupes.rewrite_confirm',{mod:state.dup.a.mod,
+      renamed:rn?tt('dupes.block_s_renamed_each_becomes_a',{rn}):'',
+      removed:rm?tt('dupes.block_s_removed',{rm}):'',
+      lost:lost?tt('dupes.of_the_removed_block_s_is',{lost}):''})))return;
   const res=await api.post('/api/bmdb/dupes_apply',dupPayload());
-  if(res.error){toast(tt('dupes.failed')+res.error);return;}
+  if(res.error){toast(tt('dupes.failed_error',{error:res.error}));return;}
   if(res.plan&&res.plan.errors&&res.plan.errors.length){toast(res.plan.errors[0]);return;}
   toast(tt('dupes.renamed_removed_undo_in_log',{renamed:res.renamed,removed:res.removed}),5200);
   state.bmdb=null; state.destData=null;

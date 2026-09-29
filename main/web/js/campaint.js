@@ -93,11 +93,9 @@ function cpaintToggle(){
   // server refuses the stroke too; this says so before anybody tries one.
   const h = state.cmap && state.cmap.man && state.cmap.man.campaign_map;
   if(!p.on && h && h.paints === false){
-    p.err = tt('campaint.reads_its_own_map_from_and',{campaign:h.campaign,folder:h.folder})
-      + tt('campaint.paints_world_maps_base_which_it')
-      + ((h.readers || []).length
-        ? tt('campaint.open_with_campaign_to_paint',{readers:h.readers.join(' or ')})
-        : tt('campaint.no_campaign_in_this_mod_reads'));
+    p.err = (h.readers || []).length
+      ? tt('campaint.own_map_open_with_readers',{campaign:h.campaign,folder:h.folder,readers:h.readers.join(' or ')})
+      : tt('campaint.own_map_no_readers',{campaign:h.campaign,folder:h.folder});
     cpaintPaint();
     return;
   }
@@ -398,9 +396,7 @@ async function cpaintRedo(){
 async function cpaintDiscard(){
   const p = state.cpaint;
   if(p.busy) return;
-  if(p.st.undo && !confirm(tt('campaint.throw_away_unsaved_stroke',{undo:p.st.undo})
-      + tt('campaint.the_layers_are_re_read_from',{x:p.st.undo === 1 ? '' : 's'})
-      + tt('campaint.nothing_that_has_been_saved_is'))) return;
+  if(p.st.undo && !confirm(ttN('campaint.throw_away_unsaved_strokes',p.st.undo))) return;
   await cpaintPost('paint_discard', {});
   toast(tt('campaint.the_map_was_re_read_from'));
   await loadCampmap();
@@ -414,21 +410,17 @@ async function cpaintSave(){
   if(plan.error){ toast('✗ ' + plan.error, 9000); cpaintPaint(); return; }
   const q = plan.plan || {};
   const warn = (q.warnings || []).map(w => '⚠ ' + w);
-  if(!confirm(tt('campaint.write_save_the_painted_map')
-    + ((q.changes || []).join('\n') || tt('common.no_visible_change'))
-    + (warn.length ? '\n\n' + warn.join('\n') : '')
-    + tt('campaint.map_rwm_is_deleted_too_or')
-    + tt('campaint.shows_none_of_this_backed_up')
-    + tt('campaint.save_in_one_go'))) return;
+  if(!confirm(tt('campaint.write_save_the_painted_map_confirm',{
+    changes:(q.changes || []).join('\n') || tt('common.no_visible_change'),
+    warnings:warn.length ? '\n\n' + warn.join('\n') : ''}))) return;
   const res = await cpaintPost('paint_apply', {});
   if(!res) return;
   if(res.error){ toast('✗ ' + res.error, 9000); cpaintPaint(); return; }
   const camp = (q.texts || []).length;
-  toast(tt('campaint.saved_layer',{n:(res.layers || []).length})
-    + `${(res.layers || []).length === 1 ? '' : 's'}`
-    + (res.region ? tt('campaint.and_the_record_for',{region:res.region}) : '')
-    + (camp ? tt('campaint.and_campaign_file',{camp,camp2:camp === 1 ? '' : 's'}) : '')
-    + tt('campaint.map_rwm_deleted_log_can_undo'), 6000);
+  toast(tt('campaint.saved_layers_done',{
+    layers:res.region ? ttN('campaint.saved_layers_and_record',(res.layers || []).length,{region:res.region})
+      : ttN('campaint.saved_layer_count',(res.layers || []).length),
+    camp:camp ? ttN('campaint.and_campaign_file_count',camp) : ''}), 6000);
   p.wiz = null; p.wizOpen = false; p.prog = null;
   await loadCampmap();
 }
@@ -523,9 +515,7 @@ async function cpaintWizStart(){
 
 async function cpaintWizCancel(){
   const p = state.cpaint;
-  if(p.st.new_region && !confirm(tt('campaint.drop_the_new_regions_record')
-      + tt('campaint.any_tiles_already_painted_its_colour')
-      + tt('campaint.separately_or_they_become_a_province'))) return;
+  if(p.st.new_region && !confirm(tt('campaint.drop_the_new_region_confirm'))) return;
   await cpaintPost('region_cancel', {});
   p.wiz = null; p.wizOpen = false; p.prog = null; p.marker = '';
   cpaintPaint();
@@ -580,8 +570,8 @@ function cpaintHtml(){
   const st = p.st;
   const unsaved = st.undo || st.dirty.length || st.new_region;
   const head = `<div class="cpbar">
-    ${tt('campaint.paint',{x:unsaved ? `<span class="cpun" title="${esc(st.files.join(', '))}">${tt('campaint.stroke_unsaved',{undo:st.undo,x:st.undo === 1 ? '' : 's',x2:st.dirty.length
-        ? tt('campaint.layer',{dirty_n:st.dirty.length,x:st.dirty.length === 1 ? '' : 's'}) : ''})}</span>` : ''})}
+    ${tt('campaint.paint',{x:unsaved ? `<span class="cpun" title="${esc(st.files.join(', '))}">${ttN('campaint.strokes_unsaved',st.undo,{layers:st.dirty.length
+        ? ttN('campaint.layer_count',st.dirty.length) : ''})}</span>` : ''})}
   </div>`;
   if(!p.on) return head + `<div class="cppanel">${p.err
     ? `<div class="w-warn">${esc(p.err)}</div>`
@@ -601,12 +591,9 @@ function cpaintHtml(){
 const CPAINT_TOOLS = [
   ['pencil', '✏', tt('campaint.pencil'), tt('campaint.one_tile_per_click_or_drag')],
   ['brush', '\u{1F58C}', tt('campaint.brush'), tt('campaint.a_disc_or_square_of_tiles')],
-  ['bucket', '\u{1FAA3}', tt('campaint.bucket'), tt('campaint.flood_fill_every_tile_of_one')
-    + tt('campaint.this_one_four_connected')],
-  ['pipette', '\u{1F489}', tt('campaint.pipette'), tt('campaint.read_the_tile_on_the_region')
-    + tt('campaint.selects_the_region_on_the_others')],
-  ['water', '\u{1F30A}', tt('campaint.water'), tt('campaint.demirs_water_brush_regions_heights_and')
-    + tt('campaint.ground_types_together_in_this_maps')],
+  ['bucket', '\u{1FAA3}', tt('campaint.bucket'), tt('campaint.bucket_hint')],
+  ['pipette', '\u{1F489}', tt('campaint.pipette'), tt('campaint.pipette_hint')],
+  ['water', '\u{1F30A}', tt('campaint.water'), tt('campaint.water_hint')],
 ];
 
 //: 28b: the five tool buttons and nothing else - the size and the water note
@@ -746,8 +733,7 @@ function cpaintPaletteHtml(){
           value="${esc(p.filter)}" data-filter>
         <button class="cprg${p.sea ? ' on' : ''}" data-sea
           title="${w && w.layers && w.layers.regions
-            ? tt('campaint.the_sea_colour_measured_off_this')
-              + w.layers.regions.rgb.join(', ')
+            ? tt('campaint.sea_colour_title',{rgb:w.layers.regions.rgb.join(', ')})
             : tt('campaint.this_map_has_no_sea_colour')}"
           ${w && w.layers && w.layers.regions ? '' : 'disabled'}>${tt('campaint.sea',{x:w && w.layers && w.layers.regions
             ? `<i style="background:rgb(${w.layers.regions.rgb.join(',')})"></i>`
@@ -766,13 +752,12 @@ function cpaintPaletteHtml(){
     `<button class="cpsw2${rgb && k.key === ((rgb[0] << 16) | (rgb[1] << 8) | rgb[2])
       ? ' on' : ''}" data-rgb="${k.rgb.join(',')}"
       title="${esc(k.name || tt('campaint.no_table_names_this_colour'))} · ${k.rgb.join(', ')}${
-      k.count ? ' · ' + k.count.toLocaleString() + ' tiles' : ''}"
+      k.count ? ttN('campaint.tile_count_suffix',k.count) : ''}"
       ><i style="background:rgb(${k.rgb.join(',')})"></i><span>${
       esc(k.name || k.rgb.join(', '))}</span></button>`).join('');
   return `<div class="cppal">${list}</div>
     <div class="cpnote">${esc(L.note)}${L.closed ? ''
-      : tt('campaint.a_colour_outside_this_list_can')
-      + tt('campaint.no_table_to_hold_it_to')}</div>`;
+      : tt('campaint.colour_outside_list_note')}</div>`;
 }
 
 /* ---------- 49: the dock on the left of the map ----------
@@ -878,14 +863,12 @@ function cpaintWizHtml(){
         tt('campaint.the_game_logs_a_province_with')) : ''}
       <div class="count">${reach.length
         ? tt('campaint.written_into_a_settlement_the_music',{reach:reach.map(esc).join(', ')})
-        : tt('campaint.no_campaign_reads_this_map_so')
-          + tt('campaint.the_province_a_settlement_in_yet')}${miss.length
-        ? ` <span class="w-warn">${tt('campaint.a_map_of_own_and_will',{miss:miss.map(esc).join(', '),miss2:miss.length === 1 ? 'has' : 'have',miss3:miss.length === 1 ? 'its' : 'their'})}</span>`
+        : tt('campaint.no_campaign_reads_this_map_note')}${miss.length
+        ? ` <span class="w-warn">${ttN('campaint.miss_own_map',miss.length,{miss:miss.map(esc).join(', ')})}</span>`
         : ''}</div>
       ${box('rebels', tt('campaint.rebel_type'), 'brigands')}
       ${box('resources', tt('common.resources'), tt('campaint.gold_wine'), tt('campaint.comma_separated'))}
-      ${box('religions', tt('common.religions'), tt('campaint.catholic_100'), tt('campaint.name_percent_comma')
-        + tt('campaint.separated_they_must_total_100_or'))}
+      ${box('religions', tt('common.religions'), tt('campaint.catholic_100'), tt('campaint.religions_hint'))}
       <div class="cprow">
         <button class="primary" onclick="cpaintWizStart()">${tt('campaint.open_it_and_paint')}</button>
         <button onclick="cpaintWizCancel()">${tt('common.cancel')}</button></div>
@@ -900,10 +883,10 @@ function cpaintWizHtml(){
     <div class="k">${tt('campaint.rgb',{name:esc(spec.name),x:spec.rgb.join(', '),settlement:esc(spec.settlement)})}</div>
     ${step(1, true, tt('campaint.the_record_is_open'), spec.shown && spec.settlement_shown
       ? `<span class="count">${tt('campaint.built_by_held_by',{shown:esc(spec.shown),settlement_shown:esc(spec.settlement_shown),x:esc(cpaintFac(spec.faction)),x2:esc(cpaintFac(spec.owner || 'slave')),x3:p.wizMusic
-          ? tt('campaint.plays') + esc(p.wizMusic) : ''})}</span>`
+          ? tt('campaint.plays_music',{music:esc(p.wizMusic)}) : ''})}</span>`
       : `<span class="w-bad" title="${ttA('campaint.the_game_asserts_on_a_province')}">${tt('campaint.a_shown_name_is_missing')}</span>`)}
     ${step(2, pr.tiles > 0, tt('campaint.paint_the_province'),
-      `<span class="count">${tt('campaint.tile',{tiles:pr.tiles.toLocaleString(),x:pr.tiles === 1 ? '' : 's'})}</span>`)}
+      `<span class="count">${ttN('campaint.tile_count',pr.tiles)}</span>`)}
     ${step(3, !!pr.settlement, tt('campaint.place_the_settlement_pixel'),
       `<button class="cpmk${p.marker === 'settlement' ? ' on' : ''}"
         data-marker="settlement">${pr.settlement
@@ -1051,7 +1034,7 @@ function cpaintWorkspacePaint(){
   el.innerHTML = `<div class="cmworkmode"><span class="cmstatedot"></span>
     <b class="cmselectionname">${p.on ? tt('campaint.painting') : state.cmap && state.cmap.sel
       ? esc(state.cmap.sel.shown || state.cmap.sel.name || tt('campaint.selected_region')) : tt('campaint.select_a_region')}</b>
-    <span>${p.on ? (p.pal ? esc(cpaintToolName()) : tt('campaint.loading_palette')) + tt('campaint.right_drag_to_pan') : tt('campaint.click_a_province_to_inspect_drag')}</span>
+    <span>${p.on ? tt('campaint.tool_right_drag_to_pan',{tool:p.pal ? esc(cpaintToolName()) : tt('campaint.loading_palette')}) : tt('campaint.click_a_province_to_inspect_drag')}</span>
     ${p.on ? `<button onclick="cpaintToggle()">${tt('campaint.stop_painting')}</button>` : ''}</div>
     <div class="cmworksave">
       <span role="status">${p.busy ? tt('common.working') : dirty ? tt('campaint.unsaved_map_changes') : tt('campaint.paint_changes_saved')}</span>

@@ -317,10 +317,17 @@ def _check_firing(doc: Doc, f: Node, owner: str, key: str, refs: Refs, out: List
                 out.append(finding("gfx", "note", _i18n.msg("eng.walls.shot_gfx_has_no_value", "{owner}: shot_gfx has no value", owner=owner), key, i))
             elif refs.sets is not None and v.lower() not in refs.sets:
                 sev = "note" if refs.sets_unread else "warn"
-                out.append(finding("gfx", sev, f"{owner}: shot_gfx {v} is in none of the effect "
-                                   "files that can be read"
-                                   + (" (the base game's packed ones may have it)" if refs.sets_unread else ""),
-                                   key, i))
+                if refs.sets_unread:
+                    said = _i18n.msg("eng.walls.shot_gfx_is_in_none_of_the_effect_files_packed",
+                                     "{owner}: shot_gfx {v} is in none of the effect "
+                                     "files that can be read (the base game's packed ones may have it)",
+                                     owner=owner, v=v)
+                else:
+                    said = _i18n.msg("eng.walls.shot_gfx_is_in_none_of_the_effect_files",
+                                     "{owner}: shot_gfx {v} is in none of the effect "
+                                     "files that can be read",
+                                     owner=owner, v=v)
+                out.append(finding("gfx", sev, said, key, i))
         elif k in ("fire_angle",) and not (len(t) == 2 and _NUM.fullmatch(t[1])):
             out.append(finding("number", "fatal", _i18n.msg("eng.walls.is_not_a_number_2", "{owner}: {k} {v} is not a number", owner=owner, k=k, v=repr(v)), key, i))
     gone = [s for s in SIZES if s not in sizes]
@@ -599,7 +606,7 @@ def apply(p: WallPlan) -> Dict:
     from . import config
     from .logutil import file_op, log
     if p.errors or not p.text:
-        raise ValueError("cannot apply: " + ("; ".join(p.errors) or "nothing to change"))
+        raise ValueError(_i18n.msg("eng.walls.cannot_apply", "cannot apply: {why}", why="; ".join(p.errors) or _i18n.msg("eng.walls.nothing_to_change", "nothing to change")))
     mod = p.mod
     tid = config.new_transfer_id()
     backup_root = config.backup_root_for(tid)

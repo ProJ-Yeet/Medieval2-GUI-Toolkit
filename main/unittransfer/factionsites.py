@@ -489,7 +489,9 @@ def apply(p: SitePlan) -> Dict:
     from . import config
     from .logutil import file_op, log
     if p.errors or not p.texts:
-        raise ValueError("cannot apply: " + ("; ".join(p.errors) or "nothing to change"))
+        raise ValueError(_i18n.msg(
+            "eng.factionsites.cannot_apply", "cannot apply: {why}",
+            why="; ".join(p.errors) or _i18n.msg("eng.factionsites.nothing_to_change", "nothing to change")))
     mod = p.mod
     tid = config.new_transfer_id()
     backup_root = config.backup_root_for(tid)

@@ -286,8 +286,9 @@ def _plan_landuse(p: GenPlan, cm, body: dict) -> None:
         out.paste(tuple(g["rgb"]), mask=mask)
         counts.append(f"{label} ({k}={v}, {len(polys)} outline(s)) {n:,} -> {code}")
     if all(c.endswith(f" 0 -> {code}") for c, (_, _, _, code) in zip(counts, todo)):
-        raise GenError("none of those tags has an outline over this map's land, so "
-                       "nothing would change: " + "; ".join(counts))
+        raise GenError(_i18n.msg("eng.mapreal.none_of_those_tags_has_an_outline",
+                                 "none of those tags has an outline over this map's land, so "
+                                 "nothing would change: {counts}", counts="; ".join(counts)))
     _put(p, cm, "ground_types", out, info, rel)
     p.changes.append(f"{rel}: land corners from OpenStreetMap, in this order - "
                      + "; ".join(counts))
@@ -332,7 +333,7 @@ def _plan_landcover(p: GenPlan, cm, body: dict) -> None:
     if none:
         p.warnings.append(_i18n.msg("eng.mapreal.none_land_corner_s_had_no", "{none:,} land corner(s) had no class in the picture and keep their type", none=none))
     if left:
-        p.warnings.append("left as they are, as asked: " + ", ".join(left))
+        p.warnings.append(_i18n.msg("eng.mapreal.left_as_they_are_as_asked", "left as they are, as asked: {names}", names=", ".join(left)))
 
 
 def _plan_koppen(p: GenPlan, cm, body: dict) -> None:
@@ -382,10 +383,11 @@ def _plan_koppen(p: GenPlan, cm, body: dict) -> None:
     if hist[0]:
         p.warnings.append(_i18n.msg("eng.mapreal.hist_corner_s_have_no_zone", "{hist:,} corner(s) have no zone (the sea, mostly) and keep their climate", hist=hist[0]))
     if missing:
-        p.warnings.append("this mod has no climate for " + "; ".join(missing)
-                          + ", so those corners keep theirs")
+        p.warnings.append(_i18n.msg("eng.mapreal.this_mod_has_no_climate_for_so",
+                                    "this mod has no climate for {zones}, so those corners keep theirs",
+                                    zones="; ".join(missing)))
     if left:
-        p.warnings.append("left as they are, as asked: " + ", ".join(left))
+        p.warnings.append(_i18n.msg("eng.mapreal.left_as_they_are_as_asked", "left as they are, as asked: {names}", names=", ".join(left)))
 
 
 # ---------------------------------------------------------------------------

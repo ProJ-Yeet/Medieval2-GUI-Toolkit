@@ -82,7 +82,7 @@ function fauRow(slot){
 //: `· 2 gaps` for the faction picker; nothing while it is loading or clean.
 function fauBadge(slot){
   const f = fauRow(slot);
-  return f && f.gaps ? tt('facaudit.gap',{gaps:f.gaps,x:f.gaps === 1 ? '' : 's'}) : '';
+  return f && f.gaps ? ttN('facaudit.badge_gaps',f.gaps) : '';
 }
 
 function fauPaint(){
@@ -125,9 +125,9 @@ function fauHtml(){
   const lack = f.rows.filter(r => r.state === 'missing');
   const copyable = lack.filter(r => r.fix === 'clone' && r.level === 'gap' && fauHas(tpl, r.id));
   const head = f.gaps
-    ? `<span class="w-bad">${tt('facaudit.gap_2',{gaps:f.gaps,x:f.gaps === 1 ? '' : 's'})}</span>`
+    ? `<span class="w-bad">${ttN('facaudit.head_gaps',f.gaps)}</span>`
     : `<span class="w-good">${tt('facaudit.complete')}</span>`;
-  const notes = f.notes ? ` <span class="count">${tt('facaudit.note',{notes:f.notes,x:f.notes === 1 ? '' : 's'})}</span>` : '';
+  const notes = f.notes ? ` <span class="count">${ttN('facaudit.head_notes',f.notes)}</span>` : '';
   const names = lack.filter(r => r.level === 'gap').map(r => r.label);
   return `<div class="fauhead">
       <button class="fautog" onclick="fauToggle()"
@@ -141,12 +141,12 @@ function fauHtml(){
         <select onchange="fauPickTemplate('${esc(slot)}', this.value)">
           ${fauTemplates(slot).map(t => `<option value="${esc(t.slot)}"${
             t.slot === tpl ? ' selected' : ''}>${esc(t.label)}${
-            t.gaps ? tt('facaudit.gap_3',{gaps:t.gaps,gaps2:t.gaps === 1 ? '' : 's'}) : ''}</option>`).join('')}
+            t.gaps ? ttN('facaudit.badge_gaps',t.gaps) : ''}</option>`).join('')}
         </select></label>
       <button class="primary" ${copyable.length && !k.busy ? '' : 'disabled'}
         onclick="fauRepair('${esc(slot)}', null)"
         title="${ttA('facaudit.every_gap_the_template_can_fill')}"
-        >${tt('facaudit.copy_gap_from',{copyable_n:copyable.length,copyable:copyable.length === 1 ? '' : 's',tpl:esc(tpl)})}</button>
+        >${ttN('facaudit.copy_gaps_from',copyable.length,{tpl:esc(tpl)})}</button>
       <span class="count">${tt('facaudit.the_same_records_add_a_faction')}</span>
     </div>` : ''}` : ''}`;
 }
@@ -220,10 +220,9 @@ async function fauRepair(slot, id){
   if(plan.error){ toast('✗ ' + plan.error, 8000); return; }
   const p = plan.plan || {};
   const warn = (p.warnings || []).map(x => '⚠ ' + x);
-  if(!confirm(tt('facaudit.copy_into_from',{slot,tpl})
-    + ((p.changes || []).join('\n') || tt('common.no_visible_change'))
-    + (warn.length ? '\n\n' + warn.join('\n') : '')
-    + tt('common.backed_up_first_and_log_can'))) return;
+  if(!confirm(tt('facaudit.copy_confirm',{slot,tpl,
+    changes:(p.changes || []).join('\n') || tt('common.no_visible_change'),
+    warnings:warn.length ? '\n\n' + warn.join('\n') : ''}))) return;
   k.busy = true; fauPaint();
   let res;
   try{ res = await api.post('/api/factions/repair_apply', body); }

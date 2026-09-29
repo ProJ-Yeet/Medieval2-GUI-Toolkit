@@ -148,7 +148,7 @@ function cbrHtml(){
     ${rows.map(r => cbrRowHtml(r, r.campaign === here)).join('')}
     ${typeof cnwHtml === 'function' ? cnwHtml() : ''}
     ${typeof cimHtml === 'function' ? cimHtml() : ''}
-    <div class="count">${tt('campbrowse.campaign_read_in_ms_the_ten',{rows_n:rows.length,rows:rows.length === 1 ? '' : 's',ms:d.ms,base:esc(d.base)})}</div>
+    <div class="count">${ttN('campbrowse.campaigns_read_in_ms',rows.length,{ms:d.ms,base:esc(d.base)})}</div>
   </div>`;
 }
 
@@ -183,9 +183,9 @@ function cbrRowHtml(r, open){
       <div class="count">${tt('campbrowse.playable_unlockable_not_playable',{play,unlock,non})}</div>
       ${counts ? `<div class="count">${counts}</div>` : ''}
       ${r.renamed ? `<div class="count">${tt('campbrowse.its_folder_is_and_its_first',{leaf:esc(r.leaf),name:esc(r.name)})}</div>` : ''}
-      ${r.problems ? `<div class="w-warn">${tt('campbrowse.line_of_it_did_not_parse',{problems:r.problems,problems2:r.problems === 1 ? '' : 's'})}</div>` : ''}
+      ${r.problems ? `<div class="w-warn">${ttN('campbrowse.lines_did_not_parse',r.problems)}</div>` : ''}
       ${cbrFilesHtml(r)}
-      ${r.layers.length ? `<div class="count">${tt('campbrowse.it_ships_map_layer_of_its',{layers_n:r.layers.length,layers:r.layers.length === 1 ? '' : 's',layers2:esc(r.layers.slice(0, 3).join(', ')),layers3:r.layers.length > 3
+      ${r.layers.length ? `<div class="count">${ttN('campbrowse.ships_map_layers',r.layers.length,{list:esc(r.layers.slice(0, 3).join(', ')),more:r.layers.length > 3
           ? ', …' : ''})}</div>` : ''}`}
   </div>`;
 }
@@ -196,7 +196,6 @@ function cbrRowHtml(r, open){
 function cbrFilesHtml(r){
   const missing = (r.files || []).filter(f => !f.have);
   if(!missing.length) return '';
-  return `<div class="count">${tt('campbrowse.no_of_its_own',{x:missing.map(f =>
-    `<code>${esc(f.file)}</code>`).join(', '),x2:missing.length === 1 ? esc(missing[0].why) + tt('campbrowse.comes_from_elsewhere')
-      : tt('campbrowse.those_come_from_elsewhere')})}</div>`;
+  return `<div class="count">${ttN('campbrowse.no_files_of_its_own',missing.length,{files:missing.map(f =>
+    `<code>${esc(f.file)}</code>`).join(', '),why:esc(missing[0].why)})}</div>`;
 }

@@ -177,7 +177,11 @@ function i18nFromServer(obj){
     const [id,params]=m;
     const have=I18N.pseudo?Object.prototype.hasOwnProperty.call(I18N.en,id)
       :Object.prototype.hasOwnProperty.call(I18N.cat,id);
-    return have?tt(id,params||{}):s;
+    if(!have)return s;
+    // a message with a count carries {count}, and the catalogue holds a form per category
+    const raw=I18N.pseudo?I18N.en[id]:I18N.cat[id];
+    if(raw&&typeof raw==='object'&&params&&typeof params.count==='number')return ttN(id,params.count,params);
+    return tt(id,params||{});
   };
   const walk=(v,d)=>{
     if(d>12||!v||typeof v!=='object')return;
@@ -198,8 +202,8 @@ function i18nFromServer(obj){
    surer than redrawing each one in place. */
 function i18nOptionsHtml(){
   const row=r=>{
-    const label=r.native+(r.name&&r.name!==r.native?` (${r.name})`:'')
-      +(r.status==='draft'?' - '+tt('i18n.draft'):'');
+    const base=r.native+(r.name&&r.name!==r.native?` (${r.name})`:'');
+    const label=r.status==='draft'?tt('i18n.language_draft',{name:base}):base;
     return `<option value="${r.tag}"${r.tag===I18N.lang?' selected':''}>${esc(label)}</option>`;
   };
   const real=I18N.offered.filter(r=>r.status!=='test'), test=I18N.offered.filter(r=>r.status==='test');

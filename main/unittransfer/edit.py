@@ -61,9 +61,12 @@ PROTECTED_FIELDS = {"type", "dictionary", "soldier"}
 # reserved int-pairs the game expects there (see modeldb._read_entry's ``pad``).
 # Deleting it would leave an unpadded entry in that position and the file would no
 # longer parse, so it is always kept.
-PAD_ENTRY_KEPT = ("'{name}' is the modeldb's padded first entry - removing it would "
-                  "corrupt the file (this mod has no 'blank' sentinel entry), so it "
-                  "is kept.")
+def pad_entry_kept(name: str):
+    return _i18n.msg(
+        "eng.edit.padded_first_entry_kept",
+        "'{name}' is the modeldb's padded first entry - removing it would "
+        "corrupt the file (this mod has no 'blank' sentinel entry), so it "
+        "is kept.", name=name)
 
 
 @dataclass
@@ -484,10 +487,13 @@ def _plan_icon_import(plan: "EditPlan", mod: Mod, unit, req: "EditRequest") -> N
         # under a faction that cannot field the unit.
         stray = [f for f in want if f not in folders and f != merc_folder]
         if stray:
-            plan.warnings.append(
-                f"{kind}: {', '.join(stray)} " + ("is" if len(stray) == 1 else "are")
-                + f" not in '{unit.type}'s ownership, so the game will not look "
-                  f"for the {kind} there")
+            plan.warnings.append(_i18n.msgN(
+                "eng.edit.not_in_ownership_so_game_will_not_look", len(stray),
+                "{kind}: {folders} is not in '{type}'s ownership, so the game will not look "
+                "for the {kind} there",
+                "{kind}: {folders} are not in '{type}'s ownership, so the game will not look "
+                "for the {kind} there",
+                kind=kind, folders=', '.join(stray), type=unit.type))
         written = 0
         for rel in dests:
             # Picking one of the unit's own pictures to spread everywhere makes
@@ -1083,7 +1089,10 @@ def _plan_folder_move(plan: EditPlan, mod: Mod, entry: "modeldb.ModelEntry",
     users = sorted({n for names in shared.values() for n in names})
     if users and not me.move_shared:
         plan.warnings.append(
-            _i18n.msg("eng.edit.other_model_entr_also_use_these", "{users_n} other model entr{x} ({users}{x2}) also use these files - they keep pointing at the old location, so the old files are copied, not moved.", users_n=len(users), x='y' if len(users) == 1 else 'ies', users=', '.join(users[:4]), x2='…' if len(users) > 4 else ''))
+            _i18n.msgN("eng.edit.other_model_entries_also_use_these", len(users),
+                       "{count} other model entry ({users}{more}) also use these files - they keep pointing at the old location, so the old files are copied, not moved.",
+                       "{count} other model entries ({users}{more}) also use these files - they keep pointing at the old location, so the old files are copied, not moved.",
+                       users=', '.join(users[:4]), more='…' if len(users) > 4 else ''))
 
     raw = modeldb.rewrite_entry_paths(raw, moves, pad=entry.first_entry_pad)
     pending = {rel.lower() for _src, rel in plan.copies}
@@ -1404,7 +1413,7 @@ def _plan_delete(plan: EditPlan, unit) -> EditPlan:
             if entry is None:
                 continue
             if entry.first_entry_pad:
-                plan.warnings.append(PAD_ENTRY_KEPT.format(name=name))
+                plan.warnings.append(pad_entry_kept(name))
                 continue
             plan.entry_deletes.append(name)
             plan.changes.append(f"model entry '{name}' removed (no other unit uses it)")
@@ -1516,7 +1525,8 @@ def _modeldb_text(plan: EditPlan) -> str:
 def apply_edit(plan: EditPlan) -> Dict:
     """Write the plan into the mod, with per-file backups and a log record."""
     if plan.errors:
-        raise ValueError("cannot apply: " + "; ".join(plan.errors))
+        raise ValueError(_i18n.msg("eng.edit.cannot_apply", "cannot apply: {why}",
+                                   why="; ".join(plan.errors)))
     mod = plan.mod
     tid = config.new_transfer_id()
     backup_root = config.backup_root_for(tid)

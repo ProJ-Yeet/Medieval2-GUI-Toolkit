@@ -892,9 +892,16 @@ def _fortification(p: _Parser, i: int, s: str, word: str) -> None:
     node = p.record(word, i)
     m = (_FORT if word == "fort" else _TOWER).match(s)
     if not m:
-        node.problems.append(f"{word} line does not read as `{word} <x> <y>"
-                             + (" [<type> culture <culture>]`" if word == "fort" else "`")
-                             + f": {s!r}")
+        if word == "fort":
+            node.problems.append(_i18n.msg(
+                "eng.campstrat.fort_line_does_not_read_as",
+                "{word} line does not read as `{word} <x> <y> [<type> culture <culture>]`: {line}",
+                word=word, line=repr(s)))
+        else:
+            node.problems.append(_i18n.msg(
+                "eng.campstrat.tower_line_does_not_read_as",
+                "{word} line does not read as `{word} <x> <y>`: {line}",
+                word=word, line=repr(s)))
         return
     node.fields.update(x=int(m.group("x")), y=int(m.group("y")))
     if word == "fort":

@@ -76,10 +76,9 @@ async function mszApply(){
   const k = state.msz;
   if(!k || k.busy || !k.plan || !k.plan.ok) return;
   const p = k.plan;
-  if(!confirm(tt('mapsize.resize_the_map_from_to',{old:p.old.join('x'),new:p.new.join('x')})
-    + (p.changes || []).join('\n')
-    + ((p.warnings || []).length ? '\n\n' + p.warnings.map(x => '⚠ ' + x).join('\n') : '')
-    + tt('mapsize.one_backup_set_log_can_undo'))) return;
+  if(!confirm(tt('mapsize.resize_confirm',{old:p.old.join('x'),new:p.new.join('x'),
+    changes:(p.changes || []).join('\n')
+      + ((p.warnings || []).length ? '\n\n' + p.warnings.map(x => '⚠ ' + x).join('\n') : '')}))) return;
   k.busy = true;
   mszPaint();
   let r;
@@ -92,8 +91,7 @@ async function mszApply(){
     mszPaint();
     return;
   }
-  toast(tt('mapsize.the_map_is_now_file_s',{new:r.new.join('x'),files_n:r.files.length})
-    + tt('common.log_can_undo_it'), 7000);
+  toast(tt('mapsize.map_now_files_written_log_can_undo',{new:r.new.join('x'),files_n:r.files.length}), 7000);
   activity(tt('mapsize.map_resize'), tt('mapsize.id',{mod:k.mod,old:r.old.join('x'),new:r.new.join('x'),id:r.id}));
   k.plan = null; k.m = {north: 0, south: 0, west: 0, east: 0};
   // every layer changed size, so the screen is a different map
@@ -254,11 +252,11 @@ async function mnwApply(){
   const k = state.mnw;
   if(!k || k.busy || !k.plan || !k.plan.ok) return;
   const p = k.plan;
-  if(!confirm(tt('mapsize.make_a_new_campaign_on_a',{name:p.name,width:p.width,height:p.height})
-    + (p.changes || []).join('\n') + tt('mapsize.nothing_existing_is_written_over_and'))) return;
+  if(!confirm(tt('mapsize.make_campaign_confirm',{name:p.name,width:p.width,height:p.height,
+    changes:(p.changes || []).join('\n')}))) return;
   k.busy = true; mszPaint();
   let r;
-  try{ r = await api.post('/api/mapnew/apply', mnwBody(), {label: `making ${p.name}`}); }
+  try{ r = await api.post('/api/mapnew/apply', mnwBody(), {label: tt('mapsize.making_name',{name:p.name})}); }
   catch(e){ r = {error: errText(e)}; }
   finally{ k.busy = false; }
   if(!r || r.error){ k.err = (r && r.error) || tt('mapsize.it_could_not_be_made'); mszPaint(); return; }
@@ -282,13 +280,13 @@ function mnwRealHtml(){
         : tt('mapsize.no_cities_picked_so_they_are')})}</div>` : `<div class="count">${tt('mapsize.no_box_yet')}</div>`}
     <div class="mszgrid">
       ${num('width', tt('mapsize.width_tiles'), 1, d.limits.min, d.limits.max)}
-      <label class="mszbox">${tt('common.height')} <span class="count">${hh ? hh + tt('mapsize.the_boxs_shape') : '-'}</span></label>
+      <label class="mszbox">${tt('common.height')} <span class="count">${hh ? tt('mapsize.height_the_boxs_shape',{height:hh}) : '-'}</span></label>
       ${f.settlements.length ? '' : num('provinces', tt('mapsize.cities_to_spread'), 1, 1, 199)}
     </div>
     <div class="mszgrid">
       <label class="mszbox">${tt('mapsize.climates',{sel:sel('climates', [['ground', tt('mapsize.from_the_ground_types')],
         ['koppen', tt('mapsize.from_the_k_ppen_zones')], ['one', tt('mapsize.one_climate_below')]])})}</label>
-      <label class="mszbox">${tt('mapsize.rivers',{sel:sel('rivers', [['major', 'rivers'], ['medium', tt('mapsize.rivers_and_canals')],
+      <label class="mszbox">${tt('mapsize.rivers',{sel:sel('rivers', [['major', tt('mapsize.rivers_only')], ['medium', tt('mapsize.rivers_and_canals')],
         ['all', tt('mapsize.rivers_canals_and_streams')], ['none', 'none']])})}</label>
       ${num('min_island', tt('mapsize.smallest_island_tiles'), 1, 0, 1000)}
     </div>

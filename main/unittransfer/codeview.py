@@ -457,11 +457,20 @@ def _bmdb_parse(text: str, ctx: dict) -> Doc:
         bad = mdb.prefix_problems(base, text, pad=pad) if base else []
         if bad:
             first = bad[0]
-            raise CodeViewError(
-                f"line {first['line']}'s length says {first['said']} but the text "
-                f"beside it is {first['should']} characters"
-                + (f" (and {len(bad) - 1} more like it)" if len(bad) > 1 else "")
-                + " - every modeldb string is written `<length> <text>`",
+            if len(bad) > 1:
+                raise CodeViewError(_i18n.msg(
+                    "eng.codeview.length_says_but_text_is_and_more",
+                    "line {line}'s length says {said} but the text "
+                    "beside it is {should} characters (and {more} more like it)"
+                    " - every modeldb string is written `<length> <text>`",
+                    line=first['line'], said=first['said'], should=first['should'],
+                    more=len(bad) - 1), first["line"]) from None
+            raise CodeViewError(_i18n.msg(
+                "eng.codeview.length_says_but_text_is",
+                "line {line}'s length says {said} but the text "
+                "beside it is {should} characters"
+                " - every modeldb string is written `<length> <text>`",
+                line=first['line'], said=first['said'], should=first['should']),
                 first["line"]) from None
         raise CodeViewError(_i18n.msg("eng.codeview.this_text_isnt_a_modeldb_entry", "this text isn't a modeldb entry: {e}", e=e), 0) from None
     # the whole card, not a slot list: hand-edited text can add or drop a faction

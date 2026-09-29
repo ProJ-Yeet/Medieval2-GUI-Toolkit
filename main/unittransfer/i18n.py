@@ -192,6 +192,16 @@ def msg(mid: str, template: str, **params: Any) -> Msg:
     return Msg(text, mid, plain)
 
 
+def msgN(mid: str, n: Any, one: str, other: str, **params: Any) -> Msg:
+    """A message with a count in it: English ``one`` when ``n`` is 1, else
+    ``other``, and the page picks the plural form its own language needs
+    (``Intl.PluralRules``) from the catalogue's entry, ``{"one": ..., "other":
+    ...}``, using ``{count}``, which is ``n``. English is the string an
+    f-string with an ``'s' if n != 1`` made, so the log is unchanged."""
+    params["count"] = n
+    return msg(mid, one if n == 1 else other, **params)
+
+
 def lookup(text: str) -> Optional[Tuple[str, Dict[str, Any]]]:
     if isinstance(text, Msg):
         return text.id, text.params

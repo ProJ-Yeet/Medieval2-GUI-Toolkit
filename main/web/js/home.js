@@ -73,7 +73,7 @@ function homeRootHtml(){
 // away whether the folder was the right one.
 async function homeSetRoot(path){
   const st = document.getElementById('homeRootStatus');
-  if(st) st.textContent = tt('home.reading') + path + '…';
+  if(st) st.textContent = tt('home.reading_path',{path});
   const r = await api.post('/api/settings', {med2_root: path});
   state.settings = r;
   await refreshMods(state.src, state.dst);
@@ -323,11 +323,8 @@ async function homePacksToggle(name){
 async function homePacksCompact(name){
   const P = HOME_REPORTS['_packsr_' + name];
   if(!P) return;
-  const ok = confirm(tt('home.compact_s_animation_packs',{name})
-    + tt('home.pack_dat_is_written_again_holding',{keep_anims:P.keep_anims.toLocaleString()})
-    + tt('home.left_out_the_new_files_are',{x:homeSize(P.anim_freed + P.skel_freed)})
-    + tt('home.which_are_kept_whole_in_the')
-    + tt('home.close_the_game_first_undo_in'));
+  const ok = confirm(tt('home.confirm_compact',{name,keep_anims:P.keep_anims.toLocaleString(),
+    freed:homeSize(P.anim_freed + P.skel_freed)}));
   if(!ok) return;
   let r;
   try{ r = await api.post('/api/packs/compact', {mod: name}); }
@@ -356,7 +353,7 @@ function homeFileRow(f){
                 missing:f.required?'<span class="w-bad">✗</span>':'<span class="count">·</span>',
                 unreadable:'<span class="w-bad">!</span>'}[f.state] || '';
   const size = f.state === 'missing' ? ''
-    : f.folder ? `${f.size} item${f.size===1?'':'s'}` : homeSize(f.size);
+    : f.folder ? ttN('home.n_items', f.size) : homeSize(f.size);
   return `<tr title="${esc(f.note || f.rel)}">
     <td class="s">${mark}</td>
     <td>${esc(f.label)}<div class="count">${esc(f.rel)}</div></td>

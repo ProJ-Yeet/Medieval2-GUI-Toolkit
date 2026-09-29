@@ -1132,7 +1132,7 @@ def apply(p: ClonePlan) -> Dict:
     from .logutil import file_op, log
 
     if p.errors:
-        raise ValueError("cannot apply: " + "; ".join(p.errors))
+        raise ValueError(_i18n.msg("eng.factionclone.cannot_apply", "cannot apply: {why}", why="; ".join(p.errors)))
     if not p.touched():
         raise ValueError(_i18n.msg("eng.factionclone.nothing_to_change", "nothing to change"))
     mod = p.mod
@@ -1279,7 +1279,7 @@ def plan_many(mod, body: dict) -> BatchPlan:
 def apply_many(bp: BatchPlan) -> Dict:
     """Write a batch: each file once, every row's art, one record to undo."""
     if bp.errors or not bp.rows:
-        raise ValueError("cannot apply: " + ("; ".join(bp.errors) or "nothing planned"))
+        raise ValueError(_i18n.msg("eng.factionclone.cannot_apply", "cannot apply: {why}", why="; ".join(bp.errors) or _i18n.msg("eng.factionclone.nothing_planned", "nothing planned")))
     merged = ClonePlan(mod=bp.mod, source=",".join(sorted({r.source for r in bp.rows})),
                        new=",".join(r.new for r in bp.rows), action="clone")
     for rel, (body, enc, label) in bp.final.items():

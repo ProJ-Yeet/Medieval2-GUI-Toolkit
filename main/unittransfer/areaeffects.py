@@ -264,16 +264,14 @@ def check(doc: lx.Doc, refs: Optional[Refs] = None) -> List[Dict]:
             out.append(finding("set_absent", "note", _i18n.msg("eng.areaeffects.effect_set_is_in_none_of", "{who}: effect set {v} is in none of the effect files that can be read; {absent_n} of the files descr_effects.txt lists are the base game's and packed, and one of those may have it", who=who, v=v, absent_n=len(refs.absent)), key, line))
         else:
             near = sorted(s for s in refs.sets if lx.lev(s, v.lower()) <= 2)
-            out.append(finding("set_missing", "warn", f"{who}: effect set {v} is in none of the "
-                               "effect files descr_effects.txt lists"
-                               + (f" - {near[0]} is, and is probably what was meant" if near else ""),
+            out.append(finding("set_missing", "warn", _i18n.msg("eng.areaeffects.effect_set_is_in_none_of_the_files_near", "{who}: effect set {v} is in none of the effect files descr_effects.txt lists - {near} is, and is probably what was meant", who=who, v=v, near=near[0]) if near else _i18n.msg("eng.areaeffects.effect_set_is_in_none_of_the_files", "{who}: effect set {v} is in none of the effect files descr_effects.txt lists", who=who, v=v),
                                key, line))
     for low, where in refs.uses.items():
         if low in names:
             continue
         first = where[0]
         whos = ", ".join(sorted({w["who"] for w in where if w["who"]})[:4])
-        out.append(finding("undeclared", "warn", _i18n.msg("eng.areaeffects.name_area_effect_and_declares_no", "{file}: {x} name{x2} area_effect {name}, and {REL} declares no area effect called that", file=first['file'], x=whos or 'line ' + str(first['line']), x2='s' if len(where) == 1 else '', name=first['name'], REL=REL), f"use/{first['name']}", 0))
+        out.append(finding("undeclared", "warn", _i18n.msgN("eng.areaeffects.who_names_area_effect_undeclared", len(where), "{file}: {who} names area_effect {name}, and {path} declares no area effect called that", "{file}: {who} name area_effect {name}, and {path} declares no area effect called that", file=first['file'], who=whos or _i18n.msg("eng.areaeffects.line_number", "line {line}", line=first['line']), name=first['name'], path=REL), f"use/{first['name']}", 0))
     return out
 
 

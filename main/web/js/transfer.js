@@ -196,9 +196,9 @@ function cmpPrevEntries(){
     if(!seen[k]){ seen[k]=1; out.push({mod,entry:n,role,key:k}); }
   });
   const u=state.data&&state.data.units.find(x=>x.type===state.editing);
-  if(u)push(state.src,state.src===state.dst?tt('transfer.this_unit'):'from '+state.src,cmpPrevOwn(u));
+  if(u)push(state.src,state.src===state.dst?tt('transfer.this_unit'):tt('transfer.role_from_mod',{mod:state.src}),cmpPrevOwn(u));
   const c=cfgFor(state.editing),b=baseUnitOf(c);
-  if(b)push(state.dst,(isReplace(c)?'replacing ':'base ')+b.type,cmpPrevOwn(b));
+  if(b)push(state.dst,tt(isReplace(c)?'transfer.role_replacing_type':'transfer.role_base_type',{type:b.type}),cmpPrevOwn(b));
   return out;
 }
 function cmpPrevEntry(){
@@ -312,7 +312,7 @@ function cmpPrevFull(){
   const go=el.requestFullscreen||el.webkitRequestFullscreen;
   if(!go){ toast(tt('common.this_browser_will_not_go_full'),3000); return; }
   Promise.resolve(go.call(el)).catch(e=>
-    toast(tt('common.full_screen_was_refused')+((e&&e.message)||e),4000));
+    toast(tt('transfer.full_screen_was_refused',{reason:(e&&e.message)||e}),4000));
 }
 
 /* ---------- composer (single or batch) ---------- */
@@ -452,8 +452,7 @@ async function renderComposer(){
        <div class="count" style="margin-top:5px">${tt('transfer.an_unticked_group_keeps_its_source',{dst:esc(state.dst),rep:rep?`“${esc(c.base_type)}”`:tt('transfer.the_base')})}</div>
      </fieldset>`}
      ${engOn&&c.include_engine!==false&&!mo?`<fieldset><legend>${tt('transfer.siege_engine_4')} <code>${esc(eng)}</code></legend>
-       <div class="count">${tt('transfer.copied_the_block',{engMounted:engMounted?'descr_mounted_engines.txt':'descr_engines.txt',engGroups:engGroups.length?tt('transfer.model_group',{engGroups_n:engGroups.length,engGroups:engGroups.length>1?'s':'',engGroups2:engGroups.map(esc).join(', ')}):'',x:engMounted?tt('transfer.and_the_reference_points_file_it')
-         :tt('transfer.every_mesh_bone_map_collision_reference',{engGroups:engGroups.length?tt('transfer.each_groups_animation_entry'):'',engGroups2:engGroups.length?tt('transfer.and_the_textures_baked_into_those'):''})})}</div>
+       <div class="count">${tt(engMounted?'transfer.copied_block_mounted':engGroups.length?'transfer.copied_block_with_groups':'transfer.copied_block_plain',{file:engMounted?'descr_mounted_engines.txt':'descr_engines.txt',groups:engGroups.length?ttN('transfer.model_group_list',engGroups.length,{groups:engGroups.map(esc).join(', ')}):''})}</div>
        ${engMounted?`<div class="count" style="margin-top:5px">${docPoints(`<b>${tt('transfer.mounted_engine')}</b>`,[
          tt('transfer.the_gun_is_part_of_the'),
          engClass?tt('transfer.its_animation_set_is_added_only',{engClass:esc(engClass),dst:esc(state.dst)})
@@ -518,10 +517,8 @@ async function renderComposer(){
      <fieldset><legend>${tt('transfer.mercenary_icons')}</legend>
        <label class="chk"><input type="checkbox" id="optMercIcons" ${c.merc_icons?'checked':''}> ${tt('transfer.put_the_unit_card_and_info')}</label>
        <div class="count" style="margin-top:5px">${docPoints(tt('transfer.what_the_tick_box_changes'),[
-         `${tt('transfer.on_cards_go_to_the_merc')} `
-           +'<code>info_pic_dir</code>.',
-         `${tt('transfer.off_default_a_copy_in_every')} `
-           +tt('transfer.folders_as_a_fallback_no_pinning')])}</div>
+         tt('transfer.merc_icons_on'),
+         tt('transfer.merc_icons_off')])}</div>
      </fieldset>
      <fieldset><legend>${tt('transfer.edit_fields_every_edu_field_edited')}</legend>
        ${sameMod?'':fromBasePanel(c,u)}
@@ -535,8 +532,7 @@ async function renderComposer(){
          `<span class="ibadge">B</span> ${tt('transfer.marks_a_field_keeps',{base_type:esc(c.base_type)})}`,[
          tt('transfer.click_one_to_import_that_field',{type:esc(u.type)}),
          tt('transfer.greyed_out_b_imported'),
-         `${tt('transfer.type_and_dictionary_are_locked_changing')} `
-           +tt('transfer.unit_instead_of_replacing_it')])}</div>`
+         tt('transfer.type_and_dictionary_locked')])}</div>`
         :`<div class="count" style="margin-top:6px"><span class="ibadge">B</span>
          ${tt('transfer.marks_a_field_taken_from_the',{base_type:c.base_type?` <b>${esc(c.base_type)}</b>`:'',type:esc(u.type)})}</div>`}
      </fieldset>`}
@@ -547,7 +543,7 @@ async function renderComposer(){
    <div class="foot">
      ${cleanerBoxHtml()}
      <button onclick="closeModal()">${tt('common.cancel')}</button>
-     <button onclick="doPreview()">${tt('transfer.probe',{batch:batch?tt('transfer.this_unit_2'):''})}</button>
+     <button onclick="doPreview()">${batch?tt('transfer.probe_this_unit'):tt('transfer.probe_plain')}</button>
      <button class="primary" onclick="doApply()">${batch?tt('transfer.apply_all'):tt('common.apply')}</button>
    </div>`;
   cmpPrevAttach();                 // the live column, back where it belongs
@@ -659,49 +655,28 @@ function fromBasePanel(c,u){
         ${cur===v?'checked':''} ${on?'':'disabled'}
         onchange="grp3Set('${key}','${v}')"> ${t}</label>`).join('')}
       <span class="count">${detail}</span></div>`;};
-  const has=n=>rep?`${esc(c.base_type)} has ${n}`:tt('transfer.base_has',{x:n});
+  const has=n=>rep?tt('transfer.type_has',{type:esc(c.base_type),x:n}):tt('transfer.base_has',{x:n});
   // The soldier line is not just "the body model": its modeldb entry carries the
   // skeletons, so whichever unit supplies it decides how the unit animates. That
   // is the one thing about this row nobody guesses, hence the ?.
   let rows=row('soldier_from',tt('transfer.animations_soldier_entry'), on?tt('transfer.the_soldier_line_only'):'',
-    tt('transfer.the_soldier_line_names_the_battle')
-    +tt('transfer.modeldb_entry_is_what_carries_its')
-    +tt('transfer.engine_animates_the_unit_from_an')
-    +tt('transfer.at_that_armour_level_and_its')
-    +tt('transfer.source_the_source_units_own_skeletons')
-    +tt('transfer.already_have_them_or_the_game')
-    +(rep?tt('transfer.base_2'):tt('transfer.base_2'))+tt('transfer.the_unit_animates_like')
-    +(rep?tt('transfer.the_replaced_unit'):tt('transfer.the_base_unit'))+tt('transfer.instead_which_always_loads_but')
-    +tt('transfer.may_fight_unexpectedly'));
+    tt('transfer.soldier_line_help',{unit:rep?tt('transfer.the_replaced_unit'):tt('transfer.the_base_unit')}));
   // Filled in by paintSoldierAnim() from the plan - a missing-animation warning
   // only belongs here when the SOLDIER model is the one asking for it, since
   // flipping this row is the fix. See TransferPlan.soldier_skeletons_missing.
   rows+=`<div class="sbanim" id="soldierAnim" hidden></div>`;
   if(b&&b.officers.length) rows+=row3('officer_from',tt('transfer.officers_3'),
     has(`${b.officers.length}: ${esc(b.officers.join(', '))}`),
-    tt('transfer.an_officer_is_a_modeldb_entry')
-    +tt('transfer.set_port_as_is_the_sources')
-    +tt('transfer.must_have_them_or_the_game')
-    +tt('transfer.same_models_with_the_base_units')
-    +tt('transfer.over_their_skeleton_lines_so_it')
-    +tt('transfer.use_bases_the')+(rep?'replaced':'base')+tt('transfer.units_officers_nothing_copied'));
+    tt('transfer.officer_help',{which:rep?tt('transfer.word_replaced'):tt('transfer.word_base')}));
   if(b&&b.mount)           rows+=row3('mount_from',tt('common.mount'),
     has(esc(b.mount)),
-    tt('transfer.a_mount_is_three_things_the')
-    +tt('transfer.that_models_animations_port_as_is')
-    +tt('transfer.skeletons_which_this_mod_must_have')
-    +tt('transfer.base_animations_the_same_mount_with')
-    +tt('transfer.so_it_always_loads_and_may')
-    +(rep?'replaced':'base')+tt('transfer.units_mount_instead_nothing_copied'));
+    tt('transfer.mount_help',{which:rep?tt('transfer.word_replaced'):tt('transfer.word_base')}));
   if(b&&b.crew&&b.crew.length) rows+=row('crew_from',tt('transfer.crew_3'),has(`${b.crew.length}: ${esc(b.crew.join(', '))}`));
   // The armour-upgrade models are only a choice when replacing: a base template
   // leaves them with the transferred unit, since the new unit IS that unit.
   if(rep) rows+=row('upgrade_from',tt('transfer.armour_upgrades'),
     tt('transfer.armour_ug_models_the_models_it'),
-    tt('transfer.independent_of_the_soldier_row_the')
-    +tt('transfer.units_armour_level_so_leaving_this')
-    +tt('transfer.from_the_base_puts_the_sources')
-    +tt('transfer.not_change_how_the_unit_animates'));
+    tt('transfer.upgrade_help'));
   return `<div class="basefrom${on?'':' off'}">
     <div class="bftitle">${tt('transfer.take_from',{x:on?`<b>${esc(c.base_type)}</b>`
       :(rep?tt('transfer.the_replaced_unit_pick_one_first'):tt('transfer.the_base_unit_pick_one_first'))})}</div>
@@ -740,11 +715,7 @@ function soundFieldset(c,u){
     <div class="count">${tt('transfer.has_no_voice_bank_export_descr',{dst:esc(state.dst)})}</div></fieldset>`;
   // why the accent/class pair is not yours to choose while a donor is set
   const why=locked
-    ? tt('transfer.locked_the_copied_entry_goes_into',{accent:d.accent,cls:d.cls,name:d.name})
-      +tt('transfer.accent_voice_type_are_written_to')
-      +tt('transfer.generic_barks')
-      +(c.sound_mode==='base'?tt('transfer.switch_to_another_unit_for_a')
-                             :tt('transfer.clear_the_unit_below_to_filter'))
+    ? tt(c.sound_mode==='base'?'transfer.voice_locked_switch':'transfer.voice_locked_clear',{accent:d.accent,cls:d.cls,name:d.name})
     : '';
   const donors=(ds.donors||[]).filter(x=>(!c.snd_accent||x.accent===c.snd_accent)
                                        &&(!c.snd_class||x['class']===c.snd_class));
@@ -762,7 +733,7 @@ function soundFieldset(c,u){
   else if(d.blocked==='nobase')
     body=`<div class="count w-warn" style="margin-top:6px">${tt('transfer.no_base_unit_picked_yet_so')}</div>`;
   else if(d.blocked==='silent')
-    body=`<div class="count w-warn" style="margin-top:6px">${tt('transfer.has_no_barks_of_its_own',{name:esc(d.name),dst:esc(state.dst),sound_mode:c.sound_mode==='base'?tt('transfer.for_the_voice'):''})}</div>`;
+    body=`<div class="count w-warn" style="margin-top:6px">${tt(c.sound_mode==='base'?'transfer.no_barks_pick_for_the_voice':'transfer.no_barks_pick_another',{name:esc(d.name),dst:esc(state.dst)})}</div>`;
   else body=`<div class="sndpick">
       ${tt('transfer.accent_class',{x:pick('snd_accent',acc,ds.accents||[],tt('transfer.any')),x2:pick('snd_class',cls,ds.classes||[],tt('transfer.any')),locked:locked?`<span class="lockicon" title="${esc(why)}">${tt('transfer.locked')}</span>`:
         `<span class="count">${tt('transfer.these_two_just_filter_the_list')}</span>`})}
@@ -895,9 +866,7 @@ function renderAllFields(type){
   // the donor's and locked, with the same explanation as the voice panel's 🔒.
   const snd=soundDonor(c), sndLock=snd.accent
     ? {vals:{accent:snd.accent,voice_type:snd.cls},
-       why:tt('transfer.locked_by_the_voice_panel_s',{name:snd.name})
-          +tt('transfer.and_these_two_fields_are_what',{accent:snd.accent,cls:snd.cls})
-          +tt('transfer.that_block_choose_dont_import_sound')}
+       why:tt('transfer.locked_by_the_voice_panel',{name:snd.name,accent:snd.accent,cls:snd.cls})}
     : null;
   // A unit that has no `accent` line at all still GETS one when a voice is copied
   // (the game can't find the block without it), so show that row rather than
@@ -910,9 +879,7 @@ function renderAllFields(type){
   const rb=baseUnitOf(c);
   const idLock=(isReplace(c)&&rb)
     ? {vals:{type:rb.type,dictionary:rb.dictionary},
-       why:tt('transfer.locked_this_transfer_rewrites_in_place',{type:rb.type})
-          +tt('transfer.type_and_dictionary_those_two_are')
-          +tt('transfer.and_icons_change_them_and_you')}
+       why:tt('transfer.locked_this_transfer_rewrites',{type:rb.type})}
     : null;
   // both locks in one lookup, most specific first
   const lockFor=key=>(idLock&&(key in idLock.vals))?{val:idLock.vals[key],why:idLock.why}
@@ -936,7 +903,7 @@ function renderAllFields(type){
     const changed=!lk&&(label in c.field_overrides)&&c.field_overrides[label]!==c._orig[label];
     const isInh=inh.has(key);
     const why=lk?lk.why
-      :isInh?`${isReplace(c)?tt('transfer.kept_from'):tt('transfer.inherited_from_the_base_unit')} ${c.base_type}.`
+      :isInh?tt(isReplace(c)?'transfer.kept_from_type':'transfer.inherited_from_type',{type:c.base_type})
       :dup?tt('transfer.this_field_appears_more_than_once')
       :(GF_FIELDS[key]&&GF_FIELDS[key].t?GF_FIELDS[key].t+'. '+gfPlainDoc(key):'');
     return `<div class="afrow${dup?' dup':''}" data-label="${esc(label)}">
@@ -1075,7 +1042,7 @@ function modelsFieldset(type){
       <label class="chk"><input type="checkbox" ${lit?'checked':''} ${m.found?'':'disabled'}
         onchange="toggleImportModel('${q1(esc(m.name))}',this.checked)"> <b>${esc(m.name)}</b></label>
       <span class="pill">${esc(MODEL_SLOT[m.slot]||m.slot)}</span>
-      ${m.found?`<div class="count">${tt('transfer.mesh_texture',{meshes:m.meshes,meshes2:m.meshes===1?'':'es',textures:m.textures,textures2:m.textures===1?'':'s',missing:m.missing?` ${tt('transfer.file_s_not_on_disk',{missing:m.missing})}`:'',x:m.skeletons.length?tt('transfer.animates_as',{skeletons:m.skeletons.map(s=>`<code>${esc(s)}</code>`).join(', ')}):''})}</div>
+      ${m.found?`<div class="count">${tt('transfer.mesh_texture_summary',{meshes:ttN('transfer.mesh_count',m.meshes),textures:ttN('transfer.texture_count',m.textures),missing:m.missing?` ${tt('transfer.file_s_not_on_disk',{missing:m.missing})}`:'',x:m.skeletons.length?tt('transfer.animates_as',{skeletons:m.skeletons.map(s=>`<code>${esc(s)}</code>`).join(', ')}):''})}</div>
         <div class="mdlfolders">${m.folders.map(f=>`<span class="path">${esc(f)}/</span>`).join('')}</div>`
         :`<div class="count w-warn">${tt('transfer.named_by_the_unit_but_s',{src:esc(state.src)})}</div>`}
     </div>`;}).join('');
@@ -1088,7 +1055,7 @@ function modelsFieldset(type){
     <div class="mdlbar">
       <button onclick="allImportModels(true)">${tt('transfer.tick_all')}</button>
       <button onclick="allImportModels(false)">${tt('transfer.untick_all')}</button>
-      <span class="count">${tt('transfer.of_entr',{picked,usable_n:usable.length,usable:usable.length===1?'y':'ies'})}</span>
+      <span class="count">${ttN('transfer.picked_of_entries',usable.length,{picked})}</span>
     </div>
     <div class="mdllist">${rows}</div>
     ${picked?'':`<div class="count w-warn" style="margin-top:6px">${tt('transfer.tick_at_least_one_entry_before')}</div>`}</fieldset>`;
@@ -1226,7 +1193,7 @@ function unitLimitBanner(){
   const dd=state.destData||{};
   const hasEop=((dd.eop_dirs||[]).length>0);
   return `<div class="limitwarn">
-    ${tt('transfer.vanilla_unit_limit_exceeded_units_in',{dst:esc(state.dst),now:now?tt('transfer.already_has',{current:p.current}):tt('transfer.will_have',{projected:p.projected}),VANILLA_UNIT_LIMIT,add:p.add?tt('transfer.this_transfer_adds',{add:p.add}):'',x:p.eop?`<div class="sub">${tt('transfer.its_m2tweop_unit_dont_count_because',{eop:p.eop,eop2:p.eop===1?'':'s',eopAdd:p.eopAdd?tt('transfer.this_transfer_adds_more',{eopAdd:p.eopAdd}):''})}</div>`:''})}
+    ${tt(now?(p.add?'transfer.limit_already_adds':'transfer.limit_already'):(p.add?'transfer.limit_will_adds':'transfer.limit_will'),{dst:esc(state.dst),current:p.current,projected:p.projected,VANILLA_UNIT_LIMIT,add:p.add,x:p.eop?`<div class="sub">${ttN('transfer.eop_units_dont_count',p.eop,{eopAdd:p.eopAdd?tt('transfer.this_transfer_adds_more',{eopAdd:p.eopAdd}):''})}</div>`:''})}
     <div class="sub">${tt('transfer.past_unmodified_m2tw_crashes_with_m2tweop',{VANILLA_UNIT_LIMIT})}</div>
     <div class="acts">
       ${hasEop?`<button onclick="allToEop()">${tt('transfer.write_these_as_m2tweop_units_instead')}</button>`:''}
@@ -1264,8 +1231,7 @@ async function quitServer(){
    same address and ends itself; this page waits for the new one and reloads. */
 async function restartServer(){
   const want=!!(document.getElementById('consoleChk')||{}).checked;
-  if(!confirm(tt('transfer.restart_the_toolkit_now_it_comes')+
-    tt('transfer.a_console_window_anything_you_have',{want:want?'with':'without'})))return;
+  if(!confirm(tt(want?'transfer.restart_with_console':'transfer.restart_without_console')))return;
   const m=document.getElementById('modal');
   m.className='modal';
   m.innerHTML=`<h2>${tt('transfer.restarting')}</h2><div class="mbody"><div class="count">
@@ -1496,9 +1462,9 @@ function paintSoldierAnim(r){
   const miss=(r&&r.soldier_skeletons_missing)||[];
   if(miss.length){
     const mdl=(r.soldier_model_name||'').trim();
-    out.push(`<b>${tt('transfer.missing_animation',{miss:miss.length===1?'':'s'})}</b>
+    out.push(`<b>${ttN('transfer.missing_animation_head',miss.length)}</b>
       <ul>
-        <li>${tt('transfer.has_no',{dst:esc(state.dst),x:list(miss),mdl:mdl?tt('transfer.which_the_soldier_model_asks_for',{mdl:esc(mdl)}):''})}</li>
+        <li>${mdl?tt('transfer.has_no_skeleton_asked',{dst:esc(state.dst),x:list(miss),mdl:esc(mdl)}):tt('transfer.has_no_skeleton',{dst:esc(state.dst),x:list(miss)})}</li>
         <li>${tt('transfer.a_soldier_entry_whose_animation_set')}</li>
         <li>${tt('transfer.fix_set_this_row_to_base',{who})}</li>
         <li>${tt('transfer.or_tick_bring_its_animations_below',{src:esc(state.src)})}</li>

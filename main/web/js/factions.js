@@ -169,7 +169,7 @@ function facPaintForm(){
 /* ---- the detail pane ---- */
 function facDetailHtml(){
   const f = state.fac, d = f.d;
-  if(!f.sel) return `<div class="empty">${tt('factions.pick_a_faction_on_the_left',{count:f.count,x:f.count===1?'':'s',file:esc(f.file)})}
+  if(!f.sel) return `<div class="empty">${ttN('factions.pick_a_faction_counted', f.count, {file:esc(f.file)})}
     <div class="trnote" style="max-width:600px;margin:14px auto;text-align:left">${
       esc(f.refused)}</div></div>`;
   if(!d) return `<div class="empty">${tt('factions.reading_the_faction')}</div>`;
@@ -249,7 +249,7 @@ function facGeneralSection(d){
           title="${ttA('factions.the_faction_slot_descr_strat_every')}">
         <input class="trtext" value="${esc(shownName)}"
           placeholder="${((d.loc||{})[d.loc_tag] === undefined)
-            ? tt('factions.not_in') + esc(d.loc_file) + ' yet' : tt('factions.the_factions_name_in_game')}"
+            ? tt('factions.not_in_file_yet',{loc_file:esc(d.loc_file)}) : tt('factions.the_factions_name_in_game')}"
           title="${ttA('factions.what_the_player_reads_saved_into',{loc_file:esc(d.loc_file)})}"
           oninput="facSetLoc(this.value)">
       </div>
@@ -570,10 +570,10 @@ async function facSave(){
   const p = plan.plan || {};
   const lines = (p.changes || []).slice(0, 14);
   const found = (p.findings || []).map(x => '⚠ ' + x.message);
-  if(!confirm(tt('factions.write_save',{slot:d.slot}) + (lines.join('\n') || tt('common.no_visible_change'))
-    + ((p.changes || []).length > 14 ? tt('factions.and_more',{changes:p.changes.length - 14}) : '')
-    + (found.length ? '\n\n' + found.slice(0, 4).join('\n') : '')
-    + tt('common.backed_up_first_and_log_can'))) return;
+  const changes = `${lines.join('\n') || tt('common.no_visible_change')}${
+    (p.changes || []).length > 14 ? tt('factions.and_more',{changes:p.changes.length - 14}) : ''}${
+    found.length ? '\n\n' + found.slice(0, 4).join('\n') : ''}`;
+  if(!confirm(tt('factions.confirm_write',{slot:d.slot,changes}))) return;
   f.busy = true;
   let res;
   try{ res = await api.post('/api/factions/apply', body); }
@@ -874,22 +874,21 @@ async function facCloneApply(){
   if(c.rows.length > 1) return facCloneApplyMany();
   const p = c.plan, name = c.rows[0].name;
   const files = (p.files || []).filter(x => x.written);
-  if(!confirm(tt('factions.add_faction_copied_from',{name,source:c.source})
-    + files.map(x => `  ${x.rel}  +${x.count}`).join('\n')
-    + (p.asset_files ? tt('factions.art_file_s_copied_and_renamed',{asset_files:p.asset_files}) : '')
+  if(!confirm(tt('factions.confirm_add_one',{name,source:c.source,
+    files:files.map(x => `  ${x.rel}  +${x.count}`).join('\n'),
+    art:p.asset_files ? tt('factions.art_file_s_copied_and_renamed',{asset_files:p.asset_files}) : '',
     // the review files live in `review`, not in the note, so this dialog names
     // them itself - it has no row to draw them in the way the plan pane does
-    + ((p.review || []).length ? tt('factions.left_for_you_to_decide')
-        + p.review.map(r => tt('factions.mention_s',{rel:r.rel,hits:r.hits})).join('\n') : '')
+    review:(p.review || []).length ? tt('factions.confirm_review',
+      {mentions:p.review.map(r => tt('factions.mention_s',{rel:r.rel,hits:r.hits})).join('\n')}) : '',
     // 42: the art the clone will NOT get, said here rather than found in the
     // game. A donor with nothing in a folder cannot fill it, so this is the
     // last point at which picking a different donor is still a choice.
-    + ((p.art_gaps || []).length
-        ? tt('factions.place_s_get_no_art',{art_gaps_n:p.art_gaps.length})
-          + p.art_gaps.map(g => `  ${g.label}  (${g.rel})\n    ${g.what}`).join('\n')
-        : '')
-    + tt('factions.every_file_is_backed_up_first')
-    + tt('factions.in_one_go') + (p.notes || []).join('\n\n'))) return;
+    gaps:(p.art_gaps || []).length
+      ? tt('factions.confirm_art_gaps',{art_gaps_n:p.art_gaps.length,
+          gaps:p.art_gaps.map(g => `  ${g.label}  (${g.rel})\n    ${g.what}`).join('\n')})
+      : '',
+    notes:(p.notes || []).join('\n\n')}))) return;
   c.busy = true;
   facCloneRender();
   let res;
@@ -900,8 +899,7 @@ async function facCloneApply(){
   const keep = name;
   f.clone = null;
   closeModal();
-  toast(tt('factions.added_file_s_art_file_s',{keep,files_n:res.files.length,asset_files:res.asset_files})
-        + tt('common.log_can_undo_it'), 5000);
+  toast(tt('factions.added_one_toast',{keep,files_n:res.files.length,asset_files:res.asset_files}), 5000);
   if(typeof fauStale === 'function') fauStale();
   // 21: the audit offers this dialog from the campaign map's faction screen too,
   // and there `main` is the map - only the mode may redraw the page (17f's rule)
@@ -913,10 +911,9 @@ async function facCloneApply(){
 async function facCloneApplyMany(){
   const f = state.fac, c = f.clone, b = c.batch;
   const names = c.rows.map(r => r.name);
-  if(!confirm(tt('factions.add_factions_each_copied_from',{names_n:names.length,source:c.source})
-    + names.join('\n  ') + tt('factions.file_s_are_written_each_once',{n:(b.files || []).length})
-    + (b.asset_files ? tt('factions.and_art_file_s_copied_and',{asset_files:b.asset_files}) : '')
-    + tt('factions.every_file_is_backed_up_first_2'))) return;
+  if(!confirm(tt('factions.confirm_add_many',{names_n:names.length,source:c.source,
+    names:names.join('\n  '),n:(b.files || []).length,
+    art:b.asset_files ? tt('factions.and_art_file_s_copied_and',{asset_files:b.asset_files}) : ''}))) return;
   c.busy = true;
   facCloneRender();
   let res;
@@ -926,8 +923,7 @@ async function facCloneApplyMany(){
   activity(tt('factions.added_factions'), tt('factions.cloned_from_in_2',{names:names.join(', '),source:c.source,src:state.src}));
   f.clone = null;
   closeModal();
-  toast(tt('factions.added_factions_file_s_art_file',{names_n:names.length,files_n:res.files.length,asset_files:res.asset_files})
-        + tt('factions.log_can_undo_all_of_them'), 6000);
+  toast(tt('factions.added_many_toast',{names_n:names.length,files_n:res.files.length,asset_files:res.asset_files}), 6000);
   if(typeof fauStale === 'function') fauStale();
   if(state.mode === 'factions'){ await loadFactions(); facOpen(names[0]); return; }
   try{ await facFetch(f.mod); }catch(e){}

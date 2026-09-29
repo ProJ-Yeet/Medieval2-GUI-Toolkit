@@ -58,7 +58,7 @@ function renderCharacters(){
       <div class="cdbhead"><div>${tt('characters.descr_character_txt_what_each_agent')}</div>
         <span style="flex:1"></span>
         <button onclick="chxRevert()" ${n ? '' : 'disabled'}>${tt('common.revert')}</button>
-        <button class="primary" onclick="chxSave()" ${n ? '' : 'disabled'}>${tt('characters.save_change',{x:n || '',x2:n === 1 ? '' : 's'})}</button>
+        <button class="primary" onclick="chxSave()" ${n ? '' : 'disabled'}>${ttN('characters.save_changes',n)}</button>
       </div>
       ${c.error ? '' : c.sel === 'grid' ? chxGridHtml() : chxTypeHtml()}
     </div>
@@ -179,9 +179,9 @@ async function chxSave(){
   finally{ c.busy = false; }
   if(plan.error){ toast('✗ ' + plan.error, 8000); return; }
   const p = plan.plan || {};
-  if(!confirm(tt('characters.write_change_s',{n:(p.changes || []).length}) + (p.changes || []).slice(0, 16).join('\n')
-    + ((p.warnings || []).length ? '\n\n⚠ ' + p.warnings.slice(0, 5).join('\n⚠ ') : '')
-    + tt('common.backed_up_first_and_log_can'))) return;
+  if(!confirm(tt('characters.write_confirm',{n:(p.changes || []).length,
+    changes:(p.changes || []).slice(0, 16).join('\n'),
+    warnings:(p.warnings || []).length ? '\n\n⚠ ' + p.warnings.slice(0, 5).join('\n⚠ ') : ''}))) return;
   let res;
   try{ res = await api.post('/api/characters/apply', body); }
   catch(e){ res = {error: errText(e)}; }

@@ -145,7 +145,7 @@ function mcpGo(name){
 async function mcpLight(name, quiet){
   if(!state.cq) cqOpen();
   if(!state.cq) return;
-  await cqTheme(tt('mercs.merc') + name);
+  await cqTheme('merc:' + name);
   if(!quiet) toast(tt('mercs.the_map_shows_where_is_sold',{name}), 5000);
 }
 
@@ -220,7 +220,9 @@ function mcpNotesHtml(d){
   const y = d.years || {};
   if(y.start != null) out.push(`<div class="count">${tt('mercs.the_campaign_runs_to',{start:y.start,end:y.end,timescale:y.timescale ? tt('mercs.of_a_year_a_turn',{timescale:y.timescale}) : ''})}</div>`);
   const dead = d.unknown_units || [];
-  if(dead.length) out.push(`<div class="w-bad">${tt('mercs.unit_name_in_this_file_not',{dead_n:dead.length,dead:dead.length === 1 ? '' : 's',dead2:dead.length === 1 ? 'is' : 'are',dead3:dead.length === 1 ? 'it' : 'them',dead4:dead.slice(0, 6).map(x => `<code>${esc(x)}</code>`).join(', '),dead5:dead.length > 6 ? tt('mercs.and_more',{dead:dead.length - 6}) : ''})}</div>`);
+  if(dead.length) out.push(`<div class="w-bad">${ttN('mercs.unit_names_not_in_the_edu',dead.length,{names:dead.length > 6
+    ? tt('mercs.names_and_more',{names:dead.slice(0, 6).map(x => `<code>${esc(x)}</code>`).join(', '),more:dead.length - 6})
+    : dead.map(x => `<code>${esc(x)}</code>`).join(', ')})}</div>`);
   // 32c's one repair. Which pool a province stays in is a choice, so it is
   // offered both ways and goes through 32a's region_move like any other move
   const two = Object.entries(d.in_two || {});
@@ -279,7 +281,7 @@ function mcpPoolsHtml(d){
     const hire = p.units.filter(u => u.hire === 'yes').length;
     return `<div class="rebrow" style="flex-wrap:wrap">
       <span class="rebnm">${esc(p.name)}</span>
-      <span class="count">${tt('mercs.province_line',{regions_n:p.regions.length,regions:p.regions.length === 1 ? '' : 's',units_n:p.units.length,units:p.units.length === 1 ? '' : 's',x:state.mcp.faction ? tt('mercs.hireable_now',{hire}) : ''})}</span>
+      <span class="count">${tt('mercs.provinces_and_lines',{provinces:ttN('mercs.province_count',p.regions.length),lines:ttN('mercs.line_count',p.units.length),x:state.mcp.faction ? tt('mercs.hireable_now',{hire}) : ''})}</span>
       <div style="flex:1 0 100%">${p.regions.map(r => `<button class="rebgo"
         onclick="mcpGo('${q1(esc(r))}')">${esc(r)}</button>`).join(' ')}</div>
     </div>`;
@@ -295,8 +297,8 @@ function mcpUnitRowsHtml(){
       ? `${u.prices[0]}-${u.prices[u.prices.length - 1]}` : `${u.prices[0]}`) : '?';
     return `<button class="rebrow${k.unit === u.name ? ' on' : ''}${u.known === false ? ' orphan' : ''}"
       onclick="mcpPickUnit('${q1(esc(u.name))}')">
-      ${tt('mercs.pool_province',{x:mcpCardHtml(u.name, u.known),name:esc(u.name),x2:u.known === false
-        ? `<span class="reborph">${tt('mercs.not_in_the_edu')}</span>` : '',offers_n:u.offers.length,offers:u.offers.length === 1 ? '' : 's',provinces:u.provinces,provinces2:u.provinces === 1 ? '' : 's',price,faction:k.faction ? tt('mercs.hireable',{yes}) : ''})}</button>`;
+      ${tt('mercs.pool_row',{x:mcpCardHtml(u.name, u.known),name:esc(u.name),x2:u.known === false
+        ? `<span class="reborph">${tt('mercs.not_in_the_edu')}</span>` : '',pools:ttN('mercs.pool_count',u.offers.length),provinces:ttN('mercs.province_count',u.provinces),price,faction:k.faction ? tt('mercs.hireable',{yes}) : ''})}</button>`;
   }).join('') || `<div class="count" style="padding:6px">${tt('mercs.no_mercenary_matches')}</div>`;
 }
 
@@ -307,8 +309,9 @@ function mcpUnitHtml(d){
       oninput="mcpSearch(this.value)" style="width:100%">
     <div class="reblist" id="mcpList">${mcpUnitRowsHtml()}</div>
     ${u ? `<div class="rebdet">
-      <div class="k">${tt('mercs.sold_by_pool',{name:esc(u.name),offers_n:u.offers.length,offers:u.offers.length === 1 ? '' : 's',prices:u.prices.length > 1
-        ? tt('mercs.at_different_prices',{prices_n:u.prices.length}) : ''})}</div>
+      <div class="k">${u.prices.length > 1
+        ? ttN('mercs.sold_by_pools_at_prices',u.offers.length,{name:esc(u.name),prices:u.prices.length})
+        : ttN('mercs.sold_by_pools_one_price',u.offers.length,{name:esc(u.name)})}</div>
       <div class="cmbar2"><button onclick="mcpLight('${q1(esc(u.name))}')"
         title="${ttA('mercs.colour_every_province_whose_pool_sells')}">${tt('mercs.light_on_the_map')}</button>
         <label class="mcpauto" title="${ttA('mercs.colour_the_provinces_as_soon_as')}">
@@ -317,7 +320,7 @@ function mcpUnitHtml(d){
       ${u.offers.map(o => {
         const pool = (d.pools || []).find(p => p.name === o.pool);
         const line = pool && pool.units[o.index];
-        return `<div class="mcpoffer"><div class="k">${tt('mercs.province',{pool:esc(o.pool),regions_n:o.regions.length,regions:o.regions.length === 1 ? '' : 's'})}</div>
+        return `<div class="mcpoffer"><div class="k">${ttN('mercs.pool_provinces',o.regions.length,{pool:esc(o.pool)})}</div>
           ${line ? mcpLineHtml(o.pool, line) : ''}
           <div>${o.regions.map(r => `<button class="rebgo"
             onclick="mcpGo('${q1(esc(r))}')">${esc(r)}</button>`).join(' ')}</div></div>`;
@@ -464,10 +467,9 @@ async function mcpWrite(body, what){
   finally{ k.busy = false; }
   if(res.error){ toast('✗ ' + res.error, 9000); return; }
   const p = res.plan || {};
-  if(!confirm(tt('mercs.write',{what,changes:(p.changes || []).join('\n')})
-    + ((p.warnings || []).length ? '\n\n⚠ ' + p.warnings.join('\n⚠ ') : '')
-    + tt('mercs.only_of_this_campaign_is_written',{file:k.d.file})
-    + tt('mercs.backed_up_first_and_log_can'))) return;
+  if(!confirm(tt('mercs.write_confirm',{what,changes:(p.changes || []).join('\n'),
+    warnings:(p.warnings || []).length ? '\n\n⚠ ' + p.warnings.join('\n⚠ ') : '',
+    file:k.d.file}))) return;
   k.busy = true;
   try{ res = await api.post('/api/mercpools/apply', body); }
   catch(e){ res = {error: errText(e)}; }

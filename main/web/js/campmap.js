@@ -163,8 +163,7 @@ const cmap3d = () => typeof cm3On === 'function' && cm3On();
    more - 49 moved it to the Models Editor, where a mod's models are. */
 const CMAP_TABS = [
   {id: 'map', label: tt('campmap.map'), icon: '\u{1F5FA}',
-   title: tt('campmap.which_campaign_is_being_read_finding')
-        + 'and the front-end picture',
+   title: tt('campmap.tab_map_title'),
    subs: [
      {id: 'camps', label: tt('campmap.campaigns'), panels: ['cmCamps'],
       open: {fn: 'cbrToggle', at: 'cbr'},
@@ -180,20 +179,16 @@ const CMAP_TABS = [
       title: tt('campmap.the_picture_the_campaign_selection_screen')},
      {id: 'size', label: tt('campmap.size'), panels: ['cmSize'],
       open: {fn: 'mszToggle', at: 'msz'},
-      title: tt('campmap.grow_or_shrink_the_map_with')
-           + tt('campmap.match_or_start_a_new_campaign')},
+      title: tt('campmap.tab_size_title')},
      {id: 'gen', label: tt('campmap.generate'), panels: ['cmGen'],
       open: {fn: 'mgnToggle', at: 'mgn'},
-      title: tt('campmap.heights_and_rivers_from_the_real')
-           + tt('campmap.heights_climates_from_the_ground_types')},
+      title: tt('campmap.tab_gen_title')},
      {id: 'osm', label: tt('campmap.real_world'), panels: ['cmOsm'],
       open: {fn: 'osmToggle', at: 'osm'},
-      title: tt('campmap.openstreetmap_behind_the_map_the_backdrop')
-           + tt('campmap.places_by_name_off_until_it')},
+      title: tt('campmap.tab_osm_title')},
    ]},
   {id: 'check', label: tt('campmap.validate'), icon: '\u2713',
-   title: tt('campmap.everything_wrong_with_this_map_what')
-        + tt('campmap.rules_the_baseline_and_the_filters'),
+   title: tt('campmap.tab_check_title'),
    subs: [
      {id: 'findings', label: tt('campmap.findings'), panels: ['cmFindings'],
       title: tt('campmap.what_reading_the_map_already_found')},
@@ -209,14 +204,12 @@ const CMAP_TABS = [
       title: tt('campmap.ask_the_map_a_question_and')},
    ]},
   {id: 'paint', label: tt('campmap.paint'), icon: '\u270E',
-   title: tt('campmap.the_brush_and_its_palette_the')
-        + tt('campmap.layer_and_the_campaign_events'),
+   title: tt('campmap.tab_paint_title'),
    subs: [
      {id: 'create', label: tt('common.create'), panels: ['cmCreate'],
       title: tt('campmap.add_regions_settlements_ports_characters_and')},
      {id: 'brush', label: tt('campmap.brush'), panels: ['cmPaint'],
-      title: tt('campmap.the_stroke_the_wizard_undo_and')
-           + tt('campmap.column_on_the_left')},
+      title: tt('campmap.tab_brush_title')},
      {id: 'clim', label: tt('campmap.climates'), panels: ['cmClim'],
       title: tt('campmap.the_climates_this_mod_declares_and')},
      {id: 'marks', label: tt('campmap.markers'), panels: ['cmMarks'],
@@ -226,8 +219,7 @@ const CMAP_TABS = [
       title: tt('campmap.the_campaigns_scripted_events_and_its')},
    ]},
   {id: 'place', label: tt('common.province'), icon: '\u25C9',
-   title: tt('campmap.what_is_on_the_tile_you')
-        + tt('campmap.settlement_its_people_and_its_forts'),
+   title: tt('campmap.tab_place_title'),
    subs: [
      // `cmDel` and `cmRecolour` are not sub-tabs of their own: neither is ever
      // open except on a click of its own button on the record, so they sit in
@@ -238,8 +230,7 @@ const CMAP_TABS = [
       title: tt('campmap.which_rebel_pool_this_province_spawns')},
      {id: 'mercs', label: tt('campmap.mercenaries'), panels: ['cmMercs'],
       open: {fn: 'mcpToggle', at: 'mcp'},
-      title: tt('campmap.what_this_province_sells_who_may')
-           + tt('campmap.mercenary_is_sold')},
+      title: tt('campmap.tab_mercs_title')},
      {id: 'settle', label: tt('common.settlement'), panels: ['cmSettle'],
       title: tt('campmap.the_settlement_standing_on_this_province')},
      {id: 'chars', label: tt('common.characters'), panels: ['cmChars'],
@@ -670,13 +661,7 @@ function cmapSaveLayers(){
 function cmapResetView(){
   const c = state.cmap;
   if(!c) return;
-  if(!confirm(tt('campmap.put_the_campaign_map_back_to')
-    + 'Every layer, its opacity, its order and the colours punched out of it; '
-    + tt('campmap.the_terrain_textures_and_the_rivers')
-    + tt('campmap.names_and_the_tooltip_the_markers')
-    + 'filters; the tab strip, the layer stack and the width of this column; '
-    + tt('campmap.the_3d_view_its_height_scale')
-    + tt('campmap.saved_views_the_campaign_you_are')))
+  if(!confirm(tt('campmap.reset_view_confirm')))
     return;
   for(const l of c.man.layers){
     const L = c.layers[l.code];
@@ -912,14 +897,10 @@ function cmapSetCampaign(rel){
   // worth warning about; the events panel builds a whole block before it writes
   // anything, and that is the one somebody can lose.
   if(typeof cevDirty === 'function' && cevDirty()
-     && !confirm(tt('campmap.read_a_different_campaign')
-        + tt('campmap.the_events_panel_has_an_unsaved')
-        + tt('campmap.the_campaign_you_are_leaving'))) return;
+     && !confirm(tt('campmap.switch_campaign_events_confirm'))) return;
   // 22a: and the forts panel, whose form is a line nobody has saved yet
   if(typeof cftDirty === 'function' && cftDirty()
-     && !confirm(tt('campmap.read_a_different_campaign')
-        + tt('campmap.the_forts_panel_has_an_unsaved')
-        + tt('campmap.campaign_you_are_leaving'))) return;
+     && !confirm(tt('campmap.switch_campaign_forts_confirm'))) return;
   c.campaign = want;
   // 20c: every field a pin can write into is one of the panels reset below
   state.cpin = null;
@@ -941,7 +922,7 @@ function cmapSetCampaign(rel){
   state.cft = null;
   c.det = null; c.cv = null; c.overlay = null; c.overlayEdge = null;
   c.overlayKey = '';
-  activity(tt('campmap.campaign_browser'), `read ${want || tt('campmap.the_default_campaign')}`);
+  activity(tt('campmap.campaign_browser'), tt('campmap.read_campaign',{campaign:want || tt('campmap.the_default_campaign')}));
   renderCampmap();
   if(was.cj) cjToggle();
   if(was.cev) cevToggle();
@@ -1032,7 +1013,7 @@ function cmapHomeNote(){
   if(!h.judged)
     return `<div class="count">${tt('campmap.ships_its_own_so_that_layer',{campaign:esc(h.campaign),own,folder:esc(h.folder)})}</div>`;
   const readers = (h.readers || []).map(esc).join(', ');
-  return `<div class="w-warn">${tt('campmap.reads_its_own_map_from_the',{campaign:esc(h.campaign),own,folder:esc(h.folder),x:readers ? tt('campmap.which_read',{readers,readers2:h.readers.length === 1 ? 's' : ''}) : ''})}</div>`;
+  return `<div class="w-warn">${tt('campmap.reads_own_map',{campaign:esc(h.campaign),own,folder:esc(h.folder),readers_note:readers ? ttN('campmap.which_read_by',h.readers.length,{readers}) : ''})}</div>`;
 }
 
 /* Centre the map on a tile and pick it.
@@ -1280,13 +1261,13 @@ function cmapFindingsHtml(f){
   for(const u of f.undeclared_land) rows.push(['warn',
     tt('campmap.a_tile_province_at_to_is',{pixels:u.pixels,bbox:u.bbox[0],bbox2:u.bbox[1],bbox3:u.bbox[2],bbox4:u.bbox[3],rgb:u.rgb.join(','),rgb2:u.rgb.join(', ')})]);
   if(f.sea_colours) rows.push(['note',
-    tt('campmap.colour_on_the_map_sea_and',{sea_colours:f.sea_colours,x:f.sea_colours === 1 ? '' : 's',x2:f.sea_colours === 1 ? 'is' : 'are'})]);
+    ttN('campmap.sea_colours_declared_nowhere',f.sea_colours)]);
   if(f.empty_records.length) rows.push(['warn',
-    tt('campmap.declared_region_with_no_pixels_at',{empty_records_n:f.empty_records.length,x:f.empty_records.length === 1 ? '' : 's',x2:esc(f.empty_records.slice(0, 4).join(', '))})]);
+    ttN('campmap.regions_with_no_pixels',f.empty_records.length,{names:esc(f.empty_records.slice(0, 4).join(', '))})]);
   if(f.orphan_settlements.length) rows.push(['warn',
-    tt('campmap.settlement_pixel_standing_in_no_region',{orphan_settlements_n:f.orphan_settlements.length,x:f.orphan_settlements.length === 1 ? '' : 's',x2:f.orphan_settlements.map(p => p.join(',')).join(' · ')})]);
+    ttN('campmap.settlement_pixels_in_no_region',f.orphan_settlements.length,{places:f.orphan_settlements.map(p => p.join(',')).join(' · ')})]);
   if(f.undecided_ports.length) rows.push(['warn',
-    tt('campmap.port_pixel_whose_owning_region_cannot',{undecided_ports_n:f.undecided_ports.length,x:f.undecided_ports.length === 1 ? '' : 's'})]);
+    ttN('campmap.port_pixels_undecided',f.undecided_ports.length)]);
   for(const p of f.record_problems.slice(0, 5))
     rows.push(['warn', `${esc(p.name)}: ${esc(p.problems.join('; '))}`]);
   if(!rows.length) return '';
@@ -1393,8 +1374,7 @@ function cmapModeHtml(code){
         <span>${tt('campmap.rivers_only')}</span></label>
       <input type="color" data-lrivercol value="${cmapHex(c.riverRgb)}"
         title="${ttA('campmap.what_the_river_network_is_drawn')}" ${c.rivers ? '' : 'disabled'}>
-      ${c.rivers ? `<span class="count">${tt('campmap.river_tile',{x:n.toLocaleString(),x2:n === 1 ? '' : 's',x3:c.layers.features.hide.size
-          ? tt('campmap.the_hidden_colours_do_not_apply') : ''})}</span>` : ''}
+      ${c.rivers ? `<span class="count">${ttN(c.layers.features.hide.size ? 'campmap.river_tiles_hidden_colours' : 'campmap.river_tiles',n)}</span>` : ''}
     </div>`;
   }
   if(code === 'heights'){
@@ -1414,9 +1394,8 @@ function cmapModeHtml(code){
       <label class="chk" title="${ttA('campmap.darker_is_more_transparent_so_what')}">
         <input type="checkbox" data-lalpha ${c.heightAlpha ? 'checked' : ''}>
         <span>${tt('campmap.height_as_transparency')}</span></label>
-      ${c.heightAlpha ? `<span class="count">${tt('campmap.the_sea_is_not_drawn_and',{med:med
-          ? ` - half its land is no higher than ${med} of 255` : ''})}</span>` : ''}
-      ${over.length ? `<span class="w-warn">${tt('campmap.still_draw_over_it',{x:esc(c.layers[over[over.length - 1]].def.label),over:over.length > 1 ? tt('campmap.and_more',{over:over.length - 1}) : '',over2:over.length > 1 ? '' : 's'})}</span>
+      ${c.heightAlpha ? `<span class="count">${med ? tt('campmap.heights_ramp_note_median',{median:med}) : tt('campmap.heights_ramp_note')}</span>` : ''}
+      ${over.length ? `<span class="w-warn">${ttN('campmap.layers_still_draw_over_it',over.length,{layer:esc(c.layers[over[over.length - 1]].def.label),more:over.length - 1})}</span>
         <button data-ltop="heights" title="${ttA('campmap.put_the_heights_at_the_top')}">${tt('campmap.put_it_on_top')}</button>` : ''}
     </div>`;
   }
@@ -1448,10 +1427,9 @@ function cmapTerrainHtml(){
     : old ? old
     : t.failed ? `<span class="w-bad">${esc(t.failed)}</span>`
     : (f && !f.have) ? `<span class="w-warn">${esc(f.problem)}</span>`
-    : (f && t.on) ? tt('campmap.texture_out_of_pixels_a_tile',{textures:f.textures,x:f.textures === 1 ? '' : 's',folder:esc(f.vocabulary.folder),scale:f.scale,x2:f.pink_tiles
-          ? '' : tt('campmap.every_land_tile_drawn'),x3:f.pink_tiles
+    : (f && t.on) ? ttN(f.pink_tiles ? 'campmap.textures_out_of' : 'campmap.textures_out_of_all_drawn',f.textures,{folder:esc(f.vocabulary.folder),scale:f.scale,gaps:f.pink_tiles
         ? ` <span class="w-warn" title="${esc(f.gaps.map(g => g.why).join('\n\n'))}">
-            ${tt('campmap.tile_have_no_texture_and_are',{pink_tiles:f.pink_tiles.toLocaleString(),x:f.pink_tiles === 1 ? '' : 's',x2:esc((CMAP_GAP_LABELS[t.gap]
+            ${ttN('campmap.tiles_have_no_texture',f.pink_tiles,{colour:esc((CMAP_GAP_LABELS[t.gap]
               || 'pink').toLowerCase())})}</span>` : ''})
     : '';
   return `<div class="cmmode">
@@ -1475,7 +1453,7 @@ function cmapTerrainHtml(){
 function cmapTerrain(on){
   const c = state.cmap, L = c.layers.ground_types;
   c.terrain.on = !!on;
-  activity(tt('campmap.map_layer'), tt('campmap.the_ground_with_the_games_textures',{on:on ? 'drew' : tt('campmap.stopped_drawing')}));
+  activity(tt('campmap.map_layer'), tt(on ? 'campmap.drew_ground_textures' : 'campmap.stopped_drawing_ground_textures'));
   if(on && L.def.present && !L.on) L.on = true;
   L.maskKey = '';
   if(L.img) cmapMask(c, 'ground_types');
@@ -1656,7 +1634,7 @@ function cmapToggleLayer(code, want){
   // same nothing rather than turning on a layer there is no picture for
   if(!L || !L.def.present) return;
   L.on = want === undefined ? !L.on : !!want;
-  activity(tt('campmap.map_layer'), `${L.on ? 'showed' : 'hid'} ${code}`);
+  activity(tt('campmap.map_layer'), tt(L.on ? 'campmap.showed_layer' : 'campmap.hid_layer',{code}));
   cmapLoadLayers();
   cmapSaveLayers();
   cmapRepanel();
@@ -1768,7 +1746,7 @@ function cmapWireLayers(){
     cmapHideColour(cb.dataset.lhide, +cb.dataset.key, cb.checked));
   // 20a's two readings
   box.querySelectorAll('[data-lriver]').forEach(cb => cb.onchange = () => {
-    activity(tt('campmap.map_layer'), `${cb.checked ? tt('campmap.lifted_the_rivers_out_of') : tt('campmap.put_the_rivers_back_into')} map_features.tga`);
+    activity(tt('campmap.map_layer'), tt(cb.checked ? 'campmap.lifted_rivers_out_of_features' : 'campmap.put_rivers_back_into_features'));
     cmapMode('features', 'rivers', cb.checked);
   });
   // `input` rather than `change`, same as the opacity slider: a colour you can
@@ -1783,7 +1761,7 @@ function cmapWireLayers(){
   });
   box.querySelectorAll('[data-ltop]').forEach(b => b.onclick = () => cmapMoveTop(b.dataset.ltop));
   box.querySelectorAll('[data-lalpha]').forEach(cb => cb.onchange = () => {
-    activity(tt('campmap.map_layer'), tt('campmap.drew_the_heights_as',{x:cb.checked ? 'transparency' : 'grey'}));
+    activity(tt('campmap.map_layer'), tt(cb.checked ? 'campmap.drew_heights_as_transparency' : 'campmap.drew_heights_as_grey'));
     cmapMode('heights', 'heightAlpha', cb.checked);
   });
   // 23a's third reading. Its own toggler rather than `cmapMode`: the picture is
@@ -1990,10 +1968,8 @@ function cmapCompose(){
   // what the mask pass did is in the key: punching a colour through, lifting
   // the rivers out or drawing the heights as transparency all change the
   // picture, and a composite that did not notice would show the old one
-  const key = shown.map(code => `${code}:${c.layers[code].opacity}`
-    + `:${cmapModeKey(c, code)}`).join('|')
-    + tt('campmap.terrain',{cmapTerrainOn:cmapTerrainOn(c) ? 1 : 0})
-    + tt('campmap.fe',{x:c.layers.fe && c.layers.fe.on ? 1 : 0});
+  const key = tt('campmap.comp_key',{layers:shown.map(code => `${code}:${c.layers[code].opacity}`
+    + `:${cmapModeKey(c, code)}`).join('|'),terrain:cmapTerrainOn(c) ? 1 : 0,fe:c.layers.fe && c.layers.fe.on ? 1 : 0});
   if(key === c.compKey && c.comp) return;
   if(!c.comp){
     c.comp = document.createElement('canvas');
@@ -3381,7 +3357,7 @@ function cmapProbeHtml(){
   const marker = p.marker
     ? `<div class="w-good">${tt('campmap.this_is_the_marker_pixel_it',{marker:esc(p.marker)})}</div>` : '';
   return head + marker + `<div class="cmprobe">${rows}</div>
-    <div class="count">${tt('campmap.the_engine_treats_this_tile_as',{x:p.sea === null ? 'unknown' : p.sea ? 'sea' : 'land'})}</div>`;
+    <div class="count">${tt(p.sea === null ? 'campmap.engine_treats_tile_unknown' : p.sea ? 'campmap.engine_treats_tile_sea' : 'campmap.engine_treats_tile_land')}</div>`;
 }
 
 /* ---------- the region, editable ---------- */
@@ -3430,16 +3406,9 @@ function cmapRegionHtml(){
    whole-word hit in either mod's descr_strat.txt is a unit type, a portrait or
    a comment. */
 const CMAP_LOCKED = {
-  name: tt('campmap.descr_strat_txt_the_win_conditions')
-      + tt('campmap.script_and_every_legion_line_point')
-      + tt('campmap.them_and_reports_the_script'),
-  settlement: tt('campmap.its_provinces_record_the_lookup_file')
-      + tt('campmap.text_file_point_at_this_name')
-      + tt('campmap.follows_the_three_files_and_reports'),
-  rgb: tt('campmap.this_is_the_colour_the_region')
-     + tt('campmap.the_number_without_repainting_the_pixels')
-     + tt('campmap.tiles_at_all_so_the_box')
-     + tt('campmap.once_36_it_does_not_renumber'),
+  name: tt('campmap.locked_name_tip'),
+  settlement: tt('campmap.locked_settlement_tip'),
+  rgb: tt('campmap.locked_rgb_tip'),
 };
 
 /* ---- renaming the province or its settlement (19b, D2) ----
@@ -3553,12 +3522,10 @@ function cmapNamesHtml(){
   }).join('');
   const dirty = (n.rows || []).some(r =>
     pick[r.slot] !== undefined && pick[r.slot] !== r.value);
-  return `<div class="k">${tt('campmap.names_the_player_reads_key',{file:esc(n.file),x:n.keys,x2:n.keys === 1 ? '' : 's'})}</div>
+  return `<div class="k">${ttN('campmap.names_player_reads_keys',n.keys,{file:esc(n.file)})}</div>
     <div class="cmform">${rows}
       <div class="count">${dirty
-        ? tt('campmap.not_saved_yet') + esc(n.file) + tt('campmap.is_a_third_file_so_it')
-          + tt('campmap.save_and_a_third_undo_the')
-          + tt('campmap.rebuilt_because_that_is_the_one')
+        ? tt('campmap.names_unsaved',{file:esc(n.file)})
         : tt('campmap.blank_here_and_the_campaign_map')}</div>
       ${dirty ? `<button class="primary" style="margin-top:6px"
         onclick="cmapNamesSave()">${tt('campmap.save_names')}</button>` : ''}
@@ -3587,10 +3554,9 @@ async function cmapNamesSave(){
   finally{ c.busy = false; }
   if(plan.error){ toast('✗ ' + plan.error, 8000); return; }
   const p = plan.plan || {};
-  if(!confirm(tt('campmap.write',{changes:(p.changes || []).join('\n') || tt('common.no_visible_change')})
-    + ((p.warnings || []).length ? (p.warnings || []).slice(0, 3).join('\n') + '\n\n' : '')
-    + tt('campmap.only_the_region_record_is_not',{files:(p.files || []).join(', ')})
-    + tt('common.backed_up_first_and_log_can_2'))) return;
+  if(!confirm(tt('campmap.write_names_confirm',{changes:(p.changes || []).join('\n') || tt('common.no_visible_change'),
+      warnings:(p.warnings || []).length ? (p.warnings || []).slice(0, 3).join('\n') + '\n\n' : '',
+      files:(p.files || []).join(', ')}))) return;
   c.busy = true;
   let res;
   try{ res = await api.post('/api/namekeys/apply', body); }
@@ -3630,12 +3596,11 @@ function cmapMercHtml(){
         <select onchange="cmapMercSet(this.value)">
           <option value="" ${now ? '' : 'selected'}>${tt('campmap.none_nothing_is_hired_here')}</option>
           ${(m.pools || []).map(p => `<option value="${esc(p.name)}"
-            ${p.name === now ? 'selected' : ''}>${tt('campmap.province_unit',{name:esc(p.name),regions:p.regions,regions2:p.regions === 1 ? '' : 's',units:p.units,units2:p.units === 1 ? '' : 's'})}</option>`).join('')}
+            ${p.name === now ? 'selected' : ''}>${tt('campmap.merc_pool_option',{name:esc(p.name),regions:ttN('campmap.merc_pool_provinces',p.regions),units:ttN('campmap.merc_pool_units',p.units)})}</option>`).join('')}
         </select>
         <div class="count">${m.units && m.units.length && !dirty
-          ? tt('campmap.sells') + m.units.map(esc).join(', ')
-          : dirty ? tt('campmap.not_saved_yet') + esc(m.file) + tt('campmap.is_a_second_file_so_it')
-                    + tt('campmap.a_second_save_and_a_second')
+          ? tt('campmap.merc_sells',{units:m.units.map(esc).join(', ')})
+          : dirty ? tt('campmap.merc_unsaved',{file:esc(m.file)})
           : tt('campmap.this_province_is_in_no_pool')}</div>
         ${dirty ? `<button class="primary" style="margin-top:6px"
           onclick="cmapMercSave()">${tt('campmap.save_mercenary_pool')}</button>` : ''}
@@ -3661,10 +3626,9 @@ async function cmapMercSave(){
   finally{ c.busy = false; }
   if(plan.error){ toast('✗ ' + plan.error, 7000); return; }
   const p = plan.plan || {};
-  if(!confirm(tt('campmap.write',{changes:(p.changes || []).join('\n') || tt('common.no_visible_change')})
-    + ((p.warnings || []).length ? (p.warnings || []).slice(0, 3).join('\n') + '\n\n' : '')
-    + tt('campmap.only_the_region_record_is_not_2',{file:d.mercenaries.file})
-    + tt('common.backed_up_first_and_log_can_2'))) return;
+  if(!confirm(tt('campmap.write_merc_confirm',{changes:(p.changes || []).join('\n') || tt('common.no_visible_change'),
+      warnings:(p.warnings || []).length ? (p.warnings || []).slice(0, 3).join('\n') + '\n\n' : '',
+      file:d.mercenaries.file}))) return;
   c.busy = true;
   let res;
   try{ res = await api.post('/api/campfiles/apply', body); }
@@ -3713,13 +3677,11 @@ function cmapMusicHtml(){
         <select onchange="cmapMusicSet(this.value)">
           <option value="" ${now ? '' : 'selected'}>${tt('campmap.none_the_engine_says_so_at')}</option>
           ${(mu.types || []).map(t => `<option value="${esc(t.name)}"
-            ${t.name === now ? 'selected' : ''}>${tt('campmap.province',{name:esc(t.name),regions:t.regions,regions2:t.regions === 1 ? '' : 's'})}</option>`).join('')}
+            ${t.name === now ? 'selected' : ''}>${ttN('campmap.music_type_provinces',t.regions,{name:esc(t.name)})}</option>`).join('')}
         </select>
         <div class="count">${dirty
-          ? tt('campmap.not_saved_yet') + esc(mu.file) + tt('campmap.is_another_file_so_it_is')
-            + tt('campmap.another_save_and_another_undo')
-          : odd || tt('campmap.beside_the_map_layers_not_in')
-            + tt('campmap.campaign_on_this_map_hears_the')}</div>
+          ? tt('campmap.music_unsaved',{file:esc(mu.file)})
+          : odd || tt('campmap.music_shared_note')}</div>
         ${dirty && odd ? `<div class="count">${odd}</div>` : ''}
         ${dirty ? `<button class="primary" style="margin-top:6px"
           onclick="cmapMusicSave()">${tt('campmap.save_music_type')}</button>` : ''}
@@ -3745,11 +3707,9 @@ async function cmapMusicSave(){
   finally{ c.busy = false; }
   if(plan.error){ toast('✗ ' + plan.error, 7000); return; }
   const p = plan.plan || {};
-  if(!confirm(tt('campmap.write',{changes:(p.changes || []).join('\n') || tt('common.no_visible_change')})
-    + ((p.warnings || []).length ? (p.warnings || []).slice(0, 3).join('\n') + '\n\n' : '')
-    + tt('campmap.only_the_region_record_is_not_3',{file:d.music.file})
-    + tt('campmap.not_deleted_this_file_is_read')
-    + tt('common.backed_up_first_and_log_can_2'))) return;
+  if(!confirm(tt('campmap.write_music_confirm',{changes:(p.changes || []).join('\n') || tt('common.no_visible_change'),
+      warnings:(p.warnings || []).length ? (p.warnings || []).slice(0, 3).join('\n') + '\n\n' : '',
+      file:d.music.file}))) return;
   c.busy = true;
   let res;
   try{ res = await api.post('/api/campfiles/apply', body); }
@@ -3817,8 +3777,7 @@ function cmapReligionRows(){
     const has = n in d.w.religions;
     return `<div class="cmrel${known.has(n.toLowerCase()) ? '' : ' odd'}">
       <span>${esc(n)}${known.has(n.toLowerCase()) ? ''
-        : tt('campmap.span_class_w_warn_title_descr')
-        + ` ${tt('campmap.one_so_the_engine_reads_the')}</span>`}</span>
+        : tt('campmap.religion_undeclared')}</span>
       <input type="number" min="0" max="100" value="${has ? d.w.religions[n] : ''}"
         placeholder="${has ? '' : '-'}"
         oninput="cmapSetReligion('${esc(n)}', this.value)"></div>`;
@@ -3839,14 +3798,14 @@ function cmapPixelHtml(){
   return `<div class="k">${tt('campmap.on_the_map_counted_off_the')}</div>
     <div class="cmkv">
       ${tt('campmap.region_id_tiles_settlement_at_game',{x:px.region_id >= 0 ? px.region_id : '-',count:px.count.toLocaleString(),x2:px.sea
-        ? ` <span class="count">${tt('campmap.of_them_sea',{sea:px.sea.toLocaleString()})}</span>` : '',x3:g(px.settlement_game),x4:g(px.settlement),x5:px.port_game ? tt('campmap.game_image',{x:g(px.port_game),x2:g(px.port)}) : 'none',x6:px.dock_game ? tt('campmap.dock_at_game_image',{x:g(px.dock_game),x2:g(px.dock)}) : '',x7:px.bbox.join(', ')})}
+        ? ` <span class="count">${tt('campmap.of_them_sea',{sea:px.sea.toLocaleString()})}</span>` : '',x3:g(px.settlement_game),x4:g(px.settlement),x5:px.port_game ? tt('campmap.game_image',{x:g(px.port_game),x2:g(px.port)}) : tt('common.none'),x6:px.dock_game ? tt('campmap.dock_at_game_image',{x:g(px.dock_game),x2:g(px.dock)}) : '',x7:px.bbox.join(', ')})}
     </div>
     <div class="k">${tt('campmap.neighbours_sharing_an_edge_on_map',{neighbours_n:px.neighbours.length})}</div>
     <div class="cmnb">${px.neighbours.map(n => `<button class="cmchip n"
       onclick="cmapGoRegion(${n.key})"
-      title="${esc(n.declared ? 'region ' + n.region_id : tt('campmap.declared_nowhere_in_descr_regions_txt'))}"
+      title="${esc(n.declared ? tt('campmap.region_number',{id:n.region_id}) : tt('campmap.declared_nowhere_in_descr_regions_txt'))}"
       ><i style="background:rgb(${n.rgb.join(',')})"></i>${
-      esc(n.name || 'undeclared')}</button>`).join('')}</div>
+      esc(n.name || tt('campmap.undeclared'))}</button>`).join('')}</div>
     <div class="count">${tt('campmap.adjacency_on_the_region_layer_alone')}</div>`;
 }
 
@@ -3939,9 +3898,7 @@ async function cmapSave(){
   if(!d || !d.w || c.busy) return;
   const total = cmapReligionTotal();
   if(total !== 100 && d.has.religions){
-    toast(tt('campmap.the_religion_percentages_total_the_game',{total})
-      + `unless they total 100 - ${total > 100 ? 'take' : 'add'} `
-      + tt('campmap.before_saving',{total:Math.abs(total - 100),total2:total > 100 ? 'off' : 'on'}), 7000);
+    toast(tt(total > 100 ? 'campmap.religion_total_take_off' : 'campmap.religion_total_add_on',{total,amount:Math.abs(total - 100)}), 7000);
     return;
   }
   /* The campaign decides WHICH `descr_regions.txt` this edits. A campaign that
@@ -3959,12 +3916,9 @@ async function cmapSave(){
   const p = plan.plan || {};
   const lines = (p.changes || []).slice(0, 14);
   const warn = (p.warnings || []).slice(0, 4).map(x => '⚠ ' + x);
-  if(!confirm(tt('campmap.write_save',{name:d.name})
-    + (lines.join('\n') || tt('common.no_visible_change'))
-    + ((p.changes || []).length > 14 ? tt('campmap.and_more_2',{changes:p.changes.length - 14}) : '')
-    + (warn.length ? '\n\n' + warn.join('\n') : '')
-    + tt('campmap.map_rwm_is_deleted_too_or')
-    + tt('campmap.shows_none_of_this_backed_up'))) return;
+  if(!confirm(tt('campmap.write_save_confirm',{name:d.name,changes:lines.join('\n') || tt('common.no_visible_change'),
+      more:(p.changes || []).length > 14 ? tt('campmap.and_more_2',{changes:p.changes.length - 14}) : '',
+      warnings:warn.length ? '\n\n' + warn.join('\n') : ''}))) return;
   c.busy = true;
   let res;
   try{ res = await api.post('/api/map/apply', body); }

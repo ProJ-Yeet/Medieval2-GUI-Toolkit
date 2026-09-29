@@ -284,8 +284,7 @@ async function cxSave(action){
   const what = action || (k.adding ? 'add' : 'edit');
   const body = cxBody(what);
   if(what === 'move'){
-    const to = prompt(tt('stratchar.move_to_which_faction',{character:body.character})
-      + k.d.vocab.factions.join(', '), '');
+    const to = prompt(tt('stratchar.move_to_which_faction_list',{character:body.character,factions:k.d.vocab.factions.join(', ')}), '');
     if(!to) return;
     body.owner = to.trim();
   }
@@ -301,14 +300,13 @@ async function cxSave(action){
   cxPaint();
   const lines = (p.changes || []).slice(0, 14);
   const warn = (p.warnings || []).slice(0, 4).map(x => '⚠ ' + x);
-  const verb = {edit: 'save', add: 'add', delete: 'delete', move: 'move'}[what];
-  if(!confirm(tt('stratchar.write',{verb,x:body.character || (k.w && k.w.name) || tt('stratchar.this_character')})
-    + tt('stratchar.in',{faction:k.faction})
-    + (lines.join('\n') || tt('common.no_visible_change'))
-    + ((p.changes || []).length > 14
-       ? tt('stratchar.and_more',{changes:p.changes.length - 14}) : '')
-    + (warn.length ? '\n\n' + warn.join('\n') : '')
-    + tt('stratchar.only_this_block_moves_backed_up'))) return;
+  const verb = {edit: tt('stratchar.verb_save'), add: tt('stratchar.verb_add'), delete: tt('stratchar.verb_delete'), move: tt('stratchar.verb_move')}[what];
+  if(!confirm(tt('stratchar.write_in_faction_confirm',{verb,
+    who:body.character || (k.w && k.w.name) || tt('stratchar.this_character'),faction:k.faction,
+    changes:lines.join('\n') || tt('common.no_visible_change'),
+    more:(p.changes || []).length > 14
+       ? tt('stratchar.and_more',{changes:p.changes.length - 14}) : '',
+    warnings:warn.length ? '\n\n' + warn.join('\n') : ''}))) return;
   k.busy = true;
   let res;
   try{ res = await api.post('/api/map/character_apply', body); }
@@ -353,7 +351,7 @@ function cxHtml(){
     <button class="cptog${k.open ? ' on' : ''}" onclick="cxToggle()"
       title="${ttA('stratchar.the_characters_armies_and_family_this')}"
       >${tt('stratchar.people',{open:k.open ? ' ✓' : ''})}</button>
-    ${d ? `<span class="count">${tt('stratchar.character',{x:esc(d.label || d.faction),characters_n:d.characters.length,characters:d.characters.length === 1 ? '' : 's',x2:d.leader ? ' · ' + esc(d.leader) : ''})}</span>` : ''}
+    ${d ? `<span class="count">${ttN('stratchar.character_count',d.characters.length,{label:esc(d.label || d.faction),leader:d.leader ? ' · ' + esc(d.leader) : ''})}</span>` : ''}
     ${k.busy ? `<span class="count">${tt('common.working_2')}</span>` : ''}
   </div>`;
   if(!k.open) return head;
@@ -558,9 +556,8 @@ function cxArmyHtml(){
     ${i === 0 && guard.size ? `<span class="count csnote">${
       guard.has(a.unit) ? tt('stratchar.the_bodyguard_in_front') : tt('stratchar.leads_this_army')}</span>` : ''}
   </div>`).join('');
-  return `<div class="k" id="cxArmyEditor">${tt('stratchar.army_regiment',{army_n:w.army.length,army:w.army.length === 1 ? '' : 's',have_edu:v.have_edu ? tt('stratchar.is_a_bodyguard')
-      : tt('stratchar.no_export_descr_unit_txt_on')
-        + tt('stratchar.campaign_itself_writes')})}</div>
+  return `<div class="k" id="cxArmyEditor">${ttN('stratchar.army_regiment_count',w.army.length,{have_edu:v.have_edu ? tt('stratchar.is_a_bodyguard')
+      : tt('stratchar.no_export_descr_unit_names')})}</div>
     <div class="cxblds">${rows || `<div class="count">${tt('stratchar.no_army')}</div>`}</div>
     <div class="csadd"><select onchange="cxUnitAdd(this.value); this.value=''">
       <option value="">${tt('stratchar.add_a_regiment')}</option>
@@ -625,9 +622,7 @@ async function cxPoolAdd(part){
   if(!k || !k.d || k.busy) return;
   const name = (k.w && k.w.name) || (k.pick >= 0 ? k.d.characters[k.pick].name : '');
   const gender = (k.w && k.w.gender) || 'male';
-  const shown = prompt(tt('stratchar.what_should_the_player_read_for',{part})
-    + tt('stratchar.this_is_the_value_of_its')
-    + tt('stratchar.the_token_with_its_underscores_turned'),
+  const shown = prompt(tt('stratchar.what_should_the_player_read_for_prompt',{part}),
     part.replace(/_/g, ' '));
   if(shown === null) return;
   const body = {mod: k.mod, what: 'name_pool', faction: k.faction,
@@ -639,10 +634,10 @@ async function cxPoolAdd(part){
   finally{ k.busy = false; }
   if(plan.error){ toast('✗ ' + plan.error, 8000); return; }
   const p = plan.plan || {};
-  if(!confirm(tt('stratchar.write_2',{changes:(p.changes || []).join('\n') || tt('common.no_visible_change')})
-    + ((p.warnings || []).length ? (p.warnings || []).slice(0, 3).join('\n') + '\n\n' : '')
-    + tt('stratchar.only_the_character_block_is_not',{files:(p.files || []).join(', ')})
-    + tt('common.backed_up_first_and_log_can_2'))) return;
+  if(!confirm(tt('stratchar.write_name_pool_confirm',{
+    changes:(p.changes || []).join('\n') || tt('common.no_visible_change'),
+    warnings:(p.warnings || []).length ? (p.warnings || []).slice(0, 3).join('\n') + '\n\n' : '',
+    files:(p.files || []).join(', ')}))) return;
   k.busy = true;
   let res;
   try{ res = await api.post('/api/namekeys/apply', body); }
@@ -681,11 +676,11 @@ function cxFamilyHtml(){
     ${tt('stratchar.line',{line:r.line,names:esc(r.names[0] || ''),names2:esc(r.names[1] || '(nobody)'),x:r.names.length > 2 ? '&rarr; ' + r.names.slice(2).map(esc).join(', ') : ''})}
   </div>`).join('');
   const rec = (d.records || []).map(r => `<div class="cxfam">
-    ${tt('stratchar.line_age',{line:r.line,name:esc(r.name),gender:esc(r.gender),age:r.age,x:r.dead === null || r.dead === undefined ? 'alive' : 'dead ' + r.dead,x2:r.leadership ? ' · ' + esc(r.leadership) : ''})}
+    ${tt('stratchar.line_age',{line:r.line,name:esc(r.name),gender:esc(r.gender),age:r.age,x:r.dead === null || r.dead === undefined ? tt('stratchar.alive') : tt('stratchar.dead_at',{dead:r.dead}),x2:r.leadership ? ' · ' + esc(r.leadership) : ''})}
   </div>`).join('');
-  return `<div class="k">${tt('stratchar.families_relative_line',{n:(d.relatives || []).length,relatives:(d.relatives || []).length === 1 ? '' : 's'})}</div>
+  return `<div class="k">${ttN('stratchar.relative_line_count',(d.relatives || []).length)}</div>
     <div class="cxfams">${rel || `<div class="count">${tt('common.none_3')}</div>`}</div>
-    <div class="k">${tt('stratchar.off_the_map_character_record_the',{n:(d.records || []).length,records:(d.records || []).length === 1 ? '' : 's'})}</div>
+    <div class="k">${ttN('stratchar.character_record_count',(d.records || []).length)}</div>
     <div class="cxfams">${rec || `<div class="count">${tt('common.none_3')}</div>`}</div>
     ${(d.findings || []).map(f =>
       `<div class="${f.fatal ? 'w-bad' : 'w-warn'}">${esc(f.message)}</div>`).join('')}`;

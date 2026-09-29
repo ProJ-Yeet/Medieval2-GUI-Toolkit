@@ -328,8 +328,7 @@ function cfeFigureText(){
   if(!k || !k.frame || !k.view) return '';
   const f = k.frame, size = k.view.size || [0, 0];
   const per = f.w ? size[0] / f.w : 0;
-  return tt('mapfe.tiles_at',{f:f.w.toFixed(1),f2:f.h.toFixed(1)})
-       + tt('mapfe.px_per_tile',{f:f.x.toFixed(1),f2:f.y.toFixed(1),per:per.toFixed(3)});
+  return tt('mapfe.figure_text',{w:f.w.toFixed(1),h:f.h.toFixed(1),x:f.x.toFixed(1),y:f.y.toFixed(1),per:per.toFixed(3)});
 }
 
 

@@ -262,10 +262,9 @@ def _line_block(p: TreePlan, src_edb: B.EdbFile, bl: B.BuildingLine, vocab: _Voc
             c = _rewrite_clause(blk.requires, vocab, mapping, lines)
             for what, name in c.missing:
                 p.errors.append(
-                    f"{bl.name}/{blk.name} requires {what} {name!r}, which "
-                    f"{p.dst.name} does not have"
-                    + (f" - add the {name.split()[0]!r} line to the import"
-                       if what in ("building", "level") else ""))
+                    _i18n.msg("eng.edbimport.requires_which_is_not_there_add_line", "{block}/{level} requires {what} {name}, which {dst} does not have - add the {first} line to the import", block=bl.name, level=blk.name, what=what, name=repr(name), dst=p.dst.name, first=repr(name.split()[0]))
+                    if what in ("building", "level") else
+                    _i18n.msg("eng.edbimport.requires_which_is_not_there", "{block}/{level} requires {what} {name}, which {dst} does not have", block=bl.name, level=blk.name, what=what, name=repr(name), dst=p.dst.name))
             _note_hidden(p, c)
             if c.never:
                 nobody.append(blk.name)
@@ -576,7 +575,7 @@ def plan(dst, src, body: dict) -> TreePlan:
         p.changes.append(f"hidden_resources: {', '.join(p.hidden_added)} added, "
                          "so the clauses that name them read as they did")
         if len(names) > HIDDEN_MAX:
-            p.warnings.append(f"{len(names)} hidden resources. " + B.HIDDEN_CEILING_NOTE)
+            p.warnings.append(_i18n.msgN("eng.edbimport.hidden_resources_count", len(names), "{count} hidden resource. {note}", "{count} hidden resources. {note}", note=B.HIDDEN_CEILING_NOTE))
     text = "".join(text_lines)
     after = B.parse_text(text)
     for bl in picked:
@@ -591,8 +590,7 @@ def plan(dst, src, body: dict) -> TreePlan:
                 if stray:
                     p.errors.append(_i18n.msg("eng.edbimport.would_still_name_which_does_not", "{name}/{name2} would still name {stray}, which {name3} does not have", name=bl.name, name2=b.name, stray=', '.join(stray), name3=dst.name))
     if len(after.warnings) > len(dst_edb.warnings):
-        p.errors.append("the EDB would read with new warnings: "
-                        + "; ".join(after.warnings[len(dst_edb.warnings):][:3]))
+        p.errors.append(_i18n.msg("eng.edbimport.would_read_with_new_warnings", "the EDB would read with new warnings: {warnings}", warnings="; ".join(after.warnings[len(dst_edb.warnings):][:3])))
     if p.errors:
         return p
 
@@ -637,7 +635,7 @@ def plan(dst, src, body: dict) -> TreePlan:
 def apply(p: TreePlan) -> dict:
     """Write the EDB, the text and the cards: one backup, one Undo."""
     if p.errors:
-        raise ValueError("cannot apply: " + "; ".join(p.errors))
+        raise ValueError(_i18n.msg("eng.edbimport.cannot_apply", "cannot apply: {why}", why="; ".join(p.errors)))
     if not p.edb_text:
         raise ValueError(_i18n.msg("eng.edbimport.nothing_to_change", "nothing to change"))
     mod = p.dst

@@ -40,8 +40,7 @@ const PORT_NOUN = {traits:'trait', ancillaries:'ancillary'};
 function portOpen(kind){
   const others = (state.mods||[]).map(m=>m.name).filter(n=>n!==state.src);
   if(!others.length){
-    toast(tt('portui.there_is_only_one_mod_here')
-        + tt('portui.mods_folder_in_settings_if_that'), 6000); return;
+    toast(tt('portui.there_is_only_one_mod_here_to'), 6000); return;
   }
   portState = {kind, dest:state.src, source:others[0], ov:null, sel:new Set(),
                q:'', plan:null, busy:false, withTriggers:true, overwrite:false,
@@ -90,7 +89,7 @@ function portRender(){
   const rows = portRows();
   const body = !ov ? `<div class="empty">${tt('portui.reading_s_s',{source:esc(p.source),noun:esc(noun)})}</div>`
     : ov.error ? `<div class="w-bad">${esc(ov.error)}</div>`
-    : `<div class="count" style="margin:8px 0">${tt('portui.in_of_them_already_exist_in',{count:ov.count,noun:esc(noun),x:ov.count===1?'':'s',source:esc(ov.source),already:ov.already,dest:esc(ov.dest),x2:ov.dest_error?`<br><span class="w-bad">${esc(ov.dest_error)}</span>`:''})}</div>
+    : `<div class="count" style="margin:8px 0">${ttN('portui.n_nouns_in_source_already_exist_in_dest',ov.count,{noun:esc(noun),source:esc(ov.source),already:ov.already,dest:esc(ov.dest),error:ov.dest_error?`<br><span class="w-bad">${esc(ov.dest_error)}</span>`:''})}</div>
       <div class="barrow">
         <input placeholder="${ttA('portui.filter')}" value="${esc(p.q)}" style="flex:1"
           oninput="portState.q=this.value;portRowsPaint()">
@@ -106,10 +105,8 @@ function portRender(){
       <div class="count" style="margin-bottom:8px">${docPoints(
         tt('portui.each_one_brings_three_things_because',{noun:esc(noun)}),[
         tt('portui.its_block_at_the_top_of'),
-        tt('portui.every_trigger_in_the_other_mod')
-          + tt('portui.trigger_section'),
-        'its text keys - without them the character screen crashes the first time '
-          + tt('portui.anyone_has_the',{noun:esc(noun)})])}</div>
+        tt('portui.every_trigger_in_the_other_mod_that'),
+        tt('portui.its_text_keys_without_them_the_character_screen_crashes',{noun:esc(noun)})])}</div>
       <div class="barrow">
         <span class="count">${tt('portui.read_from')}</span>
         <select onchange="portPickSource(this.value)">${others.map(n =>
@@ -145,9 +142,9 @@ function portRowHtml(r){
     <input type="checkbox" ${on?'checked':''}
       onchange="portTick('${q1(esc(r.name))}',this.checked)">
     <span class="pn">${esc(r.label||r.name)}</span>
-    <span class="count">${tt('portui.text_key',{triggers:r.triggers
-      ? `${r.triggers} trigger${r.triggers===1?'':'s'}`
-      : `<b class="w-warn">${tt('portui.nothing_grants_it_there')}</b>`,x:r.keys,x2:r.keys===1?'':'s',exists:r.exists?` ${tt('portui.already_in_this_mod')}`:''})}</span>
+    <span class="count">${tt('portui.triggers_and_text_keys',{triggers:r.triggers
+      ? ttN('portui.n_triggers',r.triggers)
+      : `<b class="w-warn">${tt('portui.nothing_grants_it_there')}</b>`,keys:ttN('portui.n_text_keys',r.keys),exists:r.exists?` ${tt('portui.already_in_this_mod')}`:''})}</span>
   </label>`;
 }
 
@@ -226,11 +223,10 @@ async function portApply(){
   const noun = PORT_NOUN[p.kind] || 'record';
   const lines = (pl.changes||[]).slice(0, 12);
   const warn = (pl.warnings||[]).slice(0, 5).map(w => '⚠ ' + w);
-  if(!confirm(tt('portui.port_s_from_into',{sel_n:p.sel.size,noun,source:p.source,dest:p.dest})
-    + (lines.join('\n') || tt('common.no_visible_change'))
-    + ((pl.changes||[]).length > 12 ? tt('portui.and_more_2',{x:pl.changes.length-12}) : '')
-    + (warn.length ? '\n\n' + warn.join('\n') : '')
-    + tt('portui.both_files_are_backed_up_first'))) return;
+  if(!confirm(tt('portui.port_from_into_confirm',{sel_n:p.sel.size,noun,source:p.source,dest:p.dest,
+    changes:(lines.join('\n') || tt('common.no_visible_change'))
+      + ((pl.changes||[]).length > 12 ? tt('portui.and_more_2',{x:pl.changes.length-12}) : ''),
+    warnings:warn.length ? '\n\n' + warn.join('\n') : ''}))) return;
   p.busy = true;
   let res;
   try{ res = await api.post('/api/port/apply',
@@ -239,8 +235,7 @@ async function portApply(){
   finally{ if(portState === p) p.busy = false; }
   if(res.error){ toast('✗ ' + res.error, 6000); return; }
   closeModal();
-  toast(tt('portui.ported_s_into',{n:(res.plan&&res.plan.rows||[]).length||p.sel.size,noun})
-      + tt('portui.undo_in_log',{dest:p.dest}), 5200);
+  toast(tt('portui.ported_n_noun_into_dest_undo_in_log',{n:(res.plan&&res.plan.rows||[]).length||p.sel.size,noun,dest:p.dest}), 5200);
   portState = null;
   // the destination is the mod on screen, and its file just changed under it
   if(p.kind === 'traits'){ state.tr = null; loadTraits(); }

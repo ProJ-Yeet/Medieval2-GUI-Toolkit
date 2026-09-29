@@ -499,7 +499,7 @@ function cmkLabel(it){
   }
   if(it.kind === 'character')
     return `${it.name}${it.type ? ` · ${it.type}` : ''}`
-      + (it.army ? tt('campmark.unit',{army:it.army,x:it.army === 1 ? '' : 's'}) : '')
+      + (it.army ? ttN('campmark.army_unit_count',it.army) : '')
       + (who ? ` · ${who}` : '');
   if(it.kind === 'resource') return it.name;
   // 18b. A date and a frequency are the whole reason one of these is here, so
@@ -517,11 +517,11 @@ function cmkLabel(it){
      the water. */
   if(it.kind === 'spawn'){
     const afloat = (it.type || '').toLowerCase() === 'admiral';
-    return `${it.name || '(unnamed)'}${it.type ? ` · ${it.type}` : ''}`
-      + (it.units ? tt('campmark.unit_2',{units:it.units,x:it.units === 1 ? '' : 's'}) : '')
-      + (who ? ` · ${who}` : '')
-      + (it.at_sea ? (afloat ? tt('campmark.at_sea_a_fleet') : tt('campmark.at_sea')) : '')
-      + tt('campmark.line',{line:it.line});
+    return [`${it.name || '(unnamed)'}${it.type ? ` · ${it.type}` : ''}`,
+      it.units ? ttN('campmark.spawn_unit_count',it.units) : '',
+      who ? ` · ${who}` : '',
+      it.at_sea ? (afloat ? tt('campmark.at_sea_a_fleet') : tt('campmark.at_sea')) : '',
+      tt('campmark.line',{line:it.line})].join('');
   }
   // A fort and a watchtower name a province rather than an owner: DaC writes
   // all 105 and all 295 of them inside the `region` blocks at the end of the

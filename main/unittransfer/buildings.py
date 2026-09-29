@@ -2421,9 +2421,7 @@ HIDDEN_NAME = re.compile(r"^[A-Za-z0-9_]+$")
 #: What TWCenter's *List of Hardcoded Limits* says, and what the mods here say
 #: back. Stated beside the count, never enforced: a ceiling two shipping mods
 #: are over is not a ceiling (Phase 12's ruling).
-HIDDEN_CEILING_NOTE = ("TWCenter's List of Hardcoded Limits puts the ceiling at 63 or "
-                       "64 and says more crash the game. Divide and Conquer ships 75 "
-                       "and ROCSS 74, and both play, so it is not enforced here.")
+HIDDEN_CEILING_NOTE = _i18n.msg("eng.buildings.hidden_ceiling_note", "TWCenter's List of Hardcoded Limits puts the ceiling at 63 or 64 and says more crash the game. Divide and Conquer ships 75 and ROCSS 74, and both play, so it is not enforced here.")
 
 
 def hidden_impact(mod, name: str) -> dict:
@@ -2557,7 +2555,7 @@ def plan_hidden(mod, body: dict) -> BuildingPlan:
                    "count_after": len(want), "ceiling_note": HIDDEN_CEILING_NOTE,
                    "names": hidden_usage(mod)}
     if len(want) > 64:
-        plan.warnings.append(f"{len(want)} hidden resources. " + HIDDEN_CEILING_NOTE)
+        plan.warnings.append(_i18n.msgN("eng.buildings.hidden_resources_count", len(want), "{count} hidden resource. {note}", "{count} hidden resources. {note}", note=HIDDEN_CEILING_NOTE))
     if plan.errors or want == have:
         return plan
     lines = list(edb.lines)
@@ -2582,7 +2580,7 @@ def apply_edit(plan: BuildingPlan) -> Dict:
     transfer log, so 🕑 Log -> Undo restores the EDB byte-exact.
     """
     if plan.errors:
-        raise ValueError("cannot apply: " + "; ".join(plan.errors))
+        raise ValueError(_i18n.msg("eng.buildings.cannot_apply", "cannot apply: {why}", why="; ".join(plan.errors)))
     mod = plan.mod
     tid = config.new_transfer_id()
     backup_root = config.backup_root_for(tid)

@@ -582,8 +582,7 @@ def check_character(voc: Vocabulary, spec: Spec, cm=None) -> List[dict]:
     if spec.type not in CHARACTER_TYPES:
         out.append(finding(
             "char.type", True,
-            f"{spec.type or '(nothing)'} is not a character type. The twelve "
-            f"are " + ", ".join(CHARACTER_TYPES) + "."))
+            _i18n.msg("eng.stratchar.is_not_a_character_type_the_twelve", "{type} is not a character type. The twelve are {types}.", type=spec.type or '(nothing)', types=", ".join(CHARACTER_TYPES))))
     for slot in ("age", "x", "y"):
         value = getattr(spec, slot)
         if not is_int(value):
@@ -687,16 +686,9 @@ def _check_army(voc: Vocabulary, spec: Spec) -> List[dict]:
     held = [a.unit for a in spec.army if a.unit in voc.bodyguards]
     out.append(finding(
         "army.bodyguard", False,
-        (f"{spec.army[0].unit} leads this army and the EDU does not give it "
-         f"`general_unit`. "
-         if not held else
-         f"The `general_unit` in this army is {held[0]}, and "
-         f"{spec.army[0].unit} is in front of it. ")
-        + "Vanilla puts a bodyguard first on every general it has; Third Age "
-          "Reforged has 213 armies and only 14 with a `general_unit` in them "
-          "at all, and it plays. So this is a habit worth keeping rather than "
-          "a rule. The attribute is what is read, not the name: that mod calls "
-          "19 units Bodyguard and marks 6 of them.",
+        _i18n.msg("eng.stratchar.army_leader_has_no_general_unit", "{unit} leads this army and the EDU does not give it `general_unit`. Vanilla puts a bodyguard first on every general it has; Third Age Reforged has 213 armies and only 14 with a `general_unit` in them at all, and it plays. So this is a habit worth keeping rather than a rule. The attribute is what is read, not the name: that mod calls 19 units Bodyguard and marks 6 of them.", unit=spec.army[0].unit)
+        if not held else
+        _i18n.msg("eng.stratchar.army_general_unit_is_behind", "The `general_unit` in this army is {held}, and {unit} is in front of it. Vanilla puts a bodyguard first on every general it has; Third Age Reforged has 213 armies and only 14 with a `general_unit` in them at all, and it plays. So this is a habit worth keeping rather than a rule. The attribute is what is read, not the name: that mod calls 19 units Bodyguard and marks 6 of them.", held=held[0], unit=spec.army[0].unit),
         unit=spec.army[0].unit))
     return out
 
@@ -818,10 +810,9 @@ def check_pool(voc: Vocabulary, faction: str, name: str) -> List[dict]:
                                         else voc.pool).items() if part in names]
             out.append(finding(
                 "char.pool", False,
-                f"{part} is not in {faction}'s `{where}` section of descr_names.txt"
-                + (f" - it is in {', '.join(other[:2])}'s. " if other else ". ")
-                + "Every one of Third Age Reforged's 325 characters is in its own "
-                  "faction's pool, and a name that is not may come out untranslated.",
+                _i18n.msg("eng.stratchar.name_part_is_in_another_pool", "{part} is not in {faction}'s `{where}` section of descr_names.txt - it is in {other}'s. Every one of Third Age Reforged's 325 characters is in its own faction's pool, and a name that is not may come out untranslated.", part=part, faction=faction, where=where, other=', '.join(other[:2]))
+                if other else
+                _i18n.msg("eng.stratchar.name_part_is_not_in_pool", "{part} is not in {faction}'s `{where}` section of descr_names.txt. Every one of Third Age Reforged's 325 characters is in its own faction's pool, and a name that is not may come out untranslated.", part=part, faction=faction, where=where),
                 name=name, part=part))
         elif voc.have_name_keys and part not in voc.name_keys:
             out.append(finding(
@@ -1290,8 +1281,7 @@ def plan_character(mod, facts, body: dict) -> CharPlan:
                  faction=str(body.get("faction") or "").strip(),
                  name=str(body.get("character") or "").strip())
     if action not in ACTIONS:
-        p.errors.append(f"no such action {action!r}. The four are "
-                        + ", ".join(ACTIONS))
+        p.errors.append(_i18n.msg("eng.stratchar.no_such_action_the_four_are", "no such action {action}. The four are {actions}", action=repr(action), actions=", ".join(ACTIONS)))
         return p
     try:
         sf = campstrat.read_strat(mod, campaign)
@@ -1438,7 +1428,7 @@ def apply_character(p: CharPlan) -> dict:
     from .logutil import file_op, log
 
     if p.errors:
-        raise ValueError("cannot apply: " + "; ".join(p.errors))
+        raise ValueError(_i18n.msg("eng.stratchar.cannot_apply", "cannot apply: {why}", why="; ".join(p.errors)))
     if not p.text:
         raise ValueError(_i18n.msg("eng.stratchar.nothing_to_change", "nothing to change"))
     mod = p.mod

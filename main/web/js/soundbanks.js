@@ -44,8 +44,7 @@ async function loadSoundBanks(file){
   const mod = state.src, mode = state.mode, scope = sbkScripts() ? 'scripts' : 'banks';
   const k = state.sbk && state.sbk.mod === mod && state.sbk.scope === scope ? state.sbk : null;
   file = file || (k && k.file) || (scope === 'scripts' ? 'units' : 'soldier_voice');
-  main.innerHTML = soundTabsHtml() + `<div class="empty">${tt('common.reading')} ` + esc(mod) + tt('soundbanks.s_sound')
-    + (scope === 'scripts' ? 'scripts' : 'banks') + '…</div>';
+  main.innerHTML = soundTabsHtml() + `<div class="empty">${tt(scope === 'scripts' ? 'soundbanks.reading_mod_sound_scripts' : 'soundbanks.reading_mod_sound_banks',{mod:esc(mod)})}</div>`;
   let r;
   try{ r = await api.get(sbkApi() + '?mod=' + enc(mod) + '&file=' + enc(file)); }
   catch(e){ if(stale(mode, mod)) return;
@@ -117,10 +116,10 @@ function sbkListHtml(){
     const kids = d.nodes.some(x => x.parent === i);
     const isOpen = k.open.has(i);
     const items = (n.items || []).length;
-    const sub = n.kind === 'file' ? tt('soundbanks.line_default_settings_sources',{items,items2:items === 1 ? '' : 's'})
-      : kids ? `${sbkChildren(i).length} inside`
-      : tt('soundbanks.event_sample',{events_n:n.events.length,events:n.events.length === 1 ? '' : 's',sbkSamples:sbkSamples(n),sbkSamples2:sbkSamples(n) === 1 ? '' : 's'})
-        + (items ? tt('soundbanks.setting',{items,items2:items === 1 ? '' : 's'}) : '');
+    const sub = n.kind === 'file' ? ttN('soundbanks.line_default_settings_sources_count',items)
+      : kids ? tt('soundbanks.n_inside',{n:sbkChildren(i).length})
+      : tt('soundbanks.events_samples_settings',{events:ttN('soundbanks.event_count',n.events.length),samples:ttN('soundbanks.sample_count',sbkSamples(n)),
+          settings:items ? ttN('soundbanks.setting_count_suffix',items) : ''});
     const dirty = n.events.some(e => k.w[e.at]) || (n.items || []).some(it => k.w['i' + it.at]);
     return `<button class="trrow sbkrow${k.sel === i ? ' on' : ''}" style="margin-left:${depth * 14}px"
         onclick="sbkPick(${i})">
@@ -170,11 +169,11 @@ function sbkMainHtml(){
   const n = d.nodes[k.sel];
   const nw = Object.keys(k.w).length, ro = !!d.read_only;
   const bar = `<div class="cdbhead">
-    <div><b>${esc(d.label)}</b> <span class="count">${tt('soundbanks.lines_read_when_the_game_starts',{x:d.bank ? tt('soundbanks.bank') + esc(d.bank) + ' · ' : '',line_count:d.line_count})}</span></div>
+    <div><b>${esc(d.label)}</b> <span class="count">${tt('soundbanks.lines_read_when_the_game_starts',{x:d.bank ? tt('soundbanks.bank_name',{bank:esc(d.bank)}) : '',line_count:d.line_count})}</span></div>
     <span style="flex:1"></span>
     <button onclick="rtOpen('${q1(esc(d.rel))}'${n && n.line > 0 ? ', ' + n.line : ''})" title="${ttA('soundbanks.the_whole_file_in_the_raw')}">${tt('soundbanks.raw_text')}</button>
     ${ro ? '' : `<button onclick="sbkRevert()" ${nw ? '' : 'disabled'}>${tt('common.revert')}</button>
-    <button class="primary" onclick="sbkSave()" ${nw ? '' : 'disabled'}>${tt('soundbanks.save_edit',{nw:nw || '',nw2:nw === 1 ? '' : 's'})}</button>`}
+    <button class="primary" onclick="sbkSave()" ${nw ? '' : 'disabled'}>${nw ? ttN('soundbanks.save_edit_count',nw) : tt('soundbanks.save_edits_none')}</button>`}
   </div>`;
   const about = `<div class="trnote"><div>${esc(d.about)}</div>
     <div class="count">${esc(d.packed)}</div>
@@ -187,11 +186,11 @@ function sbkMainHtml(){
   const can = x => !ro && n.kind !== 'file' && n[x] !== false;
   const sel = n.kind === 'selector';
   const acts = n.kind === 'file' ? '' : `<div class="sbkacts">
-    ${tt('soundbanks.line_line',{can:can('can_copy') ? `<button onclick="sbkBlock('duplicate')" title="${ttA('soundbanks.a_copy_of_this_block_straight')}">${tt('soundbanks.duplicate_as')}</button>` : '',can2:can('can_rename') ? `<button onclick="sbkBlock('rename')" title="${sel ? tt('soundbanks.what_this_selector_matches') : d.named || n.kind === 'named' ? tt('soundbanks.the_name_the_engine_or_a') : tt('soundbanks.change_this_block_name')}">${sel ? tt('soundbanks.change_values') : tt('soundbanks.rename')}</button>` : '',can3:can('can_remove') ? `<button class="danger" onclick="sbkBlock('remove')">${tt('common.remove')}</button>` : '',line:n.line,lines:n.lines,lines2:n.lines === 1 ? '' : 's',x:sel && !ro ? tt('soundbanks.a_selector_is_changed_in_place') : ''})}</div>`;
+    ${ttN('soundbanks.line_line_count',n.lines,{can:can('can_copy') ? `<button onclick="sbkBlock('duplicate')" title="${ttA('soundbanks.a_copy_of_this_block_straight')}">${tt('soundbanks.duplicate_as')}</button>` : '',can2:can('can_rename') ? `<button onclick="sbkBlock('rename')" title="${sel ? tt('soundbanks.what_this_selector_matches') : d.named || n.kind === 'named' ? tt('soundbanks.the_name_the_engine_or_a') : tt('soundbanks.change_this_block_name')}">${sel ? tt('soundbanks.change_values') : tt('soundbanks.rename')}</button>` : '',can3:can('can_remove') ? `<button class="danger" onclick="sbkBlock('remove')">${tt('common.remove')}</button>` : '',line:n.line,x:sel && !ro ? tt('soundbanks.a_selector_is_changed_in_place') : ''})}</div>`;
   const inside = kids.length ? `<div class="sbkkids"><div class="count">${tt('soundbanks.inside_it')}</div>
     ${kids.map(([c, j]) => `<button class="sbkkid" onclick="sbkPick(${j})">${esc(c.label)}
-      <span class="count">${d.nodes.some(x => x.parent === j) ? sbkChildren(j).length + ' inside'
-        : c.events.length + ' event' + (c.events.length === 1 ? '' : 's')}</span></button>`).join('')}</div>` : '';
+      <span class="count">${d.nodes.some(x => x.parent === j) ? tt('soundbanks.n_inside',{n:sbkChildren(j).length})
+        : ttN('soundbanks.event_count',c.events.length)}</span></button>`).join('')}</div>` : '';
   const evs = n.events.map((e, x) => sbkEventHtml(e, x, n.events.length)).join('');
   const items = (n.items || []).map(sbkItemHtml).join('');
   return bar + (n.kind === 'file' ? about : '') + `<div class="sbkpath">${esc(path)}</div>` + acts
@@ -206,7 +205,7 @@ function sbkEventHtml(e, x, of){
   const named = k.d.named, ro = !!k.d.read_only;
   const nS = lines.split('\n').filter(l => l.trim() && !/^folder\s/i.test(l.trim())).length;
   return `<div class="sbkev${k.w[e.at] ? ' on' : ''}">
-    <div class="sbkevhead">${tt('soundbanks.event_line_sample',{x:e.name ? ' ' + esc(e.name) : '',of:of > 1 ? ` ${x + 1} of ${of}` : '',line:e.line,nS,nS2:nS === 1 ? '' : 's'})}</div>
+    <div class="sbkevhead">${ttN('soundbanks.event_line_sample_count',nS,{x:e.name ? ' ' + esc(e.name) : '',of:of > 1 ? tt('soundbanks.event_n_of',{n:x + 1,of}) : '',line:e.line})}</div>
     ${named ? '' : `<label class="sbkattr"><span class="count">${tt('soundbanks.attributes')}</span>
       <input type="text" spellcheck="false" value="${esc(attrs)}" ${ro ? 'disabled' : ''}
         placeholder="${ttA('soundbanks.none_e_g_priority_120_volume')}"
@@ -257,7 +256,7 @@ function sbkPaintSave(){
   if(btns.length < 3) return;
   const save = btns[btns.length - 1], rev = btns[btns.length - 2];
   save.disabled = rev.disabled = !nw;
-  save.textContent = tt('soundbanks.save_edit',{nw:nw || '',nw2:nw === 1 ? '' : 's'});
+  save.textContent = nw ? ttN('soundbanks.save_edit_count',nw) : tt('soundbanks.save_edits_none');
 }
 
 /* typing does not redraw - that would take the caret out of the box */
@@ -332,11 +331,10 @@ async function sbkRun(ops){
   if(r.error){ toast('✗ ' + r.error, 9000); return; }
   const p = r.plan || {};
   if(!p.ok){ toast(tt('soundbanks.nothing_to_change')); return; }
-  if(!confirm(tt('soundbanks.write_change_s_to',{changes_n:p.changes.length,rel:k.d.rel})
-    + p.changes.slice(0, 14).join('\n')
-    + (p.changes.length > 14 ? tt('soundbanks.and_more',{changes:p.changes.length - 14}) : '')
-    + (p.warnings.length ? '\n\n⚠ ' + p.warnings.slice(0, 5).join('\n⚠ ') : '')
-    + tt('common.backed_up_first_and_log_can'))) return;
+  if(!confirm(tt('soundbanks.write_changes_confirm',{changes_n:p.changes.length,rel:k.d.rel,
+    changes:p.changes.slice(0, 14).join('\n'),
+    more:p.changes.length > 14 ? tt('soundbanks.and_more',{changes:p.changes.length - 14}) : '',
+    warnings:p.warnings.length ? '\n\n⚠ ' + p.warnings.slice(0, 5).join('\n⚠ ') : ''}))) return;
   k.busy = true;
   let res;
   try{ res = await api.post(sbkApi() + '/apply', body); }

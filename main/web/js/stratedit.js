@@ -225,12 +225,10 @@ async function csSave(){
   const lines = (p.changes || []).slice(0, 14);
   const notes = (p.capitals || []).concat((p.warnings || []).slice(0, 4))
     .map(x => '⚠ ' + x);
-  if(!confirm(tt('stratedit.write_save_the_settlement_in',{region:k.region})
-    + (lines.join('\n') || tt('common.no_visible_change'))
-    + ((p.changes || []).length > 14
-       ? tt('stratedit.and_more',{changes:p.changes.length - 14}) : '')
-    + (notes.length ? '\n\n' + notes.join('\n') : '')
-    + tt('stratedit.only_this_block_moves_backed_up'))) return;
+  const changes = `${lines.join('\n') || tt('common.no_visible_change')}${
+    (p.changes || []).length > 14 ? tt('stratedit.and_more',{changes:p.changes.length - 14}) : ''}${
+    notes.length ? '\n\n' + notes.join('\n') : ''}`;
+  if(!confirm(tt('stratedit.confirm_write_settlement',{region:k.region,changes}))) return;
   k.busy = true;
   let res;
   try{ res = await api.post('/api/map/settlement_apply', csBody()); }
@@ -314,9 +312,8 @@ async function csAction(body, verb, what){
   if(plan.error){ toast('✗ ' + plan.error, 9000); csPaint(); return false; }
   const p = plan.plan || {};
   const notes = (p.capitals || []).concat(p.warnings || []).map(x => '⚠ ' + x);
-  if(!confirm(`${verb}?\n\n${(p.changes || []).join('\n')}`
-    + (notes.length ? '\n\n' + notes.join('\n') : '')
-    + tt('common.backed_up_first_and_log_can'))){ csPaint(); return false; }
+  const changes = `${(p.changes || []).join('\n')}${notes.length ? '\n\n' + notes.join('\n') : ''}`;
+  if(!confirm(tt('stratedit.confirm_verb',{verb,changes}))){ csPaint(); return false; }
   k.busy = true; csPaint();
   let res;
   try{ res = await api.post('/api/map/settlement_apply', body); }
@@ -469,8 +466,7 @@ function csBuildingsHtml(){
   }).join('');
   return `<div class="k">${tt('common.buildings')}
       <span class="count">${k.blds.length}${v.have_edb ? ''
-        : tt('stratedit.no_export_descr_buildings_txt_on')
-          + tt('stratedit.campaign_itself_names')}</span></div>
+        : tt('stratedit.no_export_edb_lines')}</span></div>
     <div class="csblds">${rows || `<div class="count">${tt('common.none_3')}</div>`}</div>
     <div class="csadd">
       <select onchange="csBldAdd(this.value); this.value=''">

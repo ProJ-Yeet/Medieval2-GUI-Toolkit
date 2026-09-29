@@ -502,7 +502,7 @@ def apply(p: NamePlan) -> Dict:
     ruling :func:`unittransfer.minorfiles.apply` makes over a religion's four.
     """
     if p.errors:
-        raise ValueError("cannot apply: " + "; ".join(p.errors))
+        raise ValueError(_i18n.msg("eng.namekeys.cannot_apply", "cannot apply: {why}", why="; ".join(p.errors)))
     if not p.touched():
         raise ValueError(_i18n.msg("eng.namekeys.nothing_to_change", "nothing to change"))
     mod = p.mod

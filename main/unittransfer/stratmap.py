@@ -950,7 +950,8 @@ Log → Undo restores the mod exactly, and does not need this folder.
 def apply_cleanup(plan: CleanupPlan, progress: Progress = None) -> Dict:
     """Write the cleanup: export first, then rewrite the mod (with backups)."""
     if plan.errors:
-        raise ValueError("cannot apply: " + "; ".join(plan.errors))
+        raise ValueError(_i18n.msg("eng.stratmap.cannot_apply", "cannot apply: {why}",
+                                   why="; ".join(plan.errors)))
     mod, target = plan.mod, plan.target
     if target is None:
         raise ValueError(_i18n.msg("eng.stratmap.cannot_apply_no_export_folder", "cannot apply: no export folder"))

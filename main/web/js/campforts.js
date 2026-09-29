@@ -312,11 +312,10 @@ async function cftSave(action){
   const name = body.kind === 'resource' ? (body.name || 'resource')
     : (CFT_NAME[body.kind] || body.kind).toLowerCase();
   const verb = {add: tt('common.add_2'), delete: tt('common.delete'), edit: tt('common.save'), move: tt('campforts.move')}[p.action || body.action];
-  if(!confirm(tt('campforts.the',{verb,name,region:p.region ? ` in ${p.region}` : ''})
-    + ((p.changes || []).join('\n') || tt('common.no_visible_change'))
-    + ((p.warnings || []).length
-       ? '\n\n' + p.warnings.slice(0, 4).map(x => '⚠ ' + x).join('\n') : '')
-    + tt('campforts.one_line_of_descr_strat_txt')))
+  if(!confirm(tt(p.region ? 'campforts.verb_the_name_in_region_confirm' : 'campforts.verb_the_name_confirm',{verb,name,region:p.region,
+      changes:(p.changes || []).join('\n') || tt('common.no_visible_change'),
+      warnings:(p.warnings || []).length
+        ? '\n\n' + p.warnings.slice(0, 4).map(x => '⚠ ' + x).join('\n') : ''})))
     return;
   k.busy = true;
   let res;
@@ -389,7 +388,7 @@ function cftHtml(){
     <button class="cptog${k.open ? ' on' : ''}" onclick="cftToggle()"
       title="${ttA('campforts.the_forts_watchtowers_and_trade_resources')}">
       ${tt('campforts.forts_and_resources',{open:k.open ? ' ✓' : ''})}</button>
-    ${n ? `<span class="count">${tt('campforts.fort_watchtower_resource',{fort:n.fort,fort2:n.fort === 1 ? '' : 's',watchtower:n.watchtower,watchtower2:n.watchtower === 1 ? '' : 's',resource:n.resource || 0,resource2:n.resource === 1 ? '' : 's'})}</span>` : ''}
+    ${n ? `<span class="count">${tt('campforts.forts_watchtowers_resources',{forts:ttN('campforts.fort_count',n.fort),watchtowers:ttN('campforts.watchtower_count',n.watchtower),resources:ttN('campforts.resource_count',n.resource || 0)})}</span>` : ''}
     ${k.busy ? `<span class="count">${tt('common.working_2')}</span>` : ''}
   </div>`;
   if(!k.open) return head;
@@ -410,7 +409,7 @@ function cftPlaceHtml(kind){
   const on = state.cpin && state.cpin.fn === 'cftPlace'
     && JSON.stringify(state.cpin.args) === JSON.stringify([kind]);
   return `<button class="${on ? 'on' : ''}"
-    onclick="cpinToggle(${esc(JSON.stringify(tt('campforts.the_tile_for_a_new') + kind))}, 'cftPlace', ['${kind}'])"
+    onclick="cpinToggle(${esc(JSON.stringify(tt('campforts.the_tile_for_a_new_kind',{kind:(CFT_NAME[kind] || kind).toLowerCase()})))}, 'cftPlace', ['${kind}'])"
     title="${ttA('campforts.arm_the_map_the_next_click',{kind})}">
     ＋ ${CFT_ICON[kind]} ${CFT_NAME[kind]} ⌖</button>`;
 }
@@ -421,7 +420,7 @@ function cftFileHtml(){
   const bad = d.rows.filter(r => r.findings.some(f => f.fatal)).length;
   const look = d.rows.filter(r => r.findings.length).length;
   const [hg, ht] = d.headed_well || [0, 0];
-  return `<div class="count">${tt('campforts.region_section',{file:esc(d.file),sections:d.sections,sections2:d.sections === 1 ? '' : 's',x:total ? tt('campforts.of_forts_and_watchtowers_stand_in',{good,total}) : '',ht:ht
+  return `<div class="count">${ttN('campforts.region_sections',d.sections,{file:esc(d.file),x:total ? tt('campforts.of_forts_and_watchtowers_stand_in',{good,total}) : '',ht:ht
       ? tt('campforts.of_resources_stand_in_the_province',{hg,ht}) : '',x2:d.own_map ? tt('campforts.judged_on_this_campaigns_own_map') : ''})}</div>
     ${look ? `<div class="csbtns"><button class="${state.cft.all ? 'on' : ''}"
       onclick="cftShowAll()">${tt('campforts.to_look_at',{bad:bad ? `<span class="w-bad">${bad}</span> ` : '',look})}</button><span class="count">${tt('campforts.across_the_whole_campaign')}</span></div>` : ''}`;
@@ -479,7 +478,7 @@ function cftFormHtml(){
            <button onclick="cftSet('region', ${esc(JSON.stringify(here))}); cftPaint(); cftPlan()"
              >${tt('campforts.it_under',{verb,here:esc(here)})}</button></div>` : ''}`;
   return `<div class="cxform">
-    <div class="cmfield"><label>${CFT_ICON[w.kind]} ${k.adding ? tt('campforts.new') + w.kind
+    <div class="cmfield"><label>${CFT_ICON[w.kind]} ${k.adding ? tt('campforts.new_kind',{kind:(CFT_NAME[w.kind] || w.kind).toLowerCase()})
       : CFT_NAME[w.kind]}${row ? ` <span class="count">${tt('campforts.line',{line:row.line})}</span>` : ''}</label>
       <div class="cxrow">
         <input style="width:5.5em" value="${esc(String(w.x))}"

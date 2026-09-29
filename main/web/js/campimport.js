@@ -119,16 +119,16 @@ async function cimApply(){
   const k = state.cim;
   if(!k || k.busy || !k.plan || !k.plan.ok || k.stale) return;
   const p = k.plan;
-  if(!confirm(tt('campimport.import_from_into_as',{campaign:p.campaign,source:p.source,mod:k.mod,name:p.name})
-    + (p.changes || []).join('\n')
-    + ((p.warnings || []).length
-       ? '\n\n' + p.warnings.map(x => '⚠ ' + x).join('\n') : '')
-    + tt('campimport.file_s_log_can_undo_it',{files:p.files,x:cnwSize(p.bytes)}))) return;
+  if(!confirm(tt('campimport.import_confirm',{campaign:p.campaign,source:p.source,mod:k.mod,name:p.name,
+    changes:(p.changes || []).join('\n'),
+    warnings:(p.warnings || []).length
+       ? '\n\n' + p.warnings.map(x => '⚠ ' + x).join('\n') : '',
+    files:p.files,size:cnwSize(p.bytes)}))) return;
   k.busy = true;
   cbrPaint();
   let res;
   try{ res = await api.post('/api/campimport/apply', cimBody(),
-                            {label: `importing ${p.campaign}`}); }
+                            {label: tt('campimport.importing_campaign',{campaign:p.campaign})}); }
   catch(e){ res = {error: errText(e)}; }
   finally{ k.busy = false; }
   if(!res || res.error){
@@ -136,8 +136,7 @@ async function cimApply(){
     cbrPaint();
     return;
   }
-  toast(tt('campimport.imported_from_file_s',{name:res.name,source:p.source,files:res.files})
-    + tt('common.log_can_undo_it'), 7000);
+  toast(tt('campimport.imported_from_files_undo',{name:res.name,source:p.source,files:res.files}), 7000);
   activity(tt('campimport.import_campaign'), tt('campimport.from',{mod:k.mod,name:res.name,source:p.source,campaign:p.campaign}));
   state.cim = cimNew(k.mod);
   if(state.cnw) state.cnw.d = null;
@@ -202,7 +201,7 @@ function cimPlanHtml(k){
     ${p.errors.map(e => esc(e)).join('<br>')}</div>` : '';
   return `<div class="cbrrow">
     ${errs}
-    ${p.ok ? `<div class="k">${tt('campimport.file_into',{files:p.files,files2:p.files === 1 ? '' : 's',x:cnwSize(p.bytes),folder:esc(p.folder)})}</div>` : ''}
+    ${p.ok ? `<div class="k">${tt('campimport.files_size_into_folder',{files:ttN('campimport.file_count',p.files),size:cnwSize(p.bytes),folder:esc(p.folder)})}</div>` : ''}
     ${(p.changes || []).map(x => `<div class="count">${esc(x)}</div>`).join('')}
     ${(p.warnings || []).map(x => `<div class="w-warn">${esc(x)}</div>`).join('')}
     ${cimFactionsHtml(k, p)}
@@ -241,7 +240,7 @@ function cimUnitsHtml(k, p){
   const rows = p.units || [];
   if(!rows.length) return '';
   return `<details open>
-    <summary>${tt('campimport.units_lacks_type_regiments',{mod:esc(k.mod),rows_n:rows.length,rows:rows.length === 1 ? '' : 's',x:rows.reduce((a, u) => a + u.count, 0)})}</summary>
+    <summary>${tt('campimport.units_lacks_types_regiments',{mod:esc(k.mod),types:ttN('campimport.unit_type_count',rows.length),regiments:rows.reduce((a, u) => a + u.count, 0)})}</summary>
     <div class="count">${tt('campimport.type_one_of_s_units_to',{mod:esc(k.mod)})}</div>
     <datalist id="cimUnitList">${(p.unit_names || []).map(n =>
       `<option value="${esc(n)}">`).join('')}</datalist>

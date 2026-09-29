@@ -65,8 +65,10 @@ function pzHtml(){
     return `<details ${open ? 'open' : ''}><summary><b>${counts[s]} ${PZ_STATES[s][0]}</b>
         <span class="count">${PZ_STATES[s][1]}</span></summary>
       ${files.slice(0, 400).map(f => `<div class="count" style="margin-left:14px"><code>data/${esc(f.rel)}</code>
-        ${f.state === 'replaces' ? tt('projectzip.bytes',{before:f.before.toLocaleString(),bytes:f.bytes.toLocaleString()})
-          + (f.records.length ? ` · ${esc(f.records.join(', '))}${f.records_more ? tt('projectzip.more',{records_more:f.records_more}) : ''}` : '') : ''}
+        ${f.state === 'replaces' ? (f.records.length
+          ? tt('projectzip.bytes_records',{before:f.before.toLocaleString(),bytes:f.bytes.toLocaleString(),
+            records:esc(f.records.join(', ')) + (f.records_more ? tt('projectzip.more',{records_more:f.records_more}) : '')})
+          : tt('projectzip.bytes',{before:f.before.toLocaleString(),bytes:f.bytes.toLocaleString()})) : ''}
         ${f.why ? ` - ${esc(f.why)}` : ''}
         ${f.warnings.map(w => `<div class="w-warn">⚠ ${esc(w)}</div>`).join('')}</div>`).join('')}
       ${files.length > 400 ? `<div class="count">${tt('projectzip.and_more',{files:files.length - 400})}</div>` : ''}</details>`;
@@ -82,7 +84,7 @@ function pzHtml(){
         ${tt('projectzip.replace_the_files_the_mod_already')}</label>
       <span style="flex:1"></span>
       <button onclick="pzClose()">${tt('common.close')}</button>
-      <button class="primary" onclick="pzApply()" ${writes && !z.busy ? '' : 'disabled'}>${tt('projectzip.load_file',{writes,writes2:writes === 1 ? '' : 's'})}</button>
+      <button class="primary" onclick="pzApply()" ${writes && !z.busy ? '' : 'disabled'}>${ttN('projectzip.load_files', writes)}</button>
     </div></div>`;
 }
 
@@ -90,8 +92,7 @@ async function pzApply(){
   const z = state.chg && state.chg.pz;
   if(!z || z.busy || !z.plan) return;
   const c = z.plan.counts || {};
-  if(!confirm(tt('projectzip.load_file_s_into_new',{x:(c.new || 0) + (c.replaces || 0),src:state.src,new:c.new || 0})
-    + tt('projectzip.replacing_the_mods_own_everything_replaced',{replaces:c.replaces || 0}))) return;
+  if(!confirm(tt('projectzip.load_files_confirm',{files:(c.new || 0) + (c.replaces || 0),src:state.src,new:c.new || 0,replaces:c.replaces || 0}))) return;
   z.busy = true;
   chgPaint();
   let r;

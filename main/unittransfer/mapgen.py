@@ -543,8 +543,7 @@ def _plan_climates(p: GenPlan, cm, body: dict) -> None:
     p.changes.append(f"{rel}: " + ", ".join(
         f"{g} {n:,} -> {mapping[g]}" for g, n in done.items() if n))
     if missing:
-        p.warnings.append("this mod has no climate for " + "; ".join(missing)
-                          + ", so those corners keep the climate they have")
+        p.warnings.append(_i18n.msg("eng.mapgen.no_climate_for_so_corners_keep", "this mod has no climate for {missing}, so those corners keep the climate they have", missing="; ".join(missing)))
 
 
 # ---------------------------------------------------------------------------
@@ -835,7 +834,7 @@ def apply(p: GenPlan) -> dict:
     from .logutil import file_op, log
 
     if p.errors:
-        raise ValueError("cannot apply: " + "; ".join(p.errors))
+        raise ValueError(_i18n.msg("eng.mapgen.cannot_apply", "cannot apply: {why}", why="; ".join(p.errors)))
     if not p.data:
         raise ValueError(_i18n.msg("eng.mapgen.nothing_to_write", "nothing to write"))
     mod = p.mod

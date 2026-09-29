@@ -77,6 +77,26 @@ def prose(t: str) -> bool:
     return len(WORD.findall(t)) >= 2 and " " in t.strip()
 
 
+def catalogued(src: str) -> Dict[str, object]:
+    """The messages a module gives IDs to, ``{id: English}``: ``_i18n.msg(id,
+    template, ...)`` a string, ``_i18n.msgN(id, n, one, other, ...)`` a plural
+    ``{"one", "other"}`` (88c). Read from the tree, so a call over several lines
+    is found as well as one on a line."""
+    out: Dict[str, object] = {}
+    for n in ast.walk(ast.parse(src)):
+        if not isinstance(n, ast.Call):
+            continue
+        nm, base = _name(n.func)
+        a = [x.value if isinstance(x, ast.Constant) and isinstance(x.value, str) else None for x in n.args]
+        if base != "_i18n" or not a or a[0] is None:
+            continue
+        if nm == "msg" and len(a) >= 2 and a[1] is not None:
+            out[a[0]] = a[1]
+        elif nm == "msgN" and len(a) >= 4 and a[2] is not None and a[3] is not None:
+            out[a[0]] = {"one": a[2], "other": a[3]}
+    return out
+
+
 def candidates(tree: ast.AST) -> Tuple[List[ast.AST], List[ast.AST]]:
     """String nodes to rewrite, and message places holding a built string."""
     found, built = [], []

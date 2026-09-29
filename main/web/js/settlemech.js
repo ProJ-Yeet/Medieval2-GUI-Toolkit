@@ -87,7 +87,7 @@ function smxMainHtml(q){
     <div>${tt('settlemech.descr_settlement_mechanics_xml_growth_public')}</div>
     <span style="flex:1"></span>
     <button onclick="smxRevert()" id="smxRevert" ${n ? '' : 'disabled'}>${tt('common.revert')}</button>
-    <button class="primary" onclick="smxSave()" id="smxSave" ${n ? '' : 'disabled'}>${tt('settlemech.save_change',{x:n || '',x2:n === 1 ? '' : 's'})}</button>
+    <button class="primary" onclick="smxSave()" id="smxSave" ${n ? '' : 'disabled'}>${n ? ttN('settlemech.save_change_count',n) : tt('settlemech.save_changes_none')}</button>
   </div>`;
   const fams = q ? c.families : c.families.filter(f => f.id === c.sel);
   let body = fams.map(f => {
@@ -129,7 +129,7 @@ function smxSet(key, value, el, had, fileVal){
   if(td) td.classList.toggle('on', !same);
   el.classList.toggle('bad', smxBad(key, value) || (key.endsWith('/pip_modifier') && had && !value.trim()));
   const n = smxChanged(), s = document.getElementById('smxSave'), r = document.getElementById('smxRevert');
-  if(s){ s.disabled = !n; s.textContent = tt('settlemech.save_change',{x:n || '',x2:n === 1 ? '' : 's'}); }
+  if(s){ s.disabled = !n; s.textContent = n ? ttN('settlemech.save_change_count',n) : tt('settlemech.save_changes_none'); }
   if(r) r.disabled = !n;
 }
 
@@ -162,11 +162,10 @@ async function smxSave(){
   finally{ c.busy = false; }
   if(plan.error){ toast('✗ ' + plan.error, 8000); return; }
   const p = plan.plan || {};
-  if(!confirm(tt('settlemech.write_change_s_to_descr_settlement',{n:(p.changes || []).length})
-    + (p.changes || []).slice(0, 16).join('\n')
-    + ((p.changes || []).length > 16 ? tt('settlemech.and_more',{changes:p.changes.length - 16}) : '')
-    + ((p.warnings || []).length ? '\n\n⚠ ' + p.warnings.slice(0, 4).join('\n⚠ ') : '')
-    + tt('common.backed_up_first_and_log_can'))) return;
+  if(!confirm(tt('settlemech.write_changes_confirm',{n:(p.changes || []).length,
+    changes:(p.changes || []).slice(0, 16).join('\n'),
+    more:(p.changes || []).length > 16 ? tt('settlemech.and_more',{changes:p.changes.length - 16}) : '',
+    warnings:(p.warnings || []).length ? '\n\n⚠ ' + p.warnings.slice(0, 4).join('\n⚠ ') : ''}))) return;
   c.busy = true;
   let res;
   try{ res = await api.post('/api/settlemech/apply', body); }

@@ -121,43 +121,29 @@ const gfT=(pl,o)=>gfP(pl,'text',o);
 // between the hit sound and the delay.
 const gfWeaponParts=()=>[
   gfN(tt('guided.attack'),{min:0,max:63,
-    help:`${tt('guided.the_weapons_attack_factor_how_much')} `
-      +tt('guided.a_higher_number_is_stored_but')}),
+    help:tt('guided.the_weapon_s_attack_factor_how_much')}),
   gfN(tt('guided.charge_bonus'),{min:0,max:63,
-    help:tt('guided.extra_attack_added_while_the_charge')
-      +tt('guided.hitting_a_unit_that_is_not')}),
+    help:tt('guided.extra_attack_added_while_the_charge_is')}),
   gfC(tt('guided.projectile'),'projectile',{w:3,
-    help:`${tt('guided.the_ammunition_this_weapon_fires_an')} `
-      +tt('guided.speed_arc_damage_model_and_impact')}),
+    help:tt('guided.the_ammunition_this_weapon_fires_an_entry')}),
   gfN(tt('guided.range'),{min:0,max:2000,
-    help:tt('guided.how_far_the_missile_can_be')
-      +tt('guided.artillery_near_250_450')}),
+    help:tt('guided.how_far_the_missile_can_be_fired')}),
   gfN(tt('guided.ammo'),{min:0,max:999,
     help:tt('guided.shots_carried_per_man_not_per')}),
   gfS(tt('guided.weapon_type'),'weapon_type',{w:2,
-    help:`${tt('guided.how_the_weapon_is_used_melee')} `
-      +`${tt('guided.siege_missile_a_missile_weapon_has')} `
-      +tt('guided.secondary_bow_the_exception_is_artillery')}),
+    help:tt('guided.how_the_weapon_is_used_melee_thrown')}),
   gfS(tt('guided.tech_type'),'tech_type',{w:3,
-    help:`${tt('guided.which_weapon_upgrade_line_a_smith')} `
-      +'<code>melee_blade</code>, <code>missile_mechanical</code>, <code>missile_gunpowder</code>, '
-      +tt('guided.artillery_mechanical_or_artillery_gunpowder')}),
+    help:tt('guided.which_weapon_upgrade_line_a_smith_improves')}),
   gfS(tt('guided.damage_type'),'damage_type',{w:2,
-    help:`${tt('guided.piercing_blunt_or_slashing_the_edus')} `
-      +tt('guided.no_longer_be_read_by_the')}),
+    help:tt('guided.piercing_blunt_or_slashing_the_edu_s')}),
   gfS(tt('guided.hit_sound'),'weapon_sound',{w:2,
-    help:`${tt('guided.the_sound_played_when_the_weapon')} `
-      +tt('guided.axe_sword_or_spear_cosmetic_only')}),
+    help:tt('guided.the_sound_played_when_the_weapon_connects')}),
   gfC(tt('guided.fire_effect'),'fire_effect',{w:3,optional:1,
-    help:`${tt('guided.optional_the_effect_played_when_the')} `
-      +tt('guided.units_and_essentially_nothing_else_setting')
-      +tt('guided.it_turns_it_back')}),
+    help:tt('guided.optional_the_effect_played_when_the_weapon')}),
   gfN(tt('guided.delay'),{min:0,max:9999,
-    help:tt('guided.minimum_delay_between_attacks_in_tenths')
-      +tt('guided.faster_25_is_the_value_nearly')}),
+    help:tt('guided.minimum_delay_between_attacks_in_tenths_of')}),
   gfN(tt('guided.skel_factor'),{min:0,max:100,step:0.1,dec:1,
-    help:tt('guided.skeleton_compensation_factor_in_melee_the')
-      +tt('guided.how_a_mismatched_animation_lands')}),
+    help:tt('guided.skeleton_compensation_factor_in_melee_the_edu')}),
 ];
 // A doc is a short lead line and then points. Prose that runs for six lines is
 // what this editor exists to replace, so it does not get to live in the help.
@@ -170,22 +156,20 @@ const gfWeaponSpec=(title,doc)=>({t:title,doc,parts:gfWeaponParts(),arity:[11,12
   pad:p=>p.length>=12?p:p.slice(0,9).concat([''],p.slice(9)),
   join:p=>{const fx=(p[9]||'').trim();
     return p.slice(0,9).concat(fx?[fx]:[],p.slice(10)).map(x=>(''+(x==null?'':x)).trim()).join(', ');}});
-const gfExSpec=which=>({t:which+tt('guided.weapon_bonuses'),opt:1,
+const gfExSpec=which=>({t:tt('guided.which_weapon_bonuses',{which}),opt:1,
   syn:tt('guided.attack_bonus_vs_mounted_defence_bonus'),
   doc:gfDoc(tt('guided.optional_three_factors_that_apply_only'),[
     tt('guided.the_engine_does_read_the_line'),
-    `${tt('guided.most_mods_leave_it_out_and')} `
-      +tt('guided.spear_bonus_n_attributes_instead'),
+    tt('guided.most_mods_leave_it_out_and_use'),
     tt('guided.vanilla_ships_it_commented_out_on')]),
   parts:[gfN(tt('guided.attack_vs_mounted'),{min:-100,max:100,help:tt('guided.added_to_the_attack_factor_when')}),
     gfN(tt('guided.defence_vs_mounted'),{min:-100,max:100,help:tt('guided.added_to_defence_when_the_attacker')}),
     gfN(tt('guided.armour_penetration'),{min:-100,max:100,help:tt('guided.how_much_of_a_mounted_targets')})]});
-const gfAttrSpec=which=>({t:which+tt('guided.weapon_attributes'),w:'wattr',
+const gfAttrSpec=which=>({t:tt('guided.which_weapon_attributes',{which}),w:'wattr',
   doc:gfDoc(tt('guided.what_the_weapon_does_beyond_its'),[
     tt('guided.ap_halves_the_targets_armour'),
     tt('guided.bp_a_missile_passes_through_a'),
-    `${tt('guided.spear_light_spear_brace_against_a')} `
-      +tt('guided.from_the_front_spear_also_carries'),
+    tt('guided.spear_light_spear_brace_against_a_cavalry'),
     tt('guided.long_pike_required_by_phalanx_units'),
     tt('guided.spear_bonus_n_a_flat_attack'),
     tt('guided.thrown_launching_area_change_how_the'),
@@ -195,8 +179,7 @@ const gfAttrSpec=which=>({t:which+tt('guided.weapon_attributes'),w:'wattr',
 const GF_FIELDS={
   'type':{t:tt('guided.internal_name'),syn:'<name>',
     doc:gfDoc(tt('guided.the_name_every_other_file_uses'),[
-      `${tt('guided.read_by_descr_strat_txt_export')} `
-        +tt('guided.descr_mercenaries_txt_descr_rebel_factions'),
+      tt('guided.read_by_descr_strat_txt_export_descr'),
       tt('guided.spaces_are_allowed'),
       tt('guided.rule_of_thumb_any_file_that')]),
     parts:[gfT('type',{grow:1,help:tt('guided.renaming_it_here_does_not_update')})]},
@@ -225,35 +208,28 @@ const GF_FIELDS={
       tt('guided.light_ships_and_weak_sounding_troops'),
       tt('guided.heavy_regulars'),
       tt('guided.general_a_generals_bodyguard'),
-      `${tt('guided.with_accent_this_is_what_points')} `
-        +'<code>export_descr_sounds_units_voice.txt</code>.']),
+      tt('guided.with_accent_this_is_what_points_the')]),
     parts:[gfS('voice_type','voice_type',{w:2})]},
   'accent':{t:tt('guided.accent'),opt:1,syn:'<accent>',
     doc:gfDoc(tt('guided.optional_forces_one_accent_on_the'),[
-      tt('guided.without_the_line_it_speaks_with')
-        +tt('guided.swiss_pikemen_sound_english'),
+      tt('guided.without_the_line_it_speaks_with_the'),
       tt('guided.accents_are_declared_in_descr_sounds'),
-      tt('guided.vanilla_has_english_scottish_french_german')
-        +tt('guided.arabic_and_mongolian_mods_add_their')]),
+      tt('guided.vanilla_has_english_scottish_french_german_mediterranean')]),
     parts:[gfC('accent','accent',{w:3})]},
   'banner faction':{t:tt('guided.faction_banner'),syn:'<banner>',
     doc:gfDoc(tt('guided.the_units_big_battlefield_banner_from'),[
       tt('guided.it_also_decides_the_mini_banners'),
-      `${tt('guided.the_list_is_the_factionbanners_section')} `
-        +tt('guided.mods_own_vanilla_declares_four_all'),
+      tt('guided.the_list_is_the_lt_factionbanners_gt'),
       tt('guided.ships_have_no_line_they_never')]),
     parts:[gfC('banner','banner_faction',{w:3})]},
   'banner holy':{t:tt('guided.holy_war_banner'),opt:1,syn:'<banner>',
     doc:gfDoc(tt('guided.optional_the_second_banner_the_unit'),[
-      `${tt('guided.the_list_is_the_holybanners_section')} `
-        +`${tt('guided.descr_banners_new_xml_vanilla_declares')} `
-        +tt('guided.crusade_cavalry_and_a_mod_may'),
+      tt('guided.the_list_is_the_lt_holybanners_gt'),
       tt('guided.leave_the_line_out_and_the')]),
     parts:[gfC('banner','banner_holy',{w:3})]},
   'banner unit':{t:tt('guided.unit_banner'),opt:1,syn:'<banner>',
     doc:gfDoc(tt('guided.optional_and_rare_a_per_unit'),[
-      `${tt('guided.the_list_is_the_unitspecificbanners_section')} `
-        +tt('guided.descr_banners_new_xml_the_crusading'),
+      tt('guided.the_list_is_the_lt_unitspecificbanners_gt'),
       tt('guided.leave_the_line_out_and_the_2')]),
     parts:[gfC('banner','banner_unit',{w:3})]},
 
@@ -263,20 +239,15 @@ const GF_FIELDS={
       tt('guided.that_entry_decides_how_the_man'),
       tt('guided.swapping_it_swaps_the_animation_set')]),
     parts:[gfC(tt('guided.model'),'model',{w:3,
-        help:`${tt('guided.a_battle_models_modeldb_entry_it')} `
-          +tt('guided.animation_skeleton_so_changing_it_changes')}),
+        help:tt('guided.a_battle_models_modeldb_entry_it_carries')}),
       gfN(tt('guided.men'),{min:1,max:500,
-        help:tt('guided.men_in_the_unit_at_the')
-          +tt('guided.gives_4_100_as_the_range')}),
+        help:tt('guided.men_in_the_unit_at_the_largest')}),
       gfN(tt('guided.extras'),{min:0,max:99,
-        help:tt('guided.attached_siege_engines_or_animals_2')
-          +tt('guided.extras_are_comes_from_the_engine')}),
+        help:tt('guided.attached_siege_engines_or_animals_2_on')}),
       gfN(tt('guided.mass'),{min:0,max:200,step:0.1,dec:1,
-        help:tt('guided.collision_mass_of_one_man_1')
-          +tt('guided.cavalry_because_a_mounted_unit_takes')}),
+        help:tt('guided.collision_mass_of_one_man_1_is')}),
       gfN(tt('guided.radius'),{optional:1,min:0,max:10,step:0.05,dec:2,
-        help:tt('guided.optional_collision_radius_of_one_man')
-          +tt('guided.adding_it_lengthens_the_line_and')}),
+        help:tt('guided.optional_collision_radius_of_one_man_in')}),
       gfN(tt('common.height'),{optional:1,min:0,max:10,step:0.1,dec:1,
         help:tt('guided.optional_collision_height_of_one_man')})],
     arity:[4,5,6],
@@ -302,8 +273,7 @@ const GF_FIELDS={
   'engine':{t:tt('guided.siege_engine'),opt:1,syn:'<engine>',
     doc:gfDoc(tt('guided.the_siege_engine_this_crew_operates'),[
       tt('guided.catapult_trebuchet_bombard_ram_ladder_siege'),
-      `${tt('guided.how_many_the_unit_fields_comes')} `
-        +tt('guided.soldier_line')]),
+      tt('guided.how_many_the_unit_fields_comes_from')]),
     parts:[gfC(tt('guided.engine'),'engine',{w:3})]},
   'mounted_engine':{t:tt('guided.mounted_engine'),opt:1,syn:'<engine>',
     doc:gfDoc(tt('guided.a_gun_carried_by_the_units'),[
@@ -311,8 +281,7 @@ const GF_FIELDS={
       tt('guided.unlike_a_ground_engine_it_has')]),
     parts:[gfC(tt('guided.engine'),'mounted_engine',{w:3})]},
   'animal':{t:tt('guided.animals'),opt:1,syn:'<animal>',
-    doc:gfDoc(tt('guided.non_ridden_animals_that_fight_while')
-      +'<code>descr_animals.txt</code>.',[
+    doc:gfDoc(tt('guided.non_ridden_animals_that_fight_while_the'),[
       tt('guided.war_dogs_pigs'),
       tt('guided.needs_category_handler_or_the_animals'),
       tt('guided.how_many_comes_from_the_extras')]),
@@ -321,18 +290,14 @@ const GF_FIELDS={
     syn:'<mount> ±N, <mount> ±N, <mount> ±N',
     doc:gfDoc(tt('guided.attack_modifiers_that_apply_only_against'),[
       tt('guided.each_entry_is_a_name_and'),
-      `${tt('guided.the_name_is_a_mount_class')} `
-        +tt('guided.elephant_or_one_specific_mount_from'),
+      tt('guided.the_name_is_a_mount_class_horse'),
       `<b>${tt('guided.the_engine_reads_at_most_three')}</b>`,
       tt('guided.this_is_where_camels_frighten_horses')])},
   'attributes':{t:tt('guided.attributes'),w:'attrs',syn:tt('guided.attr_attr_attr'),
     doc:gfDoc(tt('guided.everything_about_the_unit_that_is'),[
-      `${tt('guided.abilities_where_it_can_hide_whether')} `
-        +tt('guided.it_can_withdraw_its_stamina_whether')
-        +tt('guided.stakes_or_form_a_cantabrian_circle'),
+      tt('guided.abilities_where_it_can_hide_whether_it'),
       tt('guided.a_unit_may_only_carry_one'),
-      `${tt('guided.ai_labels_pike_crossbow_artillery')} `
-        +tt('guided.gunmen_change_nothing_about_the_unit'),
+      tt('guided.ai_labels_pike_crossbow_artillery_gunmen_change'),
       tt('guided.they_only_tell_the_campaign_ai')])},
   'move_speed_mod':{t:tt('guided.movement_modifier'),opt:1,syn:'<multiplier>',
     doc:gfDoc(tt('guided.kingdoms_only_multiplies_the_speed_the'),[
@@ -350,12 +315,9 @@ const GF_FIELDS={
       gfN(tt('guided.loose_2'),{min:0,max:200,step:0.1,dec:1,help:tt('guided.front_to_back_spacing_in_loose')}),
       gfN(tt('guided.ranks'),{min:1,max:50,help:tt('guided.how_many_ranks_deep_the_unit')}),
       gfS(tt('guided.formation'),'formation_main',{w:2,
-        help:`${tt('guided.the_formation_the_unit_starts_in')} `
-          +tt('guided.square_or_horde_a_circle')}),
+        help:tt('guided.the_formation_the_unit_starts_in_with')}),
       gfS(tt('guided.can_switch_to'),'formation_special',{w:2,optional:1,
-        help:`${tt('guided.optional_the_formation_the_unit_can')} `
-          +`${tt('guided.long_pike_on_the_primary_weapon')} `
-          +tt('guided.testudo_or_wedge')})],
+        help:tt('guided.optional_the_formation_the_unit_can_toggle')})],
     arity:[6,7],
     join:p=>{const q=p.map(x=>(''+(x==null?'':x)).trim());
       // drop the empty 7th slot unless the file's own line carried it as a
@@ -377,16 +339,14 @@ const GF_FIELDS={
   'stat_pri':gfWeaponSpec(tt('guided.primary_weapon'),
     gfDoc(tt('guided.the_weapon_the_unit_leads_with'),[
       tt('guided.a_missile_weapon_has_to_be'),
-      tt('guided.artillery_is_the_exception_the_crews')
-        +tt('guided.shot_is_the_secondary_line')])),
+      tt('guided.artillery_is_the_exception_the_crew_s')])),
   'stat_pri_ex':gfExSpec(tt('guided.primary')),
   'stat_pri_attr':gfAttrSpec(tt('guided.primary')),
   'stat_sec':gfWeaponSpec(tt('guided.secondary_weapon'),
     gfDoc(tt('guided.the_sidearm'),[
       tt('guided.on_a_mounted_vehicle_or_artillery'),
       tt('guided.a_missile_units_melee_weapon_belongs'),
-      `${tt('guided.no_sidearm_is_one_exact_line')} `
-        +tt('guided.none_25_1_the_button_in')])),
+      tt('guided.no_sidearm_is_one_exact_line_0')])),
   'stat_sec_ex':gfExSpec(tt('guided.secondary')),
   'stat_sec_attr':gfAttrSpec(tt('guided.secondary')),
   'stat_ter':gfWeaponSpec(tt('guided.third_weapon'),
@@ -408,8 +368,7 @@ const GF_FIELDS={
   'stat_armour_ex':{t:tt('guided.defence_extended'),opt:1,
     syn:tt('guided.armour_0_armour_1_armour_2'),
     doc:gfDoc(tt('guided.optional_long_form_of_the_line'),[
-      tt('guided.gives_armour_its_own_value_at')
-        +tt('guided.levels_instead_of_letting_the_engine'),
+      tt('guided.gives_armour_its_own_value_at_the'),
       tt('guided.splits_the_shield_into_one_value'),
       tt('guided.vanilla_ships_it_commented_out')]),
     parts:[gfN(tt('guided.armour_0'),{min:0,max:255,help:tt('guided.armour_with_no_smith_upgrade')}),
@@ -423,24 +382,20 @@ const GF_FIELDS={
   'stat_sec_armour':{t:tt('guided.vehicle_animal_defence'),syn:tt('guided.armour_defence_skill_hit_sound'),
     doc:gfDoc(tt('guided.the_defence_of_the_attached_artillery'),[
       tt('guided.there_is_no_shield_slot_here'),
-      tt('guided.a_ridden_horse_has_no_separate')
-        +'<code>0, 0, flesh</code>.']),
+      tt('guided.a_ridden_horse_has_no_separate_defence')]),
     parts:[gfN(tt('guided.armour'),{min:0,max:255,help:tt('guided.armour_of_the_vehicle_or_animal')}),
       gfN(tt('guided.defence_skill'),{min:0,max:255,help:tt('guided.defence_skill_of_the_vehicle_or')}),
       gfS(tt('guided.hit_sound'),'armour_sound',{w:2})]},
   'stat_mental':{t:tt('guided.morale'),syn:tt('guided.morale_discipline_training_lock_morale'),
     doc:gfDoc(tt('guided.the_units_state_of_mind'),[
       tt('guided.morale_how_much_punishment_it_takes'),
-      `${tt('guided.discipline_how_well_it_answers_a')} `
-        +tt('guided.or_the_general_dying'),
+      tt('guided.discipline_how_well_it_answers_a_sudden'),
       tt('guided.training_how_tidily_it_holds_its')]),
     parts:[gfN(tt('guided.morale'),{min:0,max:100,help:tt('guided.base_morale_higher_units_stand_longer')}),
       gfS(tt('guided.discipline'),'discipline',{w:2,
-        help:`${tt('guided.low_normal_disciplined_or_impetuous')} `
-          +tt('guided.impetuous_units_may_charge_without_being')}),
+        help:tt('guided.low_normal_disciplined_or_impetuous_impetuous_units')}),
       gfS(tt('guided.training'),'training',{w:2,
-        help:`${tt('guided.untrained_trained_or_highly_trained_how')} `
-          +tt('guided.keeps_its_formation_while_it_moves')}),
+        help:tt('guided.untrained_trained_or_highly_trained_how_neatly')}),
       gfP(tt('guided.never_routs'),'flag',{on:'lock_morale',
         help:tt('guided.adds_lock_morale_an_optional_fourth')})],
     arity:[3,4],
@@ -501,22 +456,18 @@ const GF_FIELDS={
       'Vanilla uses 0.5 (half price) on the units it wants you to take along.']),
     parts:[gfN('×',{min:0,max:10,step:0.1,dec:2})]},
   'armour_ug_levels':{t:tt('guided.armour_upgrade_levels'),w:'uglevels',syn:tt('guided.level_level_level'),
-    doc:gfDoc(tt('guided.the_smith_level_each_armour_tier')
-      +tt('guided.the_models_below'),[
+    doc:gfDoc(tt('guided.the_smith_level_each_armour_tier_needs'),[
       tt('guided.the_first_value_is_the_units'),
       tt('guided.the_list_has_to_stay_ascending'),
       tt('guided.more_levels_than_models_is_normal')])},
   'armour_ug_models':{t:tt('guided.armour_upgrade_models'),w:'ugmodels',syn:tt('guided.model_model_model'),
     doc:gfDoc(tt('guided.one_battle_models_modeldb_entry_per'),[
       tt('guided.position_0_is_the_units_normal'),
-      tt('guided.naming_the_same_entry_twice_is')
-        +tt('guided.armour_upgrade_in_its_stats_without'),
-      `${tt('guided.these_entries_do_not_decide_how')} `
-        +tt('guided.soldier_line_does')])},
+      tt('guided.naming_the_same_entry_twice_is_a'),
+      tt('guided.these_entries_do_not_decide_how_the')])},
   'ownership':{t:tt('guided.ownership'),w:'factions',syn:tt('guided.faction_faction_culture'),
     doc:gfDoc(tt('guided.the_factions_and_cultures_allowed_to'),[
-      `${tt('guided.not_optional_book_keeping_a_faction')} `
-        +tt('guided.recruit_it_unless_it_is_listed'),
+      tt('guided.not_optional_book_keeping_a_faction_that'),
       tt('guided.it_also_decides_which_faction_folders')])},
   'era 0':{t:tt('guided.custom_battle_early'),w:'factions',opt:1,syn:tt('guided.faction_faction'),
     doc:gfDoc(tt('guided.optional_which_factions_may_pick_this'),[
@@ -638,7 +589,7 @@ function gfBuild(spec,parts){
 function gfHostEditor(){
   const e=state.ed;
   return {
-    id:'ed', key:tt('guided.ed')+e.mod+':'+e.unit, mod:e.mod,
+    id:'ed', key:'ed:'+e.mod+':'+e.unit, mod:e.mod,
     vocab:gfVocabFor(e.mod),
     fields:()=>e.d.fields,
     known:new Set(e.d.known_fields||[]),
@@ -676,7 +627,7 @@ function gfHostComposer(){
   const inh=new Set(c.base_type?(c._inherited||[]):[]);
   const lockFor=gfComposerLock(c);
   return {
-    id:'cm', key:tt('guided.cm')+state.dst+':'+state.editing, mod:state.dst,
+    id:'cm', key:'cm:'+state.dst+':'+state.editing, mod:state.dst,
     vocab:gfVocabFor(state.dst),
     fields:()=>gfComposerFields(c),
     known:new Set(Object.keys(GF_FIELDS)),
@@ -709,8 +660,7 @@ function gfHostComposer(){
 function gfComposerLock(c){
   const snd=soundDonor(c);
   const sndLock=snd.accent?{vals:{accent:snd.accent,voice_type:snd.cls},
-    why:tt('guided.locked_by_the_voice_panel_s',{name:snd.name,accent:snd.accent,cls:snd.cls})
-       +tt('guided.and_these_two_fields_are_what')}:null;
+    why:tt('guided.locked_by_the_voice_panel_whole',{name:snd.name,accent:snd.accent,cls:snd.cls})}:null;
   const rb=baseUnitOf(c);
   const idLock=(isReplace(c)&&rb)?{vals:{type:rb.type,dictionary:rb.dictionary},
     why:tt('guided.locked_this_transfer_rewrites_in_place',{type:rb.type})}:null;
@@ -777,30 +727,29 @@ function gfWarnings(host){
   const cls=(val('class')||'').toLowerCase();
   if(has('class')&&cat==='infantry'&&cls==='spearmen'){/* fine */}
   if(has('class')&&cat!=='infantry'&&cls==='spearmen')
-    add('class',`${tt('guided.spearmen_is_an_infantry_class_so')} `+esc(cat)+tt('guided.unit_the_engine_falls_back_to'));
+    add('class',tt('guided.spearmen_is_an_infantry_class_on_a_category_unit',{category:esc(cat)}));
   if(has('animal')&&cat!=='handler')
     add('animal',tt('guided.an_animal_line_needs_category_handler'));
   // a unit carries ONE kind of attachment; the engine reads whichever it finds
   // first and the others are dead weight
   const extras=['ship','engine','mounted_engine','animal'].filter(has);
   if(extras.length>1)extras.forEach(k=>add(k,
-    `${tt('guided.a_unit_can_only_use_one')} `
-    +tt('guided.animal_this_one_has')+extras.join('</b>, <b>')+'</b>.','bad'));
+    tt('guided.a_unit_can_only_use_one_of',{extras:extras.join('</b>, <b>')}),'bad'));
 
   ['stat_pri','stat_sec','stat_ter'].forEach(k=>{
     if(!has(k))return;
     const p=parts(k); if(p.length<11)return;
     const atk=num(p[0]),proj=(p[2]||'').toLowerCase(),rng=num(p[3]),ammo=num(p[4]),wt=(p[5]||'').toLowerCase();
-    if(atk!==null&&atk>63)add(k,`${tt('guided.attack')} <b>`+esc(p[0])+`</b> ${tt('guided.is_above_the_engines_cap_of')}`);
+    if(atk!==null&&atk>63)add(k,tt('guided.attack_value_is_above_the_engines_cap',{value:esc(p[0])}));
     const missile=(wt==='missile'||wt==='thrown'||wt==='siege_missile');
-    if(missile&&proj==='no')add(k,`${tt('guided.weapon_type_is')} <b>`+esc(wt)+`</b> ${tt('guided.but_the_projectile_is_no_so')}`);
-    if(!missile&&proj!=='no'&&proj)add(k,`${tt('guided.a_projectile_is_set_but_the')} <b>`+esc(wt||'none')+`</b>${tt('guided.only_missile_thrown_and_siege_missile')}`);
+    if(missile&&proj==='no')add(k,tt('guided.weapon_type_is_type_but_the_projectile_is_no',{type:esc(wt)}));
+    if(!missile&&proj!=='no'&&proj)add(k,tt('guided.a_projectile_is_set_but_the_weapon_type_is_type',{type:esc(wt||'none')}));
     if(missile&&!rng)add(k,tt('guided.missile_weapon_with_range_0_so'));
     if(missile&&!ammo)add(k,tt('guided.missile_weapon_with_0_ammunition_so'));
     if(proj&&proj!=='no'&&!gfHas(gfDefined(host,'projectile'),p[2])&&gfDefined(host,'projectile').length)
-      add(k,`${tt('guided.projectile')} <code>`+esc(p[2])+`</code> ${tt('guided.is_not_defined_in_this_mods')}`,'bad');
+      add(k,tt('guided.projectile_name_is_not_defined_in_this_mods',{name:esc(p[2])}),'bad');
     if(p.length>=12&&(p[9]||'').trim()&&!/^[A-Za-z_][\w]*$/.test(p[9].trim()))
-      add(k,`${tt('guided.the_12_value_form_puts_the')} <code>`+esc(p[9])+`</code> ${tt('guided.does_not_look_like_an_effect')}`);
+      add(k,tt('guided.the_12_value_form_puts_the_fire_effect_in_slot',{effect:esc(p[9])}));
   });
   if(has('stat_pri')&&has('stat_sec')){
     const w=x=>((parts(x)[5])||'').toLowerCase();
@@ -818,34 +767,32 @@ function gfWarnings(host){
       if(b&&['square','horde'].indexOf(a)<0)
         add('formation',tt('guided.with_two_formations_the_first_must'));
       if(b&&['schiltrom','shield_wall','phalanx','testudo','wedge'].indexOf(b)<0)
-        add('formation','<b>'+esc(b)+`</b> ${tt('guided.is_not_one_of_the_switchable')}`);
+        add('formation',tt('guided.name_is_not_one_of_the_switchable_formations',{name:esc(b)}));
       if(b==='phalanx'&&csv(val('stat_pri_attr')).indexOf('long_pike')<0)
         add('formation',tt('guided.a_phalanx_unit_normally_needs_long'));
     }
   }
   const lv=csv(val('armour_ug_levels')),md=csv(val('armour_ug_models'));
   if(has('armour_ug_models')&&lv.length&&md.length&&md.length>lv.length)
-    add('armour_ug_models',`<b>${md.length}</b> ${tt('guided.upgrade_model_s_but_only_level',{lv_n:lv.length})} `
-      +tt('guided.the_tiers_past_the_last_level'));
+    add('armour_ug_models',tt('guided.armour_upgrade_models_outnumber_levels',{models:md.length,levels:lv.length}));
   else if(has('armour_ug_models')&&lv.length&&md.length&&lv.length>md.length)
-    add('armour_ug_models',`<b>${lv.length}</b> ${tt('guided.armour_levels_share_model_s_so',{md_n:md.length})} `
-      +tt('guided.model_carries_the_levels_above_it'),'info');
+    add('armour_ug_models',tt('guided.armour_levels_outnumber_upgrade_models',{levels:lv.length,models:md.length}),'info');
   const defModels=gfDefined(host,'model');
   // plus whatever this job is about to write into the modeldb - see host.creates
   const coming=new Set((host.creates?host.creates():[]).map(x=>(''+x).trim().toLowerCase()));
   const knownModel=m=>gfHas(defModels,m)||coming.has((m||'').trim().toLowerCase());
   if(defModels.length){
-    md.forEach(m=>{if(!knownModel(m))add('armour_ug_models','<code>'+esc(m)+`</code> ${tt('guided.is_not_an_entry_in_this')}`,'bad');});
+    md.forEach(m=>{if(!knownModel(m))add('armour_ug_models',tt('guided.name_is_not_an_entry_in_this_mods_modeldb',{name:esc(m)}),'bad');});
     const sm=(parts('soldier')[0]||'');
     if(has('soldier')&&sm&&!knownModel(sm))
-      add('soldier','<code>'+esc(sm)+`</code> ${tt('guided.is_not_an_entry_in_this')}`,'bad');
+      add('soldier',tt('guided.name_is_not_an_entry_in_this_mods_modeldb',{name:esc(sm)}),'bad');
   }
   [['mount','mount'],['engine','engine'],['mounted_engine','mounted_engine'],
    ['ship','ship'],['animal','animal']].forEach(([k,v])=>{
     const list=gfDefined(host,v);
     if(has(k)&&list.length&&!gfHas(list,val(k))&&!coming.has((val(k)||'').trim().toLowerCase()))
-      add(k,'<code>'+esc(val(k))+`</code> ${tt('guided.is_not_defined_in_this_mods_2')}`+
-        (k==='mounted_engine'?'mounted_engines':k==='engine'?'engines':k==='animal'?'animals':k)+tt('guided.txt'),'bad');
+      add(k,tt('guided.name_is_not_defined_in_this_mods_file',{name:esc(val(k)),
+        file:k==='mounted_engine'?'mounted_engines':k==='engine'?'engines':k==='animal'?'animals':k}),'bad');
   });
   // The three banner lines name banners declared by descr_banners_new.xml, one
   // XML section per line. `defined` only carries them when the mod HAS that file.
@@ -854,8 +801,7 @@ function gfWarnings(host){
    [tt('guided.banner_unit'),'banner_unit','UnitSpecificBanners']].forEach(([k,v,section])=>{
     const list=gfDefined(host,v);
     if(has(k)&&list.length&&!gfHas(list,val(k)))
-      add(k,'<code>'+esc(val(k))+`</code> ${tt('guided.is_not_declared_in_this_mods')} `
-        +'<code>descr_banners_new.xml</code> (<code>&lt;'+section+'&gt;</code>).','bad');
+      add(k,tt('guided.name_is_not_declared_in_this_mods_banners_file',{name:esc(val(k)),section}),'bad');
   });
   if(has('soldier')){
     // NB: not "fewer than 4". The guide gives 4 as the minimum, but shipped mods
@@ -910,7 +856,7 @@ function gfRender(host){
     const hits=groups[s.id].filter(l=>gfReal(warns[l]).length);
     // the badge names the fields, not just how many - a bare "3 things to look
     // at" makes you open all three sections to find out which
-    const why=hits.length?hits.join(', ')+tt('guided.hover_or_click_the_section_to'):'';
+    const why=hits.length?tt('guided.fields_hover_or_click_the_section_to_read_them',{fields:hits.join(', ')}):'';
     return `<button class="${!q&&gf.tab===s.id?'on':''}" onclick="gfTab('${s.id}')">${esc(s.t)}
       <span class="n">${n}</span>${hits.length?`<span class="bad" title="${esc(why)}">▲ ${hits.length}</span>`:''}</button>`;
   }).join('');
@@ -944,7 +890,7 @@ function gfSumHtml(host,warns){
   const bad=Object.values(warns).reduce((a,b)=>a+b.filter(x=>x.k==='bad').length,0);
   return `<span class="count">${tt('guided.line_s_in_this_unit',{n:host.fields().length})}</span>`
     +(n?`<span class="pill warn" onclick="gfShowWarnings()" title="${ttA('guided.jump_to_the_first_one')}">
-        ${bad?'✖ '+bad+' broken':''}${bad&&n-bad?' · ':''}${n-bad?'▲ '+(n-bad)+tt('guided.to_check'):''}</span>`
+        ${bad?tt('guided.n_broken',{n:bad}):''}${bad&&n-bad?' · ':''}${n-bad?tt('guided.n_to_check',{n:n-bad}):''}</span>`
       :`<span class="pill" style="border-color:var(--good);color:var(--good)">${tt('guided.nothing_looks_wrong')}</span>`);
 }
 function gfShowWarnings(){
@@ -1063,7 +1009,7 @@ function gfParts(host,label,spec,parsed){
     const chc=ch?' changed':'';                  // the amber "you changed this"
     // the explanation hangs off the ? beside the part's name; the control keeps
     // an accessible name of its own, since the label is not a <label for=…>
-    const aria=tt('guided.aria_label',{pl:esc(p.pl)});
+    const aria=` aria-label="${esc(p.pl)}"`;
     let ctl;
     if(p.type==='flag'){
       ctl=`<label class="chk" style="height:26px"><input type="checkbox" ${attr}${aria}
@@ -1122,10 +1068,10 @@ const gfSpin=(attr,v,cls)=>`<span class="gfspin"><input ${attr} class="gfnum${cl
 // they focus the field itself (see the focusin handler), and the marker keeps a
 // plain `title` so it still has an accessible name of its own.
 const qm=(text,title)=>!text?'':`<span class="qm" tabindex="-1"
-  title="${esc(text)}"${title?tt('guided.data_tiptitle',{title:esc(title)}):''}
+  title="${esc(text)}"${title?` data-tiptitle="${esc(title)}"`:''}
   data-tiptext="${esc(text)}">?</span>`;
 const qmSpec=(key,i)=>`<span class="qm" tabindex="-1" title="${ttA('guided.what_is_this')}"
-  data-tip="${esc(key)}"${i==null?'':tt('guided.data_tipi',{x:i})}>?</span>`;
+  data-tip="${esc(key)}"${i==null?'':` data-tipi="${i}"`}>?</span>`;
 // A field's documentation as plain text, for the raw view - GF_FIELDS writes its
 // `doc` as HTML, and a ? marker carries text.
 function gfPlainDoc(key){

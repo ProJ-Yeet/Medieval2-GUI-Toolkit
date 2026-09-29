@@ -388,9 +388,9 @@ function v3AnimRow(key){
 
 function v3AnimStats(r){
   const bits = [];
-  if(r.frames) bits.push(`${r.frames} f`);
-  if(r.duration != null) bits.push(`${(+r.duration).toFixed(2)} s`);
-  if(r.distance > 0.01) bits.push(`${(+r.distance).toFixed(2)} m`);
+  if(r.frames) bits.push(tt('v3anim.stat_frames',{frames:r.frames}));
+  if(r.duration != null) bits.push(tt('v3anim.stat_seconds',{seconds:(+r.duration).toFixed(2)}));
+  if(r.distance > 0.01) bits.push(tt('v3anim.stat_metres',{metres:(+r.distance).toFixed(2)}));
   return bits.join(' · ');
 }
 
@@ -459,11 +459,10 @@ function v3AnimPanel(){
       + v3AnimSeqHtml()
       + (a.data ? v3AnimPlayHtml() : '')
       + `<div class="count">${sk.packed
-          ? `${tt('v3anim.actions_every_filled_slot_of_in',{actions_n:sk.actions.length,skeleton:esc(sk.skeleton)})} `
-            + tt('v3anim.played_straight_out_of_pack_dat',{x:L.packs === 'vanilla' ? tt('v3anim.vanillas_skeleton_pack_this_mod_ships')
-                                        : tt('v3anim.this_mods_skeleton_pack')})
-          : `${tt('v3anim.not_in_the_skeleton_pack_these')} `
-            + tt('v3anim.shipped_loose_play')}</div>`;
+          ? tt('v3anim.actions_filled_slots_played_from_pack',{actions_n:sk.actions.length,skeleton:esc(sk.skeleton),
+              pack:L.packs === 'vanilla' ? tt('v3anim.vanillas_skeleton_pack_this_mod_ships')
+                                         : tt('v3anim.this_mods_skeleton_pack')})
+          : tt('v3anim.not_in_the_skeleton_pack_only_loose')}</div>`;
   }
   const wnote = v3AnimWeaponsHtml(set);
   const casNote = v3.cas ? (L.guessed
@@ -508,8 +507,8 @@ function v3AnimWeaponsHtml(set){
     const r = got.find(g => (g.skeleton || '').toLowerCase() === n.toLowerCase());
     let what = s.packed ? '' : tt('v3anim.not_in_the_pack_2');
     if(r && r.error) what = ` - ${esc(r.error)}`;
-    else if(r) what = tt('v3anim.on',{x:r.bones.length ? r.bones.map(esc).join(', ') : tt('v3anim.no_new_bone'),hangs_off:esc(r.hangs_off)})
-                    + `its ${r.slot === 686 ? 'default' : esc(r.action)}`;
+    else if(r) what = tt('v3anim.bones_on_hangs_off_its_action',{bones:r.bones.length ? r.bones.map(esc).join(', ') : tt('v3anim.no_new_bone'),
+      hangs_off:esc(r.hangs_off),action:r.slot === 686 ? tt('v3anim.slot_default') : esc(r.action)});
     return `<code>${esc(n)}</code>${what}`;
   }).join('; ');
   return `<label class="count" title="${ttA('v3anim.the_weapon_skeletons_move_the_weapon')}"><input type="checkbox" ${
@@ -553,10 +552,10 @@ function v3AnimMarksHtml(){
   if(r.impact_frame > 0)
     ticks.push(`<i class="v3aimp" style="left:${at(r.impact_frame)}" title="${ttA('v3anim.impact_at_frame',{impact_frame:r.impact_frame})}"></i>`);
   (r.events || []).forEach(e => ticks.push(`<i class="v3aev" style="left:${at(e.start)};width:${
-    e.end > e.start ? ((Math.min(e.end, span) - e.start) / span * 100).toFixed(2) : 0}%" title="${ttA('v3anim.frame',{type:esc(e.type),name:esc(e.name),start:e.start,x:e.end > e.start ? ' to ' + e.end : ''})}"></i>`));
+    e.end > e.start ? ((Math.min(e.end, span) - e.start) / span * 100).toFixed(2) : 0}%" title="${e.end > e.start ? ttA('v3anim.event_frames_to',{type:esc(e.type),name:esc(e.name),start:e.start,end:e.end}) : ttA('v3anim.event_frame',{type:esc(e.type),name:esc(e.name),start:e.start})}"></i>`));
   const turn = r.turn && (r.turn[0] || r.turn[1]) ? tt('v3anim.turns_to',{turn:r.turn[0],turn2:r.turn[1]}) : '';
   const said = [r.impact_frame > 0 ? tt('v3anim.impact_at_frame',{impact_frame:r.impact_frame}) : '',
-                (r.events || []).map(e => `${e.type} ${e.name} at ${e.start}`).join(', ')].filter(Boolean);
+                (r.events || []).map(e => tt('v3anim.event_at',{type:e.type,name:e.name,start:e.start})).join(', ')].filter(Boolean);
   return `<div class="v3amarks">${ticks.join('')}</div>
     ${said.length || turn ? `<div class="count">${esc(said.join('; '))}${turn}</div>` : ''}`;
 }
@@ -718,11 +717,10 @@ function v3AnimClock(){
     const {segs} = v3aSeqPlan(a.seqData, a.overlap ? V3A_BLEND : 0);
     let i = segs.length - 1;
     for(let k = 0; k < segs.length; k++) if(now < segs[k].start + segs[k].len){ i = k; break; }
-    return tt('v3anim.s_of_s_of_in_place',{now:now.toFixed(2),len:len.toFixed(2),x:i + 1,segs_n:segs.length,x2:a.seq[i] ? a.seq[i].action : '',overlap:a.overlap ? 'overlapped' : tt('v3anim.end_to_end')});
+    return tt('v3anim.s_of_s_of_in_place',{now:now.toFixed(2),len:len.toFixed(2),x:i + 1,segs_n:segs.length,x2:a.seq[i] ? a.seq[i].action : '',overlap:a.overlap ? tt('v3anim.overlapped') : tt('v3anim.end_to_end')});
   }
   const frame = Math.round(now * 20);
-  return tt('v3anim.s_of_s_frame_of',{now:now.toFixed(2),len:len.toFixed(2),frame,x:a.data.times.length - 1})
-       + `${a.data.bones.length - 1} bones`;
+  return tt('v3anim.clock_frame_of_bones',{now:now.toFixed(2),len:len.toFixed(2),frame,frames:a.data.times.length - 1,bones:a.data.bones.length - 1});
 }
 function v3AnimScrub(v){
   if(!v3 || !v3.anim || !v3.anim.data) return;
@@ -829,7 +827,7 @@ function v3AnimMountHtml(set){
   const rows = m.list.mounts || [];
   if(!rows.length) return `<div class="count">${tt('v3anim.no_mount_in_descr_mount_txt',{x:esc((m.list.classes || []).join(' or '))})}</div>`;
   const opts = rows.map((r, n) => `<option value="${n}" ${n === m.pick ? 'selected' : ''}>${esc(r.type)} · ${
-    esc(r.entry)}${r.units.length ? tt('v3anim.ridden_by_unit',{units_n:r.units.length,units:r.units.length === 1 ? '' : 's'}) : ''}</option>`).join('');
+    esc(r.entry)}${r.units.length ? ttN('v3anim.ridden_by_units',r.units.length) : ''}</option>`).join('');
   const r = rows[m.pick] || rows[0];
   const said = [];
   if(m.on && m.state === 'loading') said.push(tt('v3anim.reading_the_mount'));
@@ -1002,13 +1000,13 @@ function v3AnimTwinHtml(){
     else if(!c) said = tt('common.reading_2');
     else if(!c.has_skeleton) said = tt('v3anim.s_skeleton_pack_has_no_a',{mod:esc(t.mod),skeleton:esc(c.skeleton)});
     else if(!c.has_slot) said = tt('v3anim.s_leaves_empty',{mod:esc(t.mod),skeleton:esc(c.skeleton),action:esc(c.action)});
-    else said = tt('v3anim.on_the_right',{mod:esc(t.mod),packs:c.packs === 'vanilla' ? tt('v3anim.vanillas_packs') : ''})
-      + (c.same_bytes ? tt('v3anim.the_same_animation_byte_for_byte') + (c.same_path ? '' : `${tt('v3anim.under')} <code>${esc(c.path)}</code>`)
-         : `${tt('v3anim.a_different_animation')} <code>${esc(c.path)}</code>`)
-      + (c.frames ? `, ${c.frames} f · ${(+c.duration).toFixed(2)} s` : '')
-      + (c.same_bones ? '' : tt('v3anim.its_skeletons_bones_differ_from_this')) + '.'
-      + (!c.same_bytes && c.playable && a.slot != null && v3AnimPackable(v3AnimRow(a.key))
-         ? ` <button onclick="v3AnimTwinTake()" title="${ttA('v3anim.put_s_animation_in_this_slot',{mod:esc(t.mod)})}">${tt('v3anim.use_it_here')}</button>` : '');
+    else said = tt('v3anim.twin_on_the_right',{mod:esc(t.mod),packs:c.packs === 'vanilla' ? tt('v3anim.vanillas_packs') : '',
+        what:c.same_bytes ? (c.same_path ? tt('v3anim.the_same_animation_byte_for_byte') : tt('v3anim.same_animation_under_path',{path:esc(c.path)}))
+          : tt('v3anim.different_animation_path',{path:esc(c.path)}),
+        timing:c.frames ? tt('v3anim.twin_frames_seconds',{frames:c.frames,seconds:(+c.duration).toFixed(2)}) : '',
+        bones:c.same_bones ? '' : tt('v3anim.its_skeletons_bones_differ_from_this'),
+        use:!c.same_bytes && c.playable && a.slot != null && v3AnimPackable(v3AnimRow(a.key))
+          ? ` <button onclick="v3AnimTwinTake()" title="${ttA('v3anim.put_s_animation_in_this_slot',{mod:esc(t.mod)})}">${tt('v3anim.use_it_here')}</button>` : ''});
   }
   return `<label class="v3f" title="${ttA('v3anim.the_same_skeleton_and_slot_out')}"><span>${tt('v3anim.beside_it')}</span>
     <select onchange="v3AnimTwinMod(this.value)">${opts}</select></label>${said ? `<div class="count">${said}</div>` : ''}`;
@@ -1156,7 +1154,7 @@ function v3AnimEditHtml(){
   const a = v3.anim, e = a.edit;
   if(!e) return '';
   const n = v3AnimEditCount(), keys = (a.orig.times || []).length;
-  const head = `<button class="v3aedbtn ${e.open ? 'on' : ''}" onclick="v3AnimEditFold()">${tt('v3anim.edit_this_action',{x:n ? tt('v3anim.edit',{x:n,x2:n === 1 ? '' : 's'}) : ''})}</button>`;
+  const head = `<button class="v3aedbtn ${e.open ? 'on' : ''}" onclick="v3AnimEditFold()">${tt('v3anim.edit_this_action_edits',{edits:n ? ttN('v3anim.edit_count',n) : ''})}</button>`;
   if(!e.open) return `<div class="v3btns">${head}</div>`;
   const bones = a.orig.bones.map(b => b.name).filter(x => !/^scene root$/i.test(x));
   const bone = e.bone || bones[0] || '';
@@ -1287,10 +1285,9 @@ async function v3AnimEditSave(){
   catch(err){ r = {error: '' + err}; }
   const p = r.plan;
   if(r.error || !p || !p.ok){ e.msg = r.error || tt('v3anim.nothing_to_save'); e.bad = true; return v3AnimPanel(); }
-  if(!confirm(tt('v3anim.save_2',{target:p.target})
-    + (p.overwrites ? tt('v3anim.it_replaces_the_file_of_that') : tt('v3anim.a_new_file'))
-    + (p.notes || []).map(n => '  ' + n).join('\n\n')
-    + tt('v3anim.log_undoes_it'))) return;
+  if(!confirm(tt('v3anim.save_confirm',{target:p.target,
+    state:p.overwrites ? tt('v3anim.it_replaces_the_file_of_that') : tt('v3anim.a_new_file'),
+    notes:(p.notes || []).map(n => '  ' + n).join('\n\n')}))) return;
   e.busy = true; v3AnimPanel();
   let w;
   try{ w = await api.post('/api/model/anim/save_apply', body); }
@@ -1298,7 +1295,7 @@ async function v3AnimEditSave(){
   e.busy = false;
   if(w.error){ e.msg = w.error; e.bad = true; return v3AnimPanel(); }
   e.msg = tt('v3anim.saved_log_can_undo_it',{target:w.target});
-  if(typeof activity === 'function') activity(tt('v3anim.saved_animation'), `${w.target} in ${v3.mod}`);
+  if(typeof activity === 'function') activity(tt('v3anim.saved_animation'), tt('v3anim.target_in_mod',{target:w.target,mod:v3.mod}));
   // the saved file is loose now, and it may be this action's: ask again
   a.list = null;
   const keep = a;
@@ -1313,11 +1310,12 @@ async function v3AnimEditSave(){
    first of two entries with one name, so neither can go under the old one. */
 
 function v3AnimPackMsg(p){
-  return (p.reuse ? tt('v3anim.the_pack_holds_these_bytes_already',{new_path:p.new_path})
-                  : tt('v3anim.appended_to_pack_dat_as_kb',{new_path:p.new_path,bytes:(p.bytes / 1024).toFixed(0),frames:p.frames}))
-    + tt('v3anim.s_is_pointed_at_it_for',{skeleton:p.skeleton,action:p.action})
-    + (p.loose ? tt('v3anim.kept_rebuildable',{loose:p.loose,descr_skeleton:p.descr_skeleton ? tt('v3anim.and_descr_skeleton_txts_line') : ''}) : '')
-    + (p.notes || []).map(n => '  ' + n).join('\n');
+  return tt('v3anim.pack_message',{
+    stored:p.reuse ? tt('v3anim.the_pack_holds_these_bytes_already',{new_path:p.new_path})
+                   : tt('v3anim.appended_to_pack_dat_as_kb',{new_path:p.new_path,bytes:(p.bytes / 1024).toFixed(0),frames:p.frames}),
+    skeleton:p.skeleton,action:p.action,
+    kept:p.loose ? tt('v3anim.kept_rebuildable',{loose:p.loose,descr_skeleton:p.descr_skeleton ? tt('v3anim.and_descr_skeleton_txts_line') : ''}) : '',
+    notes:(p.notes || []).map(n => '  ' + n).join('\n')});
 }
 
 async function v3AnimPackAfter(w, what){
@@ -1381,7 +1379,7 @@ function v3AnimPortHtml(){
     <div class="v3aedrow"><span>${tt('common.from')}</span><select onchange="v3AnimPortSet('mod', this.value)">
       <option value="">${tt('v3anim.pick_a_mod')}</option>${mods.map(x => `<option ${x.name === f.mod ? 'selected' : ''}>${esc(x.name)}</option>`).join('')}</select></div>
     <div class="v3aedrow"><span>${tt('v3anim.skeleton')}</span><input type="text" list="v3aportnames" value="${esc(f.name)}" style="flex:1;min-width:0"
-      onchange="v3AnimPortSet('name', this.value)" spellcheck="false" placeholder="${f.names ? f.names.length + tt('v3anim.in_its_pack') : ''}">
+      onchange="v3AnimPortSet('name', this.value)" spellcheck="false" placeholder="${f.names ? ttA('v3anim.names_in_its_pack',{n:f.names.length}) : ''}">
       <datalist id="v3aportnames">${(f.names || []).map(n => `<option value="${esc(n)}">`).join('')}</datalist></div>
     ${bodies.length ? `<div class="v3aedrow"><span>${tt('v3anim.then')}</span><select onchange="v3AnimPortSet('point', this.value)">
       <option value="">${tt('v3anim.leave_as_it_is',{entry:esc(v3.entry)})}</option>${bodies.map(n =>
@@ -1390,8 +1388,8 @@ function v3AnimPortHtml(){
       <button onclick="v3AnimPortPlan()" ${f.mod && f.name && !f.busy ? '' : 'disabled'}>${tt('v3anim.check')}</button>
       <button class="primary" onclick="v3AnimPortApply()" ${p && p.ok && !f.busy ? '' : 'disabled'}>${tt('v3anim.bring_it')}</button></div>
     ${f.msg ? `<div class="${f.bad ? 'w-bad' : 'count'}">${esc(f.msg)}</div>` : ''}
-    ${t ? `<div class="count">${tt('v3anim.of_animations_appended_mb',{x:esc(p.port.skeletons.map(s => `${s.name} ${s.action === 'rename' ? tt('v3anim.comes_in_as') + s.dest_name
-        : s.action === 'add' ? tt('v3anim.is_added') : s.action === 'reuse' ? tt('v3anim.is_here_already') : tt('v3anim.is_here_as') + s.dest_name}`).join('; ')),x2:t['animations append'] + t['animations append_renamed'],animations:t.animations,e6:((t['anim bytes appended'] + t['skeleton bytes appended']) / 1e6).toFixed(1),x3:p.loose && p.loose.files ? tt('v3anim.loose_file_s_kept_for_a',{files:p.loose.files}) : ''})}</div>
+    ${t ? `<div class="count">${tt('v3anim.port_totals',{skeletons:esc(p.port.skeletons.map(s => s.action === 'rename' ? tt('v3anim.skeleton_comes_in_as',{name:s.name,dest:s.dest_name})
+        : s.action === 'add' ? tt('v3anim.skeleton_is_added',{name:s.name}) : s.action === 'reuse' ? tt('v3anim.skeleton_is_here_already',{name:s.name}) : tt('v3anim.skeleton_is_here_as',{name:s.name,dest:s.dest_name})).join('; ')),appended:t['animations append'] + t['animations append_renamed'],animations:t.animations,mb:((t['anim bytes appended'] + t['skeleton bytes appended']) / 1e6).toFixed(1),loose:p.loose && p.loose.files ? tt('v3anim.loose_file_s_kept_for_a',{files:p.loose.files}) : ''})}</div>
       ${(p.notes || []).map(n => `<div class="count">${esc(n)}</div>`).join('')}` : ''}
   </div>`;
 }
@@ -1468,7 +1466,7 @@ function v3ExportPanel(){
     </div>
     ${v3.geo.skinned ? `<label class="count"><input type="checkbox" ${all ? 'checked' : ''}
       onchange="v3.exportAll = this.checked; v3ExportPanel()"> ${loose
-        ? tt('v3anim.with_all_loose_action_of',{loose,loose2:loose === 1 ? '' : 's',skeleton:esc(sk.skeleton)})
+        ? ttN('v3anim.with_all_loose_actions_of',loose,{skeleton:esc(sk.skeleton)})
         : tt('v3anim.with_its_actions_none_are_loose')}</label>` : ''}
     <input type="file" id="v3conv" accept=".texture,.dds" style="display:none" onchange="v3Convert(this)">`;
 }

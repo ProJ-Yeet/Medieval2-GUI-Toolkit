@@ -34,8 +34,8 @@
 const RDL_SCRIPT_SHOWN = 6;
 
 //: What each kind standing on the province's tiles is called in a sentence.
-const RDL_STANDING = {character: 'character', fort: 'fort',
-                      watchtower: 'watchtower', resource: 'resource'};
+const RDL_STANDING = {character: 'regiondel.standing_character', fort: 'regiondel.standing_fort',
+                      watchtower: 'regiondel.standing_watchtower', resource: 'regiondel.standing_resource'};
 
 /* ---------- state ---------- */
 
@@ -129,15 +129,10 @@ async function rdlApply(){
   if(!k || k.busy || !k.plan || !k.plan.ok) return;
   const p = k.plan;
   const files = (p.files || []).length + (p.deletes || []).length;
-  if(!confirm(tt('regiondel.delete_and_give_its_tile',{name:k.name,tiles:p.tiles.toLocaleString()})
-    + tt('regiondel.to',{tiles:p.tiles === 1 ? '' : 's',heir:p.heir || 'nobody'})
-    + (p.changes || []).join('\n')
-    + ((p.warnings || []).length
-       ? '\n\n' + p.warnings.map(x => '⚠ ' + x).join('\n') : '')
-    + ((p.script || []).length
-       ? tt('regiondel.line_s_of_the_campaign_script',{script_n:p.script.length})
-         + tt('regiondel.and_are_not_edited',{name:k.name}) : '')
-    + tt('regiondel.file_s_backed_up_first_and',{files}))) return;
+  const detail = `${(p.changes || []).join('\n')}${
+    (p.warnings || []).length ? '\n\n' + p.warnings.map(x => '⚠ ' + x).join('\n') : ''}${
+    (p.script || []).length ? tt('regiondel.confirm_script_lines',{script_n:p.script.length,name:k.name}) : ''}`;
+  if(!confirm(ttN('regiondel.confirm_delete',p.tiles,{name:k.name,heir:p.heir || 'nobody',detail,files}))) return;
   k.busy = true;
   rdlPaint();
   let res;
@@ -150,9 +145,7 @@ async function rdlApply(){
     rdlPaint();
     return;
   }
-  toast(tt('regiondel.deleted_its_land_is_s',{name:k.name,x:res.heir || 'nobody'})
-    + tt('regiondel.file_s_written_map_rwm_deleted',{n:(res.files || []).length})
-    + tt('common.log_can_undo_it'), 7000);
+  toast(tt('regiondel.deleted_toast',{name:k.name,heir:res.heir || 'nobody',n:(res.files || []).length}), 7000);
   activity(tt('regiondel.region_delete'),
            tt('regiondel.deleted_land_to',{mod:k.mod,name:k.name,x:res.heir || '(nobody)'}));
   state.rdl = null;
@@ -177,14 +170,13 @@ function rdlHtml(){
   if(!d.ok) return `<div class="cbrpanel w-bad">${esc(d.error
     || tt('regiondel.that_province_could_not_be_read'))}</div>`;
   return `<div class="cbrpanel">
-    <div class="k">${tt('regiondel.delete_tile',{x:esc(d.shown || k.name),tiles:d.tiles.toLocaleString(),tiles2:d.tiles === 1 ? '' : 's',settlement:d.settlement
+    <div class="k">${ttN('regiondel.delete_tile_counted',d.tiles,{shown:esc(d.shown || k.name),settlement:d.settlement
           ? ` · ${esc(d.settlement)}` : '',region_id:d.region_id >= 0
           ? tt('regiondel.region_id',{region_id:d.region_id}) : ''})}</div>
     ${rdlHeirHtml(d)}
     ${rdlPortHtml(d)}
     ${rdlStandingHtml(d)}
-    <div class="count">${tt('regiondel.it_would_be_taken_out_of',{file:esc(d.file),x:d.campaigns.length === 1 ? tt('regiondel.the_campaign') : 'the '
-        + d.campaigns.length + ' campaigns',layer:esc(d.layer),campaigns:d.campaigns.length === 1 ? 's' : ''})}</div>
+    <div class="count">${ttN('regiondel.taken_out_of_campaigns',d.campaigns.length,{file:esc(d.file),layer:esc(d.layer)})}</div>
     <div class="cmbar2">
       <button onclick="rdlPlan()" ${k.busy ? 'disabled' : ''}
         title="${ttA('regiondel.walk_the_whole_mod_for_every')}"
@@ -207,7 +199,7 @@ function rdlHeirHtml(d){
     <span class="cmtnm">${tt('regiondel.its_land_goes_to')}</span>
     <select onchange="rdlSet('heir', this.value)">
       ${d.heirs.map(h => `<option value="${esc(h.name)}"${
-        h.name === k.heir ? ' selected' : ''}>${tt('regiondel.shared_edge_tiles',{name:esc(h.name),edges:h.edges,edges2:h.edges === 1 ? '' : 's',tiles:h.tiles.toLocaleString()})}</option>`).join('')}
+        h.name === k.heir ? ' selected' : ''}>${ttN('regiondel.shared_edge_tiles_counted',h.edges,{name:esc(h.name),tiles:h.tiles.toLocaleString()})}</option>`).join('')}
     </select></span></div>
     <div class="count">${tt('regiondel.whole_to_one_province_it_touches')}</div>`;
 }
@@ -238,9 +230,10 @@ function rdlStandingHtml(d){
   const k = state.rdl;
   const rows = d.standing || [];
   if(!rows.length) return '';
-  return rows.map(r => `<div class="count">${tt('regiondel.puts_on_these_tiles_each_one',{campaign:esc(r.campaign),x:Object.keys(r.counts).map(kind => `${r.counts[kind]}
-      ${RDL_STANDING[kind] || kind}${r.counts[kind] === 1 ? '' : 's'}`).join(', '),x2:r.counts.character || r.counts.resource ? tt('regiondel.they_stay_where_they_are_and')
-      : '',x3:k.heir ? esc(k.heir) : tt('regiondel.the_heir')})}</div>`).join('');
+  return rows.map(r => `<div class="count">${tt(r.counts.character || r.counts.resource ? 'regiondel.puts_on_tiles_stay' : 'regiondel.puts_on_tiles',
+      {campaign:esc(r.campaign),kinds:Object.keys(r.counts).map(kind => RDL_STANDING[kind]
+        ? ttN(RDL_STANDING[kind], r.counts[kind]) : `${r.counts[kind]}\n      ${kind}`).join(', '),
+      heir:k.heir ? esc(k.heir) : tt('regiondel.the_heir')})}</div>`).join('');
 }
 
 function rdlPlanHtml(k){
@@ -250,10 +243,10 @@ function rdlPlanHtml(k){
     ${p.errors.map(e => esc(e)).join('<br>')}</div>`;
   const script = p.script || [];
   return `<div class="cbrpanel">
-    <div class="k">${tt('regiondel.file_would_change_deleted',{n:(p.files || []).length,files:(p.files || []).length === 1 ? '' : 's',n2:(p.deletes || []).length})}</div>
+    <div class="k">${ttN('regiondel.files_would_change',(p.files || []).length,{deleted:(p.deletes || []).length})}</div>
     ${(p.changes || []).map(x => `<div class="count">${esc(x)}</div>`).join('')}
     ${(p.warnings || []).map(x => `<div class="w-warn">${esc(x)}</div>`).join('')}
-    ${script.length ? `<div class="w-warn">${tt('regiondel.line_of_the_campaign_script_name',{script_n:script.length,script:script.length === 1 ? '' : 's',name:esc(k.name)})}</div>
+    ${script.length ? `<div class="w-warn">${ttN('regiondel.script_lines_name',script.length,{name:esc(k.name)})}</div>
       ${script.slice(0, RDL_SCRIPT_SHOWN).map(m => `<div class="count">
         <code>${esc(m.rel)}</code>:${m.line} ${esc(m.text)}</div>`).join('')}
       ${script.length > RDL_SCRIPT_SHOWN ? `<div class="count">${tt('regiondel.and_more',{x:script.length - RDL_SCRIPT_SHOWN})}</div>` : ''}` : ''}

@@ -153,21 +153,16 @@ async function rebAssign(){
   const p = res.plan || {};
   const lines = (p.changes || []).slice(0, 14);
   const warn = (p.warnings || []).map(x => '⚠ ' + x);
-  if(!confirm(tt('rebels.write_move_province',{names_n:names.length})
-    + tt('rebels.to',{names:names.length === 1 ? '' : 's',target:k.target})
-    + (lines.join('\n') || tt('common.no_visible_change'))
-    + ((p.changes || []).length > 14
-       ? tt('rebels.and_more',{changes:p.changes.length - 14}) : '')
-    + (warn.length ? '\n\n' + warn.join('\n\n') : '')
-    + tt('rebels.written_to_map_rwm_is_deleted',{rel:p.rel})
-    + tt('rebels.old_compiled_map_and_shows_none')
-    + tt('common.backed_up_first_and_log_can'))) return;
+  if(!confirm(ttN('rebels.write_move_provinces_confirm',names.length,{target:k.target,rel:p.rel,
+    changes:(lines.join('\n') || tt('common.no_visible_change'))
+      + ((p.changes || []).length > 14
+         ? tt('rebels.and_more',{changes:p.changes.length - 14}) : '')
+      + (warn.length ? '\n\n' + warn.join('\n\n') : '')}))) return;
   k.busy = true;
   try{ res = await api.post('/api/map/rebel_apply', body); }
   finally{ k.busy = false; }
   if(res.error){ toast('✗ ' + res.error, 9000); rebPaint(); return; }
-  toast(`${(res.record && res.record.summary || '').split('\n')[0]}. `
-    + tt('common.log_can_undo_it'), 6000);
+  toast(tt('rebels.summary_log_can_undo',{summary:(res.record && res.record.summary || '').split('\n')[0]}), 6000);
   activity('rebels', tt('rebels.province_s',{mod:k.mod,names_n:names.length,target:k.target}));
   k.sel = new Set();
   k.plan = null;
@@ -215,9 +210,9 @@ function rebHtml(){
 function rebNoteHtml(d){
   const out = [];
   if(d.silent_regions) out.push(`<div class="w-warn">${tt('rebels.of_provinces_name_a_rebel_faction',{silent_regions:d.silent_regions,regions:d.regions})}</div>`);
-  if((d.dangling || []).length) out.push(`<div class="w-bad">${tt('rebels.rebel_type_named_by_a_province',{dangling_n:d.dangling.length,dangling:d.dangling.length === 1 ? '' : 's',dangling2:d.dangling.map(x =>
+  if((d.dangling || []).length) out.push(`<div class="w-bad">${ttN('rebels.rebel_types_named_by_a_province',d.dangling.length,{names:d.dangling.map(x =>
       `<code>${esc(x.name)}</code> (${x.count})`).join(', ')})}</div>`);
-  if((d.blank || []).length) out.push(`<div class="count">${tt('rebels.province_name_no_rebel_type_at',{blank_n:d.blank.length,blank:d.blank.length === 1 ? '' : 's'})}</div>`);
+  if((d.blank || []).length) out.push(`<div class="count">${ttN('rebels.provinces_name_no_rebel_type',d.blank.length)}</div>`);
   return out.join('');
 }
 
@@ -232,11 +227,11 @@ function rebListHtml(d){
   return `<div class="reblist">${rows.map(r => `<button
     class="rebrow${k.pick === r.name ? ' on' : ''}${r.orphan ? ' orphan' : ''}"
     onclick="rebPick('${esc(r.name)}')"
-    title="${ttA('rebels.chance_unit_line',{name:esc(r.name),category:esc(r.category),by_category:r.by_category ? tt('rebels.spawned_by_category_not_off_a') : '',chance:esc(r.chance),unit_count:r.unit_count,unit_count2:r.unit_count === 1 ? '' : 's',line:r.line})}">
+    title="${ttA('rebels.chance_units_line',{name:esc(r.name),category:esc(r.category),by_category:r.by_category ? tt('rebels.spawned_by_category_not_off_a') : '',chance:esc(r.chance),units:ttN('rebels.unit_count',r.unit_count),line:r.line})}">
     <span class="rebnm">${esc(r.shown || r.name)}${
       r.by_category ? `<span class="rebcat">${tt('rebels.by_category')}</span>` : ''}${
       r.orphan ? `<span class="reborph">${tt('rebels.no_province')}</span>` : ''}</span>
-    <span class="count">${tt('rebels.province_chance_unit',{count:r.count,count2:r.count === 1 ? '' : 's',chance:esc(r.chance) || '?',silent:r.silent ? ` <b>${tt('rebels.none_spawn')}</b>` : '',unit_count:r.unit_count,unit_count2:r.unit_count === 1 ? '' : 's',dead_units:(r.dead_units || []).length
+    <span class="count">${tt('rebels.provinces_chance_units',{provinces:ttN('rebels.province_count',r.count),chance:esc(r.chance) || '?',silent:r.silent ? ` <b>${tt('rebels.none_spawn')}</b>` : '',units:ttN('rebels.unit_count',r.unit_count),dead_units:(r.dead_units || []).length
           ? ` ${tt('rebels.not_in_the_edu',{dead_units_n:r.dead_units.length})}` : ''})}</span>
   </button>`).join('')}</div>`;
 }
@@ -247,10 +242,10 @@ function rebDetailHtml(d){
   if(!r) return `<div class="count" style="padding:6px 2px">${tt('rebels.pick_a_rebel_faction_to_see')}</div>`;
   const all = (d.rebels || []).map(x => x.name).sort();
   return `<div class="rebdet">
-    <div class="k">${tt('rebels.chance',{x:esc(r.shown || r.name),name:esc(r.name),category:esc(r.category),chance:esc(r.chance),silent:r.silent ? ' - none will spawn' : ''})}</div>
+    <div class="k">${tt('rebels.chance',{x:esc(r.shown || r.name),name:esc(r.name),category:esc(r.category),chance:esc(r.chance),silent:r.silent ? tt('rebels.none_will_spawn') : ''})}</div>
     ${r.silent ? `<div class="w-warn">${tt('rebels.this_faction_has_chance_0_every')}</div>` : ''}
     ${r.by_category ? `<div class="w-warn">${tt('rebels.the_engine_spawns_by_category_rather',{category:esc(r.category)})}</div>` : ''}
-    ${r.orphan ? `<div class="w-warn">${tt('rebels.no_province_names_this_faction_so',{unit_count:r.unit_count,unit_count2:r.unit_count === 1 ? '' : 's'})}</div>` : ''}
+    ${r.orphan ? `<div class="w-warn">${ttN('rebels.no_province_names_faction_units',r.unit_count)}</div>` : ''}
     ${rebUnitsHtml(r)}
     ${rebProvincesHtml(r)}
     ${rebMoveHtml(k, r, all)}
@@ -262,11 +257,11 @@ function rebDetailHtml(d){
 function rebUnitsHtml(r){
   if(!r.unit_count) return `<div class="w-warn">${tt('rebels.this_faction_lists_no_unit_line')}</div>`;
   return `<div class="rebunits">
-    <div class="count">${tt('rebels.fields_unit_edit_them_on_the',{unit_count:r.unit_count,unit_count2:r.unit_count === 1 ? '' : 's'})}</div>
+    <div class="count">${ttN('rebels.fields_units_edit_on_minor_files',r.unit_count)}</div>
     ${r.units.map(u => `<span class="rebunit${
       u.known === false ? ' bad' : ''}" title="${
       u.known === false ? tt('rebels.no_unit_of_this_type_in')
-                        : 'line ' + u.line}">${esc(u.type)}</span>`).join('')}
+                        : ttA('rebels.line_n',{line:u.line})}">${esc(u.type)}</span>`).join('')}
   </div>`;
 }
 
@@ -277,7 +272,7 @@ function rebProvincesHtml(r){
   if(!r.count) return '';
   return `<div class="rebprovs">
     <div class="cmbar2">
-      ${tt('rebels.province',{count:r.count,count2:r.count === 1 ? '' : 's'})}
+      ${ttN('rebels.province_chip',r.count)}
       <button onclick="rebTickAll(true)">${tt('rebels.tick_all')}</button>
       <button onclick="rebTickAll(false)">${tt('common.none_2')}</button>
     </div>

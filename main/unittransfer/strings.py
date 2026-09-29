@@ -369,7 +369,7 @@ def apply(p: StringsPlan) -> Dict:
     the transfer log, so 🕑 Log -> Undo puts the archive back byte-exact.
     """
     if p.errors:
-        raise ValueError("cannot apply: " + "; ".join(p.errors))
+        raise ValueError(_i18n.msg("eng.strings.cannot_apply", "cannot apply: {why}", why="; ".join(p.errors)))
     if not p.data:
         raise ValueError(_i18n.msg("eng.strings.nothing_to_change", "nothing to change"))
     mod = p.mod

@@ -197,7 +197,7 @@ function edRecEditReq(kind,id){
 function edRecTabLabel(){
   const r=edRecOn();
   const n=(r&&r.r)?r.r.instances.length+r.adds.length:null;
-  return tt('edrecruit.recruitment')+(n===null?'':` <span class="badge">${n}</span>`);
+  return n===null?tt('edrecruit.recruitment'):tt('edrecruit.recruitment_badge',{n});
 }
 function edRecTab(){
   const e=state.ed,r=e.rec;
@@ -221,7 +221,7 @@ function edRecTab(){
   });
   return `<div class="frm">
     <div class="brow" style="align-items:center">
-      ${tt('edrecruit.recruit_pool',{rows_n:rows.length,rows:rows.length===1?'':'s',adds:r.adds.length
+      ${ttN('edrecruit.recruit_pools',rows.length,{adds:r.adds.length
         ? ` <span class="badge good">${tt('edrecruit.staged',{adds_n:r.adds.length})}</span>`:'',rows2:rows.length
         ? tt('edrecruit.every_building_line_in_this_mod')
         : tt('edrecruit.no_building_line_in_this_mod')})}
@@ -240,14 +240,9 @@ function edRecTab(){
     <div class="bnote" style="margin-top:8px">${docPoints(
       tt('edrecruit.these_are_the_same_recruit_pool'),[
       // the first two describe rows, so they are dropped when there are none
-      rows.length&&tt('edrecruit.a_tier_is_shown_as_its')
-        +`${tt('edrecruit.barracks_and_tier_2_of_a')} `
-        +tt('edrecruit.that_disagrees_with_what_most_of'),
-      (rows.length||r.adds.length)&&`${tt('edrecruit.the_buildings_name_opens_it_in')} `
-        +tt('edrecruit.that_tier_with_this_units_rows')
-        +tt('edrecruit.are_not_in_it_until_you'),
-      `${tt('edrecruit.save_changes_writes_these_to_export')} `
-        +tt('edrecruit.units_own_save_one_log_entry')])}</div>
+      rows.length&&tt('edrecruit.tier_is_shown_as_its_position'),
+      (rows.length||r.adds.length)&&tt('edrecruit.building_name_opens_it_in_a_tab'),
+      tt('edrecruit.save_changes_writes_these')])}</div>
   </div>`;
 }
 const edRecBusy=()=>`<div class="frm"><div class="empty">${tt('edrecruit.reading_every_building_line')}</div></div>`;
@@ -304,7 +299,7 @@ function edRecRowHtml(row,KEYS,common){
       const v=edRecVal(row,k);
       const odd=String(v).trim()!==common[j];
       return `<span class="ern ${odd?'odd':''}" title="${odd
-        ?tt('edrecruit.differs_from_what_most_pools_use')+esc(common[j])+')':''}">${
+        ?ttA('edrecruit.differs_from_what_most_pools_use_value',{value:esc(common[j])}):''}">${
         numBox(tt('edrecruit.data_er_data_erline',{x:k,key}),v,
                k==='per_turn'?'turns':(k==='experience'?'1':'pool'))}</span>`;
     }).join(''),

@@ -426,9 +426,9 @@ def parse_movies(text: str) -> MovieFile:
             cur.name_line = i
             continue
         if tag not in MOVIE_SLOTS:
-            mf.warnings.append(
-                f"line {i + 1}: <{tag}> is not one of "
-                + kb.and_list(list(MOVIE_SLOTS)))
+            mf.warnings.append(_i18n.msg(
+                "eng.campfiles.line_tag_is_not_one_of", "line {line}: <{tag}> is not one of {slots}",
+                line=i + 1, tag=tag, slots=kb.and_list(list(MOVIE_SLOTS))))
             continue
         if tag in cur.lines:
             mf.warnings.append(_i18n.msg("eng.campfiles.line_a_second_for", "line {x}: a second <{tag}> for {x2}", x=i + 1, tag=tag, x2=cur.faction or '(unnamed)'))
@@ -933,7 +933,8 @@ def apply(p: CampFilePlan) -> Dict:
     from .logutil import file_op, log
 
     if p.errors:
-        raise ValueError("cannot apply: " + "; ".join(p.errors))
+        raise ValueError(_i18n.msg("eng.campfiles.cannot_apply", "cannot apply: {why}",
+                                   why="; ".join(p.errors)))
     if not p.text and not p.loc_writes:
         raise ValueError(_i18n.msg("eng.campfiles.nothing_to_change", "nothing to change"))
     mod = p.mod

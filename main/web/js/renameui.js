@@ -60,31 +60,21 @@ function renamePaint(){
         onclick="renamePreview()">${p ? tt('renameui.check_again') : tt('renameui.check_what_changes')}</button>
       <button class="primary"
         ${p && p.ok && !u.busy ? '' : 'disabled'}
-        onclick="renameApply()">${tt('renameui.rename_in_file',{files:p ? p.files.length : 0,files2:p && p.files.length === 1 ? '' : 's'})}</button>
+        onclick="renameApply()">${ttN('renameui.rename_in_files', p ? p.files.length : 0)}</button>
     </div>`;
   const box = document.getElementById('renameBox');
   if(box && !u.busy){ box.focus(); box.setSelectionRange(box.value.length, box.value.length); }
 }
 
 const renameRuleHtml = () => renameUi.subject === 'faction'
-  ? tt('renameui.a_faction_slot_is_a_lower')
-    + tt('renameui.that_is_how_every_file_that')
-  : tt('renameui.one_word_of_letters_digits_underscores')
-    + tt('renameui.letter_a_name_with_a_space');
+  ? tt('renameui.faction_slot_rule')
+  : tt('renameui.name_rule');
 
 const renameLeadIn = () => renameUi.subject === 'settlement'
-  ? tt('renameui.a_settlement_is_named_in_its')
-    + tt('renameui.in_the_the_campaign_map_reads')
-    + tt('renameui.points_at_it_by_name_except')
-    + tt('renameui.never_edited')
+  ? tt('renameui.lead_in_settlement')
   : renameUi.subject === 'region'
-  ? tt('renameui.a_province_is_named_in_descr')
-    + tt('renameui.pools_the_music_types_the_custom')
-    + tt('renameui.names_file_it_is_also_named')
-    + tt('renameui.and_never_edited_check_first_the')
-  : tt('renameui.a_faction_slot_is_named_in')
-    + tt('renameui.texture_records_of_battle_models_modeldb')
-    + tt('renameui.from_the_slot_itself_the_campaign');
+  ? tt('renameui.lead_in_region')
+  : tt('renameui.lead_in_faction');
 
 async function renamePreview(){
   const u = renameUi;
@@ -111,24 +101,24 @@ function renamePlanHtml(p){
       <td>${esc(f.label)}<div class="count">${esc(f.note || '')}</div></td>
     </tr>`).join('');
   const assets = (p.assets || []).map(a =>
-    `<div class="rnmono">${esc(a.src)} → ${esc(a.dst)}${
-      a.dir ? tt('renameui.file',{files:a.files,files2:a.files === 1 ? '' : 's'}) : ''}</div>`).join('');
+    `<div class="rnmono">${a.dir ? ttN('renameui.asset_move_dir', a.files, {src:esc(a.src),dst:esc(a.dst)})
+      : tt('renameui.asset_move', {src:esc(a.src),dst:esc(a.dst)})}</div>`).join('');
   const shown = renameUi.showAll ? (p.script || []) : (p.script || []).slice(0, 20);
   const script = !(p.script || []).length ? '' : `
-    <div class="rnhead">${tt('renameui.the_campaign_script_names_it_time',{script_n:p.script.length,script:p.script.length === 1 ? '' : 's'})}</div>
+    <div class="rnhead">${ttN('renameui.script_names_it_times', p.script.length)}</div>
     <div class="rnscroll">${shown.map(m => `<div class="rnmono">${
       esc(m.rel)}:${m.line} &nbsp; ${esc(m.text)}</div>`).join('')}</div>
     ${p.script.length > shown.length
       ? `<button onclick="renameShowAll()">${tt('renameui.show_the_other',{n:p.script.length - shown.length})}</button>` : ''}`;
   const review = !(p.review || []).length ? '' : `
-    <div class="rnhead">${tt('renameui.also_writes_the_word_and_is',{review_n:p.review.length,review:p.review.length === 1 ? '' : 's'})}</div>
-    ${p.review.map(r => `<div class="rnmono">${tt('renameui.line',{rel:esc(r.rel),hits:r.hits,hits2:r.hits === 1 ? '' : 's',lines:r.lines.join(', '),x:r.hits > r.lines.length ? ', …' : ''})}</div>`).join('')}`;
+    <div class="rnhead">${ttN('renameui.also_writes_the_word_files', p.review.length)}</div>
+    ${p.review.map(r => `<div class="rnmono">${ttN('renameui.review_file_lines', r.hits, {rel:esc(r.rel),lines:r.lines.join(', '),more:r.hits > r.lines.length ? ', …' : ''})}</div>`).join('')}`;
   return `
     ${(p.errors || []).map(e => `<div class="w-bad">${esc(e)}</div>`).join('')}
-    ${rows ? `<div class="rnhead">${tt('renameui.rewritten_line_in_file',{hits:p.hits,hits2:p.hits === 1 ? '' : 's',files_n:p.files.length,files:p.files.length === 1 ? '' : 's'})}</div>
+    ${rows ? `<div class="rnhead">${tt('renameui.rewritten_lines_in_files', {lines:ttN('renameui.n_lines', p.hits), files:ttN('renameui.n_files', p.files.length)})}</div>
       <table class="rntab"><thead><tr><th>${tt('renameui.file_2')}</th><th>${tt('renameui.lines')}</th><th>${tt('renameui.what_it_is')}</th>
         </tr></thead><tbody>${rows}</tbody></table>` : ''}
-    ${assets ? `<div class="rnhead">${tt('renameui.art_the_engine_finds_from_the',{assets_n:p.assets.length,assets:p.assets.length === 1 ? '' : 's'})}</div>${assets}` : ''}
+    ${assets ? `<div class="rnhead">${ttN('renameui.art_moved_items', p.assets.length)}</div>${assets}` : ''}
     ${script}
     ${review}
     ${(p.warnings || []).map(w => `<div class="w-warn">${esc(w)}</div>`).join('')}
@@ -142,14 +132,10 @@ async function renameApply(){
   const u = renameUi;
   if(u.busy || !u.plan || !u.plan.ok) return;
   const p = u.plan;
-  if(!confirm(tt('renameui.rename_to',{x:RENAME_WHAT[u.subject],old:u.old,next:u.next})
-    + tt('renameui.line_s_in_file_s',{hits:p.hits,files_n:p.files.length})
-    + (p.assets.length ? tt('renameui.and_art_item_s_moved',{assets_n:p.assets.length}) : '')
-    + `.\n`
-    + (p.script.length
-       ? tt('renameui.line_s_of_campaign_script_name',{script_n:p.script.length})
-         + tt('renameui.changed_the_list_above_is_what') : '')
-    + tt('renameui.backed_up_first_and_log_can'))) return;
+  if(!confirm(tt('renameui.confirm_rename',{x:RENAME_WHAT[u.subject],old:u.old,next:u.next,
+    hits:p.hits,files_n:p.files.length,
+    art:p.assets.length ? tt('renameui.confirm_art_moved',{assets_n:p.assets.length}) : '',
+    script:p.script.length ? tt('renameui.confirm_script_not_changed',{script_n:p.script.length}) : ''}))) return;
   u.busy = true; renamePaint();
   let res;
   try{
@@ -159,9 +145,8 @@ async function renameApply(){
   catch(e){ toast('✗ ' + errText(e), 8000); u.busy = false; renamePaint(); return; }
   finally{ u.busy = false; }
   if(res.error){ toast('✗ ' + res.error, 8000); renamePaint(); return; }
-  toast(tt('renameui.renamed_in_file_s',{n:(res.files || []).length})
-    + (res.script ? tt('renameui.campaign_script_line_s_still_name',{script:res.script})
-       + tt('renameui.name_log_can_undo_this') : tt('renameui.log_can_undo_it')), 6000);
+  toast(res.script ? tt('renameui.renamed_script_left',{n:(res.files || []).length,script:res.script})
+    : tt('renameui.renamed_done',{n:(res.files || []).length}), 6000);
   const done = u.done, name = u.next;
   closeModal();
   if(done) await done(name);

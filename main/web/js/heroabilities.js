@@ -57,7 +57,7 @@ function renderHeroAbilities(){
       <div class="cdbhead"><div>${tt('heroabilities.descr_hero_abilities_xml_a_named')}</div>
         <span style="flex:1"></span>
         <button onclick="haxRevert()" ${n ? '' : 'disabled'}>${tt('common.revert')}</button>
-        <button class="primary" onclick="haxSave()" ${n ? '' : 'disabled'}>${tt('heroabilities.save_change',{x:n || '',x2:n === 1 ? '' : 's'})}</button>
+        <button class="primary" onclick="haxSave()" ${n ? '' : 'disabled'}>${ttN('heroabilities.save_changes', n)}</button>
       </div>
       ${c.error ? '' : haxAbilityHtml()}
     </div>
@@ -196,9 +196,9 @@ async function haxSave(){
   finally{ c.busy = false; }
   if(plan.error){ toast('✗ ' + plan.error, 8000); return; }
   const p = plan.plan || {};
-  if(!confirm(tt('heroabilities.write_change_s',{n:(p.changes || []).length}) + (p.changes || []).slice(0, 16).join('\n')
-    + ((p.warnings || []).length ? '\n\n⚠ ' + p.warnings.slice(0, 5).join('\n⚠ ') : '')
-    + tt('common.backed_up_first_and_log_can'))) return;
+  if(!confirm(tt('heroabilities.write_changes_confirm',{n:(p.changes || []).length,
+    changes:(p.changes || []).slice(0, 16).join('\n'),
+    warnings:(p.warnings || []).length ? '\n\n⚠ ' + p.warnings.slice(0, 5).join('\n⚠ ') : ''}))) return;
   let res;
   try{ res = await api.post('/api/heroabilities/apply', body); }
   catch(e){ res = {error: errText(e)}; }

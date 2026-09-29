@@ -97,18 +97,18 @@ function mpRender(){
           ${s.tab==='skel'?`<select onchange="mpSet('skel',this.value)" style="max-width:280px">
             <option value="">${tt('modelpicker.every_skeleton')}</option>
             ${s.skeletons.map(k=>`<option value="${esc(k.name)}" ${k.name===s.skel?'selected':''}
-              >${tt('modelpicker.entr_2',{name:esc(k.name),x:k.entries,x2:k.entries===1?'y':'ies'})}</option>`).join('')}
+              >${ttN('modelpicker.skeleton_entry_count',k.entries,{name:esc(k.name)})}</option>`).join('')}
           </select>`:''}
           <input id="mpQ" placeholder="${s.tab==='skel'?tt('modelpicker.narrow_these'):tt('modelpicker.search_entries_and_skeletons')}"
             value="${esc(s.q||'')}" oninput="mpSet('q',this.value)" style="flex:1">
-          <span class="count">${tt('modelpicker.entr',{n:mpShown().length,mpShown:mpShown().length===1?'y':'ies'})}</span>
+          <span class="count">${ttN('modelpicker.entry_count',mpShown().length)}</span>
         </div>
         <div class="mplist" id="mpList">${rows.length?rows.map(e=>`
           <div class="mprow ${e.name===s.cur?'on':''}" onclick="mpPick('${q1(esc(e.name))}')">
             <span class="mn">${esc(e.name)}</span>
             <span class="msk">${esc(e.skeletons.join(' + ')||tt('modelpicker.no_skeleton'))}</span>
             ${tt('modelpicker.lod_skin',{lods:e.lods,skins:e.skins,x:e.pending?`<span class="w-good">${tt('modelpicker.staged_saves_with_this_unit')}</span>`
-              :e.used_by?`${e.used_by} user${e.used_by===1?'':'s'}`
+              :e.used_by?ttN('modelpicker.user_count',e.used_by)
               :`<span class="w-warn">${tt('modelpicker.unused')}</span>`})}
           </div>`).join(''):`<div class="caprow"><span class="count">${tt('common.nothing_matches')}</span></div>`}</div>
         ${mpShown().length>400?`<div class="bnote">${tt('modelpicker.showing_the_first_400_narrow_it')}</div>`:''}
@@ -147,7 +147,7 @@ async function mpTakeUnit(type){
   const mod=(state.ed&&state.ed.mod)||state.src;
   let d;
   try{ d=await api.get(`/api/edit/unit?mod=${enc(mod)}&type=${enc(type)}`); }
-  catch(e){ return toast(tt('modelpicker.could_not_read')+type+': '+e); }
+  catch(e){ return toast(tt('modelpicker.could_not_read_type',{type,error:e})); }
   if(d.error)return toast(d.error);
   // fields come back as [label, value] pairs, in file order
   const line=(d.fields||[]).find(f=>f[0]===gfKey(b.label));

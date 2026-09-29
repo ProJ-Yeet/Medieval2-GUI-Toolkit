@@ -1268,7 +1268,9 @@ def fit(b: Bbox, width: int, height: int, keep: str = "width") -> Bbox:
                    b.west, b.east, b.rotation)
     bad = out.problems()
     if bad:
-        raise OsmError("the box cannot take this map's shape there: " + "; ".join(bad))
+        raise OsmError(_i18n.msg("eng.osmmap.box_cannot_take_this_shape",
+                                 "the box cannot take this map's shape there: {why}",
+                                 why="; ".join(bad)))
     return out
 
 

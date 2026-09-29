@@ -821,7 +821,7 @@ function findingsHtml(key,list,onopen){
     </div>`).join('');
   return `<div class="trnote w-warn">
     <button class="findtog" onclick="findingsToggle('${q1(esc(key))}')">
-      ${tt('core.thing_to_look_at',{open:open?'▾':'▸',x:n,x2:n===1?'':'s'})}</button>
+      ${ttN('core.things_to_look_at',n,{open:open?'▾':'▸'})}</button>
     ${open?`<div class="findlist">${rows}</div>`
           :`<div class="count">${tt('core.the_marked_rows_below_or_open')}</div>`}
   </div>`;
@@ -1073,7 +1073,7 @@ function rszApply(root){
 function rszModal(){
   const m=document.getElementById('modal');
   if(!m)return;
-  const key=tt('core.dlg')+(m.getAttribute('class')||'modal').trim().replace(/\s+/g,'.');
+  const key='dlg:'+(m.getAttribute('class')||'modal').trim().replace(/\s+/g,'.');
   if(m.dataset.rszKey===key)return;      // the same dialog repainting, not a new one
   m.dataset.rszKey=key;
   m.style.resize='both';
@@ -1268,7 +1268,7 @@ function setAppMode(id){
   // recorded the route WITH its record ("Buildings · hinterland_castles"), and
   // this would file a thinner copy of it right behind.
   if(!navGoing)navPush({mode:id});
-  activity('opened',tt('core.mod',{x:modeDef(id).name,src:state.src||'none'}));
+  activity('opened',tt('core.mod',{x:modeDef(id).name,src:state.src||tt('common.none')}));
   state.mode=id;applyMode(true);
 }
 // keeps the header label and the menu's highlighted row honest - called from
@@ -1351,8 +1351,7 @@ function navLabel(r){
 /* One link, drawn one way. `label` is markup and is NOT escaped (a row puts an
    arrow in it); everything else here is. */
 function navLinkHtml(r, label, cls, title){
-  return tt('core.a_href_data_nav',{navUrl:esc(navUrl(r)),x:esc(JSON.stringify(r))})
-    +`${cls?tt('core.class',{cls:esc(cls)}):''}${title?tt('core.title',{title:esc(title)}):''}>${label}</a>`;
+  return `<a href="${esc(navUrl(r))}" data-nav="${esc(JSON.stringify(r))}"${cls?` class="${esc(cls)}"`:''}${title?` title="${esc(title)}"`:''}>${label}</a>`;
 }
 /* Wired once, delegated, so a repaint never has to re-attach anything. A plain
    left click is ours and is cancelled; every other button and every modifier is
@@ -1487,15 +1486,15 @@ function navCrumbs(){
   const bar=document.getElementById('crumbs');
   if(!bar)return;
   const t=state.trail, from=Math.max(0,t.i-NAV_CRUMBS+1);
-  const arrow=(d,ch,what)=>`<button class="crbtn" data-step="${d}" ${navCan(d)?'':'disabled'}
-    title="${esc(navCan(d)?what+' to '+t.list[t.i+d].label
-                 :tt('core.nothing')+what.toLowerCase()+tt('core.of_here'))}">${ch}</button>`;
+  const arrow=(d,ch)=>`<button class="crbtn" data-step="${d}" ${navCan(d)?'':'disabled'}
+    title="${esc(navCan(d)?tt(d<0?'core.crumb_back_to':'core.crumb_forward_to',{label:t.list[t.i+d].label})
+                 :tt(d<0?'core.crumb_nothing_back':'core.crumb_nothing_forward'))}">${ch}</button>`;
   const links=t.list.slice(from).map((e,n)=>{
     const j=from+n;
     return `<a class="crumb${j===t.i?' on':j>t.i?' ahead':''}" href="${esc(navUrl(e.route))}"
       data-crumb="${j}" title="${esc(e.label)}${j>t.i?tt('core.ahead_of_here'):''}">${esc(e.label)}</a>`;
   }).join('<span class="crsep">›</span>');
-  bar.innerHTML=arrow(-1,'←',tt('core.back'))+arrow(1,'→',tt('core.forward'))
+  bar.innerHTML=arrow(-1,'←')+arrow(1,'→')
     +`<div class="crlist">${from?'<span class="crsep">…</span>':''}${links}</div>`;
   bar.querySelectorAll('.crbtn').forEach(b=>b.onclick=()=>navStep(+b.dataset.step));
   const l=bar.querySelector('.crlist');
@@ -1523,8 +1522,7 @@ function wire(){
     const v=e.target.value;
     // 21: the raw editor's box is the only copy of its edits - ask before the
     // pick is taken, so saying no leaves everything where it was
-    if(v!==state.src&&state.rt&&state.rt.dirty&&!confirm(tt('core.leave_without',{rel:state.rt.rel})
-      +tt('core.saving_the_edits_are_only_in'))){srcSel.value=state.src;return;}
+    if(v!==state.src&&state.rt&&state.rt.dirty&&!confirm(tt('core.leave_without_saving',{rel:state.rt.rel}))){srcSel.value=state.src;return;}
     if(v!==state.src)
       activity(tt('core.picked_mod'),tt('core.was',{mode:state.mode==='transfer'?tt('core.source'):'',x:v,src:state.src}));
     // A ticked pile belongs to the mod it was ticked in - carrying it to another
@@ -1662,7 +1660,7 @@ function applyMode(persist){
                     :mnr?tt('core.search_this_file')
                     :fac?tt('core.search_factions')
                     :raw?tt('core.search_file_names'):tt('core.search');
-  document.title=modeDef(state.mode).name+tt('core.medieval_2_gui_toolkit');
+  document.title=tt('core.page_title',{mode:modeDef(state.mode).name});
   if(one&&state.selMode)toggleSelMode();
   // A single-mod mode mirrors the destination onto the source, but the pick the
   // user made in Transfer is remembered rather than overwritten - both in
@@ -1876,11 +1874,7 @@ async function paintBuildTag(){
   const el=document.getElementById('buildTag');
   if(!el||!appBuild)return;
   el.textContent=verLabel(appBuild);
-  el.title=tt('core.this_is_the_build_of_the',{appBuild})
-    +(/^\d/.test(appBuild)
-      ? tt('core.the_2_x_line_keeps_the')
-      : tt('core.the_beta_line_carries_the_campaign'))
-    +tt('core.click_for_the_credits');
+  el.title=tt(/^\d/.test(appBuild)?'core.build_tag_tip_2x':'core.build_tag_tip_beta',{appBuild});
   el.onclick=()=>openCredits();
   el.hidden=false;
 }

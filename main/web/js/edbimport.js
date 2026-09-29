@@ -142,7 +142,7 @@ function bimListHtml(k){
       <input type="checkbox" ${k.picked.includes(l.name) ? 'checked' : ''}
         onchange="bimToggle('${q1(esc(l.name))}')">
       <code>${esc(l.name)}</code>
-      ${tt('edbimport.level',{label:esc(l.label || ''),levels_n:l.levels.length,levels:l.levels.length === 1 ? '' : 's',units:l.units ? tt('edbimport.unit',{units:l.units,units2:l.units === 1 ? '' : 's'}) : '',in_dest:l.in_dest ? `<span class="w-warn">${tt('edbimport.in_too',{src:esc(state.src)})}</span>` : ''})}
+      ${tt(l.units ? 'edbimport.line_summary_units' : 'edbimport.line_summary',{label:esc(l.label || ''),levels:ttN('edbimport.n_levels',l.levels.length),units:l.units ? ttN('edbimport.n_units',l.units) : '',in_dest:l.in_dest ? `<span class="w-warn">${tt('edbimport.in_too',{src:esc(state.src)})}</span>` : ''})}
     </label>`).join('');
 }
 
@@ -181,7 +181,7 @@ function bimPlanHtml(k, p){
     ${units.length ? `<div class="bsec ${foldCls('bim.units')}" data-fold="bim.units">
       <h4>${tt('edbimport.units_does_not_have',{src:esc(state.src)})} <span class="n">${units.length}</span></h4>
       <div class="bnote">${tt('edbimport.their_recruit_pools_are_left_out')}</div>
-      <div class="ntslots">${units.map(u => `<div>${tt('edbimport.pool',{unit:esc(u.unit),pools:u.pools,pools2:u.pools === 1 ? '' : 's'})}</div>`).join('')}</div>
+      <div class="ntslots">${units.map(u => `<div>${ttN('edbimport.unit_pools',u.pools,{unit:esc(u.unit)})}</div>`).join('')}</div>
     </div>` : ''}
     ${(p.pictures || []).length ? `<div class="bsec ${foldCls('bim.pics')}" data-fold="bim.pics">
       <h4>${tt('edbimport.building_cards')} <span class="n">${p.pictures.length}</span></h4>
@@ -212,7 +212,7 @@ function bimPaint(){
         <div id="bimList" class="bimlist">${bimListHtml(k)}</div></div>` : ''}
       ${clash ? `<label class="bimrow"><input type="checkbox" ${k.replace ? 'checked' : ''}
           onchange="bimSet('replace',this.checked)">
-        ${tt('edbimport.replace_the_line_of_the_same',{picked:k.picked.length === 1 ? '' : 's',src:esc(state.src)})}</label>` : ''}
+        ${ttN('edbimport.replace_same_named_lines',k.picked.length,{src:esc(state.src)})}</label>` : ''}
       ${k.from ? `<div class="bnote">${docPoints(tt('edbimport.what_comes_across'), [
         tt('edbimport.each_line_whole_every_faction_and'),
         tt('edbimport.its_text_keys_in_text_export'),

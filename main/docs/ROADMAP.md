@@ -696,7 +696,7 @@ line: identical but for two timings. Tests that read a module's words go
 through `tests/_webtext.py`, which puts each call's English back (94.5% of
 lines come back identical to the old source, the rest folded HTML text).
 
-**Left for 88c, before a word is translated**: 714 entries are fragments of a
+**Left for 88c** (done, see below), before a word is translated: 714 entries are fragments of a
 sentence the code still joins with `+` (`tt('home.reading') + path + '…'`),
 130 places make a plural with `+ 's'`, and 159 engine messages are built with
 `+` or `%` and are still English only. Each needs its sentence whole, with
@@ -713,6 +713,65 @@ term must contain that term's rendering in each translation, a rule-1 term
 must appear untranslated, and placeholders and plural categories must match
 the source. Done when: every term has a rendering and a source in every
 language, and the checker passes on the pseudo-locales.
+
+*Done 2026-09-29.* **Whole sentences.** `dev/checks/i18n_joins.py` finds three
+kinds of site: a `tt()` joined to other text with `+` (641 in `web/js` when it
+first ran), an English plural made in code, `n===1?'':'s'` and its kin (226),
+and a catalogue string that is half a sentence joined inside a template where
+no `+` shows (`' after {delay}s'`, `'Could not read '`: one that opens with a
+space and a lower-case word, or stops on a word and a space). With `--py` it
+lists the engine's messages built with `+`, `%` or `.format` (159) and those
+that make a plural in a parameter, `x='s' if n == 1 else ''` (33). All four
+are at zero. A sentence is now one string with named placeholders; a clause
+that was dropped in or left empty (`' and the record for {region}'`) is two
+strings, one with it and one without, since a translator cannot inflect a
+clause apart from its verb; a count is `ttN(id, n)` in the page and
+`_i18n.msgN(id, n, one, other)` in the engine, whose `{count}` the page fills
+with the right CLDR form. en.json holds **8,074 strings, 324 of them plurals**
+(there was one). A site that is not a sentence at all keeps its shape with an
+`// i18n-ok: <why>` on the line (14, twelve of them `undo.js`'s stack keys).
+`dev/checks/i18n_params.py` holds each call to its string: every `{name}` the
+string uses is passed, and every name passed is used, in the page and in the
+engine, so a sentence that lost a piece on the way shows as a failure and not
+as `{x}` on the screen; the few strings that show braces as text (a tile
+address's `{z}/{x}/{y}`, the `{tag}text` form) are listed there by ID.
+
+**What changed on the screen, on purpose.** English is otherwise the text it
+was. A count of 1,000 or more now has its thousands separator (`ttN` formats
+`{count}` for the screen). The singular now reads right where the code had only
+one wording: "1 level", "1 region follows it", "1 guild gets points", "1
+faction declares", "1 entry block shares", "1 tile has no texture". 88b had
+moved some code into the catalogue as if it were text, and it is code again:
+key prefixes (`'minor:' + tab`, a findings box's open state), and attributes
+whose values are expressions (` aria-label="${...}"`, `data-vc="..."`); the
+scanner now knows both shapes. About 300 strings still hedge with `file(s)`:
+they are whole sentences, so each translation writes its language's own
+neutral form, and turning them into plurals is left for when a count is at
+hand.
+
+**The termbase**, `web/i18n/termbase.json`: **189 terms** (80 of the game's,
+43 of the modding community's, 66 of the platform's), each with the English
+forms it is matched by and a gloss that says what it means here ("port" is the
+verb, "tile" a square of the campaign map), and in each of the 16 languages a
+rendering, a stem that every inflected form contains, its source kind (`game`,
+`community`, `loan`, `ms`) and a confidence. Rule 1 has no entries: what is
+inside a `<code>`, a file name, a `snake_case` name and the `keep` list (EDU,
+EDB, IWTE...) are carried verbatim. **The renderings are a language model's
+draft from memory, checked against nothing**: 1,835 are marked high, 922
+medium, 267 low, and the file is marked draft; a native speaker who mods the
+game reviews each language before 88d leans on it. `dev/checks/i18n_termbase.py`
+is the checker: a translated catalogue has English's IDs and shapes, its
+placeholders (a plural form may leave one out, as English's own forms do, but
+uses none English does not), the CLDR categories of its language, the same
+HTML tags, every rule-1 token as written, and each rule-2 and rule-3 term's
+stem, a rule-4 word checked only where a string is that word alone (a button),
+with an `_exempt` list per ID for a sentence worded around a term.
+`tests/test_termbase` (27), and `tests/test_i18n` (37) runs the join, fragment
+and parameter checks over the tree. `tests/_webtext.py` now puts English back
+for a plural (the form chosen when it runs) and for an ID chosen by a ternary.
+Full suite: 14 of 167 red, each failing the same way on a worktree of the
+commit before (the 13 of 88b, and `modeldb_header`, which reads a mod file
+with a hand edit in it).
 
 **88d - the European and Cyrillic languages.** `de`, `fr`, `es`, `it`,
 `pt-BR`, `pl`, `cs`, `hu`, `tr`, `ru`, `uk`, translated against the

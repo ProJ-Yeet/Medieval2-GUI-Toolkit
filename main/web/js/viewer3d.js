@@ -788,39 +788,36 @@ function v3Facts(){
   const skin = v3Skin();
   const onAtt = g.groups.filter(x => x.sheets !== 'main').length;
   host.innerHTML = docPoints(tt('viewer3d.this_model'), [
-    `<b>${g.vertices.toLocaleString()}</b> ${tt('viewer3d.vertices_triangles',{triangles:g.triangles.toLocaleString()})}`,
-    tt('viewer3d.group_over_one_shared_vertex_pool',{groups_n:g.groups.length,groups:g.groups.length===1?'':'s'}),
+    tt('viewer3d.vertices_and_triangles',{vertices:g.vertices.toLocaleString(),triangles:g.triangles.toLocaleString()}),
+    ttN('viewer3d.groups_over_pool',g.groups.length),
     tt('viewer3d.in_game_units',{x:size[0],x2:size[1],x3:size[2]}),
     g.bones.length ? tt('viewer3d.rigged_to_bones',{bones_n:g.bones.length}) : 'no skeleton - a static model',
-    skin && skin.rel ? tt('viewer3d.main_texture',{rel:esc(skin.rel),x:skin.exists?'':` ${tt('viewer3d.not_in_this_mod')}`})
+    skin && skin.rel ? tt(skin.exists ? 'viewer3d.main_texture' : 'viewer3d.main_texture_missing',{rel:esc(skin.rel)})
                      : tt('viewer3d.no_texture_listed_on_this_entry'),
     // What is actually on the model right now, which is not always what the
     // file holds: without HD, anything over 1024 arrived halved. Reading it off
     // the loaded image rather than the file means the line cannot claim a size
     // the viewer is not drawing.
-    v3.tex ? `${tt('viewer3d.drawn_at')} <b>${v3.tex.naturalWidth} × ${v3.tex.naturalHeight}</b>`
-             + (v3HdOn() ? tt('viewer3d.the_size_the_mod_ships_as')
+    v3.tex ? tt(v3HdOn() ? 'viewer3d.drawn_at_shipped'
                          : Math.max(v3.tex.naturalWidth, v3.tex.naturalHeight) >= 1024
-                           ? ` ${tt('viewer3d.halved_to_fit_hd_textures_shows')}`
-                           : tt('viewer3d.under_the_1024_cap_so_this'))
+                           ? 'viewer3d.drawn_at_halved'
+                           : 'viewer3d.drawn_at_under_cap',
+                 {w:v3.tex.naturalWidth,h:v3.tex.naturalHeight})
            : '',
     v3TexCase() === 'pair'
-      ? tt('viewer3d.attachment_texture',{attach:esc(skin.attach),x:skin.attach_exists?'':` ${tt('viewer3d.not_in_this_mod')}`})
+      ? tt(skin.attach_exists ? 'viewer3d.attachment_texture' : 'viewer3d.attachment_texture_missing',{attach:esc(skin.attach)})
       : v3TexCase() === 'self'
-        ? `${tt('viewer3d.its_attachment_slot_names')} <code>${esc((skin&&skin.attach)||'')}</code>`
-          + `${skin && skin.attach_exists ? tt('viewer3d.the_main_file_again_so_the')
-                                          : ` ${tt('viewer3d.not_in_this_mod_so_u')}`}`
-        : tt('viewer3d.no_attachment_texture_on_this_entry')
-          + 'space and u wraps at 2 - every ordinary mount is built this way',
+        ? tt(skin && skin.attach_exists ? 'viewer3d.attachment_slot_main_again' : 'viewer3d.attachment_slot_missing',
+             {attach:esc((skin&&skin.attach)||'')})
+        : tt('viewer3d.no_attachment_whole_space'),
     // the honest answer to "why does this look right in the game and not here":
     // an entry can name an attachment sheet that no group's UVs ever reach
-    onAtt ? `${onAtt} group${onAtt===1?'':'s'} reach past u 1 - into the `
-            + (v3TexCase() === 'pair' ? tt('viewer3d.attachment_sheet') : tt('viewer3d.right_half_of_that_sheet'))
+    onAtt ? ttN(v3TexCase() === 'pair' ? 'viewer3d.groups_reach_attachment' : 'viewer3d.groups_reach_right_half', onAtt)
           : tt('viewer3d.every_group_stays_in_the_left'),
     v3.info.skins.length === 1 && (v3.info.skins[0].factions||[]).length > 1
       ? tt('viewer3d.every_one_of_its_factions_uses',{n:v3.info.skins[0].factions.length})
-      : tt('viewer3d.distinct_skin_across_its_factions',{skins_n:v3.info.skins.length,x:v3.info.skins.length===1?'':'s'}),
-    g.lod_name ? `${tt('viewer3d.the_file_calls_itself')} <code>${esc(g.lod_name)}</code>` : ''
+      : ttN('viewer3d.distinct_skins_across_factions',v3.info.skins.length),
+    g.lod_name ? tt('viewer3d.file_calls_itself_name',{name:esc(g.lod_name)}) : ''
   ]) + v3FaultRows()
      + (g.notes||[]).map(n => `<div class="w-warn" style="margin-top:6px">${esc(n)}</div>`).join('');
 }
@@ -1044,13 +1041,10 @@ function v3UvKey(){
         ? row('#4a82cc', 'the main sheet - u 0 to 1')
           + row('#e08f33', 'the attachment sheet - u 1 to 2')
         : kind === 'self'
-          ? row('#4a82cc', tt('viewer3d.the_sheet_and_u_1_to')
-                         + tt('viewer3d.which_is_what_this_entry_names'))
-          : row('#4a82cc', tt('viewer3d.the_sheet_it_has_no_attachment')
-                         + tt('viewer3d.spans_all_of_u_0_to')))
+          ? row('#4a82cc', tt('viewer3d.uv_self_key'))
+          : row('#4a82cc', tt('viewer3d.uv_single_key')))
     + row('#2a3a4d', 'outside u 0 to 2 - past the space the model was unwrapped in')
-    + row('#ff3d57', `where the art starts over - every ${
-        v3UvSpan() === 2 ? tt('viewer3d.second_unit') : 'unit'} of u`)
+    + row('#ff3d57', tt(v3UvSpan() === 2 ? 'viewer3d.art_starts_over_second' : 'viewer3d.art_starts_over_unit'))
     + `<span style="grid-column:1/-1">${tt('viewer3d.32_checker_cells_to_a_sheet')}</span>`;
 }
 
@@ -1676,8 +1670,7 @@ function v3Apply(){
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-    v3Note(tt('viewer3d.this_skin_is_not_a_power')
-         + tt('viewer3d.repeat_here'), true);
+    v3Note(tt('viewer3d.skin_not_power_of_two'), true);
   }
   v3.texture = t;
   // Which of the three shapes this entry is in is decided right here, and a
@@ -2041,8 +2034,8 @@ function v3CasFacts(host, g){
   const size = [0,1,2].map(k => (g.max[k]-g.min[k]).toFixed(2));
   const missing = (i.materials||[]).filter(m => m.texture && !m.rel);
   host.innerHTML = docPoints(tt('viewer3d.this_model'), [
-    `<b>${g.vertices.toLocaleString()}</b> ${tt('viewer3d.vertices_triangles',{triangles:g.triangles.toLocaleString()})}`,
-    tt('viewer3d.mesh_each_with_its_own_vertices',{groups_n:g.groups.length,groups:g.groups.length===1?'':'es'}),
+    tt('viewer3d.vertices_and_triangles',{vertices:g.vertices.toLocaleString(),triangles:g.triangles.toLocaleString()}),
+    ttN('viewer3d.meshes_own_vertices',g.groups.length),
     tt('viewer3d.in_game_units',{x:size[0],x2:size[1],x3:size[2]}),
     tt('viewer3d.exported_by_3ds_max_file_version',{version:i.version}),
     i.nodes && i.nodes.length > 1
@@ -2051,13 +2044,11 @@ function v3CasFacts(host, g){
     i.keys ? tt('viewer3d.animation_keys_over_s_which_this',{x:i.keys,i_n:i.length})
            : tt('viewer3d.no_animation_keys'),
     (i.materials||[]).length
-      ? tt('viewer3d.material',{materials_n:i.materials.length,materials:i.materials.length===1?'':'s'})
-        + (i.materials.map(m => m.texture
-            ? `<code>${esc(m.texture)}</code>` : tt('viewer3d.one_with_no_texture')).join(', '))
+      ? ttN('viewer3d.materials_list',i.materials.length,{list:i.materials.map(m => m.texture
+            ? `<code>${esc(m.texture)}</code>` : tt('viewer3d.one_with_no_texture')).join(', ')})
       : tt('viewer3d.no_materials'),
     missing.length
-      ? `<b>${missing.length}</b> ${tt('viewer3d.of_those_texture',{missing:missing.length===1?' is':tt('common.s_are')})} `
-        + tt('viewer3d.not_in_this_mod_so_what')
+      ? ttN('viewer3d.textures_missing_bare',missing.length)
       : ''
   ]) + v3FaultRows()
      + (g.notes||[]).map(n => `<div class="w-warn" style="margin-top:6px">${esc(n)}</div>`).join('');

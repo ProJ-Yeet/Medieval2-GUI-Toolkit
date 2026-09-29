@@ -26,15 +26,10 @@ const BLD_SETTLE_LABEL={city:tt('buildings.city'),castle:tt('buildings.castle'),
 
 //: The four numbers of a `recruit_pool` line, explained on their ? markers.
 const POOL_HELP={
-  initial:tt('buildings.points_the_pool_holds_the_moment')
-    +tt('buildings.one_unit_ready_to_hire_so'),
-  per_turn:tt('buildings.points_the_pool_gains_each_turn')
-    +tt('buildings.it_by_a_whole_turn_at')
-    +tt('buildings.one_unit_actually_takes'),
-  maximum:tt('buildings.the_most_points_the_pool_can')
-    +tt('buildings.how_many_of_the_unit_can'),
-  experience:tt('buildings.experience_the_unit_is_recruited_with')
-    +tt('buildings.chevron_9_is_three_gold_ones'),
+  initial:tt('buildings.pool_help_initial'),
+  per_turn:tt('buildings.pool_help_per_turn'),
+  maximum:tt('buildings.pool_help_maximum'),
+  experience:tt('buildings.pool_help_experience'),
 };
 
 /* ---- number boxes ----
@@ -173,7 +168,7 @@ async function renderBuildings(){
   count.textContent=`${lines.length}/${ov.lines.length}`;
   const head=`<div class="faction-head">
       <h2>${tt('buildings.buildings',{src:esc(state.src)})}</h2>
-      ${tt('buildings.line_levels',{lines_n:lines.length,lines:lines.length===1?'':'s',x:lines.reduce((n,l)=>n+l.level_count,0),x2:ov.vanilla_ui?'':`<span class="n w-warn">${tt('buildings.no_unpacked_vanilla_ui_so_missing')}</span>`,x3:ov.religions_are_vanilla?`<span class="n w-warn"
+      ${tt('buildings.lines_and_levels',{lines:ttN('buildings.line_count',lines.length),levels:ttN('buildings.level_count',lines.reduce((n,l)=>n+l.level_count,0)),vanilla:ov.vanilla_ui?'':`<span class="n w-warn">${tt('buildings.no_unpacked_vanilla_ui_so_missing')}</span>`,religions:ov.religions_are_vanilla?`<span class="n w-warn"
         title="${ttA('buildings.this_mod_has_no_data_descr')}">${tt('buildings.using_vanillas_five_religions')}</span>`:''})}
           <button class="${bldBrowse()==='gallery'?'on':''}" onclick="bldSetBrowse('gallery')"
             title="${ttA('buildings.cards_with_each_lines_finished_art')}">${tt('buildings.gallery')}</button>
@@ -225,8 +220,8 @@ function bldTreeRowHtml(l){
   const open=bldOpenTrees().has(l.name);
   const a=bldCardArt(l),top=l.top_level||l.levels[l.levels.length-1]||'';
   const bits=[BLD_SETTLE_LABEL[l.settlement]||l.settlement,
-    `${l.level_count} level${l.level_count===1?'':'s'}`];
-  if(l.recruit_count)bits.push(`${l.recruit_count} unit${l.recruit_count===1?'':'s'}`);
+    ttN('buildings.level_count',l.level_count)];
+  if(l.recruit_count)bits.push(ttN('buildings.count_of_units',l.recruit_count));
   if(l.religion)bits.push(esc(l.religion));
   if(l.convert_to)bits.push('↔ '+esc(l.convert_to));
   const warn=l.missing_units.length
@@ -253,8 +248,8 @@ function bldCardHtml(l){
   const top=l.top_level||l.levels[l.levels.length-1]||'';
   const a=bldCardArt(l);
   const tags=[`<span class="badge">${esc(BLD_SETTLE_LABEL[l.settlement]||l.settlement)}</span>`,
-    `<span class="badge">${tt('buildings.level',{level_count:l.level_count,level_count2:l.level_count===1?'':'s'})}</span>`];
-  if(l.recruit_count)tags.push(`<span class="badge cls">${tt('buildings.unit',{recruit_count:l.recruit_count,recruit_count2:l.recruit_count===1?'':'s'})}</span>`);
+    `<span class="badge">${ttN('buildings.level_count',l.level_count)}</span>`];
+  if(l.recruit_count)tags.push(`<span class="badge cls">${ttN('buildings.count_of_units',l.recruit_count)}</span>`);
   if(l.religion)tags.push(`<span class="badge merc">${esc(l.religion)}</span>`);
   if(l.missing_units.length)tags.push(`<span class="badge" style="color:var(--bad);border-color:var(--bad)"
       title="${ttA('buildings.named_in_a_recruit_pool_but',{missing_units:esc(l.missing_units.join(', '))})}"
@@ -517,8 +512,7 @@ const bldCvOwns=()=>{const cv=bldCvOf(); return !!(cv&&cv.owns);};
 function bldCvBlocked(){
   const cv=bldCvOf();
   if(!cv||!cv.err)return '';
-  return tt('buildings.the_code_view_cant_be_read')+cv.err+
-    tt('buildings.fix_it_or_undo_your_typing');
+  return tt('buildings.code_view_cant_be_read',{error:cv.err});
 }
 function bldCvToggleHtml(){
   return `<button class="${state.bld.cv?'on':''}" title="${ttA('buildings.show_this_building_line_exactly_as')}"
@@ -603,7 +597,7 @@ function bldCvLabel(el){
   const b=state.bld;
   if(!b||!b.work||!el||!el.closest)return '';
   const lv=b.work.levels[b.lvl]; if(!lv)return '';
-  const key=tt('buildings.level_2')+lv.name;
+  const key=tt('buildings.level_key',{name:lv.name});
   const cap=el.closest('[data-cap]');
   if(cap){
     const row=bldCapList()[+cap.dataset.cap];
@@ -649,7 +643,7 @@ function bldCvFind(label){
   // the same line under its file-line name: the position above already says
   // it, and survives a move where this does not
   if(/^capline#/.test(label))return [];
-  const pre=tt('buildings.level_2')+lv.name;
+  const pre=tt('buildings.level_key',{name:lv.name});
   if(label===pre+':header')
     return [...document.querySelectorAll('#bldBody [data-settlement],#bldBody .clausebar')];
   if(label===pre+':upgrades'){const u=document.getElementById('bldUpg');return u?[u]:[];}
@@ -674,7 +668,7 @@ function renderBuildingEditor(){
       <img style="width:74px;height:60px" onerror="iconRetry(this)"
         src="${bldIcon(d.levels[d.levels.length-1].name,'small')}">
       <div><div class="nm">${esc(d.label)}</div>
-        <div class="count"><code>${esc(d.name)}</code> ${tt('buildings.level_4',{x:esc(BLD_SETTLE_LABEL[d.settlement]||d.settlement),levels_n:d.levels.length,levels:d.levels.length===1?'':'s',convert_to:d.convert_to?` ${tt('buildings.converts_to')} <code>${esc(d.convert_to)}</code>`:'',religion:d.religion?` ${tt('buildings.religion')} <b>${esc(d.religion)}</b>`:''})}</div>
+        <div class="count"><code>${esc(d.name)}</code> ${ttN('buildings.settlement_levels',d.levels.length,{settlement:esc(BLD_SETTLE_LABEL[d.settlement]||d.settlement),convert_to:d.convert_to?` ${tt('buildings.converts_to_name',{name:esc(d.convert_to)})}`:'',religion:d.religion?` ${tt('buildings.religion_name',{name:esc(d.religion)})}`:''})}</div>
         <div class="count">${tt('buildings.defined_in_data_export_descr_buildings',{plugins:d.plugins.length?tt('buildings.plugin_s',{plugins_n:d.plugins.length,x:esc(d.plugins.map(p=>p.name).join(', '))}):''})}</div></div>
       <span id="bldVarBtn">${bldVarBtnHtml()}</span>
     </div>
@@ -866,11 +860,11 @@ function bldLocSection(lv,orig){
         ${Object.keys(all).map(c=>`<option value="${esc(c)}" ${c===cur?'selected':''}
           >${esc(named(c))}</option>`).join('')}
       </select></span></h4>
-      <div class="brow"><span class="k">${tt('buildings.name',{x:qm('The name shown on the building browser and the construction panel. Written as {'+rec.key+'}.',tt('common.name'))})}</span>
+      <div class="brow"><span class="k">${tt('buildings.name',{x:qm(tt('buildings.name_help',{key:rec.key}),tt('common.name'))})}</span>
         <input data-loc="name" value="${esc(rec.name)}" placeholder="${esc(orig.name)}"></div>
-      <div class="brow"><span class="k">${tt('buildings.short_description',{x:qm('The one-line summary under the building in the construction panel. Written as {'+rec.key+tt('buildings.desc_short'),tt('buildings.short_description_2'))})}</span>
+      <div class="brow"><span class="k">${tt('buildings.short_description',{x:qm(tt('buildings.short_description_help',{key:rec.key}),tt('buildings.short_description_2'))})}</span>
         <input data-loc="descr_short" value="${esc(rec.descr_short)}"></div>
-      <div class="brow"><span class="k">${tt('buildings.description',{x:qm('The full text on the building\'s info scroll. Written as {'+rec.key+tt('buildings.desc_a_building_needs_all_three'),tt('common.description'))})}</span>
+      <div class="brow"><span class="k">${tt('buildings.description',{x:qm(tt('buildings.description_help',{key:rec.key}),tt('common.description'))})}</span>
         <textarea data-loc="descr" style="flex:1;min-height:56px;padding:4px 7px;font-size:12.5px"
           >${esc(rec.descr)}</textarea></div>
       <div class="bnote">${tt('buildings.editing',{key:esc(rec.key),x:rec.present?''
@@ -1025,16 +1019,14 @@ function bldPoolFilterHtml(pools){
   const picked=sel.size
     ? [...sel].map(f=>f==='(any)'?'anyone':bldFacName(f)).join(', ').slice(0,40)
     : 'any';
-  return qm(tt('buildings.narrow_the_list_below_to_the')
-      +tt('buildings.a_big_level_trains_hundreds_almost')
-      +tt('buildings.who_can_train_what_is_usually'),tt('buildings.faction_filter'))
+  return qm(tt('buildings.faction_filter_help'),tt('buildings.faction_filter'))
     // A checklist, not a drop-down: a drop-down closes on every pick, so ticking
     // three factions was three trips. It stays open until a click lands outside.
     +`<details class="facpick" ${state.bld.poolFacOpen?'open':''}
       ontoggle="state.bld.poolFacOpen=this.open">
       <summary title="${esc(picked)}">${tt('buildings.faction',{picked:esc(picked)})}</summary>
       <div class="facpickpop">
-        <div class="fphead"><span class="count">${sel.size?`${sel.size} ticked`:tt('buildings.showing_every_unit')}</span>
+        <div class="fphead"><span class="count">${sel.size?ttN('buildings.count_ticked',sel.size):tt('buildings.showing_every_unit')}</span>
           ${sel.size?`<button class="mini" style="margin-left:auto"
             onclick="bldPoolFacPick('(clear)')">${tt('buildings.show_everything')}</button>`:''}</div>
         ${open?bldPoolFacRow('(any)',tt('buildings.no_faction_clause'),open,sel):''}
@@ -1100,8 +1092,8 @@ function bldPoolOwnFlag(c){
   const row=b.own[c.pool.unit+'|'+[...facs].sort().join(',')];
   if(!row||(!row.missing_ownership.length&&!row.missing_textures.length))return '';
   const bits=[];
-  if(row.missing_ownership.length)bits.push(tt('buildings.not_owned_by')+row.missing_ownership.join(', '));
-  if(row.missing_textures.length)bits.push(tt('buildings.no_texture_for')+row.missing_textures.join(', '));
+  if(row.missing_ownership.length)bits.push(tt('buildings.not_owned_by_list',{list:row.missing_ownership.join(', ')}));
+  if(row.missing_textures.length)bits.push(tt('buildings.no_texture_for_list',{list:row.missing_textures.join(', ')}));
   return `<span class="ownflag" title="${ttA('buildings.saving_fixes_this',{bits:esc(bits.join('; '))})}">⚠</span>`;
 }
 function bldPoolRow(c){
@@ -1297,7 +1289,7 @@ function bldBulkPaste(){
   const mode=bldPasteMode();
   sel.forEach(h=>bldCondsOnto(h,clip.conds,mode));
   bldTouched();
-  toast(tt('buildings.s_requirements_unit',{unit:clip.unit,mode:mode==='add'?tt('buildings.added_to'):tt('buildings.copied_onto'),sel_n:sel.length,sel:sel.length===1?'':'s'}));
+  toast(ttN(mode==='add'?'buildings.requirements_added_to_units':'buildings.requirements_copied_onto_units',sel.length,{unit:clip.unit}));
 }
 const bldPasteMode=()=>(state.bld.pasteMode==='add'?'add':'replace');
 function bldSetPasteMode(v){ state.bld.pasteMode=v; }
@@ -1312,7 +1304,7 @@ function bldBulkDelete(){
     bldBulk().sel.delete(c);
   });
   bldTouched();
-  toast(tt('buildings.recruit_pool_marked_for_removal',{sel_n:sel.length,sel:sel.length===1?'':'s'}));
+  toast(ttN('buildings.recruit_pools_marked_for_removal',sel.length));
 }
 // Only the boxes you actually filled in are written - a blank one leaves that
 // number alone, so "give these twelve units max 4" doesn't also zero their
@@ -1324,7 +1316,7 @@ function bldBulkNums(){
   if(!keys.length){toast(tt('buildings.fill_in_at_least_one_of'));return;}
   sel.forEach(c=>keys.forEach(k=>{c.pool[k]=n[k].trim();}));
   bldTouched();
-  toast(tt('buildings.set_on_pool',{POOL_LABEL:keys.map(k=>POOL_LABEL[k]||k).join(', '),sel_n:sel.length,sel:sel.length===1?'':'s'}));
+  toast(ttN('buildings.pool_numbers_set_on_pools',sel.length,{labels:keys.map(k=>POOL_LABEL[k]||k).join(', ')}));
 }
 /* What the three recruitment numbers are CALLED, in one place.
 
@@ -1373,7 +1365,7 @@ function bldBulkBar(shown){
       title="${ttA('buildings.edit_one_requires_clause_and_put')}">${tt('buildings.requirements_for',{x:n})}</button>
     ${bldCopySelect(sel)}
     <button ${clip&&n?'':'disabled'} onclick="bldBulkPaste()"
-      title="${clip?esc(tt('buildings.paste_2')+clip.unit+tt('buildings.s_requirements')+(clip.text||tt('buildings.none_so_always_2')))
+      title="${clip?esc(tt('buildings.paste_unit_requirements',{unit:clip.unit,text:clip.text||tt('buildings.none_so_always_2')}))
                   :tt('buildings.copy_a_units_requirements_first')}">${tt('buildings.paste',{clip:clip?` ${esc(clip.unit)}’s`:''})}</button>
     <select onchange="bldSetPasteMode(this.value)" title="${ttA('buildings.what_pasting_does_to_what_the')}">
       <option value="replace" ${bldPasteMode()==='replace'?'selected':''}>${tt('buildings.replace_theirs')}</option>
@@ -1723,7 +1715,7 @@ function bldWire(){
       el.oninput=()=>{c.pool[k]=el.value.trim();
         // the grid card keeps its "a unit every N turns" line under the boxes
         if(k==='per_turn')row.querySelectorAll('[data-turns]')
-          .forEach(t=>{t.textContent=tt('buildings.a_unit_2')+poolTurns(el.value);});
+          .forEach(t=>{t.textContent=tt('buildings.a_unit',{x:poolTurns(el.value)});});
         mark(el,diff()); rowMark(); bldDirtyNote();};});
     const kw=row.querySelector('[data-kw]');
     if(kw){ mark(kw,!was||kw.value!==was.keyword);
@@ -1908,7 +1900,7 @@ function bldClauseApply(){
   if(c.kind==='bulk'){
     const n=(c.hosts||[]).length;
     (c.hosts||[]).forEach(h=>bldCondsOnto(h,c.conds,c.mode));
-    toast(tt('buildings.unit_3',{mode:c.mode==='add'?tt('buildings.added_to_2'):tt('buildings.set_on'),x:n,x2:n===1?'':'s',x3:bldClauseText(c.conds)||tt('buildings.no_requirements')}),4200);
+    toast(ttN(c.mode==='add'?'buildings.bulk_added_to_units':'buildings.bulk_set_on_units',n,{clause:bldClauseText(c.conds)||tt('buildings.no_requirements')}),4200);
   }else if(c.kind==='upgrade'){
     const lv=b.work.levels[b.lvl],i=c.host.upgIndex;
     const clause=bldClauseText(c.conds);
@@ -1931,7 +1923,7 @@ function renderClauseDialog(){
   const b=state.bld,c=b.clause;
   const bulk=c.kind==='bulk',n=bulk?c.hosts.length:0;
   const what=bulk
-    ? tt('buildings.who_can_recruit_these_unit_here',{x:n,x2:n===1?'':'s'})
+    ? ttN('buildings.who_can_recruit_these_units_here',n)
     : c.kind==='level'
     ? `${tt('buildings.who_can_build')} <b>${esc(b.d.levels[b.lvl].label)}</b>`
     : c.kind==='upgrade'
@@ -1959,7 +1951,7 @@ function renderClauseDialog(){
     <div class="foot">
       <button onclick="bldClauseCancel()">${tt('common.cancel')}</button>
       <button class="primary" onclick="bldClauseApply()">${bulk
-        ? tt('buildings.use_on_unit',{x:n,x2:n===1?'':'s'}) : tt('buildings.use_these_requirements')}</button>
+        ? ttN('buildings.use_on_units',n) : tt('buildings.use_these_requirements')}</button>
     </div>`;
   document.getElementById('condAdd').onchange=e=>{
     if(!e.target.value)return;
@@ -1975,7 +1967,7 @@ function renderClauseDialog(){
 function bldBulkClauseHead(c){
   const names=c.units.slice(0,14).map(esc);
   return `<div class="ownwarn" style="margin:0 0 10px">
-    ${tt('buildings.recruit_pool',{hosts_n:c.hosts.length,hosts:c.hosts.length===1?'':'s',names:names.join('</code> <code>'),x:c.units.length>names.length?` <span class="count">${tt('buildings.more',{n:c.units.length-names.length})}</span>`:''})}
+    ${ttN('buildings.recruit_pools_named',c.hosts.length,{names:names.join('</code> <code>'),more:c.units.length>names.length?` <span class="count">${tt('buildings.more',{n:c.units.length-names.length})}</span>`:''})}
     <div class="brow" style="margin:7px 0 0">
       <label class="chk"><input type="radio" name="bulkmode" value="replace"
         ${c.mode!=='add'?'checked':''} onchange="bldClauseMode('replace')">
@@ -1988,8 +1980,7 @@ function bldBulkClauseHead(c){
       ? tt('buildings.they_all_require_the_same_thing')
       : `${tt('buildings.they_do_not_all_require_the')} `}${
       c.mode==='add'
-      ? tt('buildings.each_term_below_is_anded_onto')
-        +tt('buildings.written_twice')
+      ? tt('buildings.each_term_anded_onto_clause')
       : tt('buildings.replacing_throws_away_whatever_each_of')}</div>
   </div>`;
 }
@@ -2077,15 +2068,15 @@ function condOptions(list,dep){
     // what the picker shows - a bare code name says nothing about where it bites.
     case 'religion': return (v.religion_rows||(v.religions||[]).map(r=>({code:r})))
       .map(r=>({value:r.code,label:r.regions
-        ? tt('buildings.region_follow_it_up_to',{regions:r.regions,regions2:r.regions===1?'':'s',x:r.max})
+        ? ttN('buildings.regions_follow_it_up_to',r.regions,{max:r.max})
         : tt('buildings.no_region_follows_this')}));
     case 'hidden_resource': return (v.hidden_resources||[]).map(r=>({value:r.code,
-      label:r.count?tt('buildings.region_2',{count:r.count,count2:r.count===1?'':'s',regions:r.regions.slice(0,4).join(', '),regions2:r.regions.length>4?'…':''}):tt('buildings.no_region_carries_this')}));
+      label:r.count?ttN('buildings.regions_listed',r.count,{regions:r.regions.slice(0,4).join(', '),more:r.regions.length>4?'…':''}):tt('buildings.no_region_carries_this')}));
     case 'resource': return (v.resources||[]).map(r=>({value:r.code||r,
-      label:r.count?tt('buildings.region_2',{count:r.count,count2:r.count===1?'':'s',regions:r.regions.slice(0,4).join(', '),regions2:r.regions.length>4?'…':''}):tt('buildings.not_placed_in_any_region')}));
+      label:r.count?ttN('buildings.regions_listed',r.count,{regions:r.regions.slice(0,4).join(', '),more:r.regions.length>4?'…':''}):tt('buildings.not_placed_in_any_region')}));
     case 'settlement': return (state.bld.ov.settlement_levels||[]).map(s=>({value:s,label:s}));
     case 'building': return (v.building_levels||[]).map(b=>({value:b.line,
-      label:`${b.levels.length} level${b.levels.length===1?'':'s'}`}));
+      label:ttN('buildings.level_count',b.levels.length)}));
     case 'level':{
       const line=(v.building_levels||[]).find(b=>b.line===dep);
       return (line?line.levels:[]).map(l=>({value:l,label:l}));}
@@ -2120,7 +2111,7 @@ function condWhereHtml(kind,code){
   const rows=places.map(p=>`<div class="wrow"><b>${esc(p.settlement)}</b>
       <span>${esc(p.region)}</span>
       ${p.faction?`<i>${esc(condOwnerName(p.faction))}</i>`:''}</div>`).join('');
-  return `<span class="where" data-where="${esc(kind)}">${tt('buildings.settlement',{places_n:places.length,places:places.length===1?'':'s'})}
+  return `<span class="where" data-where="${esc(kind)}">${ttN('buildings.places_count',places.length)}
     <span class="wpop"><div class="whead">${tt('buildings.from_world_maps_base_descr_regions',{code:esc(code)})}</div>${rows}</span></span>`;
 }
 /* ---- every gate at once (Phase 51) ----
@@ -2191,7 +2182,7 @@ function bldGateChip(conds){
   const g=bldGateEval(conds,bldVocab().regions);
   if(!g)return '';
   if(!g.pass.length)return `<span class="where none gate" title="${ttA('buildings.no_region_in_descr_regions_txt_2')}">${tt('buildings.no_region_passes_every_gate')}</span>`;
-  return `<span class="where gate">${tt('buildings.region_pass',{pass_n:g.pass.length,pass:g.pass.length===1?'':'s'})}
+  return `<span class="where gate">${ttN('buildings.regions_pass',g.pass.length)}
     <span class="wpop"><div class="whead">${tt('buildings.every_resource_gate_at_once_from',{assumed:g.assumed.length
         ?`<br>${tt('buildings.assuming',{bldGateAssumedText:esc(bldGateAssumedText(g))})}`:''})}</div>${bldGateRowsHtml(g,conds)}</span></span>`;
 }
@@ -2365,7 +2356,7 @@ function bldOwnHtml(row){
   if(!row.known)return `<div class="ownwarn bad">${tt('buildings.is_not_a_unit_in_this',{unit:esc(row.unit)})}</div>`;
   const bits=[],fixes=[];
   if(row.missing_ownership.length){
-    bits.push(`<b>${row.missing_ownership.map(bldFacName).map(esc).join(', ')}</b> ${tt('buildings.not_in_s_edu_ownership_so',{x:row.missing_ownership.length===1?'is':'are',unit:esc(row.unit),x2:row.missing_ownership.length===1?'them':'those'})}`);
+    bits.push(ttN('buildings.factions_not_in_unit_ownership',row.missing_ownership.length,{factions:row.missing_ownership.map(bldFacName).map(esc).join(', '),unit:esc(row.unit)}));
     fixes.push(tt('buildings.the_ownership_line_is_extended'));
   }
   if(row.missing_textures.length){
@@ -2373,7 +2364,7 @@ function bldOwnHtml(row){
     fixes.push(tt('buildings.the_missing_textures_are_copied_from'));
   }
   if(!bits.length)return `<div class="ownwarn ok">${tt('buildings.every_faction_here_can_already_field',{unit:esc(row.unit)})}</div>`;
-  return `<div class="ownwarn">${tt('buildings.saving_fixes_untick_fix_unit_ownership',{bits:bits.join('; and '),bits2:bits.length===1?'that':'both',fixes:fixes.join(', and ')})}</div>`;
+  return `<div class="ownwarn">${ttN('buildings.saving_fixes_these',bits.length,{bits:bits.join('; and '),fixes:fixes.join(', and ')})}</div>`;
 }
 // Over many units the individual warnings would be a wall of text, so they are
 // rolled into one line per problem naming the units - the answer you want is
@@ -2389,9 +2380,9 @@ function bldOwnManyHtml(rows){
   const list=us=>`<code>${us.slice(0,12).map(esc).join('</code> <code>')}</code>${
     us.length>12?` <span class="count">${tt('buildings.more_2',{us:us.length-12})}</span>`:''}`;
   const bits=[];
-  if(unknown.length)bits.push(`<div><b class="w-bad">${unknown.length}</b> ${tt('buildings.not_in_this_mods_edu_at',{unknown:unknown.length===1?tt('buildings.that_pool'):tt('buildings.those_pools'),x:list(unknown)})}</div>`);
-  if(noOwn.length)bits.push(`<div><b>${noOwn.length}</b> ${tt('buildings.not_list_every_one_of_those',{noOwn:noOwn.length===1?'does':'do',x:list(noOwn.map(r=>r.unit))})}</div>`);
-  if(noTex.length)bits.push(`<div><b>${noTex.length}</b> ${tt('buildings.no_battle_model_texture_for_some',{noTex:noTex.length===1?'has':'have',x:list(noTex.map(r=>r.unit))})}</div>`);
+  if(unknown.length)bits.push(`<div>${ttN('buildings.units_not_in_this_mods_edu',unknown.length,{list:list(unknown)})}</div>`);
+  if(noOwn.length)bits.push(`<div>${ttN('buildings.units_not_listing_every_faction',noOwn.length,{list:list(noOwn.map(r=>r.unit))})}</div>`);
+  if(noTex.length)bits.push(`<div>${ttN('buildings.units_without_battle_model_texture',noTex.length,{list:list(noTex.map(r=>r.unit))})}</div>`);
   return `<div class="ownwarn ${unknown.length?'bad':''}">${bits.join('')}
     <div class="count" style="margin-top:5px">${docPoints(
       tt('buildings.saving_fixes_the_ownership_and_copies'),[
@@ -2484,8 +2475,7 @@ function bldAddPoolDialog(){
         :`<div class="bnote">${tt('buildings.no_city_castle_twin_the_tool')}</div>`}
       </div>
 
-      <div class="bnote">${docPoints(tt('buildings.each_new_pool_is_gated_to')
-        +tt('buildings.ownership_so_only_the_factions_that'),[
+      <div class="bnote">${docPoints(tt('buildings.new_pool_gated_to_ownership'),[
         tt('buildings.open_requirements_on_the_row_to'),
         tt('buildings.or_tick_several_rows_and_use')])}</div>
     </div>
@@ -2553,10 +2543,10 @@ function bldPickRender(){
     </div>`).join('')||`<div class="caprow"><span class="count">${tt('common.no_units_match')}</span></div>`;
   const n=p.picked.size;
   const cnt=document.getElementById('bpCount');
-  if(cnt)cnt.textContent=n?`${n} ticked${units.length<n?tt('buildings.some_of_them_outside_the_filter'):''}`
+  if(cnt)cnt.textContent=n?ttN(units.length<n?'buildings.count_ticked_some_outside':'buildings.count_ticked',n)
                           :tt('buildings.tick_the_units_to_add');
   const add=document.getElementById('bpAdd');
-  if(add){add.textContent=n?tt('buildings.add_unit_2',{x:n,x2:n===1?'':'s'}):tt('common.add_2');add.disabled=!n;}
+  if(add){add.textContent=n?ttN('buildings.add_units_count',n):tt('common.add_2');add.disabled=!n;}
 }
 /* A pool with no clause is trained by EVERY faction that can build the level,
    which is almost never what adding one unit means - and for the factions that
@@ -2774,7 +2764,7 @@ function bldTreeFindHtml(){
   const f=t.findings||[];
   if(!f.length)return `<div class="bsec"><h4>${tt('buildings.the_tree_clean')}</h4>
     <div class="bnote">${tt('buildings.this_lines_name_is_its_own',{rules_n:t.rules.length})}</div></div>`;
-  return `<div class="bsec"><h4>${tt('buildings.the_tree_finding',{f_n:f.length,f:f.length===1?'':'s'})}</h4>
+  return `<div class="bsec"><h4>${ttN('buildings.the_tree_findings',f.length)}</h4>
     ${['fatal','warn','note'].filter(s=>f.some(x=>x.severity===s)).map(s=>`
       <div class="ckgroup"><div class="ckhead ${BLD_SEV[s].cls}">
         ${BLD_SEV[s].word} <span class="count">${
@@ -2899,7 +2889,7 @@ function bldHidInner(){
   const base=h.base||{names:[]};
   const rows=base.names.map(x=>`<div class="hidrow${x.provinces||x.clauses?'':' unused'}">
       <b>${esc(x.name)}</b>
-      <span class="count">${tt('buildings.province_clause',{provinces:x.provinces,provinces2:x.provinces===1?'':'s',clauses:x.clauses,clauses2:x.clauses===1?'':'s'})}</span>
+      <span class="count">${tt('buildings.provinces_and_clauses',{provinces:ttN('buildings.province_count',x.provinces),clauses:ttN('buildings.clause_count',x.clauses)})}</span>
       <button class="x danger" onclick="bldHidAsk('remove','${q1(esc(x.name))}')"
         title="${ttA('buildings.take_off_the_line_shows_what',{name:esc(x.name)})}">🗑</button>
     </div>`).join('');
@@ -3279,10 +3269,8 @@ function bldVarRender(){
   if(!r.twin){
     modal.innerHTML=`<h2>${tt('buildings.city_and_castle_side_by_side')}</h2>
       <div class="mbody"><div class="bnote">${esc(r.reason||'')}${docPoints('',[
-        `${tt('buildings.a_pair_is_matched_by_name')} `
-          +tt('buildings.castle_barracks_stables_against_c_stables'),
-        `${tt('buildings.a_line_buildable_in_both_settlement')} `
-          +tt('buildings.compare_because_it_already_is_both')])}</div></div>
+        tt('buildings.pair_matched_by_name'),
+        tt('buildings.line_in_both_has_no_second_half')])}</div></div>
       <div class="foot"><button onclick="bldPickCancel()">${tt('buildings.back')}</button></div>`;
     return;
   }
@@ -3300,16 +3288,12 @@ function bldVarRender(){
           <b>${esc(r.twin_label||r.twin)}</b><code>${esc(r.twin)}</code></div>
       </div>
       <div class="count">${docPoints(gaps
-        ? `<b class="w-warn">${gaps}</b> ${tt('buildings.unit_s_are_trained_by_one')}`
+        ? tt('buildings.gaps_trained_by_one_half',{gaps})
         : tt('buildings.both_halves_train_the_same_units'),[
-        r.differs?`<b>${r.differs}</b> ${tt('buildings.unit_s_are_trained_by_both')} `
-          +tt('buildings.numbers_that_is_often_deliberate_so'):'',
-        `${tt('buildings.a_requires_clause_that_differs_is')} `
-          +tt('buildings.clause_names_the_city_factions_and'),
-        `${tt('buildings.the_four_numbers_on_either_side')} `
-          +tt('buildings.them_puts_all_four_onto_the'),
-        tt('buildings.nothing_is_written_until_you_save')
-          +tt('buildings.other_half_is_listed_under_also')])}</div>
+        r.differs?tt('buildings.differs_trained_by_both',{differs:r.differs}):'',
+        tt('buildings.differing_clause_not_counted'),
+        tt('buildings.four_numbers_can_be_typed_into'),
+        tt('buildings.nothing_written_until_save')])}</div>
       <div class="sndtabs" style="margin:8px 0">
         ${tab('gaps',tt('buildings.only_on_one_side'),gaps)}
         ${tab('numbers',tt('buildings.gaps_and_different_numbers'),gaps+r.differs)}
@@ -3392,8 +3376,7 @@ function bldVarNums(u,li,side){
   const p=side==='a'?u.a:u.b;
   if(!p)return `<span class="vcnums"><span class="w-warn">${tt('buildings.not_trained')}</span></span>`;
   return `<span class="vcnums">${VAR_NUM_KEYS.map(k=>numBox(
-    tt('buildings.data_vc_data_vcside_data_vcli',{x:k,side,li})
-    +tt('buildings.data_vcu_title',{unit:esc(u.unit),POOL_LABEL:esc(POOL_LABEL[k])}),
+    `data-vc="${k}" data-vcside="${side}" data-vcli="${li}" data-vcu="${esc(u.unit)}" title="${esc(POOL_LABEL[k])}"`,
     p[k],VAR_NUM_STEP[k])).join('')}</span>`;
 }
 // All four across the divide at once, which is the commonest thing to want once
@@ -3536,8 +3519,7 @@ function bldVarCopy(li,unit,from){
   lv.differs=lv.units.filter(x=>x.numbers_differ).length;
   r.differs=r.levels.reduce((n,l)=>n+l.differs,0);
   bldTouched(); bldVarRender();
-  toast(tt('buildings.the_halfs_numbers_put_onto_the',{x:u.name||u.unit,from_label,into})
-       +tt('buildings.save_the_building_to_write_them'),4200);
+  toast(tt('buildings.halfs_numbers_put_onto_other_half',{name:u.name||u.unit,from_label,into}),4200);
 }
 /* Copy one unit into the half that does not train it.
 
@@ -3756,8 +3738,8 @@ function bldUnitRow(r,i,KEYS,modal){
     ${KEYS.map(([k],j)=>{
       const v=bldUnitVal(r,k);
       const odd=String(v).trim()!==modal[j][0];
-      return `<span class="bcn ${odd?'odd':''}" title="${odd?tt('buildings.differs_from_what_most_pools_use')+esc(modal[j][0])+')':''}">
-        ${numBox(tt('buildings.data_bc_data_bcline',{x:k,cap_line:r.cap_line}),v,k==='per_turn'?'turns':(k==='experience'?'1':'pool'))}</span>`;
+      return `<span class="bcn ${odd?'odd':''}" title="${odd?ttA('buildings.differs_from_what_most_pools_use_value',{value:esc(modal[j][0])}):''}">
+        ${numBox(`data-bc="${k}" data-bcline="${r.cap_line}"`,v,k==='per_turn'?'turns':(k==='experience'?'1':'pool'))}</span>`;
     }).join('')}
     <span class="count bcreq ${reqEdited?'changed':''}" title="${esc(req||tt('buildings.no_conditions'))}"><span>${
       esc(req||tt('common.none_2'))}</span>
@@ -3848,8 +3830,7 @@ function bldUnitApply(){
 function openUnitFromBuilding(type){
   const b=state.bld;
   if(bldDirty()&&!confirm(
-      tt('buildings.you_have_unsaved_building_changes_they')
-      +tt('buildings.switch_to_the_unit_editor_now')))return;
+      tt('buildings.unsaved_changes_switch_to_unit_editor')))return;
   state.bldReturn={line:b.line,lvl:b.lvl,label:b.d.label};
   closeModal();
   state.mode='edit';
@@ -3966,8 +3947,8 @@ function bldPlanHtml(p,stale,fold='bld.probe'){
                p.edu_rewritten?'export_descr_unit.txt':'',
                p.modeldb_rewritten?'unit_models/battle_models.modeldb':''].filter(Boolean);
   // folded like the lists above it, with what it found counted on the heading
-  const tally=[[(p.changes||[]).length,'change'],[(p.warnings||[]).length,'warning'],
-    [(p.errors||[]).length,'error']].filter(([n])=>n).map(([n,w])=>`${n} ${w}${n===1?'':'s'}`);
+  const tally=[[(p.changes||[]).length,'buildings.change_count'],[(p.warnings||[]).length,'buildings.warning_count'],
+    [(p.errors||[]).length,'buildings.error_count']].filter(([n])=>n).map(([n,id])=>ttN(id,n));
   return `<div class="bsec ${foldCls(fold)}" data-fold="${fold}" style="margin-top:14px"><h4>${tt('buildings.probe',{tally:tally.length?` <span class="count">${tally.join(' · ')}</span>`:'',stale:stale?` <span class="w-warn">${tt('buildings.out_of_date_edited_since')}</span>`:''})}</h4>
     <div class="sum">${rows.join('')}
       ${files.length?`<div class="srow shead" style="margin-top:6px"><span class="sicon">→</span>
@@ -3993,7 +3974,7 @@ async function bldSave(){
     _bldFiltersFor='';
     await openBuilding(b.line,true);           // re-read from disk, keep the level
     render();
-  }catch(e){ toast(tt('buildings.save_failed')+e,5000); }
+  }catch(e){ toast(tt('buildings.save_failed_error',{error:e}),5000); }
   finally{ if(btn)btn.disabled=false; }
 }
 
@@ -4107,8 +4088,8 @@ function bldNtHint(){
   if(!name)return `<div class="bnote">${tt('buildings.give_the_line_a_name_to')}</div>`;
   const kept=n.levels.map(x=>(x.name||'').trim()).filter(Boolean);
   return `<div class="bnote">${docPoints(tt('buildings.what_create_would_write'),[
-    tt('buildings.building_with_level_at_the_end',{name:esc(name),kept_n:kept.length,kept:kept.length===1?'':'s'}),
-    tt('buildings.text_key_in_text_export_buildings',{kept:kept.length*3,kept2:kept.length*3===1?'':'s'}),
+    ttN('buildings.building_with_levels_at_the_end',kept.length,{name:esc(name)}),
+    ttN('buildings.text_keys_in_export_buildings',kept.length*3),
     tt('buildings.probe_first_nothing_is_written_until')])}</div>`;
 }
 function bldNtPaint(){
@@ -4169,8 +4150,7 @@ function bldNtPaint(){
         <div class="bnote">${docPoints(tt('buildings.every_level_starts_from_the_same'),[
           tt('buildings.an_empty_capability_block_and_material'),
           tt('buildings.a_build_time_and_a_cost'),
-          `${tt('buildings.a_requires_factions_naming_every_culture')} `
-            +tt('buildings.belongs_to_so_the_line_starts'),
+          tt('buildings.requires_factions_naming_every_culture'),
           tt('buildings.units_come_after_open_the_line')])}</div>
       </div>
 
@@ -4229,6 +4209,6 @@ async function bldNtCreate(){
     _bldFiltersFor='';
     render();                       // the list behind the dialog gained a row
     await openBuilding(name);       // …and the new line opens on top of it
-  }catch(e){ toast(tt('buildings.create_failed')+e,6000); }
+  }catch(e){ toast(tt('buildings.create_failed_error',{error:e}),6000); }
   finally{ if(btn)btn.disabled=false; if(bldNt())bldNt().busy=false; }
 }

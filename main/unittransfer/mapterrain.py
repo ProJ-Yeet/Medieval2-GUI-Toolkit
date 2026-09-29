@@ -628,7 +628,7 @@ def plan(mod, cm: CampaignMap, campaign: str = "", season: str = "summer") -> Pl
         at = _first_tile(raw_slots, p.width, k)
         p.gaps.append({"climate": "", "ground": "", "file": name,
                        "tiles": p.counts[k - 1], "tile": list(at) if at else None,
-                       "why": _i18n.msg("eng.mapterrain.draws_counts_tile_with_and_it", "{AERIAL_REL} draws {counts:,} tile{x} with {name}, and it is not in {TEXTURE_DIR_REL}", AERIAL_REL=AERIAL_REL, counts=p.counts[k - 1], x='' if p.counts[k - 1] == 1 else 's', name=name, TEXTURE_DIR_REL=TEXTURE_DIR_REL)})
+                       "why": _i18n.msgN("eng.mapterrain.draws_tiles_with_not_in", p.counts[k - 1], "{AERIAL_REL} draws {count:,} tile with {name}, and it is not in {TEXTURE_DIR_REL}", "{AERIAL_REL} draws {count:,} tiles with {name}, and it is not in {TEXTURE_DIR_REL}", AERIAL_REL=AERIAL_REL, name=name, TEXTURE_DIR_REL=TEXTURE_DIR_REL)})
     p.gaps.sort(key=lambda g: -g["tiles"])
     _PLANS[memo] = (sig, p)
     return p

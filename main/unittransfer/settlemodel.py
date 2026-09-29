@@ -257,8 +257,19 @@ def plan(dst, src, body: dict) -> ModelPlan:
         p.textures.append({"texture": t, "found": t in found,
                            "file": found[t][1] if t in found else ""})
     if missing:
-        p.warnings.append(
-            _i18n.msg("eng.settlemodel.names_texture_s_that_not_have", "{name} names {missing_n} texture(s) that {x} not have: {missing}. The model comes without {x2} and draws untextured unless {name2} already has {x3} beside it.", name=name, missing_n=len(missing), x='the files picked do' if p.source == 'disk' else p.source + ' does', missing=', '.join(missing[:6]), x2='it' if len(missing) == 1 else 'them', name2=dst.name, x3='it' if len(missing) == 1 else 'them'))
+        shown = dict(name=name, missing=', '.join(missing[:6]), name2=dst.name)
+        if p.source == 'disk':
+            p.warnings.append(_i18n.msgN(
+                "eng.settlemodel.textures_the_files_picked_lack", len(missing),
+                "{name} names {count} texture(s) that the files picked do not have: {missing}. The model comes without it and draws untextured unless {name2} already has it beside it.",
+                "{name} names {count} texture(s) that the files picked do not have: {missing}. The model comes without them and draws untextured unless {name2} already has them beside it.",
+                **shown))
+        else:
+            p.warnings.append(_i18n.msgN(
+                "eng.settlemodel.textures_the_source_lacks", len(missing),
+                "{name} names {count} texture(s) that {source} does not have: {missing}. The model comes without it and draws untextured unless {name2} already has it beside it.",
+                "{name} names {count} texture(s) that {source} does not have: {missing}. The model comes without them and draws untextured unless {name2} already has them beside it.",
+                source=p.source, **shown))
 
     # where it lands: its own folder, else one of its own, else refused
     folder = str(body.get("folder") or "").replace("\\", "/").strip().strip("/")
@@ -277,7 +288,11 @@ def plan(dst, src, body: dict) -> ModelPlan:
         if not clash:
             break
     else:
-        p.errors.append(_i18n.msg("eng.settlemodel.already_in_with_other_bytes_and", "{clash} {x} already in {name} with other bytes, and a model is never copied over another. Give it a folder of its own.", clash=', '.join(clash[:4]), x='is' if len(clash) == 1 else 'are', name=dst.name))
+        p.errors.append(_i18n.msgN(
+            "eng.settlemodel.files_already_in_with_other_bytes", len(clash),
+            "{clash} is already in {name} with other bytes, and a model is never copied over another. Give it a folder of its own.",
+            "{clash} are already in {name} with other bytes, and a model is never copied over another. Give it a folder of its own.",
+            clash=', '.join(clash[:4]), name=dst.name))
         return p
     try:
         from . import fileswap
@@ -362,7 +377,8 @@ def apply(p: ModelPlan) -> dict:
     from .logutil import file_op, log
 
     if p.errors:
-        raise ValueError("cannot apply: " + "; ".join(p.errors))
+        raise ValueError(_i18n.msg("eng.settlemodel.cannot_apply", "cannot apply: {why}",
+                                   why="; ".join(p.errors)))
     if not p.text:
         raise ValueError(_i18n.msg("eng.settlemodel.nothing_to_change", "nothing to change"))
     mod = p.dst
@@ -399,9 +415,10 @@ def apply(p: ModelPlan) -> dict:
         "unit_type": f"{p.culture} {p.target}", "resolved_type": p.rel,
         "options": {"model": p.model, "culture": p.culture, "target": p.target},
         "applied": True, "undone": False, "note": "",
-        "summary": "\n".join([f"settlement model {p.model} onto {p.culture} "
-                              f"{p.target} in {mod.name}"]
-                             + [f"  {c}" for c in p.changes]),
+        "summary": _i18n.msg("eng.settlemodel.settlement_model_onto",
+                             "settlement model {model} onto {culture} {target} in {mod}{changes}",
+                             model=p.model, culture=p.culture, target=p.target,
+                             mod=mod.name, changes="".join(f"\n  {c}" for c in p.changes)),
         "warnings": list(p.warnings),
         "manifest": manifest, "backup_root": str(backup_root),
     }

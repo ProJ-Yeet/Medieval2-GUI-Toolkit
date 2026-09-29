@@ -60,7 +60,7 @@ function renderStrings(){
     main.innerHTML = strip + `<div class="empty">${tt('strings.has_no_strings_bin_files_looked',{mod:esc(s.mod),dir:esc(s.dir)})}</div>`;
     return;
   }
-  count.textContent = `${s.files.length} file${s.files.length===1?'':'s'}`;
+  count.textContent = ttN('strings.file_count', s.files.length);
   main.innerHTML = strip + `<div class="strwrap">
     <div class="strlist">${s.files.map(strFileRow).join('')}</div>
     <div class="strmain" id="strMain">${strRowsHtml()}</div>
@@ -79,15 +79,7 @@ function renderStrings(){
    wrong order does it too. Nothing is broken by it, so the wording stays a
    quiet warning colour and the whole explanation hangs off a ? rather than
    crowding a list of forty files. */
-const STR_STALE_HELP =
-  tt('strings.the_game_does_not_read_the')
-  + tt('strings.it_and_this_mod_saved_the')
-  + tt('strings.whatever_the_txt_has_been_made')
-  + tt('strings.game_yet_that_is_usually_just')
-  + tt('strings.rows_here_are_the_bins_real')
-  + tt('strings.the_new_thing_on_the_next')
-  + tt('strings.rebuild_from_txt_only_when_the')
-  + tt('strings.keep_because_it_compiles_the_whole');
+const STR_STALE_HELP = tt('strings.stale_help');
 
 function strFileRow(f){
   const on = state.str.file === f.rel;
@@ -151,9 +143,9 @@ function strRowsHtml(){
       ${f.txt && r.tagged ? `<button title="${ttA('strings.compile_over_this_archive_so_the',{txt:esc(f.txt)})}"
         onclick="strRebuild()">${tt('strings.rebuild_from',{txt:esc(f.txt)})}</button>` : ''}
       <button class="primary" ${pending?'':'disabled'} onclick="strSave()">
-        ${tt('strings.save_change',{pending,pending2:pending===1?'':'s'})}</button>
+        ${ttN('strings.save_changes',pending)}</button>
     </div>
-    ${nAdd || nRm ? `<div class="strnote">${tt('strings.entries_now_after_saving',{count:r.count,x:r.count + nAdd - nRm,nAdd:nAdd ? `${nAdd} new` : '',x2:nAdd && nRm ? ', ' : '',nRm:nRm ? `${nRm} removed` : '',x3:r.index && nAdd !== nRm ? tt('strings.the_archives_trailing_tag_index_names',{index:r.index}) : ''})}</div>` : ''}
+    ${nAdd || nRm ? `<div class="strnote">${tt(nAdd && nRm ? 'strings.entries_now_after_saving_new_and_removed' : nAdd ? 'strings.entries_now_after_saving_new' : 'strings.entries_now_after_saving_removed',{count:r.count,after:r.count + nAdd - nRm,added:nAdd,removed:nRm,index:r.index && nAdd !== nRm ? tt('strings.the_archives_trailing_tag_index_names',{index:r.index}) : ''})}</div>` : ''}
     ${refused.add ? `<div class="strnote count">${tt('strings.no_new_entries_or_removals_here',{add:esc(refused.add),remove:esc(refused.remove)})}</div>` : ''}
     ${f.stale && r.tagged ? `<div class="strnote w-warn">${tt('strings.was_edited_after_this_archive_was',{txt:esc(f.txt)})}</div>` : ''}
     <table class="strtab">
@@ -210,7 +202,7 @@ function strTagProblem(tag, i){
   const s = state.str;
   if(s.adds.some((a, j) => j !== i && a.tag.trim() === t)) return tt('strings.this_tag_is_new_twice');
   if((s.rows.rows || []).some(r => r.tag === t && !s.removes[r.id]))
-    return tt('strings.this_archive_already_has_an_entry') + t;
+    return tt('strings.this_archive_already_has_an_entry_tagged',{tag:t});
   return '';
 }
 function strAddRow(){
@@ -253,7 +245,7 @@ function strRevert(id){
 function strPaintBar(){
   const n = strPending();
   const b = document.querySelector('.strbar button.primary');
-  if(b){ b.disabled = !n; b.textContent = tt('strings.save_change_2',{x:n,x2:n===1?'':'s'}); }
+  if(b){ b.disabled = !n; b.textContent = ttN('strings.save_changes',n); }
 }
 // One debounce for the header search, since every keystroke is a round trip
 let strSearchT = null;
@@ -348,8 +340,7 @@ async function strSave(){
 async function strRebuild(){
   const s = state.str;
   const f = s.files.find(x => x.rel === s.file) || {};
-  if(!confirm(tt('strings.compile_over_the_archive_is_backed',{txt:f.txt,name:f.name})
-    + tt('strings.and_log_can_undo_it'))) return;
+  if(!confirm(tt('strings.compile_over_the_archive_is_backed_and_log',{txt:f.txt,name:f.name}))) return;
   await strApply({mod:s.mod, file:s.file, action:'rebuild'}, `${f.name} from ${f.txt}`);
 }
 
@@ -360,12 +351,11 @@ async function strApply(body, what){
   if(plan.error){ toast('✗ ' + plan.error, 5000); s.busy = false; return; }
   const p = plan.plan || {};
   const lines = (p.changes || []).slice(0, 12);
-  if(!confirm(tt('strings.write',{what}) + (lines.join('\n') || tt('common.no_visible_change'))
-    + ((p.changes || []).length > 12 ? tt('strings.and_more',{changes:p.changes.length - 12}) : '')
-    + tt('strings.entries_2',{before:p.before,after:p.after})
-    + ((p.warnings || []).filter(w => w !== 'nothing to change').length
-       ? '\n⚠ ' + p.warnings.filter(w => w !== 'nothing to change').join('\n⚠ ') : '')
-    + tt('common.backed_up_first_and_log_can'))) { s.busy = false; return; }
+  if(!confirm(tt('strings.write_changes_entries_backed_up',{what, changes:lines.join('\n') || tt('common.no_visible_change'),
+      more:(p.changes || []).length > 12 ? tt('strings.and_more',{changes:p.changes.length - 12}) : '',
+      before:p.before, after:p.after,
+      warnings:(p.warnings || []).filter(w => w !== 'nothing to change').length
+        ? '\n⚠ ' + p.warnings.filter(w => w !== 'nothing to change').join('\n⚠ ') : ''}))) { s.busy = false; return; }
   const res = await api.post('/api/strings/apply', body);
   s.busy = false;
   if(res.error){ toast('✗ ' + res.error, 5000); return; }

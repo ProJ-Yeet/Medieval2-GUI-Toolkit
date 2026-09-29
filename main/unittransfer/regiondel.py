@@ -334,11 +334,13 @@ def _plan_pixels(p: DeletePlan, rec, reg, body: dict) -> None:
     if not want:
         want = cands[0]["name"]
     if want.lower() not in names:
-        p.errors.append(
-            f"{want} does not share an edge with {p.name}, so its land cannot "
-            f"go there without leaving {want} in two pieces. The provinces that "
-            f"do touch it are " + ", ".join(h["name"] for h in cands[:6])
-            + ("…" if len(cands) > 6 else ""))
+        p.errors.append(_i18n.msg(
+            "eng.regiondel.does_not_share_an_edge_with_so_its_land",
+            "{want} does not share an edge with {name}, so its land cannot "
+            "go there without leaving {want} in two pieces. The provinces that "
+            "do touch it are {names}",
+            want=want, name=p.name,
+            names=", ".join(h["name"] for h in cands[:6]) + ("…" if len(cands) > 6 else "")))
         return
     heir = names[want.lower()]
     p.heir = heir["name"]
@@ -613,9 +615,10 @@ def _guard_strat(p: DeletePlan, before, text: str, rel: str) -> None:
     b, _ = stratedit.blocks_by_region(after)
     lost = sorted(set(a) - set(b))
     if lost != [p.name.lower()] and lost != []:
-        p.errors.append(f"{rel}: this would leave the campaign holding a "
-                        f"different set of provinces (lost "
-                        + ", ".join(lost[:4]) + ")")
+        p.errors.append(_i18n.msg("eng.regiondel.this_would_leave_the_campaign_holding_a",
+                                  "{rel}: this would leave the campaign holding a "
+                                  "different set of provinces (lost {names})",
+                                  rel=rel, names=", ".join(lost[:4])))
         return
     changed = [k for k in b if a.get(k) != b[k]]
     if changed:
@@ -664,11 +667,18 @@ def _plan_wins(p: DeletePlan, c: dict) -> None:
                 body = winconds.slot_line(slot, got, short_head=short)
                 lines[at] = stratedit.rewrite_line(lines[at], body)
             if not got:
-                p.warnings.append(
-                    f"{rel}: {rec.faction}'s "
-                    + ("short campaign " if slot == "short_hold" else "")
-                    + "win condition now names no province to hold, so the "
-                      "only way it can win is on the other terms in its record")
+                if slot == "short_hold":
+                    p.warnings.append(_i18n.msg(
+                        "eng.regiondel.short_campaign_win_condition_names_no_province",
+                        "{rel}: {faction}'s short campaign win condition now names no province to hold, so the "
+                        "only way it can win is on the other terms in its record",
+                        rel=rel, faction=rec.faction))
+                else:
+                    p.warnings.append(_i18n.msg(
+                        "eng.regiondel.win_condition_names_no_province",
+                        "{rel}: {faction}'s win condition now names no province to hold, so the "
+                        "only way it can win is on the other terms in its record",
+                        rel=rel, faction=rec.faction))
     if hits:
         wf.lines = [ln for i, ln in enumerate(lines) if i not in gone]
         p.texts[rel] = wf.serialise()
@@ -797,11 +807,12 @@ def _plan_mentions(p: DeletePlan) -> None:
     keys = [r for r in p.review
             if r["rel"].startswith("text/") and r["rel"].endswith(".txt")]
     if keys:
-        p.warnings.append(
+        p.warnings.append(_i18n.msg(
+            "eng.regiondel.the_two_words_the_player_reads_are_left",
             "the two words the player reads are left where they are, in "
-            + ", ".join(r["rel"] for r in keys[:3])
-            + ". A key nothing reads is not an error; the engine only names one "
-              "it cannot find.")
+            "{files}. A key nothing reads is not an error; the engine only names one "
+            "it cannot find.",
+            files=", ".join(r["rel"] for r in keys[:3])))
 
 
 def _plan_renumber(p: DeletePlan, reg) -> None:
@@ -832,7 +843,7 @@ def apply(p: DeletePlan) -> dict:
     from .logutil import file_op, log
 
     if p.errors:
-        raise ValueError("cannot apply: " + "; ".join(p.errors))
+        raise ValueError(_i18n.msg("eng.regiondel.cannot_apply", "cannot apply: {why}", why="; ".join(p.errors)))
     if not p.data and not p.texts:
         raise ValueError(_i18n.msg("eng.regiondel.nothing_would_change", "nothing would change"))
     mod = p.mod

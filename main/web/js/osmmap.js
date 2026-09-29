@@ -467,10 +467,7 @@ async function osmCoast(){
 async function osmCoastApply(){
   const k = state.osm;
   if(!k || !k.coast || !state.cpaint) return;
-  if(!confirm(tt('osmmap.make_land_tiles_on_the_water',{to_sea:k.coast.to_sea})
-    + tt('osmmap.it_is_one_stroke_of_the')
-    + tt('osmmap.in_this_maps_own_sea_colours')
-    + tt('osmmap.tabs_undo_takes_it_back_and'))) return;
+  if(!confirm(tt('osmmap.make_land_tiles_on_the_water_coastline',{to_sea:k.coast.to_sea}))) return;
   const r = await cpaintPost('osm_coast', {});
   if(!r) return;
   if(r.error){ toast('✗ ' + r.error, 9000); return; }
@@ -516,10 +513,7 @@ async function osmWater(){
 async function osmWaterApply(){
   const k = state.osm;
   if(!k || !k.water || !state.cpaint) return;
-  if(!confirm(tt('osmmap.make_land_tiles_inside_openstreetmaps_water',{to_sea:k.water.to_sea})
-    + tt('osmmap.it_is_one_stroke_of_the_2')
-    + tt('osmmap.together_in_this_maps_own_sea')
-    + tt('osmmap.the_paint_tabs_undo_takes_it'))) return;
+  if(!confirm(tt('osmmap.make_land_tiles_inside_openstreetmaps_water_confirm',{to_sea:k.water.to_sea}))) return;
   const r = await cpaintPost('osm_water', osmWaterBody());
   if(!r) return;
   if(r.error){ toast('✗ ' + r.error, 9000); return; }
@@ -577,8 +571,7 @@ async function osmNewRegionAt(p){
   Object.assign(pt.wiz, {name: key + '_Province', settlement: key,
                          shown: p.name, settlement_shown: p.name});
   cpaintPaint();
-  toast(tt('osmmap.the_new_region_is_filled_in',{name:p.name})
-        + tt('osmmap.its_boundary_from_real_world_or'), 7000);
+  toast(tt('osmmap.the_new_region_is_filled_in_from',{name:p.name}), 7000);
 }
 
 async function osmBoundary(i){
@@ -684,8 +677,7 @@ async function osmSiteObject(i, kind){
   // asked for, so shown: not 28a's once-per-map switch meant for map clicks
   const where = typeof cmapSubOf === 'function' && cmapSubOf('cmForts');
   if(where) cmapSub(where.tab, where.sub);
-  toast(tt('osmmap.a_planned_on_where_stands',{kind,gx:s.gx,gy:s.gy,x:s.name || 'the ' + s.label.toLowerCase()})
-        + tt('osmmap.check_it_and_save_it_from'), 7000);
+  toast(tt('osmmap.a_planned_on_where_stands_check_it',{kind,gx:s.gx,gy:s.gy,x:s.name || tt('osmmap.the_label',{label:s.label.toLowerCase()})}), 7000);
 }
 
 function osmSiteRegion(i){
@@ -763,8 +755,7 @@ async function osmChunksLoad(fresh){
   const bad = k.chunks.findIndex(f => f.failed);
   k.cpick = fresh && bad >= 0 ? bad : Math.min(k.cpick, Math.max(0, k.chunks.length - 1));
   if(fresh && k.chunks[0] && k.chunks[0].failed)
-    toast(tt('osmmap.of_chunks_of_the',{x:k.chunks[0].failed,n:k.chunks[0].chunks.length,x2:k.chunks[0].label})
-          + tt('osmmap.fetch_got_no_answer_they_are'), 9000);
+    toast(tt('osmmap.of_chunks_of_the_fetch_got_no_answer',{failed:k.chunks[0].failed,n:k.chunks[0].chunks.length,label:k.chunks[0].label}), 9000);
   osmPaint(); cmapPaint();
 }
 

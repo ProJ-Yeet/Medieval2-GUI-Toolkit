@@ -184,9 +184,10 @@ def parse_wins(text: str) -> WinFile:
                 out.records.append(WinRecord(faction=s, start=i, end=i))
                 short = False
             elif out.records:
-                out.records[-1].problems.append(
-                    f"line {i + 1} is neither a faction nor one of "
-                    + ", ".join(WORDS) + f": {s!r}")
+                out.records[-1].problems.append(_i18n.msg(
+                    "eng.winconds.line_is_neither_a_faction_nor_one_of",
+                    "line {line} is neither a faction nor one of {words}: {text}",
+                    line=i + 1, words=", ".join(WORDS), text=repr(s)))
             continue
         if not out.records:
             continue
@@ -311,10 +312,11 @@ def check_file(voc: Vocabulary, wf: WinFile) -> List[dict]:
     missing = [f for f in voc.factions if f.lower() not in seen]
     if missing:
         out.append(finding("win.missing", False,
-                           "no win condition for " + ", ".join(missing)
-                           + ". Vanilla leaves two of its 22 factions out for "
-                             "the same reason - the Mongols and the Timurids "
-                             "arrive by script and are not expected to win"))
+                           _i18n.msg("eng.winconds.no_win_condition_for",
+                                     "no win condition for {names}. Vanilla leaves two of its 22 "
+                                     "factions out for the same reason - the Mongols and the "
+                                     "Timurids arrive by script and are not expected to win",
+                                     names=", ".join(missing))))
     return out
 
 
@@ -624,8 +626,9 @@ def plan_win(mod, facts, body: dict) -> WinPlan:
     p = WinPlan(mod=mod, campaign=campaign, action=action,
                 faction=str(body.get("faction") or "").strip())
     if action not in ACTIONS:
-        p.errors.append(f"no such action {action!r}. The three are "
-                        + ", ".join(ACTIONS))
+        p.errors.append(_i18n.msg("eng.winconds.no_such_action",
+                                  "no such action {action}. The three are {actions}",
+                                  action=repr(action), actions=", ".join(ACTIONS)))
         return p
     try:
         wf = read_wins(mod, campaign)
@@ -690,7 +693,8 @@ def apply_win(p: WinPlan) -> dict:
     from .logutil import file_op, log
 
     if p.errors:
-        raise ValueError("cannot apply: " + "; ".join(p.errors))
+        raise ValueError(_i18n.msg("eng.winconds.cannot_apply", "cannot apply: {why}",
+                                   why="; ".join(p.errors)))
     if not p.text:
         raise ValueError(_i18n.msg("eng.winconds.nothing_to_change", "nothing to change"))
     mod = p.mod

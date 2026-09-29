@@ -652,8 +652,10 @@ def _resolve(cm: CampaignMap, sess: PaintSession, body: dict) -> Dict[str, int]:
     if tool == "water":
         w = water_palette(cm)
         if not w["ok"]:
-            raise MapError("this map's sea colours cannot be measured - "
-                           + (w.get("problem") or "no tile on it reads as sea"))
+            raise MapError(_i18n.msg("eng.campaint.sea_colours_cannot_be_measured",
+                                     "this map's sea colours cannot be measured - {why}",
+                                     why=w.get("problem") or _i18n.msg("eng.campaint.no_tile_reads_as_sea",
+                                                                       "no tile on it reads as sea")))
         return {c: w["layers"][c]["key"] for c in WATER_LAYERS}
 
     code = body.get("target") or ""
@@ -753,7 +755,8 @@ def _label(tool: str, codes: Iterable[str], tiles: int, body: dict) -> str:
     if marker:
         return f"place the {marker} pixel"
     what = ", ".join(LAYER_BY_CODE[c]["label"].lower() for c in codes)
-    return f"{tool} on {what}, {tiles} tile{'' if tiles == 1 else 's'}"
+    return _i18n.msgN("eng.campaint.on_tiles", tiles, "{tool} on {what}, {count} tile",
+                      "{tool} on {what}, {count} tiles", tool=tool, what=what)
 
 
 def paint(sess: PaintSession, body: dict) -> dict:
@@ -845,11 +848,13 @@ def _stroke_over(sess: PaintSession, tiles, colours: Dict[str, int],
     stroke.tiles = {c: a for c, a in stroke.tiles.items() if a}
     if not stroke.px:
         return {"ok": True, "changed": {}, "tiles": 0, "protected": protected,
-                "note": ("every tile in that stroke was already this colour"
+                "note": (_i18n.msg("eng.campaint.every_tile_in_that_stroke_was_already_this",
+                                   "every tile in that stroke was already this colour")
                          if not protected else
-                         f"{protected} marker pixel"
-                         f"{'' if protected == 1 else 's'} protected, and every "
-                         f"other tile was already this colour"),
+                         _i18n.msgN("eng.campaint.marker_pixels_protected_and_every_other_tile",
+                                    protected,
+                                    "{count} marker pixel protected, and every other tile was already this colour",
+                                    "{count} marker pixels protected, and every other tile was already this colour")),
                 "state": sess.state()}
     stroke.rgb = {c: colours[c] for c in stroke.px}
     stroke.label = label or _label(tool, stroke.px, stroke.tile_count, body)
@@ -857,8 +862,9 @@ def _stroke_over(sess: PaintSession, tiles, colours: Dict[str, int],
     sess.push(stroke)
     return {"ok": True, "changed": _painted(stroke), "tiles": stroke.tile_count,
             "protected": protected, "label": stroke.label,
-            "note": (f"{protected} settlement or port pixel"
-                     f"{'' if protected == 1 else 's'} left alone"
+            "note": (_i18n.msgN("eng.campaint.settlement_or_port_pixels_left_alone", protected,
+                                "{count} settlement or port pixel left alone",
+                                "{count} settlement or port pixels left alone")
                      if protected else ""),
             "state": sess.state()}
 
@@ -1664,10 +1670,10 @@ def plan_paint(sess: PaintSession) -> PaintPlan:
     if "regions" in p.data:
         gone = _emptied(cm, sess.recolour)
         if gone:
-            p.errors.append(
-                f"{len(gone)} region(s) would be left with no tiles at all: "
-                + ", ".join(gone[:6]) + ("…" if len(gone) > 6 else "")
-                + ". That is legal to write and fatal to play.")
+            p.errors.append(_i18n.msg(
+                "eng.campaint.region_s_would_be_left_with_no_tiles",
+                "{gone_n} region(s) would be left with no tiles at all: {names}. That is legal to write and fatal to play.",
+                gone_n=len(gone), names=", ".join(gone[:6]) + ("…" if len(gone) > 6 else "")))
         colours = len(cm.index.by_key)
         if colours > mapvocab.MAX_REGION_COLOURS and not cm.uncapped:
             p.warnings.append(
@@ -1834,7 +1840,10 @@ def _plan_region_campaigns(p: PaintPlan, spec: dict, voc: dict) -> None:
     skipped = [c["campaign"] for c in voc["campaigns"] if not c["reads_base"]]
     if skipped:
         p.warnings.append(
-            _i18n.msg("eng.campaint.ship_own_so_not_see_these", "{skipped} ship{x} {x2} own {REGIONS_TGA}, so {x3} not see these pixels and {name} does not exist there", skipped=', '.join(skipped), x='s' if len(skipped) == 1 else '', x2='its' if len(skipped) == 1 else 'their', REGIONS_TGA=REGIONS_TGA, x3='it does' if len(skipped) == 1 else 'they do', name=spec['name']))
+            _i18n.msgN("eng.campaint.ships_own_so_it_does_not_see", len(skipped),
+                       "{skipped} ships its own {REGIONS_TGA}, so it does not see these pixels and {name} does not exist there",
+                       "{skipped} ship their own {REGIONS_TGA}, so they do not see these pixels and {name} does not exist there",
+                       skipped=', '.join(skipped), REGIONS_TGA=REGIONS_TGA, name=spec['name']))
     if not camps:
         p.warnings.append(
             _i18n.msg("eng.campaint.no_campaign_in_reads_this_map", "no campaign in {getattr} reads this map, so no faction starts in {name} yet - there is no descr_strat.txt to give it a settlement in", getattr=getattr(p.mod, 'name', '?'), name=spec['name']))
@@ -1964,7 +1973,7 @@ def apply_paint(p: PaintPlan) -> dict:
     from .logutil import file_op, log
 
     if p.errors:
-        raise ValueError("cannot apply: " + "; ".join(p.errors))
+        raise ValueError(_i18n.msg("eng.campaint.cannot_apply", "cannot apply: {why}", why="; ".join(p.errors)))
     if not p.data and not p.region_text:
         raise ValueError(_i18n.msg("eng.campaint.nothing_has_been_painted", "nothing has been painted"))
     mod = p.mod

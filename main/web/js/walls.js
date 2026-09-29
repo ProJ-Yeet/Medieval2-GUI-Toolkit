@@ -17,7 +17,7 @@
 
 async function loadWalls(){
   const mod = state.src;
-  main.innerHTML = `<div class="empty">${tt('common.reading')} ` + esc(mod) + `${tt('walls.s_walls')}</div>`;
+  main.innerHTML = `<div class="empty">${tt('walls.reading_mod_s_walls',{mod:esc(mod)})}</div>`;
   let r;
   try{ r = await api.get('/api/walls?mod=' + enc(mod)); }
   catch(e){ if(stale('walls', mod)) return;
@@ -58,7 +58,7 @@ function renderWalls(){
       <div class="cdbhead"><div>${tt('walls.descr_walls_txt_walls_gates_and')}</div>
         <span style="flex:1"></span>
         <button onclick="wlxRevert()" ${n ? '' : 'disabled'}>${tt('common.revert')}</button>
-        <button class="primary" onclick="wlxSave()" ${n ? '' : 'disabled'}>${tt('walls.save_change',{x:n || '',x2:n === 1 ? '' : 's'})}</button>
+        <button class="primary" onclick="wlxSave()" ${n ? '' : 'disabled'}>${ttN('walls.save_changes',n)}</button>
       </div>
       ${c.error ? '' : c.sel === 'gates' ? wlxGatesHtml() : wlxWallHtml()}
     </div>
@@ -141,9 +141,9 @@ async function wlxSave(){
   finally{ c.busy = false; }
   if(plan.error){ toast('✗ ' + plan.error, 8000); return; }
   const p = plan.plan || {};
-  if(!confirm(tt('walls.write_change_s',{n:(p.changes || []).length}) + (p.changes || []).slice(0, 16).join('\n')
-    + ((p.warnings || []).length ? '\n\n⚠ ' + p.warnings.slice(0, 5).join('\n⚠ ') : '')
-    + tt('common.backed_up_first_and_log_can'))) return;
+  if(!confirm(tt('walls.write_changes_confirm',{n:(p.changes || []).length,
+    changes:(p.changes || []).slice(0, 16).join('\n'),
+    warnings:(p.warnings || []).length ? '\n\n⚠ ' + p.warnings.slice(0, 5).join('\n⚠ ') : ''}))) return;
   let res;
   try{ res = await api.post('/api/walls/apply', body); }
   catch(e){ res = {error: errText(e)}; }

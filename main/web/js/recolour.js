@@ -100,9 +100,7 @@ async function rclApply(){
   k.done = {tiles: res.tiles || 0, protected: res.protected || 0};
   activity('recolour',
     tt('recolour.tiles',{mod:k.mod,name:k.name,rgb:k.rgb.join(' '),tiles:k.done.tiles}));
-  toast(tt('recolour.tile',{name:k.name,tiles:k.done.tiles.toLocaleString()})
-    + tt('recolour.repainted_not_saved_yet',{x:k.done.tiles === 1 ? '' : 's'})
-    + tt('recolour.save_on_the_paint_panel_writes'), 8000);
+  toast(ttN('recolour.tiles_repainted_not_saved',k.done.tiles,{name:k.name}), 8000);
   rclPaint();
   // The tiles the stroke changed, written into the browser's own copy of the
   // layer - the same road every brush stroke takes, which is why the map under
@@ -141,7 +139,7 @@ function rclHtml(){
       <div class="w-ok rclnote">${tt('recolour.no_region_id_moves_an_id')}</div>
 
       ${k.err ? `<div class="w-bad">${esc(k.err)}</div>` : ''}
-      ${k.done ? `<div class="w-ok">${tt('recolour.tile_repainted_nothing_is_on_disk',{tiles:k.done.tiles.toLocaleString(),x:k.done.tiles === 1 ? '' : 's'})}</div>` : ''}
+      ${k.done ? `<div class="w-ok">${ttN('recolour.tiles_repainted_nothing_on_disk',k.done.tiles)}</div>` : ''}
 
       <div class="mrow">
         <span class="sp"></span>

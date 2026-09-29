@@ -283,6 +283,7 @@ def check(doc: lx.Doc, refs: Optional[Refs] = None) -> List[Dict]:
             continue
         first = where[0]
         places = ", ".join(sorted({w["file"].rsplit("/", 2)[-2] for w in where})[:3])
+        # i18n-ok: x2 is an ellipsis for more places, not a plural
         out.append(finding("undeclared", "warn", _i18n.msg("eng.heroabilities.character_line_s_name_hero_ability", "{where_n} character line(s) name hero_ability {name} ({x} in {file}{x2}; {places}), and {REL} declares no ability called that", where_n=len(where), name=first['name'], x=first['who'] or 'line ' + str(first['line']), file=first['file'], x2='...' if len(where) > 1 else '', places=places, REL=REL), f"use/{first['name']}", 0))
     return out
 

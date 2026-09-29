@@ -319,13 +319,21 @@ def _plan_keys(p: CampaignPlan, body: dict) -> None:
             p.loc_writes[new_head + kind] = given
     title = p.loc_writes.get(new_head + "TITLE", "")
     if not title:
-        p.warnings.append(
-            f"nothing names {p.name} on the new-game menu, so the engine shows "
-            f"the key {new_head}TITLE. {campfiles.DESCR_REL} is where that "
-            f"lives and the Descriptions panel writes it."
-            + ("" if campfiles.descr_path(p.mod).exists()
-               else " This mod ships only the compiled archive, which is "
-                    "where the key would go."))
+        if campfiles.descr_path(p.mod).exists():
+            p.warnings.append(_i18n.msg(
+                "eng.campnew.nothing_names_on_the_new_game_menu",
+                "nothing names {name} on the new-game menu, so the engine shows "
+                "the key {head}TITLE. {descr_rel} is where that "
+                "lives and the Descriptions panel writes it.",
+                name=p.name, head=new_head, descr_rel=campfiles.DESCR_REL))
+        else:
+            p.warnings.append(_i18n.msg(
+                "eng.campnew.nothing_names_on_the_new_game_menu_archive",
+                "nothing names {name} on the new-game menu, so the engine shows "
+                "the key {head}TITLE. {descr_rel} is where that "
+                "lives and the Descriptions panel writes it. This mod ships only the compiled archive, which is "
+                "where the key would go.",
+                name=p.name, head=new_head, descr_rel=campfiles.DESCR_REL))
     elif not str(body.get("title") or "").strip():
         p.warnings.append(
             _i18n.msg("eng.campnew.inherits_s_title_so_two_campaigns", "{name} inherits {source}'s title, {title}, so two campaigns read the same on the menu until one of them is renamed", name=p.name, source=p.source, title=repr(title)))
@@ -350,7 +358,7 @@ def apply(p: CampaignPlan) -> dict:
     from .logutil import file_op, log
 
     if p.errors:
-        raise ValueError("cannot apply: " + "; ".join(p.errors))
+        raise ValueError(_i18n.msg("eng.campnew.cannot_apply", "cannot apply: {why}", why="; ".join(p.errors)))
     if not p.copies and not p.texts:
         raise ValueError(_i18n.msg("eng.campnew.there_is_nothing_to_copy", "there is nothing to copy"))
     mod = p.mod

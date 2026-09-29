@@ -100,8 +100,7 @@ function eduTidyStyleBox(){
     <div class="edusample"><code>${esc(eduTidySample())}</code></div>
     <div class="count">${docPoints(tt('edusort.this_is_the_only_line_the'),[
       tt('edusort.everything_else_in_the_file_is'),
-      tt('edusort.the_shape_is_fixed_so_the')
-        +tt('edusort.a_banner_your_mod_wrote_by')])}</div>
+      tt('edusort.the_shape_is_fixed_so_the_next')])}</div>
   </fieldset>`;
 }
 /* The sample, worked out in the page.
@@ -142,10 +141,8 @@ function eduTidyClean(){
              tt('edusort.rewrites_only_the_gap_between_a'))}
     <div class="count" style="margin-top:6px">${docPoints(
       tt('edusort.this_rewrites_the_whole_unit_file'),[
-      `${tt('edusort.it_only_ever_moves_a_block')} `+
-        tt('edusort.and_the_probe_is_refused_outright'),
-      `${tt('edusort.a_tier_read_from_a_banner')} `+
-        tt('edusort.next_run_does_not_have_to'),
+      tt('edusort.it_only_ever_moves_a_block_no'),
+      tt('edusort.a_tier_read_from_a_banner_is'),
       tt('edusort.one_backup_one_entry_in_the')])}</div>
   </fieldset>`
   +(eduTidy.opts.banners?eduTidyStyleBox():'');
@@ -194,11 +191,8 @@ function eduTidyOrder(){
     .filter(s=>s.units.length);
   return `<div class="count">${docPoints(
       tt('edusort.set_what_the_sorter_reads_and'),[
-      `${tt('edusort.a_unit_with_no_tier_sorts')} `
-        +tt('edusort.tiers_read_from_the_files_own'),
-      `${tt('edusort.classification_is_what_makes_a_unit')} `
-        +`${tt('edusort.generals_are_detected_from_the_units')} `
-        +tt('edusort.a_bodyguard_or_a_hero_that'),
+      tt('edusort.a_unit_with_no_tier_sorts_after'),
+      tt('edusort.classification_is_what_makes_a_unit_lead'),
       tt('edusort.drag_a_unit_onto_another_to'),
       tt('edusort.none_of_it_is_written_until')])}</div>
     <div class="basebar" style="margin:8px 0">

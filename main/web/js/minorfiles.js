@@ -81,7 +81,7 @@ function renderMinor(){
     <div class="trlist">
       ${f.actions.includes('add')
         ? `<button class="trnew" onclick="mfNew()">${tt('minorfiles.new',{noun:esc(f.noun)})}</button>` : ''}
-      ${findingsHtml(tt('minorfiles.minor')+f.tab, f.finding_list, 'mfOpen')}
+      ${findingsHtml('minor:' + f.tab, f.finding_list, 'mfOpen')}
       <div class="trrows">${rows.map(mfRowHtml).join('')
         || `<div class="count" style="padding:8px">${tt('minorfiles.no_matches',{noun:esc(f.noun)})}</div>`}</div>
     </div>
@@ -105,12 +105,12 @@ function mfRows(){
 function mfRowHtml(r){
   const f = state.mf, on = f.sel === r.name;
   let sub = '';
-  if(f.tab === 'rebels') sub = tt('minorfiles.chance_unit',{category:esc(r.category||tt('minorfiles.no_category')),chance:esc(r.chance||'0'),units:r.units,units2:r.units===1?'':'s'});
+  if(f.tab === 'rebels') sub = ttN('minorfiles.category_chance_units',r.units,{category:esc(r.category||tt('minorfiles.no_category')),chance:esc(r.chance||'0')});
   else if(f.tab === 'resources') sub = `trade ${esc(r.trade_value||'0')}${
     r.has_mine?tt('minorfiles.has_a_mine'):''}${r.known?'':` ${tt('minorfiles.not_an_engine_resource')}`}`;
   else if(f.tab === 'religions') sub = r.listed
     ? esc(r.pip_path||tt('minorfiles.no_pip')) : `<b>${tt('minorfiles.not_in_the_religions_list')}</b>`;
-  else if(f.tab === 'cultures') sub = tt('minorfiles.settlement_level_6_agents',{levels:r.levels,levels2:r.levels===1?'':'s',agents:r.agents});
+  else if(f.tab === 'cultures') sub = ttN('minorfiles.settlement_levels_agents',r.levels,{agents:r.agents});
   else sub = Object.entries(r.sections||{}).map(([k,n]) => `${n} ${k}`).join(' · ')
     || `<b>${tt('minorfiles.no_names_at_all')}</b>`;
   return `<button class="trrow${on?' on':''}" onclick="mfOpen('${q1(esc(r.name))}')">
@@ -201,8 +201,7 @@ function mfClone(){
   const carried = f.tab === 'rebels'
     ? tt('minorfiles.unit_s_and_every_field_came',{n:(w.units||[]).length})
     : tt('minorfiles.every_field_came_with_it');
-  toast(tt('minorfiles.copied_as',{name:d.name,name2:name,carried})
-    + tt('minorfiles.nothing_is_written_until_you_press'), 6500);
+  toast(tt('minorfiles.copied_as_nothing_written',{source:d.name,name,carried}), 6500);
 }
 
 // The pickers (this mod's unit list, its settlement levels) come with a record,
@@ -239,13 +238,13 @@ function mfPaintForm(){
 /* ---- the detail pane ---- */
 function mfDetailHtml(){
   const f = state.mf, d = f.d;
-  if(!f.sel && !f.adding) return `<div class="empty">${tt('minorfiles.pick_a_on_the_left_in',{noun:esc(f.noun),count:f.count,noun2:esc(f.noun),x:f.count===1?'':'s',file:esc(f.file),x2:f.refused ? `<div class="trnote"
+  if(!f.sel && !f.adding) return `<div class="empty">${ttN('minorfiles.pick_a_noun_on_the_left',f.count,{noun:esc(f.noun),file:esc(f.file),refused:f.refused ? `<div class="trnote"
       style="max-width:560px;margin:14px auto;text-align:left">${esc(f.refused)}</div>`
       : ''})}</div>`;
   if(!d) return `<div class="empty">${tt('minorfiles.reading_the',{noun:esc(f.noun)})}</div>`;
   if(d.error) return `<div class="empty"><span class="w-bad">✗ ${esc(d.error)}</span></div>`;
   return `<div class="trbar">
-      <div><b>${esc(f.adding ? tt('minorfiles.new_3') + f.noun : d.label)}</b>
+      <div><b>${esc(f.adding ? tt('minorfiles.new_noun',{noun:f.noun}) : d.label)}</b>
         <span class="count">${esc(f.file)}</span></div>
       <span class="sp"></span>
       ${f.adding ? '' : `<button class="${d.cv?'on':''}" title="${ttA('minorfiles.show_this_exactly_as_stores_it',{noun:esc(f.noun),file:esc(f.file)})}"
@@ -330,11 +329,10 @@ function mfNameRow(d, placeholder){
       ${tag ? `<input class="trtext" value="${esc(shown)}"
         ${d.loc_writable?'':'disabled'}
         placeholder="${esc(d.loc_writable
-          ? (((d.loc||{})[tag] === undefined) ? tt('minorfiles.not_in') + d.loc_file + ' yet'
+          ? (((d.loc||{})[tag] === undefined) ? tt('minorfiles.not_in_file_yet',{file:d.loc_file})
              : tt('minorfiles.what_the_player_reads'))
           : (shown || tt('minorfiles.read_by_position_so_edit_it')))}"
-        title="${esc(d.loc_writable ? tt('minorfiles.what_the_player_reads_saved_into')
-          + d.loc_file + '.' : d.loc_note || '')}"
+        title="${esc(d.loc_writable ? tt('minorfiles.what_the_player_reads_saved_into_file',{file:d.loc_file}) : d.loc_note || '')}"
         oninput="mfSetLocName(this.value)">` : ''}
     </div>
     ${tag && !d.loc_writable ? `<span></span><div class="trhint count">${
@@ -786,10 +784,9 @@ async function mfMergeApply(){
   if(!m || !m.plan || !m.plan.ok || m.busy) return;
   const rows = Object.entries(m.plan.merge || {})
     .filter(([, c]) => c.added || c.removed);
-  if(!confirm(tt('minorfiles.merge_into',{x:(m.plan.merge_sources || []).join(', '),name:f.d.name})
-    + (rows.map(([s, c]) => `  ${s}: ${c.before} → ${c.after}`).join('\n')
-       || tt('common.no_visible_change'))
-    + tt('common.backed_up_first_and_log_can'))) return;
+  if(!confirm(tt('minorfiles.merge_into_confirm',{sources:(m.plan.merge_sources || []).join(', '),name:f.d.name,
+    changes:rows.map(([s, c]) => `  ${s}: ${c.before} → ${c.after}`).join('\n')
+       || tt('common.no_visible_change')}))) return;
   m.busy = true;
   let res;
   try{ res = await api.post('/api/minor/apply', mfMergeBody('merge')); }
@@ -964,8 +961,7 @@ async function mfDuplicate(){
   if(r.error){ toast('✗ ' + r.error, 6000); return; }
   const p = r.plan || {};
   const needs = (p.needs || []).map(n => `  • ${n.what}: ${n.detail}`).join('\n');
-  if(!confirm(tt('minorfiles.write_what_else_needs_and',{changes:(p.changes||[]).join('; '),name})
-      + tt('minorfiles.is_not_written_here_backed_up',{needs}))) return;
+  if(!confirm(tt('minorfiles.write_needs_confirm',{changes:(p.changes||[]).join('; '),name,needs}))) return;
   let res;
   try{ res = await api.post('/api/minor/apply', body); }
   catch(e){ res = {error: errText(e)}; }
@@ -1015,11 +1011,10 @@ async function mfApply(body, what){
   const found = (p.findings || []).map(x => '⚠ ' + x.message);
   const also = (p.files || []).length
     ? tt('minorfiles.also_rewritten',{files:p.files.join(', ')}) : '';
-  if(!confirm(tt('minorfiles.write',{what}) + (lines.join('\n') || tt('common.no_visible_change'))
+  if(!confirm(tt('minorfiles.write_confirm',{what,details:(lines.join('\n') || tt('common.no_visible_change'))
     + ((p.changes || []).length > 14 ? tt('minorfiles.and_more',{changes:p.changes.length - 14}) : '')
     + also
-    + (found.length ? '\n\n' + found.slice(0, 4).join('\n') : '')
-    + tt('common.backed_up_first_and_log_can'))) return;
+    + (found.length ? '\n\n' + found.slice(0, 4).join('\n') : '')}))) return;
   f.busy = true;
   let res;
   try{ res = await api.post('/api/minor/apply', body); }

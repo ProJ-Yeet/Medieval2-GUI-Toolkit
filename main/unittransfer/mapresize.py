@@ -422,8 +422,10 @@ def _plan_shrink(p: ResizePlan, cm) -> None:
         else:
             names.append(f"{reg.name} ({n} of {total[lab]})")
     if names:
-        p.warnings.append(f"{len(names)} province(s) lose land at the edge: "
-                          + ", ".join(names[:8]) + ("…" if len(names) > 8 else ""))
+        p.warnings.append(_i18n.msg(
+            "eng.mapresize.provinces_lose_land_at_the_edge",
+            "{count} province(s) lose land at the edge: {names}",
+            count=len(names), names=", ".join(names[:8]) + ("…" if len(names) > 8 else "")))
 
 
 def _plan_terrain(p: ResizePlan, tpath: Path, text: str) -> None:
@@ -660,7 +662,8 @@ def apply(p: ResizePlan) -> dict:
     from .logutil import file_op, log
 
     if p.errors:
-        raise ValueError("cannot apply: " + "; ".join(p.errors))
+        raise ValueError(_i18n.msg("eng.mapresize.cannot_apply", "cannot apply: {why}",
+                                   why="; ".join(p.errors)))
     if not p.data:
         raise ValueError(_i18n.msg("eng.mapresize.nothing_to_resize", "nothing to resize"))
     mod = p.mod

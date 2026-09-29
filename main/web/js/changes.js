@@ -95,7 +95,7 @@ function chgHeadHtml(s){
   const others = (s.sets || []).filter(x => x.name !== s.set);
   return `<div class="bsec"><h4>${tt('changes.your_changes_to',{mod:esc(s.mod),x:s.set ? `<span class="count">${tt('changes.recorded_since',{set:esc(s.set),on:s.on ? tt('changes.on') : tt('changes.off'),created:esc(s.created || '')})}</span>` : ''})}</h4>
     <div class="trnote">${tt('changes.every_save_this_toolkit_makes_to')}</div>
-    ${moved.length ? `<div class="chgwarn">${tt('changes.file_changed_under_you_since_your',{moved_n:moved.length,moved:moved.length === 1 ? '' : 's'})}</div>` : ''}
+    ${moved.length ? `<div class="chgwarn">${ttN('changes.files_changed_under_you_since_your',moved.length)}</div>` : ''}
     <div class="chgacts">
       ${s.set ? tt('changes.export_export_changed_files',{x:enc(s.set),x2:enc(s.set)}) : ''}
       <label class="btn" title="${ttA('changes.a_change_set_exported_somewhere_else')}">${tt('changes.import')}
@@ -122,7 +122,7 @@ function chgVersionsHtml(s){
     ${vs.map(v => `<div class="chgver${v.active ? ' on' : ''}">
       <span class="chgdot">${v.active ? '●' : '○'}</span>
       <b>${esc(v.name)}</b>
-      ${tt('changes.file_changed_since',{files:v.files,files2:v.files === 1 ? '' : 's',imported:v.imported ? tt('changes.imported') : '',created:esc(v.created || '?'),x:v.name !== s.set ? `<button class="x" onclick="chgView('${q1(esc(v.name))}')">${tt('changes.view')}</button>` : ''})}
+      ${ttN('changes.files_changed_since',v.files,{imported:v.imported ? tt('changes.imported') : '',created:esc(v.created || '?'),x:v.name !== s.set ? `<button class="x" onclick="chgView('${q1(esc(v.name))}')">${tt('changes.view')}</button>` : ''})}
       <button class="x" onclick="chgRename('${q1(esc(v.name))}')">${tt('changes.rename')}</button>
       ${v.active
         ? `<button class="x" onclick="chgSwitch(null)" title="${ttA('changes.put_the_original_records_back')}">${tt('changes.turn_off')}</button>`
@@ -153,7 +153,7 @@ async function chgSwitch(to){
   const k = state.chg;
   const busy = chgUnsaved();
   if(busy.length){
-    toast(tt('changes.save_or_drop_the_unsaved_edits') + busy.join(', ') + tt('changes.a_switch_rewrites_the_files_under'), 6000);
+    toast(tt('changes.save_or_drop_the_unsaved_edits_first',{list:busy.join(', ')}), 6000);
     return;
   }
   let r;
@@ -162,15 +162,14 @@ async function chgSwitch(to){
   if(r.error && !r.switch){ toast(r.error, 5000); return; }
   const sw = r.switch;
   if(sw.blocked && sw.blocked.length){
-    alert(tt('changes.this_switch_is_refused') + sw.blocked.length + tt('changes.record_s_would_conflict_with_the')
-      + sw.blocked.slice(0, 12).map(b => '  ' + b.set + ': ' + b.rel + ' / ' + b.key + ' (' + b.outcome + ')').join('\n')
-      + tt('changes.the_files_moved_under_the_version'));
+    alert(tt('changes.this_switch_is_refused_conflicts',{n:sw.blocked.length,
+      list:sw.blocked.slice(0, 12).map(b => '  ' + b.set + ': ' + b.rel + ' / ' + b.key + ' (' + b.outcome + ')').join('\n')}));
     return;
   }
   const what = sw.off && sw.on ? tt('changes.take_out_and_put_in',{off:sw.off,on:sw.on})
     : sw.off ? tt('changes.turn_off_putting_the_original_records',{off:sw.off})
     : tt('changes.turn_on',{on:sw.on});
-  if(!confirm(what + '\n\n' + sw.files.length + tt('changes.file_s_will_be_rewritten_log'))) return;
+  if(!confirm(tt('changes.what_files_will_be_rewritten',{what,n:sw.files.length}))) return;
   try{ r = await api.post('/api/changes/switch', {mod: k.mod, to}); }
   catch(e){ r = {error: errText(e)}; }
   if(r.error){ toast(r.error, 5000); return; }
@@ -197,11 +196,11 @@ function chgFilesHtml(s){
   const files = s.files || [];
   if(!s.set) return `<div class="bsec"><div class="empty" style="padding:18px">${tt('changes.nothing_recorded_for_yet_the_first',{mod:esc(s.mod)})}</div></div>`;
   if(!files.length) return `<div class="bsec"><div class="count">${tt('changes.the_record_holds_no_change_every')}</div></div>`;
-  return `<div class="bsec"><h4>${tt('changes.what_you_changed_file',{files_n:files.length,files:files.length === 1 ? '' : 's'})}</h4>
+  return `<div class="bsec"><h4>${ttN('changes.what_you_changed_files',files.length)}</h4>
     ${files.map(f => `<div class="chgfile">
       <div class="chgfhead"><code>${esc(f.rel)}</code>
         <span class="badge">${esc(f.state)}</span>
-        <span class="count">${f.count} ${esc(f.what)}${f.count === 1 ? '' : 's'}</span>
+        <span class="count">${ttN('changes.count_of_what',f.count,{what:esc(f.what)})}</span>
         ${CHG_DISK[f.disk] ? `<span class="w-warn">· ${esc(CHG_DISK[f.disk])}</span>` : ''}</div>
       <div class="chgrecs">${f.records.map(r => `<span class="chgrec ${esc(r.kind)}"
           title="${esc(r.kind)}">${CHG_KIND[r.kind] || ''} ${esc(r.key)}</span>`).join('')}
@@ -249,7 +248,7 @@ function chgPlanHtml(p){
       ${items.map(chgItemHtml).join('')}
     </div>`).join('')}
     <div class="brow" style="margin-top:10px">
-      <button class="primary" ${n && !k.busy ? '' : 'disabled'} onclick="chgApply()">${tt('changes.port_change_into',{x:n,x2:n === 1 ? '' : 's',target:esc(p.target)})}</button>
+      <button class="primary" ${n && !k.busy ? '' : 'disabled'} onclick="chgApply()">${ttN('changes.port_changes_into',n,{target:esc(p.target)})}</button>
       <span class="count">${tt('changes.backed_up_first_logs_undo_takes')}</span>
     </div>`;
 }
@@ -341,9 +340,7 @@ function chgImport(input){
 
 async function chgAdopt(){
   const k = state.chg;
-  if(!confirm(tt('changes.record_every_tracked_file_as_it')
-      + tt('changes.right_after_hand_edits_made_outside')
-      + tt('changes.your_changes_would_be_replaced_by'))) return;
+  if(!confirm(tt('changes.record_every_tracked_file_as_it_wrong_after_update'))) return;
   const r = await api.post('/api/changes/adopt', {set: k.sum.set, mod: k.mod});
   if(r.error){ toast(r.error, 5000); return; }
   await loadChanges();
@@ -351,9 +348,7 @@ async function chgAdopt(){
 
 async function chgForget(){
   const k = state.chg;
-  if(!confirm(tt('changes.forget_the_record_of_your_changes') + k.mod + '?\n\n'
-      + tt('changes.the_mod_itself_is_not_touched')
-      + tt('changes.changes_can_no_longer_be_ported'))) return;
+  if(!confirm(tt('changes.forget_the_record_of_your_changes_to_mod',{mod:k.mod}))) return;
   const r = await api.post('/api/changes/forget', {set: k.sum.set});
   if(r.error){ toast(r.error, 5000); return; }
   await loadChanges();

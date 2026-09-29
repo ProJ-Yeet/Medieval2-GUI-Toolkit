@@ -81,8 +81,7 @@ function cpinTake(tile){
   if(!p || !c) return false;
   const game = cpinGame(tile, c.man.width, c.man.height);
   if(!game){
-    toast(tt('mappin.that_is_off_the_map_pick',{width:c.man.width,height:c.man.height})
-      + tt('mappin.or_press_esc'), 4000);
+    toast(tt('mappin.off_the_map_pick_a_tile',{width:c.man.width,height:c.man.height}), 4000);
     return true;
   }
   state.cpin = null;

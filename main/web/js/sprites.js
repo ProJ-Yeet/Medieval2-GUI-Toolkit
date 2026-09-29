@@ -15,7 +15,7 @@
    branches. */
 async function loadSprites(){
   const mod=state.src;
-  main.innerHTML=`<div class="empty">${tt('common.reading')} `+esc(mod)+`${tt('sprites.s_models')}</div>`;
+  main.innerHTML=`<div class="empty">${tt('sprites.reading_mod_s_models',{mod:esc(mod)})}</div>`;
   let r;
   try{ r=await api.get('/api/sprites?mod='+enc(mod)); }
   catch(e){ if(stale('sprites',mod))return;
@@ -95,7 +95,7 @@ function renderSprites(){
   main.innerHTML=bmdbTabsHtml('data/unit_sprites')+`<div class="sprhead">
       <h2>${tt('sprites.unit_sprites',{src:esc(state.src)})}</h2>
       <span class="count">${tt('sprites.generate_the_far_lod_billboards_convert',{x:a.missing||a.misnamed_total
-        ?`<b class="w-warn">${a.missing+a.misnamed_total}</b> ${tt('sprites.of_sprite_line_s_resolve_to',{x:a.ok+a.missing+a.misnamed_total})}`
+        ?tt('sprites.n_of_total_sprite_lines_resolve_to_no_file',{bad:a.missing+a.misnamed_total,total:a.ok+a.missing+a.misnamed_total})
         :tt('sprites.all_sprite_line_s_resolve',{ok:a.ok})})}</span>
     </div>
 
@@ -139,7 +139,7 @@ function renderSprites(){
           <label><input type="checkbox" ${s.picked.has(m.name)?'checked':''}
             onchange="sprPick('${q1(m.name)}',this.checked)">
             <span>${esc(m.name)}</span> ${sprFlags(m)}
-            <span class="fac">${m.factions.length} faction(s)</span></label>`).join('')
+            <span class="fac">${tt('sprites.n_factions',{n:m.factions.length})}</span></label>`).join('')
           :`<div class="empty" style="padding:14px">${s.todo
             ?tt('sprites.nothing_left_to_generate_every_model')
             :tt('sprites.no_models_match')}</div>`}</div>
@@ -161,10 +161,8 @@ function renderSprites(){
             <span class="sprtag ${cfgState==='on'?'on':'off'}">${tt('sprites.bypass',{cfgState:esc(cfgState)})}</span>
           </div>
           <div class="sprnote">${docPoints(tt('sprites.two_things_catch_people_out_on'),[
-            `${tt('sprites.sprite_script_txt_goes_in_the')} `
-              +tt('sprites.the_mod_that_is_the_single'),
-            tt('sprites.the_bypass_flag_makes_the_next')
-              +tt('sprites.as_a_crash_turn_it_back')])}</div>
+            tt('sprites.sprite_script_txt_goes_in_the_medieval'),
+            tt('sprites.the_bypass_flag_makes_the_next_normal')])}</div>
           <div class="sprrow">
             <button class="primary" ${picked.length?'':'disabled'} onclick="sprPrep()">
               ${tt('sprites.write_sprite_script_set_flag',{picked_n:picked.length})}</button>
@@ -229,7 +227,8 @@ function sprResultHtml(r){
   const dupes=Object.values(r.duplicates||{}).reduce((n,v)=>n+Object.keys(v).length,0);
   const models=Object.keys(r.models||{}).length;
   return `<div class="sprnote" style="border-top:1px solid var(--edge);padding-top:9px">
-    ${tt('sprites.converted_sheet_s_across_model_s',{converted_n:r.converted.length,models,installed_n:r.installed.length,dupes:dupes?tt('sprites.duplicate_faction_copy_s_collapsed',{dupes}):''})}
+    ${dupes?tt('sprites.converted_sheets_across_models_installed_dupes',{converted_n:r.converted.length,models,installed_n:r.installed.length,dupes})
+      :tt('sprites.converted_sheets_across_models_installed',{converted_n:r.converted.length,models,installed_n:r.installed.length})}
     </div>
     <div class="sprrow"><button class="primary" onclick="sprWire()">
       ${tt('sprites.point_the_modeldb_at_these_model',{models})}</button></div>`;
@@ -261,7 +260,7 @@ async function sprConvert(){
     ()=>api.post('/api/sprites/convert_apply',{mod:state.src,job,mipmaps:s.mipmaps,
       dedup:s.dedup,install:true,cleanup:true}));
   closeModal();
-  if(r.error)return toast(tt('sprites.convert_failed')+r.error);
+  if(r.error)return toast(tt('sprites.convert_failed_error',{error:r.error}));
   const last=r.record;
   await loadSprites();           // re-reads the mod: export/ and data/ both changed
   state.spr.last=last; renderSprites();
@@ -314,7 +313,7 @@ function renderSounds(){
   main.innerHTML=soundTabsHtml('data/export_descr_sounds_units_voice.txt')+`<div class="sndhead">
       <h2>${tt('sprites.unit_voices',{src:esc(state.src)})}</h2>
       <div class="count">${docPoints(tt('sprites.units_have_their_own_selection_barks',{donors_n:s.donors.length,pairs_n:s.pairs.length}),[
-        nConf?`<b class="w-warn">${nConf}</b> ${tt('sprites.unit_s_sit_in_a_block')}`:'',
+        nConf?tt('sprites.n_unit_s_sit_in_a_block_their_edu_doesnt_point_at',{n:nConf}):'',
         s.ships_skipped?tt('sprites.ship_s_are_left_out_a',{ships_skipped:s.ships_skipped}):''])}</div>
       <div class="sndtabs">
         ${tab('missing',tt('sprites.no_voice_entry'),s.missing.length)}
@@ -429,8 +428,7 @@ async function sndCvShow(type){
   if(row&&row.accent===undefined){
     cv.loaded=true; cv.text=''; cv.spans={}; cv.partSpans={}; cv.err=null;
     cv.base=''; cv.pristine=''; cv.hidden=[]; cv.comments=0; cv.auto=null;
-    cv.note=tt('sprites.has_no_entry_in_the_voice',{type})
-      +tt('sprites.and_apply_and_it_will_have');
+    cv.note=tt('sprites.has_no_entry_in_the_voice_bank_stage_one',{type});
     renderSounds(); return;
   }
   cv.loaded=false;
@@ -453,10 +451,8 @@ async function sndApply(){
     <div class="mbody">
       ${bad?`<div class="warnbox">${tt('sprites.row_s_cant_be_written_nothing',{bad,errors:r.errors.map(e=>esc(e)).join('<br>')})}</div>`:''}
       <div class="count" style="margin-bottom:8px">${docPoints(
-        tt('sprites.writes_the_voice_bank')+(r.edu_rewritten
-          ?` ${tt('sprites.and_export_descr_unit_txt_the')}`
-          :'')+'.',[
-        'Backed up first: 🕑 Log → Undo restores them exactly.'])}</div>
+        r.edu_rewritten?tt('sprites.writes_the_voice_bank_and_the_edu'):tt('sprites.writes_the_voice_bank_only'),[
+        tt('sprites.backed_up_first_log_undo_restores_them_exactly')])}</div>
       ${renderSummary(r.summary)}
     </div>
     <div class="foot">${cleanerBoxHtml()}<button onclick="closeModal()">${tt('common.cancel')}</button>
@@ -466,11 +462,11 @@ async function sndDoApply(){
   const ops=sndOps();
   document.getElementById('modal').innerHTML=`<h2>${tt('sprites.writing_voice_edits')}</h2>
     <div class="mbody"><div class="progress-track"><div class="progress-fill" style="width:60%"></div></div>
-      <div class="count" style="margin-top:8px">${ops.length} unit(s)</div></div>`;
+      <div class="count" style="margin-top:8px">${tt('sprites.n_units',{n:ops.length})}</div></div>`;
   let r;
   try{ r=await api.post('/api/sounds/apply',{mod:state.src,ops,clear_strings_bin:clearBinOn()}); }
   catch(e){ r={error:''+e}; }
-  if(r.error){ toast(tt('sprites.voice_edits_failed')+r.error,4500); closeModal(); return; }
+  if(r.error){ toast(tt('sprites.voice_edits_failed_error',{error:r.error}),4500); closeModal(); return; }
   closeModal();
   toast(tt('sprites.voice_change_s_written_undo_in',{ops_n:ops.length,binMsg:binMsg(r)}),4200);
   state.snd=null; state.destSnd=null; loadSounds();

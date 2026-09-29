@@ -297,7 +297,7 @@ def apply_load(p: LoadPlan) -> Dict:
     from . import cleaner, config
     from .logutil import file_op, log
     if p.errors or not p.writes():
-        raise ValueError("cannot apply: " + ("; ".join(p.errors) or "nothing to load"))
+        raise ValueError(_i18n.msg("eng.projectzip.cannot_apply", "cannot apply: {why}", why="; ".join(p.errors) or _i18n.msg("eng.projectzip.nothing_to_load", "nothing to load")))
     mod = p.mod
     data = Path(mod.data)
     tid = config.new_transfer_id()
@@ -341,9 +341,15 @@ def apply_load(p: LoadPlan) -> Dict:
         "unit_type": p.manifest.get("campaign") or "data/ zip",
         "resolved_type": p.manifest.get("campaign") or "data/ zip",
         "options": {}, "applied": True, "undone": False, "note": "",
-        "summary": f"loaded {counts.get('new', 0)} new and {counts.get('replaces', 0)} replaced "
-                   f"file(s) into {mod.name}"
-                   + (f", {len(p.stale)} stale map.rwm deleted" if p.stale else ""),
+        "summary": (_i18n.msg("eng.projectzip.loaded_new_and_replaced_file_s_into_stale",
+                              "loaded {new} new and {replaced} replaced file(s) into {name}, "
+                              "{stale_n} stale map.rwm deleted",
+                              new=counts.get('new', 0), replaced=counts.get('replaces', 0),
+                              name=mod.name, stale_n=len(p.stale))
+                    if p.stale else
+                    _i18n.msg("eng.projectzip.loaded_new_and_replaced_file_s_into",
+                              "loaded {new} new and {replaced} replaced file(s) into {name}",
+                              new=counts.get('new', 0), replaced=counts.get('replaces', 0), name=mod.name)),
         "warnings": [w for f in p.writes() for w in f.warnings],
         "manifest": manifest, "backup_root": str(backup_root),
     }

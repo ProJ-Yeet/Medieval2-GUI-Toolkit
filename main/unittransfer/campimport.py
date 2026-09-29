@@ -865,7 +865,7 @@ def _plan_folder(p: ImportPlan, home: Path, d: Destination, renames: Dict[str, s
     held = sorted(s for s in renames if s.lower() in guard)
     if held:
         p.warnings.append(
-            _i18n.msg("eng.campimport.also_a_province_a_settlement_or", "{shown} {x} also a province, a settlement or a character in this campaign, so the word is left as it is in {SCRIPT_NAME} and descr_events.txt rather than guessed at", shown=_shown(held), x='is' if len(held) == 1 else 'are', SCRIPT_NAME=SCRIPT_NAME))
+            _i18n.msgN("eng.campimport.held_word_is_also_a_province", len(held), "{shown} is also a province, a settlement or a character in this campaign, so the word is left as it is in {script} and descr_events.txt rather than guessed at", "{shown} are also a province, a settlement or a character in this campaign, so the word is left as it is in {script} and descr_events.txt rather than guessed at", shown=_shown(held), script=SCRIPT_NAME))
     script_hits = 0
     for path in sorted(home.rglob("*")):
         if not path.is_file():
@@ -991,7 +991,7 @@ def _plan_map(p: ImportPlan, home: Path) -> None:
     missing = [n for n in MAP_FILES if n != REGIONS_NAME and not (home / n).is_file()
                and not (base / n).is_file()]
     if missing:
-        p.warnings.append(_i18n.msg("eng.campimport.has_no_so_the_new_campaign", "{name} has no {shown}, so the new campaign reads {name2}'s base copy of {x}, which belongs to a different map", name=p.src.name, shown=_shown(missing), name2=p.dst.name, x='it' if len(missing) == 1 else 'them'))
+        p.warnings.append(_i18n.msgN("eng.campimport.has_no_base_copy_of", len(missing), "{name} has no {shown}, so the new campaign reads {name2}'s base copy of it, which belongs to a different map", "{name} has no {shown}, so the new campaign reads {name2}'s base copy of them, which belongs to a different map", name=p.src.name, shown=_shown(missing), name2=p.dst.name))
 
 
 def _plan_cap(p: ImportPlan, rf) -> None:
@@ -1238,7 +1238,7 @@ def apply(p: ImportPlan) -> dict:
     from .logutil import file_op, log
 
     if p.errors:
-        raise ValueError("cannot apply: " + "; ".join(p.errors))
+        raise ValueError(_i18n.msg("eng.campimport.cannot_apply", "cannot apply: {why}", why="; ".join(p.errors)))
     if not p.copies and not p.texts:
         raise ValueError(_i18n.msg("eng.campimport.there_is_nothing_to_import", "there is nothing to import"))
     there = Path(p.dst.data) / p.folder

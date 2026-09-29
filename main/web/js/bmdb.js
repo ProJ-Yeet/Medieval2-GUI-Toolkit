@@ -65,7 +65,7 @@ function renderBmdb(){
     <div class="bmmain">
     <div class="dbhead">
       <h2>${tt('bmdb.battle_model_entries',{src:esc(state.src),names:state.bmdb.names})}</h2>
-      ${tt('bmdb.referenced_by_nothing',{nUnused,nUnused2:nUnused?tt('bmdb.clean_up_bmdb_moves_them_out'):'',x:dupBlocks?tt('bmdb.entry_block_share_a_name_with',{dupBlocks,dupBlocks2:dupBlocks===1?'':'s',dupBlocks3:dupBlocks===1?'it':'them'}):'',x2:dupBlocks?`<button onclick="openDupes()"
+      ${tt('bmdb.referenced_by_nothing',{nUnused,nUnused2:nUnused?tt('bmdb.clean_up_bmdb_moves_them_out'):'',x:dupBlocks?ttN('bmdb.entry_blocks_share_a_name',dupBlocks):'',x2:dupBlocks?`<button onclick="openDupes()"
         title="${ttA('bmdb.m2tw_reads_the_first_entry_with')}">${tt('bmdb.duplicates',{dupBlocks})}</button>`:''})}
       <button class="${bmPrevNode?'on':''}" onclick="bmPrevToggle()"
         title="${ttA('bmdb.draw_a_battle_model_beside_the')}">${tt('bmdb.view_in_3d')}</button>
@@ -87,7 +87,7 @@ function bmdbRow(e){
     <span class="en">${esc(e.name)}${e.copies>1?`<span class="badge w-warn" style="margin-left:5px"
       title="${ttA('bmdb.the_modeldb_holds_this_name_times',{copies:e.copies})}">×${e.copies}</span>`:''}</span>
     <span class="use">${use}</span>
-    <span class="nums">${tt('bmdb.lod_skin',{lods:e.lods,lods2:e.lods===1?'':'s',skins:e.skins,skins2:e.skins===1?'':'s'})}</span>
+    <span class="nums">${tt('bmdb.lods_skins',{lods:ttN('bmdb.lod_count',e.lods),skins:ttN('bmdb.skin_count',e.skins)})}</span>
     <button class="db3d" title="${ttA('bmdb.draw_this_model_in_the_panel')}"
       onclick="event.stopPropagation();bmPrevOpen('${q1(esc(e.name))}')">🧊</button>
   </div>`;
@@ -184,7 +184,7 @@ function bmPrevFull(){
   const go = el.requestFullscreen || el.webkitRequestFullscreen;
   if(!go){ toast(tt('common.this_browser_will_not_go_full'), 3000); return; }
   Promise.resolve(go.call(el)).catch(e =>
-    toast(tt('common.full_screen_was_refused') + ((e && e.message) || e), 4000));
+    toast(tt('bmdb.full_screen_refused_because',{why:(e && e.message) || e}), 4000));
 }
 // Opening an entry builds exactly the state the unit editor's model tab runs on,
 // with a one-entry `models` list and no unit - so edModels(), the faction
@@ -281,12 +281,12 @@ function bmCvLabel(el,name){
   const idx=el.closest('[data-i]');
   if(idx&&idx.dataset.entry)return 'path#'+idx.dataset.i;
   const fac=el.closest('[data-fac]');
-  if(fac)return tt('bmdb.fac')+fac.dataset.f+':'+fac.dataset.kind;
+  if(fac)return tt('bmdb.fac_label',{f:fac.dataset.f,kind:fac.dataset.kind});
   // a default box stands for that kind in EVERY faction record
   const def=el.closest('[data-def]');
   if(def){
     const m=bmModel(name),k=def.dataset.kind;
-    return (m.factions||[]).map(f=>tt('bmdb.fac')+f+':'+k);
+    return (m.factions||[]).map(f=>tt('bmdb.fac_label',{f,kind:k}));
   }
   const nm=el.closest('[data-rename]');
   return nm?'name':'';
@@ -308,7 +308,7 @@ function renderBmdbEditor(){
     <h2>${tt('bmdb.battle_model')} <span class="pill">${esc(e.mod)}</span></h2>
     <div class="ehead">
       <div><div class="nm" style="font-family:ui-monospace,Consolas,monospace">${esc(m.name)}</div>
-        <div class="count">${tt('bmdb.lod_faction_skin',{lods_n:m.lods.length,lods:m.lods.length===1?'':'s',factions_n:m.factions.length,factions:m.factions.length===1?'':'s',used_by:m.used_by.length?tt('bmdb.used_by',{used_by_n:m.used_by.length}):`<span class="w-warn">${tt('bmdb.referenced_by_nothing_2')}</span>`})}</div></div>
+        <div class="count">${tt('bmdb.lods_faction_skins_used_by',{lods:ttN('bmdb.lod_count',m.lods.length),skins:ttN('bmdb.faction_skin_count',m.factions.length),used_by:m.used_by.length?tt('bmdb.used_by',{used_by_n:m.used_by.length}):`<span class="w-warn">${tt('bmdb.referenced_by_nothing_2')}</span>`})}</div></div>
     </div>
     <div class="cvsplit${e.cv?'':' off'}" style="padding:0 14px">
       <div id="bmGui"><div class="mbody" id="edBody" style="padding:0"></div></div>
@@ -439,16 +439,15 @@ function renderOwnership(){
         <div class="srow shead"><span class="sicon">${def.icon}</span><span class="stext">
           ${tt('bmdb.of_entries_are_short_of_a',{row_count:a.row_count,entry_count:a.entry_count})}</span></div>
         <div class="srow"><span class="sicon">+</span><span class="stext">
-          <b>${a.added_records}</b> ${tt('bmdb.record_to_add_across_faction_slot',{added_records:a.added_records===1?'':'s',slot_count:a.slot_count,slot_count2:a.slot_count===1?'':'s'})}</span></div>
+          ${tt('bmdb.records_to_add_across_slots',{records:ttN('bmdb.record_count',a.added_records),slots:ttN('bmdb.faction_slot_count',a.slot_count)})}</span></div>
         <div class="srow ${heavy?'warn':''}"><span class="sicon">${heavy?'!':'📦'}</span>
           <span class="stext">${tt('bmdb.battle_models_modeldb_grows_by_about',{x:MB(a.bytes),x2:a.modeldb_bytes?tt('bmdb.from_to_its_size',{x:MB(a.modeldb_bytes),x2:MB(a.modeldb_bytes+a.bytes),grow:(1+grow).toFixed(1)}):'',x3:heavy?tt('bmdb.m2tw_loads_the_whole_file_into'):'.'})}</span></div>
         ${a.covered?`<div class="srow"><span class="sicon">✓</span><span class="stext">
-          ${tt('bmdb.entr_already_ha_every_record',{covered:a.covered,covered2:a.covered===1?'y':'ies',covered3:a.covered===1?'s':'ve',mode:o.mode==='all'?tt('bmdb.the_roster_asks_for'):tt('bmdb.their_units_need')})}</span></div>`:''}
+          ${ttN('bmdb.entries_already_have_every_record',a.covered,{mode:o.mode==='all'?tt('bmdb.the_roster_asks_for'):tt('bmdb.their_units_need')})}</span></div>`:''}
         ${a.no_unit?`<div class="srow"><span class="sicon">·</span><span class="stext">
-          ${tt('bmdb.entr_drawn_for_no_unit_at',{no_unit:a.no_unit,no_unit2:a.no_unit===1?tt('bmdb.y_is'):tt('bmdb.ies_are'),x:o.mode==='units'?tt('bmdb.so_this_mode_has_nothing_to')
-          +(a.no_unit===1?'it':'them'):''})}</span></div>`:''}
+          ${ttN(o.mode==='units'?'bmdb.entries_drawn_for_no_unit_units_mode':'bmdb.entries_drawn_for_no_unit',a.no_unit)}</span></div>`:''}
         ${a.no_records?`<div class="srow warn"><span class="sicon">!</span><span class="stext">
-          ${tt('bmdb.entr_no_texture_record_at_all',{no_records:a.no_records,no_records2:a.no_records===1?tt('bmdb.y_has'):tt('bmdb.ies_have')})}</span></div>`:''}
+          ${ttN('bmdb.entries_no_texture_record',a.no_records)}</span></div>`:''}
       </div>
 
       ${a.unknown_ownership.length?`<fieldset class="assetconf" style="margin-top:10px">
@@ -456,7 +455,7 @@ function renderOwnership(){
         <div class="count">${tt('bmdb.these_appear_on_a_units_ownership')}</div>
         <div class="flist" style="margin-top:6px">${a.unknown_ownership.map(x=>`<div class="frow">
           <span class="fp">${esc(x.faction)}</span>
-          <span class="fs">${tt('bmdb.unit',{count:x.count,count2:x.count===1?'':'s',units:esc(x.units.join(', ')),x:x.count>x.units.length?' …':''})}</span></div>`).join('')}</div>
+          <span class="fs">${ttN('bmdb.units_list',x.count,{units:esc(x.units.join(', ')),x:x.count>x.units.length?' …':''})}</span></div>`).join('')}</div>
       </fieldset>`:''}
 
       ${a.row_count?`<div class="clbar" style="margin-top:12px">
@@ -541,7 +540,7 @@ function ownPlanHtml(r){
   return `<div class="sum" style="margin-top:10px">
     <div class="srow shead"><span class="sicon">✎</span><span class="stext">${tt('common.what_this_writes')}</span></div>
     <div class="srow"><span class="sicon">·</span><span class="stext">
-      <b>${r.entries||0}</b> ${tt('bmdb.entr_in_data_unit_models_battle',{x:r.entries===1?'y':'ies'})}</span></div>
+      ${ttN('bmdb.entries_in_modeldb',r.entries||0)}</span></div>
     ${ch.slice(0,8).map(x=>`<div class="srow"><span class="sicon">·</span>
       <span class="stext">${esc(x)}</span></div>`).join('')}
     ${ch.length>8?`<div class="srow"><span class="sicon">·</span><span class="stext">
@@ -557,19 +556,13 @@ async function ownApply(){
   if((p.errors||[]).length){toast(p.errors[0]);return;}
   if(!r.entries){toast(tt('bmdb.nothing_to_add'));return;}
   const bytes=a.rows.reduce((n,x)=>n+(o.picked.has(x.entry)?x.bytes:0),0);
-  if(!confirm(tt('bmdb.add_the_missing_faction_texture_records',{x:r.entries})+
-      tt('bmdb.entr_of',{x:r.entries===1?'y':'ies',mod:a.mod})+
-      tt('bmdb.each_new_record_is_a_clone')+
-      tt('bmdb.texture_nothing_is_removed')+
-      tt('bmdb.battle_models_modeldb_grows_by_roughly',{x:MB(bytes)})+
-      tt('bmdb.it_is_backed_up_first_log')))return;
+  if(!confirm(ttN('bmdb.add_missing_records_confirm',r.entries,{mod:a.mod,size:MB(bytes)})))return;
   const job=newJob();
   const res=await runJob(job,`${OWN_MODES[o.mode].icon} ${esc(OWN_MODES[o.mode].title)}`,
-    tt('bmdb.adding_the_missing_faction_records_to',{x:r.entries,x2:r.entries===1?'y':'ies',mod:esc(a.mod)}),
+    ttN('bmdb.adding_missing_records',r.entries,{mod:esc(a.mod)}),
     ()=>api.post('/api/bmdb/ownership_apply',{...ownPayload(),job}));
-  if(res.error){toast(tt('bmdb.could_not_add_the_records')+res.error);renderOwnership();return;}
-  toast(tt('bmdb.entr_given_their_missing_faction',{res:res.entries,res2:res.entries===1?'y':'ies'})+
-        tt('bmdb.record_s_undo_in_log'),5200);
+  if(res.error){toast(tt('bmdb.could_not_add_records_reason',{error:res.error}));renderOwnership();return;}
+  toast(ttN('bmdb.entries_given_missing_records',res.entries),5200);
   // The list was built from a scan taken BEFORE the write, so it now describes a
   // file that has changed - re-run rather than leave rows up inviting a second go.
   state.bmdb=null;

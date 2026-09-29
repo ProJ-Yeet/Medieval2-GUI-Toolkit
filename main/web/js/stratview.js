@@ -124,7 +124,7 @@ function cmodHtml(){
         placeholder="${ttA('stratview.castle_general_symbol')}"
         oninput="cmodFilter(this.value)"></label>
     <div class="count">${shown.length === models.length
-      ? tt('stratview.model_file_under_data_models_strat',{models_n:models.length,models:models.length === 1 ? '' : 's'})
-      : `${shown.length} of ${models.length}`}</div>
+      ? ttN('stratview.model_files_under_data_models_strat',models.length)
+      : tt('stratview.shown_of_total',{shown:shown.length,total:models.length})}</div>
     <div class="cmodlist">${rows || `<div class="count">${tt('stratview.nothing_by_that_name')}</div>`}</div>`;
 }

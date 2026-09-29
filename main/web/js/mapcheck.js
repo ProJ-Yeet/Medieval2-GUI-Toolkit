@@ -122,8 +122,7 @@ async function cchkPost(path, body){
 async function cchkBaseline(what){
   const k = state.cchk;
   if(what === 'clear'
-     && !confirm(tt('mapcheck.clear_the_baseline_every_finding_already')
-                 + tt('mapcheck.back_to_being_one_the_toolkit'))) return;
+     && !confirm(tt('mapcheck.clear_the_baseline_confirm'))) return;
   const r = await cchkPost('baseline', {action: what});
   if(r && !r.error){
     activity(tt('mapcheck.map_check'), what === 'clear' ? tt('mapcheck.cleared_the_baseline')
@@ -305,7 +304,7 @@ function cchkRowHtml(f){
         title="${ttA('mapcheck.centre_the_map_on_and_pick',{x:f.tile.join(',')})}"
         >\u{1F50D} ${f.tile[0]},${f.tile[1]}</button>`
     : f.file ? `<button class="cpshape" onclick="cchkRevealKey('${f.key}')"
-        title="${ttA('mapcheck.open',{file:esc(f.file),x:f.line ? tt('mapcheck.at_line') + f.line : ''})}"
+        title="${f.line ? ttA('mapcheck.open_at_line',{file:esc(f.file),line:f.line}) : ttA('mapcheck.open',{file:esc(f.file),x:''})}"
         >\u{1F4C4} ${f.line ? 'line ' + f.line : 'file'}</button>` : '';
   // A fix that names its own button acts on this one finding, not on every
   // finding of its rule: smoothing a crossing is a choice made crossing by

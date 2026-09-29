@@ -1102,7 +1102,8 @@ def apply(p: RenamePlan) -> Dict:
     :func:`unittransfer.transfer.undo` restores the one and removes the other.
     """
     if p.errors:
-        raise ValueError("cannot apply: " + "; ".join(p.errors))
+        raise ValueError(_i18n.msg("eng.renames.cannot_apply", "cannot apply: {why}",
+                                   why="; ".join(p.errors)))
     if not p.touched():
         raise ValueError(_i18n.msg("eng.renames.nothing_to_change", "nothing to change"))
     mod = p.mod

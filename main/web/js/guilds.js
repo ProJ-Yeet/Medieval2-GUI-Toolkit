@@ -37,7 +37,7 @@ const GU_BLANK = {name:'', building:'', levels:'100 250 500'};
 
 async function loadGuilds(){
   const mod = state.src;
-  main.innerHTML = `<div class="empty">${tt('common.reading')} ` + esc(mod) + `${tt('guilds.s_guilds')}</div>`;
+  main.innerHTML = `<div class="empty">${tt('guilds.reading_mod_guilds',{mod:esc(mod)})}</div>`;
   let r;
   try{ r = await api.get('/api/guilds?mod=' + enc(mod)); }
   catch(e){ if(stale('guilds', mod)) return;
@@ -82,7 +82,7 @@ function guUndeclaredHtml(){
   const list = state.gu.undeclared || [];
   if(!list.length) return '';
   return `<div class="trnote w-warn" style="margin:6px 0">
-    ${tt('guilds.guild_get_points_and_do_not',{list_n:list.length,list:list.length===1?'':'s',list2:list.map(esc).join(', '),list3:list.length===1?'it':'them',x:list.map(n=>`<button class="trnew" style="margin:4px 4px 0 0"
+    ${ttN('guilds.undeclared_guilds_note',list.length,{names:list.map(esc).join(', '),buttons:list.map(n=>`<button class="trnew" style="margin:4px 4px 0 0"
       onclick="guNew('${q1(esc(n))}')">${tt('guilds.declare',{x:esc(n)})}</button>`).join('')})}
   </div>`;
 }
@@ -102,7 +102,7 @@ function guRowHtml(r){
     <div class="nm">${esc(r.name)}</div>
     <div class="sub">${r.building?esc(r.building):`<b>${tt('guilds.no_building')}</b>`}${
       r.levels && r.levels.length?` · ${r.levels.join(' / ')}`:''}${
-      r.awards?tt('guilds.trigger_line',{awards:r.awards,awards2:r.awards===1?'':'s'})
+      r.awards?ttN('guilds.trigger_line_count',r.awards)
               :` ${tt('guilds.nothing_awards_it_points')}`}${
       r.findings?` <span class="w-warn">· ${r.findings}⚠</span>`:''}</div>
   </button>`;
@@ -166,12 +166,12 @@ function guPaintForm(){
 /* ---- the detail pane ---- */
 function guDetailHtml(){
   const g = state.gu, d = g.d;
-  if(!g.sel && !g.adding) return `<div class="empty">${tt('guilds.pick_a_guild_on_the_left',{n:(g.guilds||[]).length,guilds:(g.guilds||[]).length===1?'':'s',triggers:g.triggers,triggers2:g.triggers===1?'':'s',awards:g.awards,awards2:g.awards===1?'':'s',file:esc(g.file||'')})}</div>`;
+  if(!g.sel && !g.adding) return `<div class="empty">${tt('guilds.pick_a_guild_hint',{guilds:ttN('guilds.guild_count',(g.guilds||[]).length),triggers:ttN('guilds.trigger_count',g.triggers),points:ttN('guilds.point_line_count',g.awards),file:esc(g.file||'')})}</div>`;
   if(!d) return `<div class="empty">${tt('guilds.reading_the_guild')}</div>`;
   if(d.error) return `<div class="empty"><span class="w-bad">✗ ${esc(d.error)}</span></div>`;
   return `<div class="trbar">
       <div><b>${esc(g.adding ? tt('guilds.new_guild_3') : d.label || d.name)}</b>
-        ${d.awards?`<span class="count">${tt('guilds.point_line',{awards_n:d.awards.length,awards:d.awards.length===1?'':'s'})}</span>`:''}</div>
+        ${d.awards?`<span class="count">${ttN('guilds.point_line_count',d.awards.length)}</span>`:''}</div>
       <span class="sp"></span>
       ${g.adding ? '' : `<button class="${d.cv?'on':''}" title="${ttA('guilds.show_this_guild_exactly_as_export')}"
         onclick="guCvToggle()">${tt('common.code_view')}</button>
@@ -211,8 +211,7 @@ function guFormHtml(w, d){
           .filter(b => b.indexOf('guild_') === 0)
           .map(b=>`<option value="${esc(b)}">`).join('')}</datalist>
         <div class="trhint">${tt('guilds.the_export_descr_buildings_txt_line',{known:known ? tt('guilds.every_guild_line_in_this_mod')
-          : tt('guilds.this_mod_keeps_its_edb_in')
-            + tt('guilds.and_nothing_here_is_checked_against')})}</div>
+          : tt('guilds.this_mod_keeps_its_edb_packed')})}</div>
       </div>
       <label class="lbl" data-label="levels">${tt('guilds.point_thresholds')}</label>
       <div data-label="levels">
@@ -303,8 +302,7 @@ function guAddTrigger(){
 function guDelTrigger(i){
   const d = state.gu.d;
   const row = d.trigs[i];
-  if(!row.added && !confirm(tt('guilds.remove_trigger',{name:row.name})
-    + tt('common.it_is_written_out_of_the'))) return;
+  if(!row.added && !confirm(tt('guilds.remove_trigger_confirm',{name:row.name}))) return;
   if(row.ui) trgDrop(row.ui);
   d.trigs.splice(i, 1);
   d.removed = (d.removed || []).concat(row.added ? [] : [row.name]);
@@ -399,11 +397,10 @@ async function guApply(body, what){
   const p = plan.plan || {};
   const lines = (p.changes || []).slice(0, 14);
   const found = (p.findings || []).map(f => '⚠ ' + f.message);
-  if(!confirm(tt('guilds.write',{what}) + (lines.join('\n') || tt('common.no_visible_change'))
+  if(!confirm(tt('guilds.write_confirm',{what,changes:(lines.join('\n') || tt('common.no_visible_change'))
     + ((p.changes || []).length > 14 ? tt('guilds.and_more',{changes:p.changes.length - 14}) : '')
     + ((p.warnings || []).length ? '\n\n' + p.warnings.slice(0, 3).join('\n') : '')
-    + (found.length ? '\n\n' + found.slice(0, 4).join('\n') : '')
-    + tt('common.backed_up_first_and_log_can'))) return;
+    + (found.length ? '\n\n' + found.slice(0, 4).join('\n') : '')}))) return;
   g.busy = true;
   let res;
   try{ res = await api.post('/api/guilds/apply', body); }

@@ -85,7 +85,7 @@ function trRowHtml(r){
   const on = state.tr.sel === r.name;
   return `<button class="trrow${on?' on':''}" onclick="trOpen('${q1(esc(r.name))}')">
     <div class="nm">${esc(r.label)}</div>
-    <div class="sub">${tt('traits.level',{levels:r.levels,levels2:r.levels===1?'':'s',hidden:r.hidden?tt('traits.hidden'):'',x:r.triggers?tt('traits.trigger',{triggers:r.triggers,triggers2:r.triggers===1?'':'s'})
+    <div class="sub">${ttN('traits.level_count',r.levels,{hidden:r.hidden?tt('traits.hidden'):'',x:r.triggers?ttN('traits.trigger_count_suffix',r.triggers)
         :r.lua_gives?tt('traits.given_by_a_script'):` ${tt('traits.no_trigger_gives_it',{lua_names:r.lua_names?tt('traits.a_script_names_it'):''})}`,findings:r.findings?` <span class="w-warn">· ${r.findings}⚠</span>`:''})}</div>
   </button>`;
 }
@@ -152,13 +152,13 @@ function trPaintForm(){
 /* ---- the detail pane ---- */
 function trDetailHtml(){
   const t = state.tr, d = t.d;
-  if(!t.sel && !t.adding) return `<div class="empty">${tt('traits.pick_a_trait_on_the_left',{count:t.count,count2:t.count===1?'':'s',triggers:t.triggers,triggers2:t.triggers===1?'':'s',file:esc(t.file)})}</div>`;
+  if(!t.sel && !t.adding) return `<div class="empty">${tt('traits.pick_a_trait_counts',{traits:ttN('traits.trait_count',t.count),triggers:ttN('traits.trigger_count',t.triggers),file:esc(t.file)})}</div>`;
   if(!d) return `<div class="empty">${tt('traits.reading_the_trait')}</div>`;
   if(d.error) return `<div class="empty"><span class="w-bad">✗ ${esc(d.error)}</span></div>`;
   const w = d.w;
   return `<div class="trbar">
       <div><b>${esc(t.adding ? tt('traits.new_trait_3') : d.label)}</b>
-        <span class="count">${tt('traits.level_2',{levels_n:w.levels.length,levels:w.levels.length===1?'':'s'})}</span></div>
+        <span class="count">${ttN('traits.level_count_plain',w.levels.length)}</span></div>
       <span class="sp"></span>
       ${t.adding ? '' : `<button class="${d.cv?'on':''}" title="${ttA('traits.show_this_trait_exactly_as_export')}"
         onclick="trCvToggle()">${tt('common.code_view')}</button>
@@ -450,8 +450,7 @@ function trAddTrigger(){
 function trDelTrigger(i){
   const d = state.tr.d;
   const row = d.trigs[i];
-  if(!row.added && !confirm(tt('traits.remove_trigger',{name:row.name})
-    + tt('common.it_is_written_out_of_the'))) return;
+  if(!row.added && !confirm(tt('traits.remove_trigger_confirm',{name:row.name}))) return;
   if(row.ui) trgDrop(row.ui);
   d.trigs.splice(i, 1);
   d.removed = (d.removed || []).concat(row.added ? [] : [row.name]);
@@ -557,10 +556,9 @@ async function trApply(body, what){
   const p = plan.plan || {};
   const lines = (p.changes || []).slice(0, 14);
   const found = (p.findings || []).map(f => '⚠ ' + f.message);
-  if(!confirm(tt('traits.write',{what}) + (lines.join('\n') || tt('common.no_visible_change'))
-    + ((p.changes || []).length > 14 ? tt('traits.and_more',{changes:p.changes.length - 14}) : '')
-    + (found.length ? '\n\n' + found.slice(0, 4).join('\n') : '')
-    + tt('common.backed_up_first_and_log_can'))) return;
+  if(!confirm(tt('traits.write_confirm',{what,changes:lines.join('\n') || tt('common.no_visible_change'),
+    more:(p.changes || []).length > 14 ? tt('traits.and_more',{changes:p.changes.length - 14}) : '',
+    warnings:found.length ? '\n\n' + found.slice(0, 4).join('\n') : ''}))) return;
   t.busy = true;
   let res;
   try{ res = await api.post('/api/traits/apply', body); }

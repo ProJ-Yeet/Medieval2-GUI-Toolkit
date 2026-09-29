@@ -23,7 +23,7 @@ async function packExport(types){
   const modal=document.getElementById('modal');
   modal.className='modal';
   overlay.classList.add('open');
-  modal.innerHTML=`<h2>${tt('packs.export_unit_as_a_pack',{types_n:types.length,types:types.length===1?'':'s'})}</h2>
+  modal.innerHTML=`<h2>${ttN('packs.export_units_as_a_pack',types.length)}</h2>
     <div class="mbody"><div class="empty">${tt('packs.working_out_what_has_to_travel')}</div></div>
     <div class="foot"><button onclick="closeModal()">${tt('common.cancel')}</button></div>`;
   let r;
@@ -35,19 +35,19 @@ async function packExport(types){
 }
 function packExportRender(){
   const p=state.pack.plan;
-  document.getElementById('modal').innerHTML=`<h2>${tt('packs.export_unit_as_a_pack_2',{units_n:p.units.length,units:p.units.length===1?'':'s'})} <span class="pill">${esc(state.pack.mod)}</span></h2>
+  document.getElementById('modal').innerHTML=`<h2>${ttN('packs.export_units_as_a_pack',p.units.length)} <span class="pill">${esc(state.pack.mod)}</span></h2>
     <div class="mbody">
       <div class="sum">
         <div class="srow"><span class="sicon">•</span><span class="stext">
           ${p.units.map(t=>`<code>${esc(t)}</code>`).join(', ')}</span></div>
         <div class="srow"><span class="sicon">•</span><span class="stext">
-          ${tt('packs.battle_model_entr_mesh_texture_file',{models_n:p.models.length,models:p.models.length===1?'y':'ies',assets:p.assets,assets2:p.assets===1?'':'s',icons:p.icons,icons2:p.icons===1?'':'s'})}</span></div>
+          ${tt('packs.model_entries_files_icons',{models:ttN('packs.battle_model_entries',p.models.length),assets:ttN('packs.mesh_texture_files',p.assets),icons:ttN('packs.icons',p.icons)})}</span></div>
         ${p.mounts.length?`<div class="srow"><span class="sicon">•</span><span class="stext">
-          ${tt('packs.mount',{mounts:p.mounts.length===1?'':'s',mounts2:p.mounts.map(m=>`<code>${esc(m)}</code>`).join(', ')})}</span></div>`:''}
+          ${ttN('packs.mounts_list',p.mounts.length,{list:p.mounts.map(m=>`<code>${esc(m)}</code>`).join(', ')})}</span></div>`:''}
         ${p.projectiles.length?`<div class="srow"><span class="sicon">•</span><span class="stext">
-          ${tt('packs.projectile',{projectiles:p.projectiles.length===1?'':'s',projectiles2:p.projectiles.map(m=>`<code>${esc(m)}</code>`).join(', ')})}</span></div>`:''}
+          ${ttN('packs.projectiles_list',p.projectiles.length,{list:p.projectiles.map(m=>`<code>${esc(m)}</code>`).join(', ')})}</span></div>`:''}
         ${p.engines.length?`<div class="srow"><span class="sicon">•</span><span class="stext">
-          ${tt('packs.engine',{engines:p.engines.length===1?'':'s',engines2:p.engines.map(m=>`<code>${esc(m)}</code>`).join(', ')})}</span></div>`:''}
+          ${ttN('packs.engines_list',p.engines.length,{list:p.engines.map(m=>`<code>${esc(m)}</code>`).join(', ')})}</span></div>`:''}
         <div class="srow"><span class="sicon">→</span><span class="stext">
           ${tt('packs.about_of_art_before_compression',{x:MBs(p.bytes)})}</span></div>
         ${(p.missing||[]).map(t=>`<div class="srow bad"><span class="sicon">✕</span>
@@ -121,7 +121,7 @@ function packImportRender(){
     <div class="foot">
       <button onclick="closeModal()">${tt('common.cancel')}</button>
       <button class="primary" ${r.units.length?'':'disabled'} onclick="packMount()">
-        ${tt('packs.open_unit_for_transfer',{units_n:r.units.length,units:r.units.length===1?'':'s'})}</button></div>`;
+        ${ttN('packs.open_units_for_transfer',r.units.length)}</button></div>`;
 }
 async function packMount(){
   const r=state.packIn;
@@ -136,8 +136,7 @@ async function packMount(){
   state.src=info.name; srcSel.value=info.name;
   applyMode(true);
   await loadSource();
-  toast(tt('packs.pack_opened_as_pick_the_units',{name:info.name,dst:state.dst})
-       +tt('packs.exactly_as_you_would_from_any'),6000);
+  toast(tt('packs.pack_opened_pick_the_units',{name:info.name,dst:state.dst}),6000);
 }
 
 /* ---- clean-up: what nothing uses, and where to put it ---- */
@@ -230,12 +229,12 @@ function clLuaBox(a){
   const kept=a.lua_kept||[];
   const scanned=a.lua_files||0;
   if(!scanned) return '';
-  if(!kept.length) return `<div class="count">${tt('packs.read_lua_script_in_the_mod',{scanned,scanned2:scanned===1?'':'s'})}</div>`;
+  if(!kept.length) return `<div class="count">${ttN('packs.read_lua_scripts_in_the_mod',scanned)}</div>`;
   const rows=kept.slice(0,60).map(m=>`<div class="frow"><span class="fp">${esc(m.entry)}</span><span class="fs">${
     esc(m.file)}${m.in_comment?tt('packs.in_a_comment_and_still_protected'):''}</span></div>`).join('');
   return `<fieldset class="assetconf" style="margin-top:10px;border-color:var(--good)">
     <legend class="w-good">${tt('packs.protected_by_the_mods_lua_scripts')}</legend>
-    <div class="count"><b>${kept.length}</b> ${tt('packs.entr_named_by_one_of_this',{kept:kept.length===1?tt('packs.y_is'):tt('packs.ies_are'),scanned,scanned2:scanned===1?'':'s',kept2:kept.length===1?'it':'them',kept3:kept.length===1?tt('common.it_is'):tt('common.they_are')})}</div>
+    <div class="count">${ttN('packs.entries_named_by_lua_scripts',kept.length,{scripts:ttN('packs.lua_scripts_bold',scanned)})}</div>
     <div class="flist" style="margin-top:6px">${rows}${
       kept.length>60?`<div class="count">${tt('packs.and_more_2',{kept:kept.length-60})}</div>`:''}</div>
   </fieldset>`;
@@ -252,7 +251,7 @@ function clUnusedBody(){
         onchange="clPick('entries','${q1(esc(u.entry))}',this.checked)">
       <div class="grow"><span class="nm">${esc(u.entry)}</span>${u.copies>1?`
         <span class="badge w-warn">${tt('packs.copies_of_this_name_and_all',{copies:u.copies})}</span>`:''}
-        <div class="sub">${tt('packs.lod_skin_file_named_on_disk',{lods:u.lods,lods2:u.lods===1?'':'s',skins:u.skins,skins2:u.skins===1?'':'s',files_n:u.files.length,files:u.files.length===1?'':'s',on_disk:u.on_disk})}</div></div>
+        <div class="sub">${tt('packs.lods_skins_files_named',{lods:ttN('packs.lods',u.lods),skins:ttN('packs.skins',u.skins),files:ttN('packs.files',u.files.length),on_disk:u.on_disk})}</div></div>
     </div>`).join('')}</div>`;
 }
 /* Suggestions, never decisions: the twin has the same animations, skeletons and
@@ -278,7 +277,7 @@ function clMergeBody(){
         </select>
         <span class="badge" id="clOwn_${esc(m.entry)}" style="color:var(--good);border-color:var(--good)${
           clIsOwn(m,c.into[m.entry])?'':';display:none'}">${tt('packs.already_an_armour_tier_of_the')}</span>
-        <div class="sub">${tt('packs.soldier_of_lod_file',{x:m.units.map(u=>userLink(u)).join(', '),lods:m.lods,lods2:m.lods===1?'':'s',files_n:m.files.length,files:m.files.length===1?'':'s'})}</div>
+        <div class="sub">${tt('packs.soldier_of_lods_files',{units:m.units.map(u=>userLink(u)).join(', '),lods:ttN('packs.lods',m.lods),files:ttN('packs.files',m.files.length)})}</div>
         ${risky?`<div class="sub w-warn">${tt('packs.list_no_armour_ug_models_so',{units_without_upgrades:esc(m.units_without_upgrades.join(', '))})}</div>`:''}
       </div></div>`;}).join('')}</div>`;
 }
@@ -397,18 +396,15 @@ async function clApply(){
   if(!r)return;
   if(r.errors&&r.errors.length){toast(r.errors[0]);return;}
   if(!r.entry_deletes.length&&!r.export_count&&!r.mount_deletes.length){toast(tt('common.nothing_is_ticked'));return;}
-  if(!confirm(tt('packs.move_modeldb_entr',{entry_deletes_n:r.entry_deletes.length,entry_deletes:r.entry_deletes.length===1?'y':'ies'})+
-      tt('packs.and_file_s_out_of_they',{export_count:r.export_count,mod:c.a.mod,target:r.target})+
-      `${r.merges.length?tt('packs.unit_soldier_line_s_are_repointed',{merges_n:r.merges.length}):''}`+
-      `${r.mount_deletes.length?tt('packs.mount_s_are_removed_from_descr',{mount_deletes_n:r.mount_deletes.length}):''}`+
-      tt('packs.everything_touched_is_backed_up_first')))return;
+  if(!confirm(tt('packs.move_entries_and_files_out',{entries:ttN('packs.modeldb_entries',r.entry_deletes.length),export_count:r.export_count,mod:c.a.mod,target:r.target,
+      merges:r.merges.length?tt('packs.unit_soldier_line_s_are_repointed',{merges_n:r.merges.length}):'',
+      mounts:r.mount_deletes.length?tt('packs.mount_s_are_removed_from_descr',{mount_deletes_n:r.mount_deletes.length}):''})))return;
   const job=newJob();
   const res=await runJob(job,tt('packs.cleaning_up'),
     tt('packs.copying_file_s_out_then_rewriting',{export_count:r.export_count,mod:esc(c.a.mod)}),
     ()=>api.post('/api/bmdb/cleanup_apply',{...clPayload(),job,clear_strings_bin:clearBinOn()}));
-  if(res.error){toast(tt('packs.cleanup_failed')+res.error);renderCleanup();return;}
-  toast(tt('packs.removed_entr',{entry_deletes_n:res.plan.entry_deletes.length,x:res.plan.entry_deletes.length===1?'y':'ies'})+
-        tt('packs.and_file_s_undo_in_log',{export_count:res.plan.export_count,x:binMsg(res)}),5200);
+  if(res.error){toast(tt('packs.cleanup_failed_error',{error:res.error}));renderCleanup();return;}
+  toast(ttN('packs.removed_entries_and_files',res.plan.entry_deletes.length,{export_count:res.plan.export_count,x:binMsg(res)}),5200);
   state.bmdb=null; state.destData=null;
   // The lists in this dialog were built from an audit taken BEFORE the cleanup,
   // so leaving them up shows entries that are no longer in the mod and invites
@@ -459,8 +455,7 @@ function renderRecheck(){
       ${rcRunsHtml(r)}
       ${n?`<fieldset class="assetconf" style="margin-top:10px;border-color:var(--bad)">
         <legend class="w-bad">${tt('packs.removed_but_needed')}</legend>
-        <div class="count"><b>${n}</b> ${tt('packs.thing_a_past_cleanup_took_out',{x:n===1?'':'s',x2:n===1?'is':'are',ok:ok?`<b>${ok}</b> ${tt('packs.can_be_put_back_from_a')}`:'',x3:lost?`<span class="w-bad">${tt('packs.the_backup_and_the_export_folder',{ok:ok?tt('packs.the_other_cannot',{lost})
-            :tt('packs.none_of_them_can_be_put'),lost:lost===1?tt('packs.that_file_has'):tt('packs.they_have')})}</span>`:''})}</div>
+        <div class="count">${ttN('packs.things_a_past_cleanup_took_out',n,{ok:ok?`<b>${ok}</b> ${tt('packs.can_be_put_back_from_a')}`:'',lost:lost?`<span class="w-bad">${ttN(ok?'packs.backup_gone_the_other_cannot':'packs.backup_gone_none_can_go_back',lost)}</span>`:''})}</div>
         <div class="clbar">
           <button onclick="rcAll(true)">${tt('packs.select_all_that_can_go_back')}</button>
           <button onclick="rcAll(false)">${tt('common.none_2')}</button></div>
@@ -468,7 +463,7 @@ function renderRecheck(){
       </fieldset>`
       :`<div class="sum" style="margin-top:10px"><div class="srow">
           <span class="sicon">✓</span><span class="stext">${tt('packs.nothing_a_past_cleanup_removed_is',{x:r.checked_files+r.checked_entries
-            ?tt('packs.all_file_s_and_entr_removed',{checked_files:r.checked_files,checked_entries:r.checked_entries,checked_entries2:r.checked_entries===1?'y':'ies'})
+            ?ttN('packs.all_files_and_entries_removed',r.checked_entries,{checked_files:r.checked_files})
             :tt('packs.no_cleanup_of_this_mod_has')})}</span></div></div>`}
     </div>
     <div class="foot">
@@ -483,8 +478,8 @@ function renderRecheck(){
 function rcNetsHtml(r){
   const n=r.nets||{};
   const cf=n.campaign_files||[];
-  return `<div class="count" style="margin-bottom:10px">${tt('packs.read_for_this_check_campaign_battle',{cf_n:cf.length,cf:cf.length===1?'':'s',x:cf.length?`(<code>${cf.slice(0,6).map(esc).join('</code>, <code>')}</code>${
-      cf.length>6?tt('packs.and_more_4',{cf:cf.length-6}):''})`:'',lua_files:n.lua_files||0,lua_files2:(n.lua_files||0)===1?'':'s',text_refs:n.text_refs||0})}</div>`;
+  return `<div class="count" style="margin-bottom:10px">${tt('packs.read_for_this_check_scripts_and_text',{campaign:ttN('packs.campaign_scripts_bold',cf.length),x:cf.length?`(<code>${cf.slice(0,6).map(esc).join('</code>, <code>')}</code>${
+      cf.length>6?tt('packs.and_more_4',{cf:cf.length-6}):''})`:'',lua:ttN('packs.lua_scripts_bold',n.lua_files||0),text_refs:n.text_refs||0})}</div>`;
 }
 /* The runs themselves, because "can this be undone at all" is decided here and
    not in the row list: a run whose backup AND export folder are both gone can
@@ -532,15 +527,13 @@ async function rcApply(){
   if(!picks.length){toast(tt('common.nothing_is_ticked'));return;}
   const files=picks.filter(x=>x.kind==='file').length;
   const entries=picks.length-files;
-  if(!confirm(tt('packs.put_file_s_back_into',{files,x:entries?tt('packs.and_modeldb_entr',{x:entries,x2:entries===1?'y':'ies'}):'',mod:s.r.mod})+
-      tt('packs.they_are_copied_from_the_backups')+
-      tt('packs.this_is_itself_backed_up_log')))return;
+  if(!confirm(entries?ttN('packs.put_files_and_entries_back',entries,{files,mod:s.r.mod}):tt('packs.put_files_back',{files,mod:s.r.mod})))return;
   const job=newJob();
   const res=await runJob(job,tt('packs.putting_them_back'),
-    tt('packs.copying_file_s_back_into',{files,mod:esc(s.r.mod),x:entries?tt('packs.and_appending_entr_to_its_modeldb',{x:entries,x2:entries===1?'y':'ies'}):''}),
+    entries?ttN('packs.copying_files_and_entries_back',entries,{files,mod:esc(s.r.mod)}):tt('packs.copying_files_back',{files,mod:esc(s.r.mod)}),
     ()=>api.post('/api/bmdb/recheck_revert',
       {mod:s.r.mod,job,picks:picks.map(x=>({kind:x.kind,run:x.run,name:x.name}))}));
-  if(res.error){toast(tt('packs.revert_failed')+res.error);return;}
+  if(res.error){toast(tt('packs.revert_failed_error',{error:res.error}));return;}
   toast(tt('packs.put_thing_s_back_undo_in',{restored_n:res.restored.length,x:res.failed.length?tt('packs.could_not_be',{failed_n:res.failed.length}):''}),5200);
   state.bmdb=null; state.destData=null;
   loadSource();
@@ -583,7 +576,7 @@ async function edDoDelete(){
   const e=state.ed;
   if(!confirm(tt('packs.delete_from_it_is_backed_up',{type:e.d.type,mod:e.mod})))return;
   const res=await api.post('/api/edit/apply',edPayload(edDeleteOpts()));
-  if(res.error){toast(tt('packs.delete_failed')+res.error);return;}
+  if(res.error){toast(tt('packs.delete_failed_error',{error:res.error}));return;}
   closeModal(); toast(tt('packs.deleted_undo_in_log',{type:e.d.type}),4200);
   state.destData=null; loadSource();
 }

@@ -580,7 +580,7 @@ def plan(mod, cm, body: dict) -> ClimatePlan:
              if c["rgb"] and tuple(c["rgb"]) == p.rgb and c["code"] != p.code]
     if clash:
         p.errors.append(
-            _i18n.msg("eng.climatenew.already_colour_two_climates_on_one", "{x} already {x2} colour {x3}. Two climates on one colour is one climate: map_climates.tga has no way to tell them apart, and the probe would name whichever the file declares first.", x=' and '.join(c['code'] for c in clash), x2='declare' if len(clash) > 1 else 'declares', x3=' '.join(str(v) for v in p.rgb)))
+            _i18n.msgN("eng.climatenew.already_declare_colour", len(clash), "{codes} already declares colour {rgb}. Two climates on one colour is one climate: map_climates.tga has no way to tell them apart, and the probe would name whichever the file declares first.", "{codes} already declare colour {rgb}. Two climates on one colour is one climate: map_climates.tga has no way to tell them apart, and the probe would name whichever the file declares first.", codes=' and '.join(c['code'] for c in clash), rgb=' '.join(str(v) for v in p.rgb)))
 
     voc = mapterrain.read_vocabulary(mod)
     p.geog = geography(mod)
@@ -737,14 +737,9 @@ def _plan_warnings(p: ClimatePlan) -> None:
     if not p.trimmings:
         others = ", ".join(c for c in (p.climates_named or []) if c != p.code)
         p.warnings.append(
-            f"{p.donor} is a block of {AERIAL_REL} and not a declared climate, "
-            f"so it has no strategy tree models, no battle vegetation and no "
-            f"env map to copy - and there is nowhere else those lines could "
-            f"come from. {p.code}'s block carries its colour, its heat and its "
-            f"winter flag and nothing else: the strat map will draw the ground "
-            f"underneath it and the province will have no trees on it. Copying "
-            f"from a climate instead gives it all three"
-            + (f" - {others} each have them." if others else "."))
+            _i18n.msg("eng.climatenew.donor_is_an_aerial_block_others", "{donor} is a block of {rel} and not a declared climate, so it has no strategy tree models, no battle vegetation and no env map to copy - and there is nowhere else those lines could come from. {code}'s block carries its colour, its heat and its winter flag and nothing else: the strat map will draw the ground underneath it and the province will have no trees on it. Copying from a climate instead gives it all three - {others} each have them.", donor=p.donor, rel=AERIAL_REL, code=p.code, others=others)
+            if others else
+            _i18n.msg("eng.climatenew.donor_is_an_aerial_block", "{donor} is a block of {rel} and not a declared climate, so it has no strategy tree models, no battle vegetation and no env map to copy - and there is nowhere else those lines could come from. {code}'s block carries its colour, its heat and its winter flag and nothing else: the strat map will draw the ground underneath it and the province will have no trees on it. Copying from a climate instead gives it all three.", donor=p.donor, rel=AERIAL_REL, code=p.code))
     if p.orphan_tiles:
         p.warnings.append(
             _i18n.msg("eng.climatenew.orphan_tiles_tile_s_are_painted", "{orphan_tiles:,} tile(s) are painted {x}, which is {code}'s colour until this is saved and nobody's afterwards. They stay where they are - this writes no pixels - and are drawn with the {DEFAULT_CLIMATE} block until they are repainted with the brush.", orphan_tiles=p.orphan_tiles, x=' '.join(str(v) for v in p.orphan_rgb), code=p.code, DEFAULT_CLIMATE=DEFAULT_CLIMATE))
@@ -773,7 +768,7 @@ def apply(p: ClimatePlan) -> dict:
     from .logutil import file_op, log
 
     if p.errors:
-        raise ValueError("cannot apply: " + "; ".join(p.errors))
+        raise ValueError(_i18n.msg("eng.climatenew.cannot_apply", "cannot apply: {why}", why="; ".join(p.errors)))
     if not p.texts:
         raise ValueError(_i18n.msg("eng.climatenew.there_is_nothing_to_write", "there is nothing to write"))
     mod = p.mod
