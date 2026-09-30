@@ -26,6 +26,7 @@ from dataclasses import dataclass, field, asdict, replace as dc_replace
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
+from . import banners as banners_mod
 from . import (config, edu as edu_mod, effects as effects_mod,
                engines as engines_mod, eop, localization,
                modeldb, mounts, projectiles as projectiles_mod, sounds)
@@ -74,6 +75,11 @@ class TransferOptions:
     #   "edu"   force data/export_descr_unit.txt
     # See :mod:`unittransfer.eop`.
     eop_target: str = "auto"
+    # 92d: a banner the unit carries that the destination has not got:
+    #   "port"  bring the source's banner into descr_banners_new.xml (default)
+    #   "swap"  use main_cavalry / main_infantry (the crusade banner for a holy
+    #           one, none for a unit-specific one)
+    banner_mode: str = "port"
     # What the transfer produces in the destination:
     #   "new"     the unit arrives as its OWN entry - a new unit type, a new
     #             dictionary entry, its own icons (the default)
@@ -304,6 +310,11 @@ class TransferPlan:
     effect_blocks: List[Tuple[str, str]] = field(default_factory=list)
     effect_actions: List[Tuple[str, str, str]] = field(default_factory=list)
     effect_assets: List[str] = field(default_factory=list)
+    # 92d: banners the unit carries and the destination has not got.
+    # (kind, name, action, detail); action "port" | "swap" | "drop" | "blocked"
+    banner_actions: List[Tuple[str, str, str, str]] = field(default_factory=list)
+    banner_swaps: Dict[Tuple[str, str], str] = field(default_factory=dict)   # "" drops the line
+    banner_text: str = ""            # the destination's descr_banners_new.xml, ported into
     # siege engines (descr_engines.txt / descr_mounted_engines.txt /
     # descr_engine_skeleton.txt). See `_resolve_engines`.
     engine_actions: List[Tuple[str, str, str]] = field(default_factory=list)  # (name,action,detail)
@@ -2542,7 +2553,7 @@ def plan_transfer(source: Mod, unit_type: str, dest: Mod,
     # say which factions it leaves out (the apply composes it again)
     if not models and not plan.base_error and not plan.skipped:
         try:
-            _build_unit_block(plan, unit)
+            _plan_banners(plan, source, dest, _build_unit_block(plan, unit))
         except Exception as exc:          # the composer's own errors surface at apply
             log.debug("plan: the unit block did not compose: %s", exc)
 
@@ -2557,6 +2568,78 @@ def _tag(mod: Mod) -> str:
 
 
 # --------------------------------------------------------------------------
+def _plan_banners(plan: TransferPlan, source: Mod, dest: Mod, block: str) -> None:
+    """92d: every ``banner`` line naming a banner the destination has not got.
+
+    It used to be copied as it was, and Health found it afterwards. Now the
+    plan says which, and ``options.banner_mode`` decides: ``port`` (the
+    default) brings the source's banner into the destination's
+    ``descr_banners_new.xml`` with 65's reader, its rows cut to the destination's
+    factions and one added for each owner that has none, and copies the files it
+    names that the source ships; ``swap`` puts ``main_cavalry`` or
+    ``main_infantry`` in its place by category (a holy banner becomes the
+    crusade one, a unit banner's line goes), which is what another import
+    tool always does. A banner the source file does not declare either is
+    swapped whatever the mode: there is nothing to port.
+    """
+    lines = [(k.lower(), n) for k, n in banners_mod._BAN.findall(block)]
+    if not lines:
+        return
+    dst_path, src_path = dest.data / banners_mod.REL, source.data / banners_mod.REL
+    if not dst_path.is_file():
+        return                          # nothing declared at all: not ours to judge
+    try:
+        dst_text = kb.read_text(dst_path, banners_mod.ENCODING)
+        src_text = kb.read_text(src_path, banners_mod.ENCODING) if src_path.is_file() else ""
+    except OSError:
+        return
+    have = banners_mod.declared(dst_text)
+    unit = edu_mod._parse_block(block)
+    owners = [o.strip().lower() for o in unit.ownership if o.strip()]
+    mode = getattr(plan.options, "banner_mode", "port")
+    text = dst_text
+    for kind, name in lines:
+        if name.lower() in {n.lower() for n in have.get(kind, [])}:
+            continue
+        ported, why = False, ""
+        if mode == "port" and src_text:
+            try:
+                new, paths = banners_mod.port_banner(src_text, text, kind, name, owners,
+                                                     banners_mod._roster(dest))
+            except banners_mod.BannerError as e:
+                why = e.message
+            else:
+                text, ported = new, True
+                ships = []
+                for rel in paths:
+                    src_abs = source.data / rel
+                    if src_abs.is_file() and not (dest.data / rel).exists():
+                        plan.asset_files.append((src_abs, rel))
+                        ships.append(rel)
+                plan.banner_actions.append((kind, name, "port", _i18n.msgN(
+                    "eng.transfer.banner_ported", len(ships),
+                    "into the destination's banner file, with {count} file of its own",
+                    "into the destination's banner file, with {count} files of its own")))
+        if not ported:
+            to = banners_mod.swap_for(kind, unit.category or "", have)
+            plan.banner_swaps[(kind, name.lower())] = to
+            plan.banner_actions.append((kind, name, "swap" if to else "drop",
+                                        f"{to} ({why})" if why and to else why or to))
+    if text != dst_text:
+        plan.banner_text = text
+
+
+def _swap_banners(plan: TransferPlan, block: str) -> str:
+    """The unit's ``banner`` lines with :func:`_plan_banners`' swaps applied."""
+    for (kind, name), to in plan.banner_swaps.items():
+        key = f"banner {kind}"
+        for m in list(banners_mod._BAN.finditer(block)):
+            if m.group(1).lower() == kind and m.group(2).lower() == name:
+                block = edu_mod.set_field(block, key, to) if to else edu_mod.remove_field(block, key)
+                break
+    return block
+
+
 def _build_unit_block(plan: TransferPlan, unit) -> str:
     """Compose the EDU block to write: base template + rename/model rewrites + overrides."""
     # A parsed block runs up to the next `type` line in the SOURCE file, so it can
@@ -2617,6 +2700,9 @@ def _build_unit_block(plan: TransferPlan, unit) -> str:
     # 4c) the engine's ceilings: the soldier count held to what the destination
     #     can take, and anything else past one said
     block = _hold_ceilings(plan, block)
+    # 4d) 92d: a banner the destination has not got, swapped for one it has
+    if plan.banner_swaps:
+        block = _swap_banners(plan, block)
     # 5) mercenary flag last, so a manual `attributes` override can't drop it
     if plan.mercenary:
         block = edu_mod.add_attribute(block, MERC_ATTR)
@@ -2950,6 +3036,10 @@ def apply_transfer(plan: TransferPlan) -> Dict:
             if not etext.endswith(nl):
                 etext += nl
             write_text(rel, etext, effects_mod.ENCODING, exact=True)
+
+    # ---- 3c3) 92d: the banners the unit carries, ported ----
+    if plan.banner_text:
+        write_text(banners_mod.REL, plan.banner_text, banners_mod.ENCODING, exact=True)
 
     # ---- 3d) siege engines ----
     for rel, raws, current in (

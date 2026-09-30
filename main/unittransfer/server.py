@@ -1580,6 +1580,7 @@ def _options_from(d: dict) -> TransferOptions:
         include_engine=bool(d.get("include_engine", True)),
         exclude_models=[str(m).lower() for m in (d.get("exclude_models") or [])],
         eop_target=d.get("eop_target", "auto"),
+        banner_mode=("swap" if d.get("banner_mode") == "swap" else "port"),
         on_conflict=d.get("on_conflict", "rename"),
         new_type=d.get("new_type") or None,
         new_dictionary=d.get("new_dictionary") or None,
@@ -1666,6 +1667,9 @@ def _plan_payload(plan) -> dict:
         "effect_actions": [{"name": n, "action": a, "detail": d}
                            for n, a, d in plan.effect_actions],
         "effect_assets": plan.effect_assets,
+        # 92d: the banners the unit carries that the destination has not got
+        "banner_actions": [{"kind": k, "name": n, "action": a, "detail": d}
+                           for k, n, a, d in plan.banner_actions],
         "engine_conflict": plan.options.engine_conflict,
         "engine_actions": [{"name": n, "action": a, "detail": d}
                            for n, a, d in plan.engine_actions],

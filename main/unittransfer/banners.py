@@ -539,6 +539,111 @@ class BannerPlan:
                 "ok": not self.errors and bool(self.text)}
 
 
+# ---------------------------------------------------------------------------
+# 92d: a banner a transferred unit carries and the destination has not got
+
+
+#: EDU kind -> the list its banners sit in
+KIND_SECTION = {v: k for k, v in SECTIONS.items()}
+
+
+def declared(text: str) -> Dict[str, List[str]]:
+    """``{kind: [banner names]}`` for the three lists, as the file spells them."""
+    doc = parse(text)
+    out: Dict[str, List[str]] = {k: [] for k in KIND_SECTION}
+    for b in banners(doc):
+        kind = SECTIONS.get(b["section"])
+        if kind:
+            out[kind].append(b["name"])
+    return out
+
+
+def _banner_elem(doc: Doc, kind: str, name: str) -> Optional[Elem]:
+    sec = KIND_SECTION.get(kind)
+    for e in doc.find("Banner"):
+        if (e.get("Name").lower() == name.lower() and e.parent >= 0
+                and doc.elems[e.parent].tag == sec):
+            return e
+    return None
+
+
+def port_banner(src_text: str, dst_text: str, kind: str, name: str,
+                owners: List[str], roster: List[str]) -> Tuple[str, List[str]]:
+    """``(new destination text, data-relative paths the banner names)``: the
+    source's ``<Banner Name=...>`` put at the end of the destination's list of
+    that kind, cut to the destination's factions (92d).
+
+    A row for a faction the destination has not got is left out (it would be a
+    "not a faction" note), and each faction that will own the unit and has no
+    row gets one copied from the banner's first, so the banner leaves the
+    destination with no finding: the coverage rule is "a faction that owns a
+    unit carrying banner X has a row in X". Raises :class:`BannerError` when
+    either file cannot take it.
+    """
+    src, dst = parse(src_text), parse(dst_text)
+    b = _banner_elem(src, kind, name)
+    if b is None:
+        raise BannerError(_i18n.msg("eng.banners.the_source_has_no_banner", "the source's {REL} has no {kind} banner {name}", REL=REL, kind=kind, name=name))
+    if _banner_elem(dst, kind, name) is not None:
+        return dst_text, []
+    sec = next((e for e in dst.elems if e.tag == KIND_SECTION[kind] and e.parent == 0), None)
+    if sec is None or sec.end < 0 or dst.root_end < 0:
+        raise BannerError(_i18n.msg("eng.banners.the_destination_has_no_list", "the destination's {REL} has no <{section}> to put it in", REL=REL, section=KIND_SECTION[kind]))
+    s, t = _line_span(src_text, b)
+    rows = sorted((r for tag in ROW_TAGS for r in src.find(tag, b)), key=lambda r: r.start)
+    have = {r.get("Faction").lower() for r in rows}
+    keep = [f.lower() for f in roster]
+    cut: List[Tuple[int, int, str]] = []
+    first = rows[0] if rows else None
+    for r in rows:
+        f = r.get("Faction").lower()
+        if keep and f not in keep and not MULTIPLAYER.fullmatch(f) and r is not first:
+            rs, rt = _line_span(src_text, r)
+            cut.append((rs, rt, ""))
+    add = "".join(row_copy(src, first, o) for o in owners
+                  if first is not None and o and o != "all" and o not in have)
+    if first is not None and first.get("Faction").lower() not in keep and keep \
+            and not MULTIPLAYER.fullmatch(first.get("Faction")):
+        rs, rt = _line_span(src_text, first)
+        cut.append((rs, rt, ""))
+    if add and first is not None:
+        _fs, ft = _line_span(src_text, first)
+        cut.append((ft, ft, add))
+    block = src_text
+    for a, z, v in sorted(cut, key=lambda x: (x[0], x[1]), reverse=True):
+        block = block[:a] + v + block[z:]
+    shift = sum(len(v) - (z - a) for a, z, v in cut if a < s)
+    end_shift = sum(len(v) - (z - a) for a, z, v in cut if a < t)
+    block = block[s + shift:t + end_shift]
+    nl = "\r\n" if "\r\n" in dst_text else "\n"
+    block = kb.to_newline(block, nl)
+    if not block.endswith(nl):
+        block += nl
+    close = dst_text.rfind("</" + sec.tag, sec.start, sec.end)
+    at = dst_text.rfind("\n", 0, close) + 1
+    paths = []
+    for e in parse(block).elems:
+        for a in PATH_ATTRS:
+            v = e.get(a).strip().replace("\\", "/")
+            if v:
+                paths.append(v[5:] if v.lower().startswith("data/") else v)
+    return dst_text[:at] + block + dst_text[at:], sorted(set(paths))
+
+
+def swap_for(kind: str, category: str, have: Dict[str, List[str]]) -> str:
+    """What a missing banner is swapped for (92d), ``""`` for dropping the line:
+    a faction banner becomes ``main_cavalry`` or ``main_infantry`` by the unit's
+    category, a holy one the destination's crusade banner, and a unit-specific
+    one goes, since the unit then carries its faction's banner."""
+    names = {n.lower(): n for n in have.get(kind, [])}
+    if kind == "faction":
+        want = "main_cavalry" if category.lower() == "cavalry" else "main_infantry"
+        return names.get(want, next(iter(names.values()), ""))
+    if kind == "holy":
+        return names.get("crusade", next(iter(names.values()), ""))
+    return ""
+
+
 def plan(mod, body: dict) -> BannerPlan:
     """``attrs``: ``{element id: {attribute: value}}``; ``add_rows``:
     ``[{like: row id, faction}]`` (a copy of that row, under it);

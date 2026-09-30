@@ -1376,6 +1376,32 @@ unit's category, which is what the friend's tool always does. `banner holy`
 and `banner unit` get the same treatment. Done when: neither choice leaves a
 Health finding on the destination, and the suite covers both.
 
+*92d done 2026-09-30, uncut; not seen in game.* Measured first: between the
+two installed mods only one unit carries a banner the other has not got,
+Reforged's *Bomb Platforms* (`banner faction main_none`), and Reforged does
+not declare `main_none` either. The transfer plan now reads the final block's
+`banner` lines against the destination's `descr_banners_new.xml`
+(`transfer._plan_banners`), and the transfer page shows a **Banners ... has
+not got** box with the choice (`options.banner_mode`):
+
+- **Bring the banner across** (the default): `banners.port_banner` puts the
+  source's `<Banner>` at the end of the destination's list of that kind. Its
+  rows are cut to the destination's factions, and each faction that will own
+  the unit and has no row gets one, copied from the banner's first row. So the
+  destination's own check has nothing to say about it: the coverage rule is a
+  row for every owner. The loose files it names that the source ships are
+  copied with the unit. A banner the source does not declare either (the one
+  real case) falls back to the swap, and says why.
+- **Use main_cavalry or main_infantry instead** (`banners.swap_for`): a
+  faction banner becomes one of those by the unit's category, a holy banner
+  becomes `crusade`, and a unit banner's line goes, so the unit carries its
+  faction's banner.
+
+Written in the same job as the unit, one Undo. `tests/test_transfer_banners`
+(16): the port on text (the list, the rows, the files, no finding afterwards),
+the swaps, and the real plan in both modes. **92a is not started**: it waits
+on the friend's `descr_caps_ex.txt` and `descr_model_battle.txt`, as written.
+
 **Left out, and why.** Two smaller things in the friend's tool are recorded
 so they are not rediscovered: when a skeleton cannot be ported and there is
 no base unit to borrow from, it guesses one by trimming words off the name

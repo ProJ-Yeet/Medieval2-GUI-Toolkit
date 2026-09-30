@@ -41,6 +41,8 @@ function cfgFor(type){
     // where the unit's block is written: 'auto' mirrors the source unit (an EOP
     // unit stays one), 'eop' forces an M2TWEOP unit file, 'edu' forces the EDU
     eop_target:'auto',
+    // 92d: a banner the destination has not got - 'port' it, or 'swap' it
+    banner_mode:'port',
     base_fac:'',_conflict:null,_fields:null,_orig:null,_fieldsKey:null,_inherited:null};
   return state.cfg[type];
 }
@@ -1112,6 +1114,7 @@ function optsPayload(type){const c=cfgFor(type);
     // of the SAME unit wants; the box only exists where a new record is written
     new_name:(c.new_name||'').trim()||null,
     eop_target:c.eop_target||'auto',
+    banner_mode:c.banner_mode==='swap'?'swap':'port',
     asset_conflict:c.asset_conflict||'mod_folder',
     asset_reroute_dir:c.asset_reroute_dir||null,
     icon_conflict:c.icon_conflict||'use_existing',
@@ -1439,8 +1442,9 @@ async function doPreview(){
   if(r.unit_conflict) cfgFor(type)._resolved=true;
   if(r.unit_conflict) html+=conflictUI(type);
   html+=eopUI(type,r);
+  html+=bannerUI(type,r);
   html+=assetConflictUI(type,r);
-  box.innerHTML=html; wireConflict(type); wireEop(type); wireAssetConflict(type);
+  box.innerHTML=html; wireConflict(type); wireEop(type); wireBanner(type); wireAssetConflict(type);
   return r;
 }
 /* Missing animations, shown against the row that can fix them.
@@ -1572,6 +1576,28 @@ function eopUI(type,r){
     </div>`:''}
     ${r.eop_file?`<div class="count" style="margin-top:6px">${tt('transfer.will_be_written_to',{eop_file:esc(r.eop_file)})}</div>`:''}
   </fieldset>`;
+}
+/* 92d: a banner the unit carries that the destination has not got. It used to
+   be copied as it was, for Health to find afterwards; the plan names it, and
+   the choice is here: bring the banner across, or use one the destination has. */
+function bannerUI(type,r){
+  const acts=r.banner_actions||[];
+  if(!acts.length) return '';
+  const c=cfgFor(type);
+  const rows=acts.map(a=>`<li><code>banner ${esc(a.kind)} ${esc(a.name)}</code>: ${
+    a.action==='port'?tt('transfer.banner_row_port',{detail:esc(a.detail)})
+    :a.action==='swap'?tt('transfer.banner_row_swap',{to:esc(a.detail)})
+    :tt('transfer.banner_row_drop',{detail:esc(a.detail||'')})}</li>`).join('');
+  return `<fieldset class="assetconf" style="margin-top:10px">
+    <legend>${tt('transfer.banner_legend',{dst:esc(state.dst)})}</legend>
+    <ul class="count" style="margin:4px 0 6px 18px;padding:0">${rows}</ul>
+    <div class="radio-row">
+      <label><input type="radio" name="banm" value="port" ${c.banner_mode!=='swap'?'checked':''}> ${tt('transfer.banner_port')}</label>
+      <label><input type="radio" name="banm" value="swap" ${c.banner_mode==='swap'?'checked':''}> ${tt('transfer.banner_swap')}</label>
+    </div></fieldset>`;
+}
+function wireBanner(type){const c=cfgFor(type);
+  document.querySelectorAll('input[name=banm]').forEach(x=>x.onchange=()=>{c.banner_mode=x.value;doPreview();});
 }
 function wireEop(type){const c=cfgFor(type);
   document.querySelectorAll('input[name=eopt]').forEach(x=>x.onchange=()=>{c.eop_target=x.value;doPreview();});
