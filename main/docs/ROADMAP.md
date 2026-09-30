@@ -935,6 +935,30 @@ and it follows the drag. Done when: both looks draw at the right size against
 a tower measured in the game, the switch hides them, and the radius moves with
 a dragged tower.
 
+*89c done 2026-09-30, uncut; one step is left, the in-game measurement.*
+**The number: 10 tiles**, the engine's own, the same for every tower. No file
+sets it: the installed mods were searched, and `descr_campaign_db.xml` holds
+only `spy_watchtower_modifier`, which is a spy's odds, not a range. A tower has
+no culture's or owner's figure either. What it covers is the tiles within 10 of
+the tower: a disc of 317 tiles, not the 441 of a 21 × 21 square. In game a hill
+or a forest can hide part of it, so the drawing shows the furthest a tower
+reaches, and its hint says so. **Still to do:** confirm the 10 against a tower
+in the game.
+
+Built in `campmark.js` on 17d's markers layer (`cmkSight*`), drawn from
+`cmapOverlay` under the markers. **Filled** tints each covered tile (one
+rectangle per row of the disc, so 21 per tower). **Outline** draws one circle,
+10.5 tiles out from the tower's tile centre. The switch and the look are in the
+markers panel under the categories, and both are remembered in Settings
+(`map_sight`). The switch starts off. The key is **`w`**, a letter like the
+other view switches because the ten digits are the ten image layers. The sight
+is drawn whatever the switch says while a watchtower is being placed (under the
+pointer, whichever of the create buttons armed the pin) or dragged (where it is
+now, not where it was). The hover repaints the whole map while placing, since
+the disc is not the one cell a hover redraws. Measured on Divide and Conquer's
+295 towers, all drawn: about 2 ms a frame. `tests/test_mapsight` (20, in Node
+on the real `campmark.js`).
+
 **89d - the real-world map report (4).** Three problems and one question, each
 reproduced on a map with as many provinces as the reporter's before anything
 is changed:

@@ -2287,6 +2287,8 @@ function cmapOverlay(x, s0, t0, s1, t1){
 
   // 17d's markers sit above the layers and below the hover cell, so the cell
   // the pointer is on is never hidden by what is standing on it
+  // 89c: a watchtower's line of sight goes under the markers it is about
+  if(typeof cmkSightDraw === 'function') cmkSightDraw(x, s0, t0, s1, t1);
   if(typeof cmkDraw === 'function') cmkDraw(x, s0, t0, s1, t1);
   // 20c's names go over the markers they are beside, and under the hover cell
   if(typeof clnDraw === 'function') clnDraw(x, s0, t0, s1, t1);
@@ -2474,6 +2476,14 @@ function cmapHover(tile){
   const same = (!next && !c.hover) || (next && c.hover && next[0] === c.hover[0]
                                        && next[1] === c.hover[1]);
   if(same){ cmapReadout(); cmapTipPaint(); return; }
+  // 89c: a new watchtower's sight follows the pointer, and a disc 21 tiles
+  // across is not the one cell the two repaints below would redraw
+  if(typeof cmkSightPlacing === 'function' && cmkSightPlacing()){
+    c.hover = next;
+    cmapPaint();
+    cmapTipPaint();
+    return;
+  }
   const was = c.hover ? cmapCellRect(...c.hover) : null;
   c.hover = next;
   if(next) cmapPaint(cmapCellRect(tx, ty));
@@ -4070,6 +4080,9 @@ function cmapKeys(){
     // M18 - `d` for the third dimension, beside the other view switches. A
     // letter for the same reason they are: the ten digits are the ten layers.
     else if(e.key === 'd' || e.key === 'D'){ cm3Toggle(); }
+    // 89c - `w` for a watchtower's line of sight. A letter, like the other
+    // view switches: the ten digits are the ten image layers
+    else if((e.key === 'w' || e.key === 'W') && typeof cmkSightToggle === 'function'){ cmkSightToggle(); }
     else if(e.key === 'Escape' && (state.cmap.sel || state.cmap.pick)){
       const c = state.cmap;
       c.sel = null; c.pick = null; c.probe = null; c.det = null;

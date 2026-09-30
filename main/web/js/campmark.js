@@ -99,7 +99,8 @@ function cmkNew(mod){
   const cats = {};
   for(const c of CMK_CATS) cats[c.id] = c.on;
   return {mod, on: true, cats, loading: false, err: '', d: null,
-          groups: [], byTile: new Map(), art: {}, drag: null, open: true};
+          groups: [], byTile: new Map(), art: {}, drag: null, open: true,
+          sight: cmkSightSaved()};
 }
 
 function cmkOpen(){
@@ -657,6 +658,132 @@ async function cmkDrop(){
   cxSave('edit');
 }
 
+/* ---------- 89c: a watchtower's line of sight ----------
+
+   Asked for by a modder placing watchtowers: see what one covers before
+   choosing its tile. Two looks, from the report: FILLED tints every tile it
+   sees, OUTLINE draws only the edge.
+
+   THE NUMBER. 10 tiles, the engine's own and the same for every tower: no
+   file in any installed mod sets it (descr_campaign_db.xml has only
+   `spy_watchtower_modifier`, a spy's odds, not a range), and a tower has no
+   culture's or owner's figure to look up. What it covers is the tiles within
+   10 of the tower, a disc and not a square; in game a hill or a forest can
+   hide part of that, so this is the furthest it can reach, not a promise of
+   every tile. Recorded in ROADMAP.md under 89c; confirming it against a tower
+   in the game is still to do.
+
+   It is off unless switched on (`w`, or the box in the markers panel), and ON
+   whatever the switch says while a watchtower is being placed or dragged,
+   following the pointer, since that is when the spot is being chosen. */
+const CMK_SIGHT = 10;
+const CMK_SIGHT_LOOKS = ['filled', 'outline'];
+
+function cmkSightSaved(){
+  const m = (state.settings && state.settings.map_sight) || {};
+  return {on: !!m.on, look: CMK_SIGHT_LOOKS.includes(m.look) ? m.look : 'filled'};
+}
+
+function cmkSightSave(){
+  const k = state.cmk;
+  if(!k) return;
+  if(state.settings) state.settings.map_sight = Object.assign({}, k.sight);
+  if(typeof api !== 'undefined') api.post('/api/settings', {map_sight: k.sight}).catch(() => {});
+}
+
+//: `[dy, half]` per row of the disc: the tiles `tx - half .. tx + half` on row
+//: `ty + dy` are within `r` of the tower's tile
+function cmkSightSpans(r){
+  const out = [];
+  for(let dy = -r; dy <= r; dy++) out.push([dy, Math.floor(Math.sqrt(r * r - dy * dy))]);
+  return out;
+}
+
+//: Is a pin waiting for the tile of a new watchtower? Every road in - the
+//: markers panel's create, the forts panel's `+ Watchtower` - arms the pin with
+//: the kind as its first argument.
+function cmkSightPlacing(){
+  const p = state.cpin;
+  return !!(p && state.cmap && p.args && p.args[0] === 'watchtower');
+}
+
+//: The tiles to draw a sight from: every tower when the switch is on, the one
+//: being dragged where it is now rather than where it was, and the tile under
+//: the pointer while a new one is being placed.
+function cmkSightCentres(){
+  const k = state.cmk, c = state.cmap, out = [];
+  if(!k || !c) return out;
+  const drag = k.drag && k.drag.item && k.drag.item.kind === 'watchtower' ? k.drag : null;
+  if(k.on && k.sight && k.sight.on && k.cats.watchtower){
+    for(const g of k.groups)
+      for(const it of g.items)
+        if(it.kind === 'watchtower' && !(drag && it === drag.item)) out.push([g.tx, g.ty]);
+  }
+  if(drag) out.push(drag.tile.slice());
+  else if(cmkSightPlacing() && c.hover) out.push(c.hover.slice());
+  return out;
+}
+
+//: Drawn under the markers, from `cmapOverlay`, clipped to the tiles repainted.
+function cmkSightDraw(x, s0, t0, s1, t1){
+  const c = state.cmap, k = state.cmk;
+  const centres = cmkSightCentres();
+  if(!centres.length) return;
+  const z = c.view.zoom, r = CMK_SIGHT, spans = cmkSightSpans(r);
+  const look = (k && k.sight && k.sight.look) || 'filled';
+  x.save();
+  x.fillStyle = 'rgba(255,214,102,.22)';
+  x.strokeStyle = 'rgba(255,214,102,.9)';
+  x.lineWidth = Math.max(1.5, Math.min(3, z / 5));
+  for(const [tx, ty] of centres){
+    if(tx + r < s0 - 1 || tx - r > s1 || ty + r < t0 - 1 || ty - r > t1) continue;
+    if(look === 'filled'){
+      for(const [dy, h] of spans) x.fillRect(cmapX(tx - h), cmapY(ty + dy), (2 * h + 1) * z, z);
+    }else{
+      x.beginPath();
+      x.arc(cmapX(tx) + z / 2, cmapY(ty) + z / 2, (r + 0.5) * z, 0, Math.PI * 2);
+      x.stroke();
+    }
+  }
+  x.restore();
+}
+
+function cmkSightToggle(){
+  const k = state.cmk;
+  if(!k) return;
+  k.sight.on = !k.sight.on;
+  // a sight with the markers off would draw nothing, which reads as broken
+  if(k.sight.on && !k.on) cmkToggleLayer();
+  if(k.sight.on && !k.cats.watchtower) k.cats.watchtower = true;
+  cmkSightSave();
+  cmkPaint();
+  cmapPaint();
+}
+
+function cmkSightLook(look){
+  const k = state.cmk;
+  if(!k || !CMK_SIGHT_LOOKS.includes(look)) return;
+  k.sight.look = look;
+  cmkSightSave();
+  cmkPaint();
+  cmapPaint();
+}
+
+function cmkSightHtml(){
+  const k = state.cmk;
+  if(!(k.d && k.d.counts && k.d.counts.watchtower)) return '';
+  return `<div class="cmksight">
+    <label class="chk" title="${ttA('campmark.sight_title',{r:CMK_SIGHT})}">
+      <input type="checkbox" ${k.sight.on ? 'checked' : ''} onchange="cmkSightToggle()">
+      <b class="cmkey">W</b> ${tt('campmark.sight_label')}</label>
+    <select onchange="cmkSightLook(this.value)" aria-label="${ttA('campmark.sight_look')}">
+      <option value="filled" ${k.sight.look === 'filled' ? 'selected' : ''}>${tt('campmark.sight_filled')}</option>
+      <option value="outline" ${k.sight.look === 'outline' ? 'selected' : ''}>${tt('campmark.sight_outline')}</option>
+    </select>
+    <div class="count">${tt('campmark.sight_hint',{r:CMK_SIGHT})}</div>
+  </div>`;
+}
+
 /* ---------- the panel ---------- */
 
 //: The tooltip is cached by tile - it only rebuilds when the pointer changes
@@ -727,6 +854,7 @@ function cmkHtml(){
   return `<div class="cmmark">${head}
     ${cmkObjectRows()}
     <div class="cmkcats">${rows}</div>
+    ${cmkSightHtml()}
     <div class="cmiconkey">${tt('campmark.named_character_general_admiral_port_spy')}</div>
     <div class="count">${tt('campmark.drag_a_character_a_fort_a',{x:res ? tt('campmark.this_mod_ships_its_own_picture',{art,n:new Set((k.d.items || []).filter(i => i.kind === 'resource')
           .map(i => i.name)).size}) : ''})}</div>

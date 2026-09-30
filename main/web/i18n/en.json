@@ -1844,6 +1844,12 @@
 "campmark.script_spawns": "Script spawns",
 "campmark.settlements": "Settlements",
 "campmark.show_settlements_ports_and_campaign_objects": "Show settlements, ports and campaign objects. Choose which categories appear below.",
+"campmark.sight_filled": "Filled",
+"campmark.sight_hint": "{r} tiles, the same for every watchtower. Also drawn while one is being placed or dragged. In game, hills and forests can hide part of it, so this is the furthest it reaches.",
+"campmark.sight_label": "Watchtower line of sight",
+"campmark.sight_look": "How the line of sight is drawn",
+"campmark.sight_outline": "Outline",
+"campmark.sight_title": "Draw how far each watchtower sees ({r} tiles). Key: W",
 "campmark.spawn_unit_count": {
 "one": " · {count} unit",
 "other": " · {count} units"
