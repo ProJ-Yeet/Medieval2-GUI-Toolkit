@@ -139,7 +139,17 @@ function cfgRestore(v){ for(const t of Object.keys(v)) Object.assign(cfgFor(t),v
    editor, driven off the same interactions the undo stack watches, so it can
    never fall out of step with what is actually pending. */
 const dirtyChip=on=>on?`<span class="dirtychip">${tt('undo.unsaved_changes')}</span>`:'';
+/* 94a: coalesced. On Tsardoms' militia barracks (1,131 recruit pools, a 5 MB
+   working copy) one check is a stringify of the whole building, and it ran up
+   to three times for every click of a ▲ - the click itself was 50 ms, the rest
+   of a 300 ms freeze was these checks and the garbage they left. The chip is a
+   summary, so it follows the last edit of a burst, 120 ms after it. */
+let _dirtyPend=0;
 function paintDirty(){
+  clearTimeout(_dirtyPend);
+  _dirtyPend=setTimeout(paintDirtyNow,120);
+}
+function paintDirtyNow(){
   const bld=document.getElementById('bldDirtyNote');
   if(bld)bld.innerHTML=dirtyChip(!!(state.bld&&state.bld.work&&bldDirty()));
   const ed=document.getElementById('edDirtyNote');

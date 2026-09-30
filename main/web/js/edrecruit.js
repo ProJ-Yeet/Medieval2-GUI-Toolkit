@@ -283,6 +283,10 @@ function edRecPoolHtml(o){
         <button class="reqbtn" title="${ttA('edrecruit.edit_who_can_recruit_it_from')}"
           onclick="${o.reqEdit}">✎</button></span></div></div>`;
 }
+/* 94b: "= 8.9 turns" beside a pool's rate, as the Buildings editor and this
+   tab's own "numbers each new pool gets" block already print it. wireNumBoxes
+   keeps it in step with ▲▼ and typing. */
+const edRecTurns=(k,v)=>k==='per_turn'?`<span class="turns">= ${esc(poolTurns(v))}</span>`:'';
 function edRecRowHtml(row,KEYS,common){
   const gone=edRecDeleted(row), key=edRecKey(row), req=edRecReq(row);
   return edRecPoolHtml({
@@ -301,7 +305,7 @@ function edRecRowHtml(row,KEYS,common){
       return `<span class="ern ${odd?'odd':''}" title="${odd
         ?ttA('edrecruit.differs_from_what_most_pools_use_value',{value:esc(common[j])}):''}">${
         numBox(tt('edrecruit.data_er_data_erline',{x:k,key}),v,
-               k==='per_turn'?'turns':(k==='experience'?'1':'pool'))}</span>`;
+               k==='per_turn'?'turns':(k==='experience'?'1':'pool'),edRecTurns(k,v))}</span>`;
     }).join(''),
     act:`<button class="reqbtn ${gone?'':'danger'}"
       title="${gone?tt('edrecruit.keep_this_recruit_pool'):tt('edrecruit.remove_this_recruit_pool')}"
@@ -321,7 +325,7 @@ function edRecAddRowHtml(a,i,KEYS){
     badges:`<span class="badge good">${tt('edrecruit.new')}</span>`,
     nums:KEYS.map(([k])=>`<span class="ern">${
       numBox(tt('edrecruit.data_eradd_data_eraddi',{x:k,x2:i}),a[k],
-             k==='per_turn'?'turns':(k==='experience'?'1':'pool'))}</span>`).join(''),
+             k==='per_turn'?'turns':(k==='experience'?'1':'pool'),edRecTurns(k,a[k]))}</span>`).join(''),
     act:`<button class="reqbtn danger" title="${ttA('edrecruit.drop_this_new_pool')}"
       onclick="edRecDropAdd(${i})">🗑</button>`,
     req:a.requires||'', reqEdited:!!a.condEdited,

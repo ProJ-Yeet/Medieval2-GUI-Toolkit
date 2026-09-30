@@ -631,6 +631,7 @@
 "buildings.name_help": "The name shown on the building browser and the construction panel. Written as {{key}}.",
 "buildings.named_in_a_recruit_pool_but": "Named in a recruit pool but not in this mod's EDU: {missing_units}",
 "buildings.neither_this_mod_nor_the_unpacked": "Neither this mod nor the unpacked vanilla UI has art for this building",
+"buildings.never": "never",
 "buildings.new_building_tree": "＋ New building tree",
 "buildings.new_building_tree_in": "New building tree in {mod}",
 "buildings.new_pool_gated_to_ownership": "Each new pool is gated to that unit’s own <code>ownership</code>, so only the factions that can field it are offered it here.",
@@ -911,6 +912,10 @@
 "buildings.trained_at_missing_from": "trained at {x} Missing from <b>{x2}</b>.",
 "buildings.trains_it_too": "{where} trains it too.",
 "buildings.tree": "▤ Tree",
+"buildings.turns_count": {
+"one": "{count} turn",
+"other": "{count} turns"
+},
 "buildings.turns_to_build": "Turns to build",
 "buildings.unconditional_the_rest_need_every_gate": "{always} unconditional · the rest need every gate to line up",
 "buildings.unit_2": "✎ Unit",

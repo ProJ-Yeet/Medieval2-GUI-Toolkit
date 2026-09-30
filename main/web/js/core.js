@@ -1182,7 +1182,11 @@ function rszInit(){
     let worth=false;
     for(const r of recs){
       if(r.type==='attributes'){ if(r.target.id==='modal')worth=true; }
-      else if(r.addedNodes.length)worth=true;
+      // 94a: an ELEMENT, not any node. A readout that rewrites its text - the
+      // "= 8 turns" beside a recruit rate, on every click of its ▲ - adds a text
+      // node, and taking that for a new box re-queried the whole page: 240-290 ms
+      // a click on Tsardoms' militia barracks, 265,000 elements in the dialog.
+      else for(const n of r.addedNodes){ if(n.nodeType===1){ worth=true; break; } }
       if(worth)break;
     }
     if(!worth||queued)return;

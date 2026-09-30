@@ -52,10 +52,11 @@ function numBox(attrs,value,step,after){
 // Turns per unit, for a recruit pool's points-per-turn. 0 or nonsense = never.
 function poolTurns(v){
   const n=parseFloat(v);
-  if(!isFinite(n)||n<=0)return 'never';
+  if(!isFinite(n)||n<=0)return tt('buildings.never');
   const t=1/n;
   if(t<=1.02)return tt('buildings.every_turn');
-  return (t<10?numFmt(t.toFixed(1)):Math.round(t))+' turns';
+  // 94b: a count, so each language's own plural (8.9 is "other" in most)
+  return ttN('buildings.turns_count',t<10?+numFmt(t.toFixed(1)):Math.round(t));
 }
 /* A pool count of 1 and a pool count of 0 are different buildings, and the
    useful value between them is 0.99: the pool fills but never reaches a whole
@@ -657,7 +658,13 @@ function bldCvFind(label){
 function bldLevelDirty(i){
   const b=state.bld;
   if(!b||!b.orig)return false;
-  return JSON.stringify(b.work.levels[i])!==JSON.stringify(JSON.parse(b.orig).levels[i]);
+  // 94a: the original is parsed once per `b.orig`, not once per call - opening
+  // the editor asks this of every level, and each call parsed the whole 5 MB
+  if(b._origFor!==b.orig){
+    b._origFor=b.orig;
+    b._origLv=JSON.parse(b.orig).levels.map(l=>JSON.stringify(l));
+  }
+  return JSON.stringify(b.work.levels[i])!==b._origLv[i];
 }
 function renderBuildingEditor(){
   const b=state.bld,d=b.d;
@@ -1737,8 +1744,14 @@ function bldDirtyNote(){
   paintDirty();
   const b=state.bld; if(!b)return;
   b.planStale=!!b.plan;
-  const chip=document.querySelectorAll('.lvchip')[b.lvl];
-  if(chip)chip.classList.toggle('dirty',bldLevelDirty(b.lvl));
+  // 94a: the level chip is a summary too, so it follows the burst, not each click
+  clearTimeout(b._chipT);
+  const lvl=b.lvl;
+  b._chipT=setTimeout(()=>{
+    if(state.bld!==b)return;
+    const chip=document.querySelectorAll('.lvchip')[lvl];
+    if(chip)chip.classList.toggle('dirty',bldLevelDirty(lvl));
+  },120);
   bldCvFollow();
 }
 /* Keep the text pane in step with the boxes.

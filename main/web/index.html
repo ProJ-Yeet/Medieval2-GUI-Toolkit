@@ -2372,6 +2372,10 @@
   .caplist,.poollist{border:1px solid var(--edge);border-radius:7px;background:var(--panel2);
     max-height:340px;overflow:auto}
   .caprow{display:flex;gap:6px;align-items:center;padding:5px 7px;border-bottom:1px solid var(--edge)}
+  /* 94a: a level can hold a thousand pools (Tsardoms' militia barracks: 1,131,
+     265,000 elements), and every value typed made the browser lay out all of
+     them. Rows off screen are skipped until they scroll into view. */
+  #bldBody [data-cap]{content-visibility:auto;contain-intrinsic-size:auto 90px}
   .caprow:last-child{border-bottom:none}
   .caprow.gone{opacity:.4;text-decoration:line-through}
   .caprow select.kw{flex:0 0 190px;font-size:12px;padding:3px 6px}
@@ -2521,6 +2525,10 @@
   .erlv{flex:0 1 122px;min-width:56px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .ernums{flex:0 0 auto;margin-left:auto;display:flex;gap:8px;align-items:center}
   .ern{flex:0 0 90px;min-width:0}
+  /* 94b: the "= N turns" under the rate's box, so the column keeps its width
+     and the delete button stays on the row at Phase 90's narrow widths */
+  .ern .numwrap{flex-wrap:wrap}
+  .ern .turns{flex-basis:100%;font-size:10px}
   .ern.odd input{border-color:var(--warn);color:var(--warn)}
   .eract{flex:0 0 auto;display:flex;gap:4px}
   .erpool.gone{opacity:.45}
