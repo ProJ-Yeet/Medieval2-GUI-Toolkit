@@ -30,9 +30,11 @@ because its militia barracks has 1,131 pools (DaC 343, Reforged 166): ten ▲
 clicks took 4.2 s and take 189 ms now. Most of it was the page-wide resize
 observer re-querying the page on a text change, then whole-building
 stringify/parse per click. The Unit Editor's pool rows show "= N turns".
-`tests/test_bigbuilding` (9). **Note:** the M2EX EUR's `battle_models.modeldb`
-has a hand edit (a stray `v`, entry #88 `cardolan_sharpshooters`) that the
-reader refuses, so suites that read DaC's models fail until it is fixed.
+`tests/test_bigbuilding` (9). The M2EX EUR's `battle_models.modeldb` had a
+hand edit (a stray `v` after a `0`, entry #88 `cardolan_sharpshooters`, line
+18689) that the reader refused; removed on the user's word ("remove that v"),
+one byte, and the suites that copy DaC's files pass again (transfer_v2,
+batch_dedup, transfer_banners, transfer_sprites, buildings).
 The M2EX install at `C:/Users/projy/Downloads/EUREXV1/M2EX` has the real
 `descr_caps_ex.txt` and `descr_model_battle.txt` 92a waited on.
 
