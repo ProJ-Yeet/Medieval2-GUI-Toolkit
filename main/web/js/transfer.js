@@ -43,6 +43,7 @@ function cfgFor(type){
     eop_target:'auto',
     // 92d: a banner the destination has not got - 'port' it, or 'swap' it
     banner_mode:'port',
+    own_skins_only:false,
     base_fac:'',_conflict:null,_fields:null,_orig:null,_fieldsKey:null,_inherited:null};
   return state.cfg[type];
 }
@@ -1115,6 +1116,7 @@ function optsPayload(type){const c=cfgFor(type);
     new_name:(c.new_name||'').trim()||null,
     eop_target:c.eop_target||'auto',
     banner_mode:c.banner_mode==='swap'?'swap':'port',
+    own_skins_only:!!c.own_skins_only,
     asset_conflict:c.asset_conflict||'mod_folder',
     asset_reroute_dir:c.asset_reroute_dir||null,
     icon_conflict:c.icon_conflict||'use_existing',
@@ -1451,8 +1453,9 @@ async function doPreview(){
   if(r.unit_conflict) html+=conflictUI(type);
   html+=eopUI(type,r);
   html+=bannerUI(type,r);
+  html+=skinsUI(type,r);
   html+=assetConflictUI(type,r);
-  box.innerHTML=html; wireConflict(type); wireEop(type); wireBanner(type); wireAssetConflict(type);
+  box.innerHTML=html; wireConflict(type); wireEop(type); wireBanner(type); wireSkins(type); wireAssetConflict(type);
   return r;
 }
 /* Missing animations, shown against the row that can fix them.
@@ -1603,6 +1606,22 @@ function bannerUI(type,r){
       <label><input type="radio" name="banm" value="port" ${c.banner_mode!=='swap'?'checked':''}> ${tt('transfer.banner_port')}</label>
       <label><input type="radio" name="banm" value="swap" ${c.banner_mode==='swap'?'checked':''}> ${tt('transfer.banner_swap')}</label>
     </div></fieldset>`;
+}
+/* 92c: only the skins the new owners wear. Off by default; the plan states
+   what it saved. */
+function skinsUI(type,r){
+  if(r.models_mode) return '';
+  const c=cfgFor(type);
+  const saved=r.skins_dropped?`<div class="count">${tt('transfer.own_skins_saved',{
+    dropped:r.skins_dropped,files:r.skins_saved_files,mb:(r.skins_saved_bytes/1e6).toFixed(1),
+    kept:esc((r.skins_kept||[]).join(', '))})}</div>`:'';
+  return `<fieldset class="assetconf" style="margin-top:10px">
+    <legend>${tt('transfer.own_skins_legend')}</legend>
+    <label class="chk"><input type="checkbox" id="ownSkins" ${c.own_skins_only?'checked':''}>
+      ${tt('transfer.own_skins_label')}</label>${saved}</fieldset>`;
+}
+function wireSkins(type){const c=cfgFor(type), b=document.getElementById('ownSkins');
+  if(b)b.onchange=()=>{c.own_skins_only=b.checked;doPreview();};
 }
 function wireBanner(type){const c=cfgFor(type);
   document.querySelectorAll('input[name=banm]').forEach(x=>x.onchange=()=>{c.banner_mode=x.value;doPreview();});

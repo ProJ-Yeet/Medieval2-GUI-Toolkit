@@ -1402,6 +1402,24 @@ Done when: a DaC unit taken with the option on shows the right skin in the
 game for its owner, the copy is measurably smaller, and the entry's counts
 agree with its records (the suite reads the result back).
 
+*92c done 2026-09-30, uncut; not seen in game.* The writer already existed:
+`modeldb.set_texture_factions` (the model card's faction checklist) keeps
+exactly a list of factions in each texture group, clones a record for one it
+lacks and rewrites each count. The option is `own_skins_only` (off by default,
+a **Skins** box on the transfer page). `transfer._plan_own_skins` gives each
+copied entry its final block's owners (`all` left out, `slave` added for a
+mercenary or a rebel's unit, `default` kept where an entry has one). It drops
+from the copy list the files only the left-out records named, a sprite's
+sheets with it, and says how many records, files and MB. Measured on Tsardoms'
+*Hungarian Peasants* (32 skins) into a copy of Reforged: 6 owners kept, 104
+records across its entries left out, but only 2 files, 0.1 MB, saved, because
+Tsardoms points most factions' records at shared textures. A mod with a file
+per faction saves far more. `tests/test_transfer_skins` (6): off by default,
+the owners only, the saving, and the applied `.modeldb` reading back with
+counts that agree and every kept texture copied. **The suites that copy DaC's
+files cannot run** until the hand edit in the M2EX EUR's `.modeldb` is fixed
+(see Phase 94's note).
+
 **92d - a banner the destination does not have.** A unit whose `banner
 faction` names a banner missing from the destination's
 `descr_banners_new.xml` (a Hospitaller or Templar banner, say) is copied as

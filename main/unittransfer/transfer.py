@@ -80,6 +80,10 @@ class TransferOptions:
     #   "swap"  use main_cavalry / main_infantry (the crusade banner for a holy
     #           one, none for a unit-specific one)
     banner_mode: str = "port"
+    # 92c: copy only the skins the unit's owners in the destination wear. Off by
+    # default: a DaC unit with a dozen faction skins brings a dozen sets of
+    # .texture files for a faction that wears one
+    own_skins_only: bool = False
     # What the transfer produces in the destination:
     #   "new"     the unit arrives as its OWN entry - a new unit type, a new
     #             dictionary entry, its own icons (the default)
@@ -315,6 +319,11 @@ class TransferPlan:
     banner_actions: List[Tuple[str, str, str, str]] = field(default_factory=list)
     banner_swaps: Dict[Tuple[str, str], str] = field(default_factory=dict)   # "" drops the line
     banner_text: str = ""            # the destination's descr_banners_new.xml, ported into
+    # 92c: what "only the skins the new owners wear" left out
+    skins_kept: List[str] = field(default_factory=list)
+    skins_dropped: int = 0           # texture records taken out of the entries
+    skins_saved_files: int = 0
+    skins_saved_bytes: int = 0
     # siege engines (descr_engines.txt / descr_mounted_engines.txt /
     # descr_engine_skeleton.txt). See `_resolve_engines`.
     engine_actions: List[Tuple[str, str, str]] = field(default_factory=list)  # (name,action,detail)
@@ -2553,7 +2562,10 @@ def plan_transfer(source: Mod, unit_type: str, dest: Mod,
     # say which factions it leaves out (the apply composes it again)
     if not models and not plan.base_error and not plan.skipped:
         try:
-            _plan_banners(plan, source, dest, _build_unit_block(plan, unit))
+            block = _build_unit_block(plan, unit)
+            _plan_banners(plan, source, dest, block)
+            if plan.options.own_skins_only:
+                _plan_own_skins(plan, block)
         except Exception as exc:          # the composer's own errors surface at apply
             log.debug("plan: the unit block did not compose: %s", exc)
 
@@ -2627,6 +2639,64 @@ def _plan_banners(plan: TransferPlan, source: Mod, dest: Mod, block: str) -> Non
                                         f"{to} ({why})" if why and to else why or to))
     if text != dst_text:
         plan.banner_text = text
+
+
+def _plan_own_skins(plan: TransferPlan, block: str) -> None:
+    """92c: each copied entry keeps texture records for its owners only.
+
+    The owners are the final block's ``ownership`` (and ``slave`` for a rebel
+    or mercenary, and ``default`` where an entry has one), so a faction the
+    unit arrives for that the source never skinned gets a record cloned from
+    the donor, as :func:`modeldb.set_texture_factions` does for the editor's
+    faction checklist. The files only the dropped records named are not copied.
+    """
+    owners = [o.strip().lower() for o in edu_mod._parse_block(block).ownership
+              if o.strip() and o.strip().lower() != "all"]
+    if not owners:
+        return
+    if plan.mercenary or "slave" in owners:
+        owners.append("slave")
+    norm = lambda p: (p or "").replace("\\", "/").lower().lstrip("/").removeprefix("data/")  # noqa: E731
+    keep_paths, drop_paths = set(), set()
+    out = []
+    for final_name, entry in plan.add_entries:
+        have = [t.faction for t in entry.main_textures]
+        wanted = list(dict.fromkeys(owners + (["default"] if "default" in have else [])))
+        raw = modeldb.set_texture_factions(entry.raw, wanted,
+                                           prefer=plan.texture_donor or None,
+                                           pad=entry.first_entry_pad)
+        new = modeldb.parse_entry_text(raw, pad=entry.first_entry_pad)
+        new.raw = raw
+        kept = {t.faction for t in new.main_textures}
+        for t in entry.main_textures + entry.attach_textures:
+            paths = {norm(t.texture), norm(t.normal), norm(t.sprite)} - {""}
+            (keep_paths if t.faction in kept else drop_paths).update(paths)
+            if t.faction not in kept:
+                plan.skins_dropped += 1
+        out.append((final_name, new))
+    plan.add_entries = out
+    plan.skins_kept = sorted({f for _n, e in out for f in (t.faction for t in e.main_textures)})
+    gone = drop_paths - keep_paths
+    # a sprite's sheets travel beside it: france_x_sprite.spr, _000.texture...
+    stems = {g[:-4] for g in gone if g.endswith(".spr")}
+    kept_assets = []
+    for src_abs, rel in plan.asset_files:
+        r = norm(rel)
+        if r in gone or any(r.startswith(s + "_") for s in stems):
+            plan.skins_saved_files += 1
+            try:
+                plan.skins_saved_bytes += Path(src_abs).stat().st_size
+            except OSError:
+                pass
+            continue
+        kept_assets.append((src_abs, rel))
+    plan.asset_files = kept_assets
+    if plan.skins_dropped:
+        plan.warnings.append(_i18n.msg(
+            "eng.transfer.own_skins_only",
+            "ONLY THE OWNERS' SKINS: {dropped} texture record(s) for factions that will not own the unit were left out ({kept} kept), and {files} file(s), {mb} MB, are not copied.",
+            dropped=plan.skins_dropped, kept=", ".join(plan.skins_kept), files=plan.skins_saved_files,
+            mb=f"{plan.skins_saved_bytes / 1e6:.1f}"))
 
 
 def _swap_banners(plan: TransferPlan, block: str) -> str:

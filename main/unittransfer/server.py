@@ -1582,6 +1582,7 @@ def _options_from(d: dict) -> TransferOptions:
         exclude_models=[str(m).lower() for m in (d.get("exclude_models") or [])],
         eop_target=d.get("eop_target", "auto"),
         banner_mode=("swap" if d.get("banner_mode") == "swap" else "port"),
+        own_skins_only=bool(d.get("own_skins_only")),
         on_conflict=d.get("on_conflict", "rename"),
         new_type=d.get("new_type") or None,
         new_dictionary=d.get("new_dictionary") or None,
@@ -1671,6 +1672,10 @@ def _plan_payload(plan) -> dict:
         # 92d: the banners the unit carries that the destination has not got
         "banner_actions": [{"kind": k, "name": n, "action": a, "detail": d}
                            for k, n, a, d in plan.banner_actions],
+        # 92c
+        "skins_kept": plan.skins_kept, "skins_dropped": plan.skins_dropped,
+        "skins_saved_files": plan.skins_saved_files,
+        "skins_saved_bytes": plan.skins_saved_bytes,
         "engine_conflict": plan.options.engine_conflict,
         "engine_actions": [{"name": n, "action": a, "detail": d}
                            for n, a, d in plan.engine_actions],
