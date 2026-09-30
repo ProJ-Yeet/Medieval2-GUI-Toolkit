@@ -394,9 +394,20 @@ roadmap"), with 87 and 88 added on 2026-09-25. A finished row moves up into
 the phase index. The schedule as it stood, with how it was ordered and the
 notes on 74-76, is in `ROADMAP_ARCHIVE.md` under *The 2026-09-23 schedule*.
 
+On 2026-09-30 the user moved the translations to the end ("skip the languages
+phases for now and group them move it to later and do the other stages
+first"): 88a-88c are done, and 88d-88f (the catalogues themselves, several
+million tokens of output) wait until 89-94 are built. The order is now:
+
 | # | Phase | Stars | Size | Line |
 |---|---|---|---|---|
-| 88 | Every major language: the interface translated, with each language's correct technical terms (a termbase, right-to-left, CJK) | - | L, split 88a-88f | both |
+| 89 | Four reports from users: the resource list open on M2EX, a new resource, a watchtower's line of sight, the real-world map | - | M, split 89a-89d | a, b both; c, d beta |
+| 90 | A layout that fits the window at every interface size | - | M, split 90a-90c | both |
+| 91c | A cloned faction's three campaign files | - | S | both |
+| 92 | Four things another import tool does that Unit Transfer does not | - | M, split 92a-92d | both |
+| 93 | Two reports on getting around | - | S, split 93a-93b | both |
+| 94 | A recruitment screen that lags, and its turns | - | M, split 94a-94b | both |
+| 88d-88f | The translations: European and Cyrillic, then CJK, then Arabic and right-to-left | - | L | both |
 
 Releasing stays on request: each phase is committed to master as it lands.
 
@@ -865,6 +876,50 @@ new name. Deleting a resource stays refused on every mod, for the reason
 `REFUSED` gives (`descr_regions.txt` places resources by name). Done when: a
 resource made in the tab, placed on the map and saved loads in the game on an
 M2EX mod, and the tab offers no add on one without it.
+
+*89a and 89b done 2026-09-30, uncut; the in-game check waits on someone with
+M2EX.* **M2EX's ceiling, found out:** its release notes say trade goods "are no
+longer a hardcoded list", are "fully data-driven from descr_sm_resources.txt",
+and "you can add as many new ones as you want". A new one is named by
+`SMT_RESOURCE_<NAME>` in `text/strat.txt` and `TMT_<NAME>_TOOLTIP` in
+`text/tooltips.txt` (`localised_name` still overrides). With no number given,
+nothing is counted: on a mod marked as running on M2EX, the
+`unknown-resource` finding is not raised and every row is `known`
+(`minorfiles.is_m2ex`). The same file with the flag off gets the vanilla
+warning as before, and `REFUSED` now says the flag opens the list.
+`actions_for` / `refused_for` replace the fixed `ACTIONS` / `REFUSED` lookups:
+on M2EX, resources are `edit` and `add`, and delete stays refused, with its
+reason. The map's resource box already offers the file's own names, and falls
+back to the 28 only when a mod has no `descr_sm_resources.txt`.
+
+A new resource, from **+ New resource** or **Clone**, brings:
+
+- its record, laid out the way the file is. `flatrecord.new_record` now copies
+  a neighbouring record's indent and value column. It had written every new
+  rebel faction and resource indented with a space before the value, and no
+  real file does that.
+- its name as a new key at the end of `strat.txt`. This is the one `strat.txt`
+  write the tool makes. It is only a key the file lacks, and it goes after
+  every other key, so no entry moves. Every installed mod's compiled
+  `strat.txt.strings.bin` and `tooltips.txt.strings.bin` is read by position
+  (style 1, 1307 and 382 entries), so the tool can't rebuild it. It is backed
+  up and removed instead, and the game builds it again from the text. The
+  name, if none is typed, is the resource's own in words (`dried_fish` → "Dried
+  Fish"), never its key. A mod with only the compiled file gets a warning and
+  no name. An existing resource's name is still the Strings module's.
+- its tooltip in `tooltips.txt`, the same way, defaulting to the name.
+- its icon, copied from the resource picked in *Icon from* (a clone picks its
+  donor) to `data/ui/resources/resource_<name>.tga`. When the donor's icon is
+  not a loose file (it is in the packs), the new resource uses the donor's path
+  instead, which draws, and nothing is copied. The model is the donor's. There
+  is no "pick a .tga from disk": a new religion's pip has none either.
+
+One save, one Undo. `test_minorfiles` 89a/89b (19): the flag off and on, the
+refusal, a new resource planned and applied with its icon, both keys and both
+caches, the layout, the pack-held icon, and Undo byte for byte. The page was
+checked against Third_Age_Reforged with the flag switched on for the check and
+off again after (a clone of `amber` plans the icon copy and the file's own
+layout). Nothing was written to the mod.
 
 **89c - a watchtower's line of sight (the suggestion, 3).** First the number:
 how far a watchtower sees, in tiles, and whether a mod file sets it or the

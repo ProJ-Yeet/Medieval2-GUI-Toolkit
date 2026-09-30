@@ -157,12 +157,18 @@ function mfNew(){
   const blank = mfBlank(f.tab);
   f.d = {name:'', label:tt('minorfiles.new_2',{noun:f.noun}), tab:f.tab, file:f.file, noun:f.noun,
     record:blank, w:JSON.parse(JSON.stringify(blank)), findings:[], loc:{},
-    locEdits:{}, missing_loc:[], loc_tag:'', loc_writable:true,
+    locEdits:{}, missing_loc:[], loc_writable:true,
+    // 89b: a new resource's name is a key M2EX derives from it, in strat.txt
+    loc_tag:f.tab === 'resources' ? mfResourceTag('') : '',
+    loc_file:f.tab === 'resources' ? 'text/strat.txt' : '',
     known:(f.records||[]).map(r=>r.name), actions:f.actions,
     vocab:(f.d && f.d.vocab) || {}};
   renderMinor();
   mfLoadVocab();
 }
+
+// SMT_RESOURCE_<NAME>, the key M2EX reads a resource's name under (89b)
+const mfResourceTag = name => 'SMT_RESOURCE_' + ((name || '').trim().toUpperCase() || 'NAME');
 
 /* ---- clone ----
    A rebel faction is a category, a chance and a LIST OF UNITS, and building the
@@ -187,15 +193,20 @@ function mfClone(){
   const was = d.loc_tag || '';
   // both tabs that have a writable text key are keyed by something that just
   // became the new name - a rebel by its `description`, a religion by itself
-  const tag = (f.tab === 'rebels' || f.tab === 'religions') ? name : '';
-  const shown = was ? ((d.locEdits||{})['#name'] !== undefined ? d.locEdits['#name']
+  const tag = (f.tab === 'rebels' || f.tab === 'religions') ? name
+    : f.tab === 'resources' ? mfResourceTag(name) : '';
+  // 89b: a copied resource keeps the donor's model, copies its icon to a file
+  // of its own, and is not called by the donor's name
+  if(f.tab === 'resources') w.icon_from = d.name;
+  const shown = f.tab === 'resources' ? '' : was ? ((d.locEdits||{})['#name'] !== undefined ? d.locEdits['#name']
                        : ((d.loc||{})[was] || '')) : '';
   f.sel = ''; f.adding = true;
   f.d = {name:'', label:tt('minorfiles.copy_of',{label:d.label}), tab:f.tab, file:f.file, noun:f.noun,
     record:JSON.parse(JSON.stringify(w)), w,
     findings:[], loc:{}, locEdits:(tag && shown) ? {'#name':shown} : {},
     missing_loc:tag ? [tag] : [], loc_tag:tag, loc_file:d.loc_file || '',
-    loc_writable:d.loc_writable !== false, loc_note:d.loc_note || '',
+    loc_writable:f.tab === 'resources' || d.loc_writable !== false,
+    loc_note:f.tab === 'resources' ? '' : d.loc_note || '',
     known:[...known], actions:f.actions, vocab:d.vocab || {}};
   renderMinor();
   const carried = f.tab === 'rebels'
@@ -410,6 +421,31 @@ function mfResourceForm(d){
       <div data-label="has_mine"><label class="chk"><input type="checkbox"
         ${w.has_mine?'checked':''} onchange="mfSet('has_mine',this.checked)">
         ${tt('minorfiles.shows_the_mine_model_named_at')}</label></div>
+    </div>
+  </section>${state.mf.adding ? mfResourceStartHtml(d) : ''}`;
+}
+
+/* ---- what a new resource brings (89b) ----
+   Only offered on a mod marked as running on M2EX, whose resource list is
+   open. Its name and tooltip are keys M2EX derives from it, each added after
+   every other key in its file; its icon is copied from a resource that has one,
+   until one is drawn - the way a new religion's pip is. */
+function mfResourceStartHtml(d){
+  const w = d.w, name = (w.name||'').trim() || 'name';
+  const res = (state.mf.records || []).map(r => r.name);
+  return `<section class="trsec">
+    <div class="trsechead">${tt('minorfiles.what_the_new_resource_brings')}</div>
+    <div class="trgrid">
+      <label class="lbl mfstartlbl">${tt('minorfiles.icon_from')}</label>
+      <div><select onchange="mfSet('icon_from', this.value)">
+        <option value="">${tt('minorfiles.no_copy_use_the_icon_path',{name:esc(name)})}</option>
+        ${res.map(r => `<option value="${esc(r)}" ${w.icon_from === r ? 'selected' : ''}>${tt('minorfiles.copy_s_icon',{x:esc(r)})}</option>`).join('')}
+      </select></div>
+      <label class="lbl mfstartlbl">${tt('minorfiles.tooltip')}</label>
+      <div><input value="${esc(w.tooltip||'')}" placeholder="${ttA('minorfiles.left_empty_it_is_the_name')}"
+        oninput="mfSet('tooltip', this.value)">
+        <div class="trhint count">${tt('minorfiles.the_name_and_the_tooltip_are',{tag:esc(mfResourceTag(w.name)),tip:esc('TMT_' + name.toUpperCase() + '_TOOLTIP')})}</div>
+      </div>
     </div>
   </section>`;
 }
@@ -840,6 +876,7 @@ function mfLocTag(){
   const f = state.mf, d = f.d, w = (d && d.w) || {};
   if(f.tab === 'rebels') return (w.description || '').trim() || (w.name || '').trim();
   if(f.tab === 'religions') return (w.name || '').trim();
+  if(f.tab === 'resources' && f.adding) return mfResourceTag(w.name);
   return d ? (d.loc_tag || '') : '';        // resources: read by position, not by tag
 }
 function mfLocBody(){
@@ -983,6 +1020,10 @@ function mfBody(action){
   if(f.tab === 'religions' && action === 'add'){
     body.pip_from = d.w.pip_from || '';
     body.seeds = (d.w.seeds || []).filter(r => r.region && r.share);
+  }
+  if(f.tab === 'resources' && action === 'add'){
+    body.icon_from = d.w.icon_from || '';
+    body.tooltip = (d.w.tooltip || '').trim();
   }
   return body;
 }

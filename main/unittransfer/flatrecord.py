@@ -27,6 +27,8 @@ without touching a byte of the rest.
 """
 from __future__ import annotations
 
+import re
+
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
@@ -304,18 +306,57 @@ def edit_repeats(sp: kb.Splice, lines: List[str], olds: List[Repeat],
             sp.drop(old.line)
 
 
-def new_record(shape: Shape, edits: Dict) -> str:
-    """A whole record written from scratch, in the order the real files write it."""
+_KEY_LINE = re.compile(r"^(\s*)([A-Za-z_]\w*)(\s*)(.*)$")
+
+
+def _prefixes(block: str) -> Dict[str, str]:
+    """``{key: what comes before its value}`` in an existing record - indent,
+    keyword and the run of tabs after it - so a new record can be written the
+    way the file around it is (89b: ``descr_sm_resources.txt`` is unindented and
+    tab-aligned, where this wrote the rebels file's indented shape)."""
+    out: Dict[str, str] = {}
+    for line in block.splitlines():
+        m = _KEY_LINE.match(line)
+        if m and m.group(2) not in out:
+            out[m.group(2)] = m.group(1) + m.group(2) + (m.group(3) if m.group(4) else "")
+    return out
+
+
+def new_record(shape: Shape, edits: Dict, like: str = "") -> str:
+    """A whole record written from scratch, in the order the real files write it.
+
+    ``like`` is a record already in the file: each line takes the indent and the
+    spacing that record gives the same keyword, and a keyword it lacks takes its
+    indent and the column its values line up at."""
     name = str(edits.get("name") or "").strip()
     if not name:
         raise RecordError(_i18n.msg("eng.flatrecord.a_new_needs_a_name", "a new {noun} needs a name", noun=shape.noun))
-    out = [f"{shape.kw}\t\t\t{name}"]
-    out += ["\t" + ln.strip() for ln in
-            kb.new_lines(edits, shape.fields, shape.order, shape.flags,
-                         shape.list_keys, "")]
+    pre = _prefixes(like) if like else {}
+    body = [p for k, p in pre.items() if k != shape.kw]
+    indent = _KEY_LINE.match(body[0]).group(1) if body else "\t"
+
+    def head(key: str, has_value: bool) -> str:
+        if key in pre:
+            return pre[key] if has_value else pre[key].rstrip()
+        if not like:
+            return f"\t{key}\t\t\t" if key == shape.repeat_kw else f"\t{key} " if has_value else f"\t{key}"
+        if not has_value:
+            return indent + key
+        # the column the file's values start at, tab stops of 4
+        col = max((len(p.expandtabs(4)) for p in pre.values() if p.endswith("\t")), default=0)
+        text, tabs = indent + key, ""
+        while len((text + tabs).expandtabs(4)) < col or not tabs:
+            tabs += "\t"
+        return text + tabs
+
+    out = [pre.get(shape.kw, f"{shape.kw}\t\t\t") + name]
+    for ln in kb.new_lines(edits, shape.fields, shape.order, shape.flags,
+                           shape.list_keys, ""):
+        key, _, value = ln.strip().partition(" ")
+        out.append(head(key, bool(value)) + value)
     for value in (edits.get("units") or []):
         if str(value).strip():
-            out.append(f"\t{shape.repeat_kw}\t\t\t{str(value).strip()}")
+            out.append(head(shape.repeat_kw, True) + str(value).strip())
     return "\n".join(out)
 
 

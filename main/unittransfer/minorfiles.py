@@ -176,6 +176,14 @@ RESOURCES = Shape(
 #: the 28 resource names all three installed mods ship - in three different
 #: orders, and with no additions. The engine's list is closed: a `type` it does
 #: not know is read and ignored.
+#:
+#: **Except on M2EX** (89a). Its release notes: trade goods "are no longer a
+#: hardcoded list, they're fully data-driven from descr_sm_resources.txt and you
+#: can add as many new ones as you want", a new one named by
+#: ``SMT_RESOURCE_<NAME>`` in ``text/strat.txt`` and ``TMT_<NAME>_TOOLTIP`` in
+#: ``text/tooltips.txt``. No ceiling is given, so none is counted against: on a
+#: mod marked as running on M2EX every declared name is a resource, which is
+#: what a user reported seeing in game (a 29th, ``citrus``, shown and traded).
 KNOWN_RESOURCES = (
     "amber", "camels", "chocolate", "coal", "cotton", "dogs", "dyes", "elephants",
     "fish", "furs", "generic", "gold", "grain", "iron", "ivory", "marble",
@@ -227,11 +235,19 @@ def check_records(shape: Shape, rf: RecordFile, mod=None) -> List[Dict]:
             if value and not kb.is_int(value):
                 add("bad-trade-value", rec.name, rec.lines["trade_value"],
                     f"`{value}` is not a whole number")
-            if rec.name and rec.name not in KNOWN_RESOURCES:
+            if rec.name and rec.name not in KNOWN_RESOURCES and not is_m2ex(mod):
                 add("unknown-resource", rec.name, rec.start,
                     f"`{rec.name}` is not one of the 28 resources the engine knows "
                     "- the line is read and then ignored")
     return out
+
+
+def is_m2ex(mod) -> bool:
+    """Is this mod marked as running on M2EX, whose resource list is open (89a)?
+
+    ``False`` for no mod at all, so a check run on a bare file stays the
+    vanilla engine's check."""
+    return bool(mod is not None and getattr(mod, "m2ex", False))
 
 
 # ---- the two flat files by name, so callers do not pass shapes around -------
@@ -1647,13 +1663,38 @@ REFUSED: Dict[str, str] = {
                  "and no text entry, which is what being ignored looks like. "
                  "Deleting one is worse than adding one, because descr_regions.txt "
                  "places resources by name and the map would keep placing a "
-                 "resource this file no longer defines.",
+                 "resource this file no longer defines. On a mod marked as "
+                 "running on M2EX (the flag is on its Home card) the list is "
+                 "open, and a resource can be added.",
     "cultures": "A culture is eleven settlement models and cards, a fort, a port "
                 "ladder, a watchtower and six agents - nothing a text editor can "
                 "create from nothing, so a new one is a duplicate of one that "
                 "works. Deleting one orphans every faction whose `culture` line "
                 "names it.",
 }
+
+#: 89b: why a resource still cannot be deleted on M2EX, where it can be added
+REFUSED_M2EX_RESOURCES = (
+    "This mod runs on M2EX, whose resource list is open, so a resource can be "
+    "added here - a new one, or a clone of the open one. Deleting one stays "
+    "refused: descr_regions.txt places resources by name, and the map would keep "
+    "placing a resource this file no longer defines.")
+
+
+def actions_for(mod, tab_id: str) -> Tuple[str, ...]:
+    """What this tab offers on this mod: :data:`ACTIONS`, with the resource list
+    opened to ``add`` on a mod that runs on M2EX (89b)."""
+    if tab_id == "resources" and is_m2ex(mod):
+        return ("edit", "add")
+    return ACTIONS.get(tab_id, ("edit",))
+
+
+def refused_for(mod, tab_id: str) -> str:
+    """Why this tab withholds what it withholds, on this mod."""
+    if tab_id == "resources" and is_m2ex(mod):
+        return REFUSED_M2EX_RESOURCES
+    return REFUSED.get(tab_id, "")
+
 
 #: tab -> (the ``data/text`` file its names live in, whether a save may write it).
 #:
@@ -1717,10 +1758,11 @@ def render_any(tab_id: str, base: str, edits: Optional[Dict] = None) -> str:
     raise KeyError(_i18n.msg("eng.minorfiles.no_minor_files_tab", "no minor-files tab {tab_id}", tab_id=repr(tab_id)))
 
 
-def new_any(tab_id: str, edits: Dict) -> str:
-    """A whole record written from scratch - only for the tabs that allow it."""
+def new_any(tab_id: str, edits: Dict, like: str = "") -> str:
+    """A whole record written from scratch - only for the tabs that allow it.
+    ``like``: a record of the same file, whose layout a flat record copies."""
     if tab_id in ("rebels", "resources"):
-        return new_record(shape_of(tab_id), edits)
+        return new_record(shape_of(tab_id), edits, like)
     if tab_id == "religions":
         return new_religion(edits)
     if tab_id == "names":
@@ -1810,7 +1852,7 @@ def _row(mod, tab_id: str, rec, parsed: LineFile, names: Dict[str, str],
     elif tab_id == "resources":
         row.update(trade_value=rec.get("trade_value"), icon=rec.get("icon"),
                    has_mine=rec.flag("has_mine"),
-                   known=rec.name in KNOWN_RESOURCES)
+                   known=rec.name in KNOWN_RESOURCES or is_m2ex(mod))
     elif tab_id == "religions":
         row.update(pip_path=rec.pip_path, listed=rec.name in parsed.listed_lines)
     elif tab_id == "cultures":
@@ -1829,8 +1871,8 @@ def overview(mod, tab_id: str) -> Dict:
     out: Dict = {"mod": getattr(mod, "name", ""), "tab": tab_id, "label": meta.label,
                  "file": meta.rel, "noun": meta.noun, "exists": path.is_file(),
                  "records": [], "findings": 0, "count": 0,
-                 "actions": list(ACTIONS.get(tab_id, ("edit",))),
-                 "refused": REFUSED.get(tab_id, ""),
+                 "actions": list(actions_for(mod, tab_id)),
+                 "refused": refused_for(mod, tab_id),
                  "tabs": [{"id": t.id, "label": t.label, "rel": t.rel} for t in TABS]}
     if not path.is_file():
         out["error"] = f"{getattr(mod, 'name', '?')} has no {meta.rel}"
@@ -1935,7 +1977,7 @@ def detail(mod, tab_id: str, name: str) -> Dict:
         "missing_loc": [tag] if tag and names and tag not in names else [],
         "has_loc": bool(names),
         "known": [r.name for r in parsed.items],
-        "actions": list(ACTIONS.get(tab_id, ("edit",))),
+        "actions": list(actions_for(mod, tab_id)),
         "vocab": vocab(mod, tab_id, parsed),
     }
     if tab_id == "resources":
@@ -1985,6 +2027,9 @@ class MinorPlan:
     needs: List[Dict] = field(default_factory=list)
     #: 60: pictures copied, ``(from, to)`` relative to data/ - a new religion's pip
     copies: List[Tuple[str, str]] = field(default_factory=list)
+    #: 89b: text keys for a second ``data/text`` file, ``{rel: {tag: text}}`` - a
+    #: new resource's tooltip, which lives apart from its name
+    loc_more: Dict[str, Dict[str, str]] = field(default_factory=dict)
 
     def summary(self) -> str:
         where = getattr(self.mod, "name", "?")
@@ -2001,7 +2046,8 @@ class MinorPlan:
                          + [f"  {c}" for c in self.changes])
 
     def touched(self) -> bool:
-        return bool(self.text or self.extra or self.loc_writes or self.copies)
+        return bool(self.text or self.extra or self.loc_writes or self.copies
+                    or self.loc_more)
 
     def payload(self) -> Dict:
         return {"tab": self.tab, "action": self.action, "name": self.name,
@@ -2010,6 +2056,7 @@ class MinorPlan:
                 "block": self.block, "files": sorted(self.extra),
                 "loc_writes": dict(self.loc_writes), "loc_new": list(self.loc_new),
                 "loc_file": self.loc_rel,
+                "loc_more": {rel: dict(w) for rel, w in self.loc_more.items()},
                 "merge": dict(self.merge), "merge_sources": list(self.merge_sources),
                 "needs": list(self.needs),
                 "ok": not self.errors and self.touched()}
@@ -2030,8 +2077,8 @@ def plan(mod, body: dict) -> MinorPlan:
     except KeyError as e:
         p.errors.append(str(e))
         return p
-    if p.action not in ACTIONS.get(p.tab, ()):
-        p.errors.append(REFUSED.get(p.tab)
+    if p.action not in actions_for(mod, p.tab):
+        p.errors.append(refused_for(mod, p.tab)
                         or f"a {meta.noun} cannot be {p.action}ed here")
         return p
     path = path_for(mod, p.tab)
@@ -2039,6 +2086,11 @@ def plan(mod, body: dict) -> MinorPlan:
         p.errors.append(_i18n.msg("eng.minorfiles.has_no", "{getattr} has no {rel}", getattr=getattr(mod, 'name', '?'), rel=meta.rel))
         return p
     original = kb.read_text(path, ENCODING)
+    icon_from = ""
+    if p.tab == "resources" and p.action == "add" and body.get("icon_from"):
+        icon_from = str(body["icon_from"]).strip()
+        body = dict(body, edits=_resource_icon_edits(
+            mod, parse_resources(original), icon_from, p.name, dict(body.get("edits") or {})))
     try:
         text = _plan_record(p, original, body)
     except MinorError as e:
@@ -2058,6 +2110,9 @@ def plan(mod, body: dict) -> MinorPlan:
                            str((body.get("edits") or {}).get("pip_path") or "").strip())
     if p.tab == "cultures" and p.action == "duplicate":
         _plan_culture_needs(p, mod, str(body.get("source") or "").strip())
+    if icon_from:
+        _plan_icon_copy(p, mod, parse_resources(original), icon_from,
+                        str((body.get("edits") or {}).get("icon") or ""))
 
     parsed = parse_any(p.tab, text)
     rec = parsed.get(p.name)
@@ -2066,6 +2121,8 @@ def plan(mod, body: dict) -> MinorPlan:
         p.findings = [f for f in check_any(mod, p.tab, parsed) if f["name"] == p.name]
         if body.get("write_loc", True):
             _plan_loc(p, mod, rec, dict(body.get("loc") or {}))
+            if p.tab == "resources" and p.action == "add":
+                _plan_resource_tooltip(p, mod, rec, str(body.get("tooltip") or ""))
     p.text = "" if text == original else text
     _drop_settled(p)
     if not p.touched() and not p.errors:
@@ -2109,7 +2166,8 @@ def _plan_record(p: MinorPlan, text: str, body: dict) -> str:
             p.errors.append(_i18n.msg("eng.minorfiles.is_already_a_in_this_file", "{name} is already a {noun} in this file", name=p.name, noun=noun))
             return text
         block = str(body.get("raw_block") or "").strip("\r\n") or new_any(
-            p.tab, dict(body.get("edits") or {}, name=p.name))
+            p.tab, dict(body.get("edits") or {}, name=p.name),
+            parsed.block_text(parsed.items[-1]) if parsed.items else "")
         if parse_block_any(p.tab, block + "\n").name != p.name:
             raise MinorError(_i18n.msg("eng.minorfiles.this_text_does_not_define", "this text does not define `{name}`", name=p.name))
         p.changes.append(f"+ {noun} {p.name}")
@@ -2477,6 +2535,91 @@ def _plan_pip_copy(p: MinorPlan, mod, donor: str, pip_path: str) -> None:
     p.changes.append(f"+ {dst}, copied from {donor}'s pip")
 
 
+#: where a resource's icon lives when this tool names it, as the files write it
+RESOURCE_ICON = "data/ui/resources/resource_{name}.tga"
+
+
+def _data_rel(path: str) -> str:
+    """``data/ui/x.tga`` or ``ui/x.tga`` -> ``ui/x.tga``: relative to data/."""
+    rel = (path or "").replace("\\", "/").strip()
+    return rel[5:] if rel.lower().startswith("data/") else rel
+
+
+def _resource_icon_edits(mod, rf: RecordFile, donor: str, name: str, edits: Dict) -> Dict:
+    """A new resource's icon line when its icon is copied from ``donor`` (89b).
+
+    A clone arrives holding the donor's own path, and a copy onto the donor's
+    own file is no copy: the new one gets ``resource_<name>.tga`` of its own
+    unless a different path was typed. Only when the donor's icon is a loose
+    file, though: one that lives in the game's packs cannot be copied, and its
+    path is one that works, where a path of its own would point at nothing."""
+    rec = rf.get(donor)
+    if rec is None:
+        return edits
+    src = _data_rel(rec.get("icon") or "")
+    have = str(edits.get("icon") or "").strip()
+    if not have or _data_rel(have) == src:
+        loose = bool(src) and (Path(getattr(mod, "data", "")) / src).is_file()
+        edits["icon"] = RESOURCE_ICON.format(name=name) if loose else rec.get("icon") or ""
+    return edits
+
+
+def _plan_icon_copy(p: MinorPlan, mod, rf: RecordFile, donor: str, icon: str) -> None:
+    """The donor resource's icon, copied to where the new record points - the
+    resource's twin of :func:`_plan_pip_copy`."""
+    data = Path(getattr(mod, "data", ""))
+    rec = rf.get(donor)
+    if rec is None:
+        p.errors.append(_i18n.msg("eng.minorfiles.there_is_no_resource_to_copy",
+                                  "there is no resource `{donor}` to copy an icon from", donor=donor))
+        return
+    src, dst = _data_rel(rec.get("icon") or ""), _data_rel(icon)
+    if not src or not (data / src).is_file():
+        p.warnings.append(_i18n.msg("eng.minorfiles.s_icon_is_not_in_this",
+                                    "{donor}'s icon ({x}) is not a file in this mod (it may be in the game's packs), so the new resource uses the same path and draws the same icon",
+                                    donor=donor, x=src or 'none'))
+        return
+    if dst == src:
+        return                  # the donor's own icon, used as it is
+    if not dst or (data / dst).exists():
+        p.warnings.append(_i18n.msg("eng.minorfiles.is_already_there_and_is_kept", "{dst} is already there, and is kept", dst=dst))
+        return
+    p.copies.append((src, dst))
+    p.changes.append(f"+ {dst}, copied from {donor}'s icon")
+
+
+#: 89b: where a resource's tooltip lives
+TOOLTIPS_REL = "text/tooltips.txt"
+
+
+def resource_tooltip_tag(name: str) -> str:
+    """``citrus`` -> ``TMT_CITRUS_TOOLTIP``, the key M2EX derives."""
+    return f"TMT_{(name or '').strip().upper()}_TOOLTIP"
+
+
+def _shown_default(name: str) -> str:
+    """``dried_fish`` -> ``Dried Fish``: a new resource's name until one is typed,
+    never its key, which is what the player would otherwise read."""
+    return " ".join(w.capitalize() for w in (name or "").split("_") if w) or name
+
+
+def _plan_resource_tooltip(p: MinorPlan, mod, rec, wanted: str) -> None:
+    """A new resource's tooltip in ``text/tooltips.txt`` (89b), when there is
+    none. Like its name, only ever a new key at the end of the file: every key
+    before it keeps its place, so a file read by position reads the same."""
+    tag = resource_tooltip_tag(rec.name)
+    if tag in _loc(mod, TOOLTIPS_REL):
+        return
+    if not (Path(mod.data) / TOOLTIPS_REL).exists():
+        p.warnings.append(_i18n.msg("eng.minorfiles.this_mod_has_no_as_text_so",
+                                    "this mod has no {name} as text, so the new resource's tooltip could not be written",
+                                    name=Path(TOOLTIPS_REL).name))
+        return
+    shown = p.loc_writes.get(loc_tag("resources", rec)) or _shown_default(rec.name)
+    p.loc_more[TOOLTIPS_REL] = {tag: wanted.strip() or shown}
+    p.changes.append(f"+ a new text key in {Path(TOOLTIPS_REL).name}")
+
+
 def _plan_loc(p: MinorPlan, mod, rec, wanted: Dict) -> None:
     """What this save would write into the tab's ``data/text`` file.
 
@@ -2489,18 +2632,27 @@ def _plan_loc(p: MinorPlan, mod, rec, wanted: Dict) -> None:
     if not rel or not tag:
         return
     p.loc_rel = rel
-    if not writable:
+    # 89b: a new resource on M2EX is the one strat.txt write this tool makes - a
+    # key the file does not have yet, appended after every other, so no entry
+    # moves; its compiled cache, read by position, is rebuilt by the game
+    fresh = (p.tab == "resources" and p.action == "add" and is_m2ex(mod)
+             and tag not in loc_names(mod, p.tab))
+    if not writable and not fresh:
         if wanted.get(tag):
             p.warnings.append(_i18n.msg("eng.minorfiles.is_read_by_position_not_by", "{rel} is read by position, not by tag - change this name in the Strings module, which can do it safely", rel=rel))
         return
     have = loc_names(mod, p.tab)
     txt = Path(mod.data) / rel
+    if fresh and not txt.exists():
+        # only the compiled cache, read by position: a key cannot be added to it
+        p.warnings.append(_i18n.msg("eng.minorfiles.this_mod_has_no_as_text_so_2", "this mod has no {name} as text, so this {noun}'s name could not be written - it will have no name of its own in game", name=Path(rel).name, noun=tab(p.tab).noun))
+        return
     if not txt.exists() and not stringsbin.bin_path_for(txt).exists():
         p.warnings.append(_i18n.msg("eng.minorfiles.this_mod_has_no_so_this", "this mod has no {name}, so this {noun}'s name could not be written - it will show its tag in game", name=Path(rel).name, noun=tab(p.tab).noun))
         return
     want = str(wanted.get(tag, "")).strip() if wanted else ""
     if tag not in have:
-        p.loc_writes[tag] = want or tag
+        p.loc_writes[tag] = want or (_shown_default(rec.name) if fresh else tag)
         p.loc_new.append(tag)
         p.changes.append(f"+ a new text key in {Path(rel).name}")
     elif want and want != have[tag]:
@@ -2553,21 +2705,23 @@ def apply(p: MinorPlan) -> Dict:
         target = keep(dst)
         shutil.copy2(Path(mod.data) / src, target)
         file_op("COPY", target, f"<- {src}")
+    def write_txt(rel: str, writes: Dict[str, str]) -> Dict:
+        """Set these keys in one ``data/text`` file and bring its cache in step."""
+        target = keep(rel)
+        # the compiled cache is rewritten below, so it is backed up too - an
+        # undo that put the .txt back and left the .bin would leave the game
+        # still reading the new text
+        keep(rel + ".strings.bin")
+        kb.write_text(target,
+                      stringsbin.upsert_txt(kb.read_text(target, "utf-16"), writes),
+                      "utf-16")
+        file_op("WRITE", target, f"{len(writes)} text key(s)")
+        return cleaner.refresh_strings_bin(mod.root, "data/" + rel + ".strings.bin")
+
     if p.loc_writes and p.loc_rel:
         txt = Path(mod.data) / p.loc_rel
         if txt.exists():
-            target = keep(p.loc_rel)
-            # the compiled cache is rewritten below, so it is backed up too - an
-            # undo that put the .txt back and left the .bin would leave the game
-            # still reading the new text
-            keep(p.loc_rel + ".strings.bin")
-            kb.write_text(target,
-                          stringsbin.upsert_txt(kb.read_text(target, "utf-16"),
-                                                p.loc_writes),
-                          "utf-16")
-            file_op("WRITE", target, f"{len(p.loc_writes)} text key(s)")
-            res = cleaner.refresh_strings_bin(mod.root,
-                                              "data/" + p.loc_rel + ".strings.bin")
+            res = write_txt(p.loc_rel, p.loc_writes)
             out["loc"] = {"file": p.loc_rel, "written": len(p.loc_writes),
                           "new": len(p.loc_new), "strings_bin": res}
         else:
@@ -2580,6 +2734,8 @@ def apply(p: MinorPlan) -> Dict:
             file_op("WRITE", target, f"{len(p.loc_writes)} text key(s)")
             out["loc"] = {"file": rel, "written": len(p.loc_writes),
                           "new": len(p.loc_new), "compiled": True}
+    for rel, writes in sorted(p.loc_more.items()):
+        out.setdefault("loc_more", {})[rel] = write_txt(rel, writes)
 
     rec = {
         "id": tid,

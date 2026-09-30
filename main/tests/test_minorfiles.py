@@ -993,5 +993,128 @@ check("merge and dedupe are offered on the names tab and nowhere else",
 shutil.rmtree(tmp41, ignore_errors=True)
 
 
+# ---------------------------------------------------------------------------
+print("\n89a/89b: the resource list on M2EX")
+# A user on M2EX added a 29th resource, `citrus`: the tab flagged it as a line
+# the engine ignores, and in game it showed and traded. M2EX's notes: resources
+# are data-driven, as many as you want, named by SMT_RESOURCE_<NAME> in strat.txt
+# and TMT_<NAME>_TOOLTIP in tooltips.txt. The same file, flag off, must still
+# get the vanilla warning - there it is still true.
+from unittransfer import modflags, stringsbin
+
+tmp89 = Path(_tmp.mkdtemp(prefix="tk-m2ex-"))
+w89 = tmp89 / "M2exMod"
+(w89 / "data" / "text").mkdir(parents=True)
+(w89 / "data" / "ui" / "resources").mkdir(parents=True)
+CITRUS = RESOURCES_TXT + ("\r\ntype\t\t\t\tcitrus\r\ntrade_value\t\t\t4\r\n"
+                          "item\t\t\t\tdata/models_strat/resource_timber.CAS\r\n"
+                          "icon\t\t\t\tdata/ui/resources/resource_timber.tga\r\n")
+kb.write_text(w89 / "data" / mf.RESOURCES.rel, CITRUS, mf.ENCODING)
+(w89 / "data" / "ui" / "resources" / "resource_gold.tga").write_bytes(b"TGA-gold")
+STRAT = "\ufeff\u00ac strat\r\n{SMT_RESOURCE_TIMBER}Timber\r\n{SMT_RESOURCE_GOLD}Gold\r\n"
+TIPS = "\ufeff\u00ac tips\r\n{TMT_TIMBER_TOOLTIP}Wood\r\n{TMT_GOLD_TOOLTIP}Gold\r\n"
+kb.write_text(w89 / "data" / "text" / "strat.txt", STRAT, "utf-16")
+kb.write_text(w89 / "data" / "text" / "tooltips.txt", TIPS, "utf-16")
+# both caches read by position, as in every installed mod
+for f, vals in (("strat", ["Timber", "Gold"]), ("tooltips", ["Wood", "Gold"])):
+    stringsbin.write(w89 / "data" / "text" / f"{f}.txt.strings.bin",
+                     stringsbin.StringsBin(style=stringsbin.UNTAGGED, values=vals))
+strat_bin = (w89 / "data" / "text" / "strat.txt.strings.bin").read_bytes()
+
+m_off = Mod(w89)
+modflags.set_m2ex(m_off, False)
+check("flag off: a 29th resource is still reported as ignored",
+      any(f["kind"] == "unknown-resource" and f["name"] == "citrus"
+          for f in mf.check_any(Mod(w89), "resources",
+                                mf.read_any(Mod(w89), "resources")[0])))
+ov = mf.overview(Mod(w89), "resources")
+check("  and its row is marked, and the tab offers no add",
+      [r["known"] for r in ov["records"] if r["name"] == "citrus"] == [False]
+      and ov["actions"] == ["edit"] and "closed" in ov["refused"]
+      and "M2EX" in ov["refused"])
+p = mf.plan(Mod(w89), {"tab": "resources", "name": "salt", "action": "add"})
+check("  and a new resource is refused", not p.payload()["ok"])
+
+modflags.set_m2ex(m_off, True)
+m89 = Mod(w89)
+ov = mf.overview(m89, "resources")
+check("flag on: no finding for citrus",
+      not [f for f in ov["finding_list"] if f["name"] == "citrus"])
+check("  its row is known, and the tab offers add but not delete",
+      all(r["known"] for r in ov["records"])
+      and ov["actions"] == ["edit", "add"] and "Deleting one stays" in ov["refused"])
+check("  and the record's own pane agrees",
+      mf.detail(m89, "resources", "citrus")["actions"] == ["edit", "add"])
+p = mf.plan(m89, {"tab": "resources", "name": "citrus", "action": "delete"})
+check("  deleting a resource is still refused", not p.payload()["ok"])
+
+p = mf.plan(m89, {"tab": "resources", "name": "salt", "action": "add",
+                  "edits": {"trade_value": "3",
+                            "item": "data/models_strat/resource_gold.CAS",
+                            "icon": "data/ui/resources/resource_gold.tga"},
+                  "icon_from": "gold", "loc": {"SMT_RESOURCE_SALT": "Sea Salt"},
+                  "tooltip": "Salt from the pans"})
+pay = p.payload()
+check("a new resource plans its record, its name, its tooltip and its icon",
+      pay["ok"] and "type" in p.block and "salt" in p.block
+      and p.loc_writes == {"SMT_RESOURCE_SALT": "Sea Salt"}
+      and pay["loc_more"] == {"text/tooltips.txt": {"TMT_SALT_TOOLTIP": "Salt from the pans"}}
+      and p.copies == [("ui/resources/resource_gold.tga", "ui/resources/resource_salt.tga")])
+check("  a clone holding the donor's icon path gets one of its own",
+      "data/ui/resources/resource_salt.tga" in p.block
+      and "resource_gold.tga" not in p.block)
+check("  laid out the way the file is: unindented, values at the file's column",
+      p.block.splitlines() == ["type\t\t\t\tsalt", "trade_value\t\t\t3",
+                               "item\t\t\t\tdata/models_strat/resource_gold.CAS",
+                               "icon\t\t\t\tdata/ui/resources/resource_salt.tga"])
+mf.apply(p)
+m89 = Mod(w89)
+check("it landed: the record, and the icon copied",
+      mf.parse_resources(kb.read_text(w89 / "data" / mf.RESOURCES.rel, mf.ENCODING))
+      .get("salt").get("trade_value") == "3"
+      and (w89 / "data" / "ui" / "resources" / "resource_salt.tga").read_bytes() == b"TGA-gold")
+strat = kb.read_text(w89 / "data" / "text" / "strat.txt", "utf-16")
+check("  the name added after every key strat.txt had, none moved",
+      strat.rstrip().splitlines()[-1] == "{SMT_RESOURCE_SALT}Sea Salt"
+      and strat.startswith(STRAT.rstrip("\r\n")))
+check("  the tooltip in tooltips.txt",
+      "{TMT_SALT_TOOLTIP}Salt from the pans" in kb.read_text(
+          w89 / "data" / "text" / "tooltips.txt", "utf-16"))
+check("  and the position-read caches removed, for the game to build again",
+      not (w89 / "data" / "text" / "strat.txt.strings.bin").exists()
+      and not (w89 / "data" / "text" / "tooltips.txt.strings.bin").exists())
+check("  the tab shows the name it was given",
+      [r["label"] for r in mf.overview(m89, "resources")["records"]
+       if r["name"] == "salt"] == ["Sea Salt (salt)"])
+
+from unittransfer import transfer
+transfer.undo(config.load_log()[-1]["id"])
+check("undo takes all of it back, the caches byte for byte",
+      mf.parse_resources(kb.read_text(w89 / "data" / mf.RESOURCES.rel, mf.ENCODING))
+      .get("salt") is None
+      and kb.read_text(w89 / "data" / "text" / "strat.txt", "utf-16") == STRAT
+      and (w89 / "data" / "text" / "strat.txt.strings.bin").read_bytes() == strat_bin
+      and not (w89 / "data" / "ui" / "resources" / "resource_salt.tga").exists())
+
+p = mf.plan(m89, {"tab": "resources", "name": "dried_fish", "action": "add",
+                  "edits": {"trade_value": "2", "item": "data/models_strat/x.CAS",
+                            "icon": "data/ui/resources/resource_fish.tga"}})
+p2 = mf.plan(m89, {"tab": "resources", "name": "salt", "action": "add",
+                   "edits": {"trade_value": "3", "item": "data/models_strat/x.CAS",
+                             "icon": "data/ui/resources/resource_timber.tga"},
+                   "icon_from": "timber"})
+check("a donor whose icon is not a loose file lends its path, and nothing is copied",
+      p2.payload()["ok"] and "resource_timber.tga" in p2.block and not p2.copies)
+check("with no name typed, the player reads a name and not a key",
+      p.loc_writes == {"SMT_RESOURCE_DRIED_FISH": "Dried Fish"}
+      and p.loc_more["text/tooltips.txt"] == {"TMT_DRIED_FISH_TOOLTIP": "Dried Fish"})
+p = mf.plan(m89, {"tab": "resources", "name": "timber", "action": "edit",
+                  "edits": {"trade_value": "6"}, "loc": {"SMT_RESOURCE_TIMBER": "Wood"}})
+check("an existing resource's name is still the Strings module's, on M2EX too",
+      not p.loc_writes and any("Strings module" in w for w in p.warnings))
+modflags.set_m2ex(m89, False)
+shutil.rmtree(tmp89, ignore_errors=True)
+
+
 print(f"\n{sum(ok)}/{len(ok)} checks passed")
 sys.exit(0 if all(ok) else 1)
