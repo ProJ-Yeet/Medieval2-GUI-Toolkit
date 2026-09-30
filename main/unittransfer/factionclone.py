@@ -44,6 +44,11 @@ is why this is a cloner per shape and not one search-and-replace:
   call the model card's faction checklist makes.
 * ``text/expanded.txt`` - the shown name and the ~30 ``EMT_*`` keys, which are
   the donor's text with the donor's slot swapped out of the key.
+* 91c: every campaign's ``descr_win_conditions.txt`` - the donor's block with
+  its ``hold_regions`` emptied, since those provinces are the donor's - and
+  ``text/campaign_descriptions.txt``, a title (the clone's name) and a
+  description (the donor's text, to rewrite) per campaign. See
+  :func:`campaign_jobs`.
 
 **The art is found, not listed.** Every faction file in a real mod carries the
 slot in its own name - ``symbol24_sicily_roll.tga``, ``faction_banner_sicily``,
@@ -174,6 +179,60 @@ def clone_paragraph(text: str, src: str, new: str, kw: str = "faction") -> Tuple
     clone = re.sub(_tok(src), new, body, count=1, flags=re.I)
     nl = kb.newline_of(text)
     return text[:end] + clone + nl + nl + text[end:], 1
+
+
+def clone_win_conditions(text: str, src: str, new: str) -> Tuple[str, int]:
+    """``descr_win_conditions.txt``: the donor's block, as the clone's (91c).
+
+    A block is the faction's bare name on a line of its own and the lines under
+    it, to the blank line. It is copied whole but for ``hold_regions``, which
+    names the DONOR's provinces: a clone holds none of them, so the list is
+    left empty, the form Divide and Conquer writes for every faction it has.
+    ``take_regions``, ``outlive`` and ``short_campaign`` are copied as they are.
+    """
+    lines = text.split("\n")
+    names = [ln.split(";", 1)[0].strip().lower() for ln in lines]
+    if new in names:
+        return text, 0
+    try:
+        i = names.index(src)
+    except ValueError:
+        return text, 0
+    j = i + 1
+    while j < len(lines) and lines[j].strip():
+        j += 1
+    block = [lines[i].replace(lines[i].strip().split(";", 1)[0].strip(), new, 1)]
+    for ln in lines[i + 1:j]:
+        m = re.match(r"^(\s*(?:short_campaign\s+)?hold_regions)\b.*$", ln, re.I)
+        block.append(m.group(1) if m else ln)
+    return "\n".join(lines[:j] + [""] + block + lines[j:]), 1
+
+
+def clone_campaign_descriptions(text: str, src: str, new: str,
+                                label: str = "") -> Tuple[str, int]:
+    """``text/campaign_descriptions.txt``: ``{<CAMPAIGN>_<SLOT>_TITLE}`` and
+    ``_DESCR`` for every campaign that has the donor's (91c).
+
+    The title is the clone's shown name when one was given, the description the
+    donor's text as a start, since it describes the donor and is the modder's
+    to rewrite. A key the file already has is left alone.
+    """
+    from . import stringsbin
+    pairs = stringsbin.from_txt(text)
+    have = {t for t, _ in pairs}
+    want = re.compile(r"^(.+)_" + re.escape(src.upper()) + r"_(TITLE|DESCR)$")
+    writes: Dict[str, str] = {}
+    for tag, value in pairs:
+        m = want.match(tag)
+        if not m:
+            continue
+        key = f"{m.group(1)}_{new.upper()}_{m.group(2)}"
+        if key in have or key in writes:
+            continue
+        writes[key] = label if (m.group(2) == "TITLE" and label) else value
+    if not writes:
+        return text, 0
+    return stringsbin.upsert_txt(text, writes), len(writes)
 
 
 def clone_braced(text: str, src: str, new: str) -> Tuple[str, int]:
@@ -527,6 +586,28 @@ JOBS: Tuple[Job, ...] = (
         note="a texture row in every banner the donor has one in"),
 )
 
+def campaign_jobs(mod) -> Tuple[Job, ...]:
+    """91c: the two campaign files, one victory-conditions job per campaign.
+
+    Measured before this was written: both are per-faction blocks, but
+    ``descr_win_conditions.txt`` does name places - ``hold_regions`` lists the
+    donor's provinces and ``outlive`` other factions - so :func:`clone_win_conditions`
+    copies the block with the provinces taken out. Every campaign the mod has
+    keeps its own file (Reforged's Fellowship, DaC's Shattered Alliances)."""
+    from . import campstrat
+    data = Path(mod.data)
+    out: List[Job] = []
+    for rel in campstrat.campaign_paths(mod):
+        r = f"{campstrat.CAMPAIGN_DIR_REL}/{rel}/descr_win_conditions.txt"
+        if (data / r).is_file():
+            out.append(Job(r, f"Victory conditions ({rel.rsplit('/', 1)[-1]})", "wincond",
+                           note="the donor's block, its hold_regions left empty"))
+    out.append(Job("text/campaign_descriptions.txt", "Campaign descriptions", "campdesc",
+                   encoding="utf-16",
+                   note="the title and description on the faction picker"))
+    return tuple(out)
+
+
 #: Where a mod keeps art the engine finds BY CONVENTION - from the faction's own
 #: name, with nothing pointing at it: ``ui/units/<faction>/``, ``symbol24_<faction>``,
 #: ``faction_banner_<faction>``, ``captain_card_<faction>``. That art has to be
@@ -631,7 +712,7 @@ ART_PLACES: Tuple[ArtPlace, ...] = (
 REVIEW_FILES: Tuple[str, ...] = (
     "export_descr_character_traits.txt", "export_descr_ancillaries.txt",
     "export_descr_sounds_prebattle.txt", "descr_missions.txt",
-    "descr_sounds_music.txt", "descr_win_conditions.txt", "descr_banners.txt")
+    "descr_sounds_music.txt", "descr_banners.txt")
 
 #: the campaign file this deliberately leaves alone, and why
 STRAT_REL = "world/maps/campaign/imperial_campaign/descr_strat.txt"
@@ -977,6 +1058,10 @@ def clone_file(data: Path, job: Job, src: str, new: str, label: str = "",
             after, n = clone_modeldb(before, src, new)
         elif job.how == "banners":
             after, n = clone_banners(before, src, new, data, art)
+        elif job.how == "wincond":
+            after, n = clone_win_conditions(before, src, new)
+        elif job.how == "campdesc":
+            after, n = clone_campaign_descriptions(before, src, new, label)
         else:                                     # unreachable
             after, n = before, 0
     except (fr.RecordError, ValueError, OSError, UnicodeError) as e:
@@ -1067,7 +1152,7 @@ def plan(mod, body: dict, overlay: Optional[Dict[str, str]] = None) -> ClonePlan
     text_opts = {"rename": bool(body.get("rename")),
                  "titles": body.get("titles") if isinstance(body.get("titles"), dict) else None,
                  "art": want_art, "logos": logos}
-    for job in JOBS:
+    for job in JOBS + campaign_jobs(mod):
         edit = clone_file(data, job, src, new, label, overlay, text_opts)
         p.edits.append(edit)
         if edit.skipped and job.required and not edit.count:
@@ -1113,6 +1198,15 @@ def plan(mod, body: dict, overlay: Optional[Dict[str, str]] = None) -> ClonePlan
         p.notes.append(
             _i18n.msg("eng.factionclone.some_files_name_in_a_way", "Some files name {src} in a way that is a decision rather than a list, and those are left for you. A trait named after the faction, an ancillary's `FactionType` condition and a prebattle speech cannot be cloned by appending to them - the Traits and Ancillaries editors open all three.", src=src))
     p.notes.append(STRAT_NOTE)
+    wrote = {e.rel for e in p.written()}
+    if any(r.endswith("descr_win_conditions.txt") for r in wrote):
+        p.notes.append(_i18n.msg("eng.factionclone.win_conditions_copied",
+                                 "{src}'s victory conditions were copied, but its hold_regions list was left empty, because those provinces are {src}'s. Name the ones `{new}` must hold in descr_win_conditions.txt once it has a place in descr_strat.txt.",
+                                 src=src, new=new))
+    if "text/campaign_descriptions.txt" in wrote:
+        p.notes.append(_i18n.msg("eng.factionclone.descriptions_copied",
+                                 "The campaign descriptions' text is {src}'s, as a start: it describes {src}, and is yours to rewrite in text/campaign_descriptions.txt.",
+                                 src=src))
     if not (data / STRAT_REL).is_file():
         p.notes.append(_i18n.msg("eng.factionclone.this_mod_has_no_descr_strat", "This mod has no descr_strat.txt where one is expected ({STRAT_REL}), so nothing here was checked against it.", STRAT_REL=STRAT_REL))
     if not p.touched() and not p.errors:

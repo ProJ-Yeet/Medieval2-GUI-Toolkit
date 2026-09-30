@@ -1268,6 +1268,27 @@ should copy the donor's `descr_win_conditions.txt` block and
 decided here: both are per-faction blocks with no settlement in them, so the
 reason `descr_strat.txt` is not copied does not apply to them.
 
+*91c done 2026-09-30, uncut.* **Decided: both are copied, and not blindly.**
+Measured first on the two installed mods. The premise above is half right:
+`descr_win_conditions.txt` has no settlement in it, but it does name places.
+`hold_regions` lists the donor's provinces (Reforged's `sicily` holds Anorien,
+Umbar and five more), and `outlive` names other factions. So
+`clone_win_conditions` copies the donor's block under the new name in every
+campaign that has the file (Reforged's imperial and Fellowship, each its own),
+with **both `hold_regions` lines left empty**, the form Divide and Conquer
+writes for all its factions. `take_regions`, `outlive` and `short_campaign`
+are copied as they are. `clone_campaign_descriptions` adds
+`{<CAMPAIGN>_<NEW>_TITLE}` and `_DESCR` for every campaign that has the
+donor's: the title is the clone's shown name, the description is the donor's
+text to start from. The compiled `.strings.bin` is tagged in both mods and is
+rebuilt. The plan says what was left:
+the provinces to hold, once the faction has a place in `descr_strat.txt`, and
+the text to rewrite. `descr_win_conditions.txt` leaves `REVIEW_FILES`.
+`descr_strat.txt` stays as it was: not copied, and said so.
+`test_factionclone` 91c (17): both cloners on text, the real plan on Reforged,
+and an apply on a copy (the compiled title is there, every campaign has the
+block, one Undo puts all of it back byte for byte).
+
 # Phase 92 - four things another import tool does that Unit Transfer does not, scheduled 2026-09-28
 
 **Passed on by the user on 2026-09-28**: a friend wrote an import tool of

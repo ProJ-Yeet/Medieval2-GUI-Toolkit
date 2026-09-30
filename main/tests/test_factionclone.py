@@ -349,5 +349,90 @@ first = fc.review_mentions(mod, DONOR)
 check("the review scan is cached rather than repeated",
       fc.review_mentions(mod, DONOR) is first)
 
+# ---------------------------------------------------------------------------
+print("\n91c: the two campaign files the clone used to leave to the modder")
+WIN = ("scripts\nhold_regions\ntake_regions 180\n\n"
+       "sicily\nhold_regions Anorien_Province Umbar_Province ; the capital\ntake_regions 50\n"
+       "outlive england spain\nshort_campaign hold_regions Anorien_Province\ntake_regions 35\n\n"
+       "milan\nhold_regions Kings-Land_Province\ntake_regions 50\n")
+out, n = fc.clone_win_conditions(WIN, "sicily", "arnor")
+blk = out.split("\n\n")
+arnor = next(b for b in blk if b.startswith("arnor"))
+check("victory conditions: the donor's block, under the new name, after the donor's",
+      n == 1 and out.index("\nsicily") < out.index("\narnor") < out.index("\nmilan"))
+check("  its hold_regions left empty, both of them: those provinces are the donor's",
+      "hold_regions\n" in arnor + "\n" and "Anorien" not in arnor
+      and "short_campaign hold_regions\n" in arnor + "\n")
+check("  take_regions and outlive copied as they are",
+      "take_regions 50" in arnor and "outlive england spain" in arnor
+      and "take_regions 35" in arnor)
+check("  every other block byte for byte", out.replace("\n" + arnor + "\n", "", 1) == WIN)
+check("  a second clone of the same name adds nothing",
+      fc.clone_win_conditions(out, "sicily", "arnor") == (out, 0))
+check("  a donor with no block adds nothing",
+      fc.clone_win_conditions(WIN, "gondor", "arnor") == (WIN, 0))
+
+DESC = ("\ufeff\u00ac campaign descriptions\n"
+        "{IMPERIAL_CAMPAIGN_SICILY_TITLE}Gondor\n"
+        "{IMPERIAL_CAMPAIGN_SICILY_DESCR}Leader: Denethor\\n\\nThe south.\n"
+        "{FELLOWSHIP_CAMPAIGN_SICILY_TITLE}Gondor\n"
+        "{IMPERIAL_CAMPAIGN_MILAN_TITLE}Rohan\n")
+out, n = fc.clone_campaign_descriptions(DESC, "sicily", "arnor", "Arnor")
+check("campaign descriptions: a title and description for each campaign the donor has",
+      n == 3 and "{IMPERIAL_CAMPAIGN_ARNOR_TITLE}Arnor" in out
+      and "{FELLOWSHIP_CAMPAIGN_ARNOR_TITLE}Arnor" in out)
+check("  the title is the clone's name, the description the donor's text to start from",
+      "{IMPERIAL_CAMPAIGN_ARNOR_DESCR}Leader: Denethor\\n\\nThe south." in out)
+check("  and the donor's own keys are untouched",
+      out.startswith(DESC.rstrip("\n")))
+check("  with no name given, the title is the donor's",
+      "{IMPERIAL_CAMPAIGN_ARNOR_TITLE}Gondor" in fc.clone_campaign_descriptions(
+          DESC, "sicily", "arnor")[0])
+
+jobs = fc.campaign_jobs(mod)
+wins = [j for j in jobs if j.how == "wincond"]
+check(f"{mod.name}: a victory-conditions job for each campaign that has the file ({len(wins)})",
+      wins and all((Path(mod.data) / j.rel).is_file() for j in wins))
+p91 = fc.plan(mod, {"source": DONOR, "new": NEW, "label": "Probe"})
+w91 = {e.rel: e for e in p91.written()}
+check(f"  the real plan writes them: {sorted(r for r in w91 if 'win_cond' in r or 'campaign_desc' in r)}",
+      any(r.endswith("descr_win_conditions.txt") for r in w91)
+      and "text/campaign_descriptions.txt" in w91)
+check("  and says what it left for the modder: the provinces, the text",
+      any("hold_regions list was left empty" in x for x in p91.notes)
+      and any("yours to rewrite" in x for x in p91.notes))
+check("  descr_win_conditions.txt is no longer only reported for review",
+      "descr_win_conditions.txt" not in fc.REVIEW_FILES)
+
+# written for real, on a copy holding the roster and the two campaign files,
+# with a config of its own so the undo log is not the user's
+import shutil as _sh
+from tests import _tmp
+from unittransfer import config as _cfg, stringsbin as _sb, transfer as _tr
+_c = Path(_tmp.mkdtemp(prefix="ut_cfg91c_"))
+_cfg.CONFIG_DIR = _c; _cfg.BACKUP_DIR = _c / "backups"
+_cfg.SETTINGS_PATH = _c / "settings.json"; _cfg.LOG_PATH = _c / "transfers.json"
+w91 = Path(_tmp.mkdtemp(prefix="ut_fc91c_")) / "Probe"
+for rel in [fa.REL, "text/campaign_descriptions.txt", "text/campaign_descriptions.txt.strings.bin"] + [
+        j.rel for j in wins] + [j.rel.replace("descr_win_conditions.txt", "descr_strat.txt")
+                                for j in wins]:
+    (w91 / "data" / rel).parent.mkdir(parents=True, exist_ok=True)
+    if (Path(mod.data) / rel).is_file():
+        _sh.copy2(Path(mod.data) / rel, w91 / "data" / rel)
+m91 = Mod(w91)
+p91 = fc.plan(m91, {"source": DONOR, "new": NEW, "label": "Probe", "art": False})
+before = {j.rel: (w91 / "data" / j.rel).read_bytes() for j in wins}
+res = fc.apply(p91)
+cd = _sb.read(w91 / "data" / "text" / "campaign_descriptions.txt.strings.bin")
+check("applied: the compiled descriptions hold the new title, so the game reads it",
+      any(t.endswith(f"_{NEW.upper()}_TITLE") and v == "Probe" for t, v in cd.rows()))
+check("  and every campaign's victory conditions has the new block",
+      all(f"\n{NEW}\n" in kb.read_text(w91 / "data" / j.rel, fc.ENCODING).replace("\r\n", "\n")
+          for j in wins))
+_tr.undo(res["id"])
+check("  one Undo puts every one of them back byte for byte",
+      all((w91 / "data" / r).read_bytes() == b for r, b in before.items()))
+_sh.rmtree(w91.parent, ignore_errors=True); _sh.rmtree(_c, ignore_errors=True)
+
 print(f"\n{sum(ok)}/{len(ok)} checks passed")
 sys.exit(0 if all(ok) else 1)
