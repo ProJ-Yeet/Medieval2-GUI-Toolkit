@@ -206,6 +206,34 @@ class _Reader:
         except ValueError:
             raise _Desync(at, f"expected a number here and found {tok!r}") from None
 
+    def skip_blank_fields(self, fields: int) -> None:
+        """Read the ``blank`` entry's fields: numbers, plus a name where one sits.
+
+        Nearly every file writes 39 bare numbers. Some put a real name in one of
+        those slots (Divide_and_Conquer_EUR has ``14 MTW2_Swordsman`` where the
+        others have a ``0``), so the slot is a length-prefixed string that happens
+        to be empty elsewhere. A number followed by something that is not a number
+        is that length and its name; the name counts as ONE field.
+        """
+        for _ in range(fields):
+            self._skip_ws()
+            at, tok = self.i, self.token()
+            try:
+                int(tok)
+            except ValueError:
+                raise _Desync(at, f"expected a number here and found {tok!r}") from None
+            save = self.i
+            nxt = self.token()
+            self.i = save
+            try:
+                float(nxt)
+                is_name = False
+            except ValueError:
+                is_name = bool(nxt)
+            if is_name:
+                self.i = at
+                self.get_string()
+
     def get_float(self) -> float:
         self._skip_ws()
         at, tok = self.i, self.token()
@@ -247,6 +275,11 @@ class _Reader:
         try:
             length = int(tok)
         except ValueError:
+            lead = len(tok) - len(tok.lstrip("0123456789"))
+            if lead and tok[:lead] == "0" * lead:
+                raise _Desync(at + lead, f"a stray {tok[lead:]!r} is glued to the {tok[:lead]} "
+                              f"that says this attachment has no sprite, most likely left by a "
+                              f"hand edit. Delete it and the file reads", exact=True)
             raise _Desync(
                 at, f"expected the length of a name here and found {tok!r}") from None
         if length == 0:
@@ -507,8 +540,7 @@ def parse_text(text: str) -> ModelDb:
             if n == 0:
                 name = r.get_string().lower()
                 if name == "blank":
-                    for _ in range(39):
-                        r.get_int()
+                    r.skip_blank_fields(39)
                     blank_raw = text[prev_end:r.i]
                     prev_end = r.i
                     continue
