@@ -44,6 +44,7 @@ function cfgFor(type){
     // 92d: a banner the destination has not got - 'port' it, or 'swap' it
     banner_mode:'port',
     own_skins_only:false,
+    set_recruitment:false,
     base_fac:'',_conflict:null,_fields:null,_orig:null,_fieldsKey:null,_inherited:null};
   return state.cfg[type];
 }
@@ -1117,6 +1118,7 @@ function optsPayload(type){const c=cfgFor(type);
     eop_target:c.eop_target||'auto',
     banner_mode:c.banner_mode==='swap'?'swap':'port',
     own_skins_only:!!c.own_skins_only,
+    set_recruitment:!!c.set_recruitment,
     asset_conflict:c.asset_conflict||'mod_folder',
     asset_reroute_dir:c.asset_reroute_dir||null,
     icon_conflict:c.icon_conflict||'use_existing',
@@ -1454,8 +1456,9 @@ async function doPreview(){
   html+=eopUI(type,r);
   html+=bannerUI(type,r);
   html+=skinsUI(type,r);
+  html+=recruitUI(type,r);
   html+=assetConflictUI(type,r);
-  box.innerHTML=html; wireConflict(type); wireEop(type); wireBanner(type); wireSkins(type); wireAssetConflict(type);
+  box.innerHTML=html; wireConflict(type); wireEop(type); wireBanner(type); wireSkins(type); wireRecruit(type); wireAssetConflict(type);
   return r;
 }
 /* Missing animations, shown against the row that can fix them.
@@ -1619,6 +1622,23 @@ function skinsUI(type,r){
     <legend>${tt('transfer.own_skins_legend')}</legend>
     <label class="chk"><input type="checkbox" id="ownSkins" ${c.own_skins_only?'checked':''}>
       ${tt('transfer.own_skins_label')}</label>${saved}</fieldset>`;
+}
+/* 92b: "Let the faction recruit them" - the pools the transfer adds with the
+   unit, each listed, or why there are none. */
+function recruitUI(type,r){
+  if(r.models_mode||r.replace_type) return '';
+  const c=cfgFor(type), pools=r.recruit_pools||[];
+  const list=pools.length?`<ul class="count" style="margin:4px 0 0 18px;padding:0">${pools.slice(0,12).map(p=>
+    `<li>${esc(p.line)} · ${esc(p.level)} <code>${esc(p.requires)}</code></li>`).join('')}${
+    pools.length>12?`<li>${tt('transfer.recruit_more',{n:pools.length-12})}</li>`:''}</ul>`
+    :(c.set_recruitment&&r.recruit_none?`<div class="count w-warn">${esc(r.recruit_none)}</div>`:'');
+  return `<fieldset class="assetconf" style="margin-top:10px">
+    <legend>${tt('transfer.recruit_legend')}</legend>
+    <label class="chk"><input type="checkbox" id="setRecruit" ${c.set_recruitment?'checked':''}>
+      ${tt('transfer.recruit_label')}</label>${list}</fieldset>`;
+}
+function wireRecruit(type){const c=cfgFor(type), b=document.getElementById('setRecruit');
+  if(b)b.onchange=()=>{c.set_recruitment=b.checked;doPreview();};
 }
 function wireSkins(type){const c=cfgFor(type), b=document.getElementById('ownSkins');
   if(b)b.onchange=()=>{c.own_skins_only=b.checked;doPreview();};

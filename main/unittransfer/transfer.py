@@ -84,6 +84,9 @@ class TransferOptions:
     # default: a DaC unit with a dozen faction skins brings a dozen sets of
     # .texture files for a faction that wears one
     own_skins_only: bool = False
+    # 92b: "Let the faction recruit them" - recruit pools for the unit, through
+    # the Recruitment tab's own writer (buildings.plan_edit), in the same job
+    set_recruitment: bool = False
     # What the transfer produces in the destination:
     #   "new"     the unit arrives as its OWN entry - a new unit type, a new
     #             dictionary entry, its own icons (the default)
@@ -324,6 +327,11 @@ class TransferPlan:
     skins_dropped: int = 0           # texture records taken out of the entries
     skins_saved_files: int = 0
     skins_saved_bytes: int = 0
+    # 92b: (building line, level, requires) per pool the transfer adds, the
+    # EDB as it would be written, and what is left recruitable nowhere
+    recruit_pools: List[Tuple[str, str, str]] = field(default_factory=list)
+    recruit_text: str = ""
+    recruit_none: str = ""
     # siege engines (descr_engines.txt / descr_mounted_engines.txt /
     # descr_engine_skeleton.txt). See `_resolve_engines`.
     engine_actions: List[Tuple[str, str, str]] = field(default_factory=list)  # (name,action,detail)
@@ -2566,6 +2574,8 @@ def plan_transfer(source: Mod, unit_type: str, dest: Mod,
             _plan_banners(plan, source, dest, block)
             if plan.options.own_skins_only:
                 _plan_own_skins(plan, block)
+            if plan.options.set_recruitment and not plan.replace_type:
+                _plan_recruitment(plan, source, dest, block)
         except Exception as exc:          # the composer's own errors surface at apply
             log.debug("plan: the unit block did not compose: %s", exc)
 
@@ -2639,6 +2649,122 @@ def _plan_banners(plan: TransferPlan, source: Mod, dest: Mod, block: str) -> Non
                                         f"{to} ({why})" if why and to else why or to))
     if text != dst_text:
         plan.banner_text = text
+
+
+_FACS = re.compile(r"factions\s*\{([^}]*)\}", re.I)
+
+
+def _narrow_factions(req: str, owners: List[str], fill: bool) -> Optional[str]:
+    """A pool's clause with its ``factions { }`` held to ``owners``.
+
+    ``None`` when the clause names factions and none of them is an owner and
+    ``fill`` is off (the pool is for somebody else); with ``fill`` such a list
+    becomes the owners. A clause with no factions list is given one."""
+    owned = {o.lower() for o in owners}
+    m = _FACS.search(req or "")
+    if not m:
+        head = "factions { " + ", ".join(owners) + ", }"
+        return head + (f"  and {req.strip()}" if (req or "").strip() else "")
+    named = [f.strip() for f in re.split(r"[\s,]+", m.group(1)) if f.strip()]
+    keep = [f for f in named if f.lower() in owned]
+    if not keep:
+        if not fill:
+            return None
+        keep = list(owners)
+    return req[:m.start()] + "factions { " + ", ".join(keep) + ", }" + req[m.end():]
+
+
+def _plan_recruitment(plan: TransferPlan, source: Mod, dest: Mod, block: str) -> None:
+    """92b: recruit pools for the transferred unit, written with it.
+
+    Two kinds, as another import tool does it behind the same tick:
+
+    * **a renamed copy of a unit the destination already has** (the collision
+      rename) gets a copy of each of the original's pools in the destination
+      whose factions include one of its owners, the list narrowed to them;
+    * **a new unit** goes into each building level that recruits it in the
+      source, where the destination has a line and level of that name, for its
+      owners.
+
+    Through the Recruitment tab's own writer (``buildings.plan_edit``), so the
+    lines are what that tab would write; one job, one Undo with the rest.
+    Whatever is left is said: the unit trains nowhere until a pool is added.
+    """
+    from . import buildings as bld
+    owners = [o.strip() for o in edu_mod._parse_block(block).ownership
+              if o.strip() and o.strip().lower() != "all"]
+    new_type = plan.resolved_type or plan.unit_type
+    if not owners or not dest.edb_path.exists():
+        return
+    renamed = new_type != plan.unit_type and any(
+        u.type == plan.unit_type for u in dest.edu.units)
+    ops: Dict[Tuple[str, str], list] = {}
+    seen = set()
+
+    def add(line: str, level: str, pool, req: str) -> None:
+        key = (line, level, req)
+        if key in seen:
+            return
+        seen.add(key)
+        new = bld.RecruitPool(unit=new_type, initial=pool.initial, per_turn=pool.per_turn,
+                              maximum=pool.maximum, experience=pool.experience,
+                              requires=req, quoted=True)
+        ops.setdefault((line, level), []).append(
+            {"line": None, "keyword": "recruit_pool", "args": new.to_args(),
+             "requires": req, "delete": False})
+        plan.recruit_pools.append((line, level, req))
+
+    if renamed:
+        for bl_ in dest.edb.buildings:
+            for blk in bl_.blocks:
+                for pool in blk.recruits:
+                    if pool.unit != plan.unit_type:
+                        continue
+                    req = _narrow_factions(pool.requires, owners, fill=False)
+                    if req is not None:
+                        add(bl_.name, blk.name, pool, req)
+    else:
+        try:
+            src_edb = source.edb
+        except Exception:
+            src_edb = None
+        for bl_ in (src_edb.buildings if src_edb else []):
+            for blk in bl_.blocks:
+                for pool in blk.recruits:
+                    if pool.unit != plan.unit_type:
+                        continue
+                    dl = dest.edb.get(bl_.name)
+                    if dl is None or dl.level(blk.name) is None:
+                        continue
+                    add(bl_.name, blk.name, pool,
+                        _narrow_factions(pool.requires, owners, fill=True))
+    if not ops:
+        plan.recruit_none = _i18n.msg(
+            "eng.transfer.recruit_none",
+            "NOT RECRUITABLE: {unit} has no pool the destination can take ({why}), so it trains nowhere until one is added on its Recruitment tab.",
+            unit=new_type,
+            why=("none of the original's pools names one of its owners" if renamed
+                 else "no building level that recruits it in the source has a level of that name here"))
+        plan.warnings.append(plan.recruit_none)
+        return
+    lines: Dict[str, list] = {}
+    for (line, level), caps in ops.items():
+        lines.setdefault(line, []).append({"name": level, "capabilities": caps})
+    body = {"mod": dest.name, "line": next(iter(lines)), "levels": [],
+            "also": [{"line": ln, "levels": lvls} for ln, lvls in lines.items()]}
+    bp = bld.plan_edit(dest, body)
+    if bp.errors or not bp.edb_text:
+        plan.recruit_pools = []
+        plan.recruit_none = "; ".join(str(e) for e in bp.errors) or ""
+        plan.warnings.append(_i18n.msg("eng.transfer.recruit_refused",
+                                       "RECRUITMENT NOT SET: {why}", why=plan.recruit_none or "nothing to write"))
+        return
+    plan.recruit_text = bp.edb_text
+    plan.warnings.append(_i18n.msgN(
+        "eng.transfer.recruit_set", len(plan.recruit_pools),
+        "RECRUITMENT: {count} recruit pool is added for {unit} ({owners}).",
+        "RECRUITMENT: {count} recruit pools are added for {unit} ({owners}).",
+        unit=new_type, owners=", ".join(owners)))
 
 
 def _plan_own_skins(plan: TransferPlan, block: str) -> None:
@@ -3118,6 +3244,11 @@ def apply_transfer(plan: TransferPlan) -> Dict:
             if not etext.endswith(nl):
                 etext += nl
             write_text(rel, etext, effects_mod.ENCODING, exact=True)
+
+    # ---- 3c4) 92b: the recruit pools, through the Recruitment tab's writer ----
+    if plan.recruit_text:
+        from . import buildings as bld
+        write_text(bld.EDB_REL, plan.recruit_text, bld.ENCODING, exact=True)
 
     # ---- 3c3) 92d: the banners the unit carries, ported ----
     if plan.banner_text:

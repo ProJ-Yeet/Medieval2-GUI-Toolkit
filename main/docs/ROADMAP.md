@@ -1387,6 +1387,29 @@ Done when: the plan shows every pool it will add, the unit trains there in
 the game, one Undo takes the pools back with the transfer, and the suite
 covers both kinds and the leftover.
 
+*92b done 2026-09-30, uncut; not seen in game.* A **Recruitment** box on the
+transfer page, *Let the faction recruit them* (`set_recruitment`, off by
+default). `transfer._plan_recruitment` works on the final block's owners:
+
+- **a renamed copy** (the unit type is the destination's own, written under a
+  new one) gets a copy of each of the original's pools in the destination
+  whose `factions { }` names an owner, the list held to those owners
+  (`_narrow_factions`);
+- **a new unit** gets each pool that recruits it in the source, in the
+  destination's line and level of the same name, its factions list held to the
+  owners (or made of them when the source's names none of them), and a clause
+  with no list is given one.
+
+The pools go through `buildings.plan_edit`, the Recruitment tab's own writer,
+and the EDB text it plans is written in the transfer's job, so one Undo takes
+both back. The box lists each pool (line, level, clause), and a unit left with
+none says **NOT RECRUITABLE** and why. Not in replace or models-only mode.
+`tests/test_transfer_recruit` (13): the narrowing rule, Reforged's Gondor
+Spearmen as a renamed copy (6 pools, applied, 6 places in the EDB, one Undo
+byte for byte), the same unit as a new one into a copy without it (6 pools),
+and a Tsardoms unit whose levels Reforged has none of (not recruitable).
+**Phase 92 is done**: a, b, c and d.
+
 **92c - one faction's look only.** Transfer copies every texture the model
 names, so a DaC unit with a dozen faction skins brings a dozen sets of
 `.texture` files for a faction that wears one. The friend's tool copies only

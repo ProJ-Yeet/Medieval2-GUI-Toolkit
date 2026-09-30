@@ -1583,6 +1583,7 @@ def _options_from(d: dict) -> TransferOptions:
         eop_target=d.get("eop_target", "auto"),
         banner_mode=("swap" if d.get("banner_mode") == "swap" else "port"),
         own_skins_only=bool(d.get("own_skins_only")),
+        set_recruitment=bool(d.get("set_recruitment")),
         on_conflict=d.get("on_conflict", "rename"),
         new_type=d.get("new_type") or None,
         new_dictionary=d.get("new_dictionary") or None,
@@ -1676,6 +1677,10 @@ def _plan_payload(plan) -> dict:
         "skins_kept": plan.skins_kept, "skins_dropped": plan.skins_dropped,
         "skins_saved_files": plan.skins_saved_files,
         "skins_saved_bytes": plan.skins_saved_bytes,
+        # 92b
+        "recruit_pools": [{"line": a, "level": b, "requires": c}
+                          for a, b, c in plan.recruit_pools],
+        "recruit_none": plan.recruit_none,
         "engine_conflict": plan.options.engine_conflict,
         "engine_actions": [{"name": n, "action": a, "detail": d}
                            for n, a, d in plan.engine_actions],

@@ -5014,6 +5014,12 @@
 "eng.transfer.projectile_import_special_effects_are_not_imported": "PROJECTILE IMPORT: special effects are NOT imported - the projectile's effect/impact lines were pointed at 'invisible_placeholder_set' where the destination lacks them. Re-add the real effects manually in the effect files descr_effects.txt lists.",
 "eng.transfer.projectile_import_special_effects_are_not_imported_m2ex": "PROJECTILE IMPORT: special effects are NOT imported - the projectile's effect/impact lines were pointed at 'invisible_placeholder_set' where the destination lacks them. Re-add the real effects manually in the effect files descr_effects.txt lists.  (Mark the destination as M2EX on its Home card and the sets the source defines are carried across instead.)",
 "eng.transfer.projectile_model_cas_files_were_copied": "projectile model (.cas) files were copied, but their textures under data/models_missile/textures/ are not chased - verify the missile model renders and copy its texture if it's missing in the destination.",
+"eng.transfer.recruit_none": "NOT RECRUITABLE: {unit} has no pool the destination can take ({why}), so it trains nowhere until one is added on its Recruitment tab.",
+"eng.transfer.recruit_refused": "RECRUITMENT NOT SET: {why}",
+"eng.transfer.recruit_set": {
+"one": "RECRUITMENT: {count} recruit pool is added for {unit} ({owners}).",
+"other": "RECRUITMENT: {count} recruit pools are added for {unit} ({owners})."
+},
 "eng.transfer.replacing_its_edu_block_is_rewritten": "replacing '{type}': its EDU block is rewritten in place, so no unit type and no dictionary entry are added. It keeps its name, description, stats, ownership and era - only the models change.",
 "eng.transfer.s_previous_battle_models_are_left": "'{type}'s previous battle models are left in battle_models.modeldb (other units may still use them). Use the BMDB Editor's cleanup afterwards if nothing else does.",
 "eng.transfer.secondary_model_s_excluded_their_edu": "{excluded_n} secondary model(s) excluded; their EDU names are kept and must already exist in the destination.",
@@ -8600,6 +8606,9 @@
 "transfer.re_enable_in_settings": "{hasEop}Re-enable in ⚙ Settings.",
 "transfer.reading_failed_so_there_is_nothing": "Reading “{dst}” failed, so there is nothing to build the transfer against.",
 "transfer.reading_s_models": "Reading “{type}”’s models…",
+"transfer.recruit_label": "Let the faction recruit them",
+"transfer.recruit_legend": "Recruitment",
+"transfer.recruit_more": "and {n} more",
 "transfer.relocating_file_s_so_those_have": "Relocating {relocated_count} file(s) → <code>{reroute_dir}/</code>, so those have no conflict.",
 "transfer.rename": "Rename",
 "transfer.replace_an_existing_unit_no_new": "<b>Replace an existing unit</b>: no new entry, so a destination unit keeps its name and stats, and gets “{name}”’s models",
