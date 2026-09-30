@@ -1078,6 +1078,56 @@ breakpoint fires at the same *page* width at 60% and 125%.
 Done when: 90a's list is walked again at every size and width and nothing
 is left on it, with a screenshot of Minor Files at 60% and 125% to show it.
 
+*Done 2026-09-30, uncut.* **90a, measured.** A script in the page opened
+each of the 30 screens (the campaign map apart, checked on its own) at 1280,
+1600 and 1920 px times 60, 80, 100 and 125%, and at 375 px at 100%. It
+recorded how far `#main` or the page scrolls sideways, a record pane squeezed
+under 200 px, and a tab strip whose tabs are not all one height. The
+cause was checked first, in the browser: at 125% on a 1280 px window the body
+lays out in 1024 px while `(max-width:1100px)` does not match. What failed:
+
+- **The Minor Files tab strip, on all 16 screens under it.** Nineteen tabs in
+  a row that does not wrap, shrunk into tabs one, two and three lines tall at
+  every size, even 60%. Past its minimum width it pushed `#main` sideways:
+  at 1280 px by 46-209 px at 80%, 359-519 at 100% and 607-767 at 125%; at
+  1600 px by 39-199 at 100% and 351-511 at 125%; at 1920 px by 95-255 at 125%;
+  at 375 px by about 1,300. Most of the report is this one strip: with the
+  page scrolling, the list column is laid out wider than 280 px, its buttons
+  are bars with the label pushed right, and at 375 px the record pane is 0
+  to 49 px wide.
+- At 1280 px and 125%: two tables wider than their pane (Banners, Agents and
+  generals, `.smxtab`, 768 and 795 px).
+- At 375 px, besides the strip: the unit editor, Unit Transfer and Buildings
+  (the 210 px filter column beside cards 165 px wide, Buildings' faction header
+  not wrapping its buttons), Unit Sounds (a six-column grid, 468 px over), My
+  changes (a long path in `<code>`, 368 over), Hero abilities (a long `<code>`,
+  24 over).
+
+**90b, chosen: container queries.** `body{container:page/inline-size}`, and
+all twelve `@media (max-width)` rules became `@container page (max-width)`.
+It is one declaration and a search-and-replace, where a class set from
+`innerWidth / zoom` would need every rule rewritten and a script kept in step.
+A container query measures the body as laid out, zoom included. Proven with a
+probe `.edsplit` (breakpoint 1100): at 1280 px it now fires at 125% (page 1024)
+and not at 100%, 80% or 60%. At a 1000 px window it fires at 100% and not at
+60% (page 1667), where the media query had fired at both.
+
+**90c, the shared pieces.** The tab strip is one row that scrolls in itself
+(`overflow-x:auto`, tabs `flex:0 0 auto; white-space:nowrap`), with the open
+tab scrolled into view (`mfTabsReveal`), and the file path is a line of its
+own under it (`.mfpath`). **+ New ...** and **Port from another mod** sit in a
+`.trnewrow`, the size of their labels (Traits, Ancillaries, Guilds, Minor
+Files). The list and the record stack at one width, 760 px of page, for every
+screen built on `.trwrap`. The unit list's filters go above the cards at 600 px.
+Nothing wide moves the page: `.smxtab` and `.sndlist` scroll in their own box,
+a long `<code>` breaks where it has to, and Buildings' faction header wraps.
+**The walk again: nothing is left** at any of the fifteen combinations, and
+the campaign map scrolls at none (it stacks at 375 px, its 1000 px rule now
+seeing the page). Screenshots: Ancillaries at 1280 px, 125% (the strip one
+row with its scrollbar, the path under it, the two buttons in a row) and 60%
+(all nineteen tabs in the row). `tests/test_layout` (14) holds the source to
+it.
+
 # Phase 91 - a cloned faction's missing faction button, scheduled 2026-09-26
 
 **Reported by a user on 2026-09-26** against the beta: a faction added with

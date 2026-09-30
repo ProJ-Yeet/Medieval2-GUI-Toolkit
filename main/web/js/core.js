@@ -771,12 +771,27 @@ function recTabsHtml(list,cur,fn){
     `<button class="mftab${id===cur?' on':''}" onclick="${fn}('${id}')">${esc(label)}</button>`
   ).join('')}</div>`;
 }
+/* 90c: nineteen tabs in one row that scrolls sideways inside itself, and the
+   file's path on a line of its own under it. They used to shrink into tabs two
+   and three lines tall and still push the page sideways by up to 700 px, with
+   the path squeezed in after the last one. */
 function minorTabsHtml(active,note){
+  setTimeout(mfTabsReveal,0);
   return `<div class="mftabs">${MINOR_TABS.map(t=>{
     const on=t.mode?state.mode===t.mode:(state.mode==='minor'&&active===t.id);
     const go=t.go?t.go:t.mode?`minorGo(null,'${t.mode}')`:`minorGo('${t.id}')`;
     return `<button class="mftab${on?' on':''}" onclick="${go}">${esc(t.label)}</button>`;
-  }).join('')}${note?`<span class="count" style="margin-left:auto">${esc(note)}</span>`:''}</div>`;
+  }).join('')}</div>${note?`<div class="mfpath count">${esc(note)}</div>`:''}`;
+}
+//: the open tab scrolled into the strip's view, since it may be the nineteenth
+function mfTabsReveal(){
+  for(const s of document.querySelectorAll('.mftabs')){
+    const on=s.querySelector('.mftab.on');
+    if(!on) continue;
+    const l=on.offsetLeft-s.offsetLeft, r=l+on.offsetWidth;
+    if(l<s.scrollLeft) s.scrollLeft=Math.max(0,l-24);
+    else if(r>s.scrollLeft+s.clientWidth) s.scrollLeft=r-s.clientWidth+24;
+  }
 }
 function minorGo(tab,mode){
   if(mode)return setAppMode(mode);

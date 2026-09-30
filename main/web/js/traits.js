@@ -60,8 +60,10 @@ function renderTraits(){
   count.textContent = `${rows.length}/${t.count}`;
   main.innerHTML = strip + `<div class="trwrap">
     <div class="trlist">
-      <button class="trnew" onclick="trNew()">${tt('traits.new_trait')}</button>
-      <button class="trnew" onclick="portOpen('traits')" title="${ttA('traits.copy_traits_out_of_another_mod')}">${tt('traits.port_from_another_mod')}</button>
+      <div class="trnewrow">
+        <button class="trnew" onclick="trNew()">${tt('traits.new_trait')}</button>
+        <button class="trnew" onclick="portOpen('traits')" title="${ttA('traits.copy_traits_out_of_another_mod')}">${tt('traits.port_from_another_mod')}</button>
+      </div>
       ${findingsHtml('traits', t.finding_list, 'trOpen')}
       <div class="trrows">${rows.map(trRowHtml).join('')
         || `<div class="count" style="padding:8px">${tt('traits.no_trait_matches')}</div>`}</div>

@@ -57,8 +57,10 @@ function renderAncillaries(){
   count.textContent = `${rows.length}/${a.count}`;
   main.innerHTML = strip + `<div class="trwrap">
     <div class="trlist">
-      <button class="trnew" onclick="anNew()">${tt('ancillaries.new_ancillary')}</button>
-      <button class="trnew" onclick="portOpen('ancillaries')" title="${ttA('ancillaries.copy_ancillaries_out_of_another_mod')}">${tt('ancillaries.port_from_another_mod')}</button>
+      <div class="trnewrow">
+        <button class="trnew" onclick="anNew()">${tt('ancillaries.new_ancillary')}</button>
+        <button class="trnew" onclick="portOpen('ancillaries')" title="${ttA('ancillaries.copy_ancillaries_out_of_another_mod')}">${tt('ancillaries.port_from_another_mod')}</button>
+      </div>
       ${findingsHtml('ancillaries', a.finding_list, 'anOpen')}
       <div class="trrows">${rows.map(anRowHtml).join('')
         || `<div class="count" style="padding:8px">${tt('ancillaries.no_ancillary_matches')}</div>`}</div>

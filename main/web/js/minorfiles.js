@@ -80,7 +80,7 @@ function renderMinor(){
   main.innerHTML = mfTabsHtml() + (f.exists ? `<div class="trwrap">
     <div class="trlist">
       ${f.actions.includes('add')
-        ? `<button class="trnew" onclick="mfNew()">${tt('minorfiles.new',{noun:esc(f.noun)})}</button>` : ''}
+        ? `<div class="trnewrow"><button class="trnew" onclick="mfNew()">${tt('minorfiles.new',{noun:esc(f.noun)})}</button></div>` : ''}
       ${findingsHtml('minor:' + f.tab, f.finding_list, 'mfOpen')}
       <div class="trrows">${rows.map(mfRowHtml).join('')
         || `<div class="count" style="padding:8px">${tt('minorfiles.no_matches',{noun:esc(f.noun)})}</div>`}</div>

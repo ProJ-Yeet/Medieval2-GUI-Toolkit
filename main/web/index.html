@@ -16,6 +16,12 @@
     --plw:190px;}
   *{box-sizing:border-box}
   body{margin:0;font:14px/1.45 "Segoe UI",system-ui,sans-serif;background:var(--bg);color:var(--ink)}
+  /* 90b: every breakpoint below is a container query on the body, not a media
+     query. Settings' interface size is CSS zoom on the root, and a media query
+     measures the WINDOW: at 125% on a 1280 px window the page lays out in 1024
+     px while (max-width:1100px) still saw 1280 and never fired. The body's own
+     width is the room the page has, zoom and all. */
+  body{container:page/inline-size}
   header{display:flex;gap:10px;align-items:center;padding:8px 14px;background:var(--panel);
     border-bottom:1px solid var(--edge);position:sticky;top:0;z-index:10;flex-wrap:wrap}
   header h1{font-size:15px;margin:0;color:var(--accent);letter-spacing:.5px;font-weight:600;white-space:nowrap}
@@ -140,9 +146,20 @@
      stays inside the scrollport and shows as a gap above a top:0 sticky header.
      Breathing room comes from the first group's margin, which scrolls away. */
   main{flex:1;overflow:auto;padding:0 16px 16px}
+  /* 90c: a long path or key breaks, only where it has to, rather than
+     pushing the page sideways */
+  main code{overflow-wrap:anywhere}
+  /* 90c: on a page this narrow the filters go above the list, not beside it:
+     at 375 px they took 210 of it and left the cards less than one card wide */
+  @container page (max-width:600px){
+    .layout{flex-direction:column;height:auto;min-height:calc(calc(100vh / var(--uiz)) - 80px)}
+    .layout>.filters{width:auto;flex:0 0 auto;max-height:calc(35vh / var(--uiz));
+      border-right:0;border-bottom:1px solid var(--edge)}
+    .layout>main{overflow:visible}
+  }
   .faction-group{margin-bottom:24px}
   .faction-group:first-child{margin-top:12px}
-  .faction-head{display:flex;align-items:baseline;gap:10px;position:sticky;top:0;background:var(--bg);
+  .faction-head{display:flex;flex-wrap:wrap;align-items:baseline;gap:10px;position:sticky;top:0;background:var(--bg);
     padding:8px 0 6px;border-bottom:1px solid var(--edge);margin-bottom:10px;z-index:1;
     cursor:pointer;user-select:none}
   .faction-head:hover h2{color:var(--accent2)}
@@ -524,7 +541,7 @@
      column, or on a narrow window - the layout takes the stage instead, and the
      button is the way back to the model. */
   .v3wrap.dock .v3stage.uv .v3gl{display:none}
-  @media (max-width:1100px){ .v3stage.uv .v3gl{display:none} }
+  @container page (max-width:1100px){ .v3stage.uv .v3gl{display:none} }
   /* The unit editor's 3D column. The fields keep the width they had; the
      preview takes what is left, and folds to its bar when it is in the way. */
   .edsplit{display:flex;gap:12px;align-items:stretch;min-height:0}
@@ -651,7 +668,7 @@
      and the button is the reason to read the row - so it is not hidden */
   .frow .db3d{opacity:1}
   .dbrow.showing{outline:1px solid var(--accent);outline-offset:-1px}
-  @media (max-width:1100px){
+  @container page (max-width:1100px){
     .bmsplit{flex-wrap:wrap}
     /* !important because splitInstall writes the width as an inline style, and
        on a window this narrow the panel belongs under the list at full width
@@ -662,7 +679,7 @@
   /* the way back when the preview has been hidden: a quiet button in the title */
   .edprevon{font:inherit;font-size:12px;padding:3px 9px;margin-left:10px;vertical-align:middle}
   /* narrow windows: the preview goes under the fields rather than squeezing them */
-  @media (max-width:1100px){
+  @container page (max-width:1100px){
     .edsplit{flex-wrap:wrap}
     .edprev{flex:1 1 100%!important;margin:0 14px;max-height:calc(60vh / var(--uiz))}
   }
@@ -782,7 +799,7 @@
   .mgsrc{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));
     gap:2px 10px;margin-top:4px}
   .mgsrc .fcart{margin-bottom:0}
-  @media (max-width:720px){
+  @container page (max-width:720px){
     .fcgrid{grid-template-columns:1fr}
     .fcrow{grid-template-columns:44px 1fr}
     .fcrow .fcw{grid-column:2}
@@ -871,12 +888,12 @@
   .cmworkspace .cmbar #cmZoom{white-space:normal;font-size:10px}
   .cmworkmode>span:not(.cmstatedot){display:none}
   .cmworkspace .cmlaypop{max-width:calc(100% - 32px);box-sizing:border-box}
-  @media(max-width:1050px){
+  @container page (max-width:1050px){
     .cmworkmode>span:not(.cmstatedot){display:none}
     .cmworkspace .cmpalcol{flex-basis:150px;min-width:120px}
     .cmworkspace .cmstage{min-width:180px}
   }
-  @media(max-width:760px){
+  @container page (max-width:760px){
     .cmworkspace{height:auto;min-height:0}
     .cmworkspace .cmwrap{flex-wrap:wrap}
     .cmworkspace .cmstage{height:calc(55vh / var(--uiz));min-height:300px}
@@ -1220,7 +1237,7 @@
   .cclform{border-top:1px solid var(--edge);margin-top:8px;padding-top:7px}
   .cclform input[type=color]{width:30px;height:20px;padding:0;border-radius:4px;
     border:1px solid var(--edge);background:none;cursor:pointer}
-  @media (max-width:520px){.cclslots{grid-template-columns:1fr}}
+  @container page (max-width:520px){.cclslots{grid-template-columns:1fr}}
 
   /* 35: the rebel factions, one row each. A LIST and not a grid, because
      unlike a climate the thing being chosen has no colour and the two numbers
@@ -1711,7 +1728,7 @@
     line-height:1.45;padding:2px 0;border-top:1px solid var(--edge)}
   .cqsw i{flex:0 0 auto;width:13px;height:13px;border-radius:3px;
     border:1px solid var(--edge)}
-  @media (max-width:1000px){
+  @container page (max-width:1000px){
     .cmwrap{flex-direction:column;height:auto}
     .cmstage{min-height:calc(60vh / var(--uiz))}
     /* !important for the same reason `.bmprev` carries it: `splitInstall`
@@ -1959,6 +1976,8 @@
   .sndbar select,.sndbar input{padding:4px 7px;font-size:12px}
   .sndbar .grow{flex:1;min-width:120px}
   .sndlist{border:1px solid var(--edge);border-radius:8px;background:var(--panel);margin-top:10px}
+  /* 90c: six columns do not fit a phone; the list scrolls in itself */
+  .sndlist{overflow-x:auto}
   /* The unit column had 1.5fr and squeezed "In game now" into 88px, which cut off
      the one thing the row is telling you ("English - generic", "Gondor/General ✗").
      Half the width is plenty for a name over its type, and the freed space goes
@@ -2008,7 +2027,7 @@
   .cvsplit{display:grid;grid-template-columns:minmax(0,1fr) minmax(320px,42%);gap:12px;
     align-items:stretch}
   .cvsplit.off{display:block}
-  @media (max-width:1100px){.cvsplit{grid-template-columns:minmax(0,1fr)}}
+  @container page (max-width:1100px){.cvsplit{grid-template-columns:minmax(0,1fr)}}
   .cvpane{--cvlh:17px;border:1px solid var(--edge);border-radius:8px;background:var(--panel);
     padding:8px;position:sticky;top:0}
   .cvpane.bad{border-color:var(--bad)}
@@ -2096,8 +2115,8 @@
   .gfpair{display:grid;gap:0 9px;align-items:stretch;
     grid-template-columns:repeat(var(--gfn,2),minmax(0,1fr))}
   .gfpair>.gfcard{min-width:0}
-  @media (max-width:1250px){.gfpair{grid-template-columns:repeat(2,minmax(0,1fr))}}
-  @media (max-width:780px){.gfpair{grid-template-columns:minmax(0,1fr)}}
+  @container page (max-width:1250px){.gfpair{grid-template-columns:repeat(2,minmax(0,1fr))}}
+  @container page (max-width:780px){.gfpair{grid-template-columns:minmax(0,1fr)}}
   .gfcard.changed{border-color:var(--accent)}
   .gfcard.gone{opacity:.55}
   .gfcard.gone .gfhead .t{text-decoration:line-through}
@@ -3033,6 +3052,8 @@
   .fsxrow input{font:inherit;font-size:12px;background:var(--panel2);color:var(--ink);
     border:1px solid var(--edge);border-radius:5px;padding:2px 5px}
   .smxtab{border-collapse:collapse;font-size:12.5px;margin:4px 0 8px}
+  /* 90c: a table wider than its pane scrolls in its own box, not the page */
+  .smxtab{display:block;max-width:100%;overflow-x:auto}
   .smxtab th{font-size:11px;color:var(--dim);font-weight:500;text-align:left;padding:2px 6px}
   .smxtab td{padding:2px 6px;border-top:1px solid var(--edge)}
   .smxtab td.on{background:color-mix(in srgb,var(--accent) 12%,transparent)}
@@ -3058,7 +3079,7 @@
   .cdbmiss{margin:4px 0 8px}
   .cdbadd{padding:4px 0;font-size:12px}
   .cdbadd button.on{border-color:var(--accent);background:var(--panel2)}
-  @media (max-width:760px){.cdbrow{grid-template-columns:1fr auto}.cdbwhy{grid-column:1/-1}}
+  @container page (max-width:760px){.cdbrow{grid-template-columns:1fr auto}.cdbwhy{grid-column:1/-1}}
   /* 18a: the guild point table, and the faction-fact rows on the campaign
      screen. Both are read-mostly grids of short values, so they share one rule
      rather than each inventing a layout. */
@@ -3097,6 +3118,21 @@
   .anpicbox button:not(.icoedit){padding:3px 7px;font-size:11px}
 
   /* ---- Minor Files: five files behind one tab strip ---- */
+  /* 90c: one row that scrolls in itself; the path under it on its own line */
+  .mftabs{overflow-x:auto;overflow-y:hidden;scrollbar-width:thin}
+  .mftab{flex:0 0 auto;white-space:nowrap}
+  .mfpath{padding:5px 0 0;font-size:11.5px;overflow-wrap:anywhere}
+  /* 90c: "+ New ..." and "Port from another mod" the size of their labels, in
+     a row, rather than bars the width of the list with the label pushed right */
+  .trnewrow{display:flex;flex-wrap:wrap;gap:6px}
+  .trnewrow .trnew{flex:0 0 auto}
+  /* 90c: the list and the record go from side by side to stacked at one width
+     shared by every screen built on them, the list a box that scrolls itself */
+  @container page (max-width:760px){
+    .trwrap{flex-direction:column;align-items:stretch}
+    .trlist{position:static;flex:0 0 auto;max-height:calc(45vh / var(--uiz))}
+    .trmain{width:100%}
+  }
   .mftabs{display:flex;gap:6px;align-items:center;padding:10px 0 0;
     border-bottom:1px solid var(--edge)}
   .mftab{padding:6px 12px;border-bottom-left-radius:0;border-bottom-right-radius:0}

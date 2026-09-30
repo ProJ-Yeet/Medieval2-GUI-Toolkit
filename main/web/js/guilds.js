@@ -57,7 +57,9 @@ function renderGuilds(){
   count.textContent = `${rows.length}/${(g.guilds||[]).length}`;
   main.innerHTML = strip + `<div class="trwrap">
     <div class="trlist">
-      <button class="trnew" onclick="guNew()">${tt('guilds.new_guild')}</button>
+      <div class="trnewrow">
+        <button class="trnew" onclick="guNew()">${tt('guilds.new_guild')}</button>
+      </div>
       ${guUndeclaredHtml()}
       ${findingsHtml('guilds', guFindingList(), 'guOpen')}
       <div class="trrows">${rows.map(guRowHtml).join('')
