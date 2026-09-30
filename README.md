@@ -240,6 +240,15 @@ overwrite/skip), and every step is shown in a probe before anything is written.
 
 Other transfer options:
 
+* **Let the faction recruit them.** Adds the unit's recruit pools in the same
+  job: a renamed copy gets the original's pools, a new unit the levels that
+  recruited it in the source. One Undo takes them back with the unit.
+* **Copy only the skins the new owners wear.** Leaves out the texture records,
+  and their files, of factions that will not own the unit.
+* **A banner the destination has not got** is caught in the plan: brought
+  across, or swapped for `main_cavalry` / `main_infantry`. An M2EX mod that
+  reads its battle models from `descr_model_battle.txt` is read and written
+  through that file.
 * **Batch transfer.** Select several units and transfer them in one pass, each
   with its own options.
 * **Use another unit as a stat base.** Port a unit's identity and models but
