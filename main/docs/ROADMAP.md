@@ -1489,6 +1489,31 @@ click on each Home button opens that screen for that mod in a new tab, the
 first tab stays where it was, a left click behaves as before, and a
 keyboard user reaches and presses each one as before.
 
+*Phase 93 done 2026-09-30, uncut.* **93a, confirmed by reading and fixed:**
+`spawn_server` ran a console restart on `sys.executable`, and in a server from
+the normal launch that is `pythonw.exe` (started by `_pythonw`), so the new
+console had nothing writing to it. `startup._python_console` now picks
+`python.exe` beside `pythonw.exe`. When there is none, the server does not
+restart (it would come back exactly as it is) and says `console_later`, and the
+page says the console comes at the next launch. `test_startup` covers both
+starting points: from `pythonw.exe` the command is `python.exe`, and a
+`pythonw.exe` with no `python.exe` beside it has no console interpreter
+(76/76). **Not checked here:** a restart from a normal `.bat` launch leaving a
+console on screen, which needs the user's launch.
+
+**93b.** The Home card's ten screen buttons, the "Last time you were in"
+button and the side menu's items are links to their `navUrl` (the Home ones
+carry their card's mod), styled as they were (`a.btn`, `a.navitem`). A plain
+left click still runs `homeGo` / `setAppMode` in place with the default
+prevented. A middle click, Ctrl+click and the context menu's *Open in new tab*
+are the browser's own, and Space presses them as it pressed the buttons
+(`navPlain`, `navLinkKey` in `core.js`). The menu's links are re-pointed at
+the mod on show each time it opens. The trail's crumbs were links already.
+Checked in the page: 30 Home links (`/?mod=Tsardoms-3.0&go=sounds`...), a
+plain click on one switched mod and screen in the same page with no load, and
+`/?mod=Third_Age_Reforged&go=buildings` opened in a second tab lands on
+Reforged's Buildings.
+
 # Phase 94 - a recruitment screen that lags, and its turns, scheduled 2026-09-29
 
 **Passed on by the user on 2026-09-29**, from a user on Tsardoms 3.0, with three

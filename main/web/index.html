@@ -424,6 +424,10 @@
   .navitem{display:flex;gap:10px;align-items:center;width:100%;text-align:left;background:none;
     border:1px solid transparent;border-radius:6px;padding:9px 10px;margin:1px 0;color:var(--ink)}
   .navitem:hover{background:var(--panel2);border-color:var(--edge)}
+  /* 93b: the menu's items are links now; they keep the button's look */
+  a.navitem{text-decoration:none;cursor:pointer;box-sizing:border-box}
+  a.btn.primary{background:var(--accent);color:#1a1a1a;border-color:var(--accent);font-weight:600}
+  a.btn.hcmod{font-size:12px;padding:5px 9px}
   .navitem.on{background:var(--panel2);border-color:var(--accent);color:var(--accent)}
   .navitem .ic{width:22px;text-align:center;flex:0 0 22px}
   .navitem .nm{font-weight:600;font-size:13px}

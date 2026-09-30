@@ -389,6 +389,24 @@ if sys.platform == "win32":
                       and seen["out"] == _sp.DEVNULL)
             check(f"either way it passes --wait-port (console={want_console})",
                   "--wait-port" in seen["cmd"])
+        # 93a: the case the report hit. A server from the normal launch runs on
+        # pythonw.exe, so sys.executable there is the windowless interpreter.
+        pyw = Path(sys.executable).with_name("pythonw.exe")
+        if pyw.exists():
+            real_exe = sys.executable
+            sys.executable = str(pyw)
+            try:
+                try:
+                    startup.spawn_server(ROOT / "app.py", ["--port", "1"], console=True)
+                except OSError:
+                    pass
+                check("93a: from a server on pythonw.exe, a console restart runs python.exe",
+                      Path(seen["cmd"][0]).name.lower() == "python.exe")
+            finally:
+                sys.executable = real_exe
+        check("93a: no python.exe beside a pythonw.exe means no console interpreter",
+              startup._python_console(r"C:/nowhere/pythonw.exe") is None
+              and startup._python_console(r"C:/x/python.exe").endswith("python.exe"))
     finally:
         _sp.Popen = real_popen
 

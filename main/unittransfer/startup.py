@@ -303,6 +303,25 @@ def _pythonw() -> str:
     return str(exe)
 
 
+def _python_console(exe: Optional[str] = None) -> Optional[str]:
+    """The console interpreter, or ``None`` when there is none to be had (93a).
+
+    A server started by the normal launch runs on ``pythonw.exe`` (see
+    :func:`_pythonw`), so in the server a restart comes from, ``sys.executable``
+    is the WINDOWLESS one - and a new console handed to it stays empty, which is
+    the report: "Restart now to apply it" came back with no console. The one to
+    use is ``python.exe`` beside it.
+    """
+    p = Path(exe or sys.executable)
+    if os.name != "nt":
+        return str(p)
+    low = p.name.lower()
+    if low.startswith("pythonw"):
+        cand = p.with_name(p.name[:6] + p.name[7:])     # pythonw.exe -> python.exe
+        return str(cand) if cand.exists() else None
+    return str(p)
+
+
 def port_free(port: int, host: str = "127.0.0.1") -> bool:
     """True when this process could BIND ``port`` right now.
 
@@ -359,7 +378,8 @@ def spawn_server(app_path: Path, args: List[str],
         group = getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0)
         if console:
             flags = getattr(subprocess, "CREATE_NEW_CONSOLE", 0) | group
-            exe = sys.executable        # pythonw.exe would have nothing to write to
+            # 93a: the console interpreter, even from a server on pythonw.exe
+            exe = _python_console() or sys.executable
             io = None                   # inherit the new console's own handles
         else:
             flags = getattr(subprocess, "DETACHED_PROCESS", 0) | group

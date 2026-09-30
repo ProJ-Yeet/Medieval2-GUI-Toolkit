@@ -1240,7 +1240,15 @@ async function restartServer(){
   m.innerHTML=`<h2>${tt('transfer.restarting')}</h2><div class="mbody"><div class="count">
     ${tt('transfer.waiting_for_the_toolkit_to_come')}</div></div>`;
   overlay.classList.add('open');
-  try{await api.post('/api/restart',{console:want});}catch(e){}
+  let r=null;
+  try{r=await api.post('/api/restart',{console:want});}catch(e){}
+  // 93a: no console interpreter to restart on - the setting waits for a launch
+  if(r&&r.console_later){
+    m.innerHTML=`<h2>${tt('transfer.console_at_next_launch')}</h2><div class="mbody"><div class="trnote">
+      ${tt('transfer.console_at_next_launch_why')}</div></div>
+      <div class="foot"><button class="primary" onclick="closeModal()">${tt('common.close')}</button></div>`;
+    return;
+  }
   // The old server stops answering the moment it hands the port over, so this
   // polls rather than waiting on the response.
   const t0=Date.now();

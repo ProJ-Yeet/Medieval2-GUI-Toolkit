@@ -1263,7 +1263,19 @@ const bmdbTabsHtml=note=>`<div class="mftabs">${BMDB_TABS.map(t=>
   `<button class="mftab${state.mode===t.mode?' on':''}" onclick="setAppMode('${t.mode}')"
     >${esc(t.label)}</button>`).join('')}${
   note?`<span class="count" style="margin-left:auto">${esc(note)}</span>`:''}</div>`;
+/* 93b: a screen switch is a real link to its `navUrl`, so a middle click, a
+   Ctrl+click and the context menu's "Open in new tab" are the browser's own,
+   and a plain left click still switches this tab in place. Space presses it as
+   it pressed the button it was. */
+function navPlain(e){
+  return e.button===0&&!(e.ctrlKey||e.metaKey||e.shiftKey||e.altKey);
+}
+function navLinkKey(e){
+  if(e.key===' '){e.preventDefault();e.currentTarget.click();}
+}
 function navOpen(open){
+  // the menu's links name the mod on show, which may have changed since
+  if(open)navModes.querySelectorAll('.navitem').forEach(a=>{a.href=navUrl({mode:a.dataset.mode});});
   navMenu.classList.toggle('open',open);
   navBack.classList.toggle('open',open);
   navMenu.setAttribute('aria-hidden',open?'false':'true');
@@ -1523,11 +1535,14 @@ function navCrumbs(){
 function wire(){
   wireFilterFolds();
   navLinkWire();
-  navModes.innerHTML=menuModes().map(m=>`<button class="navitem" data-mode="${m.id}">
+  navModes.innerHTML=menuModes().map(m=>`<a class="navitem" role="button" data-mode="${m.id}"
+      href="${esc(navUrl({mode:m.id}))}">
       <span class="ic">${m.icon}</span>
       <span><span class="nm">${esc(m.name)}</span><span class="hint">${esc(m.hint)}</span></span>
-    </button>`).join('');
-  navModes.querySelectorAll('.navitem').forEach(b=>b.onclick=()=>setAppMode(b.dataset.mode));
+    </a>`).join('');
+  navModes.querySelectorAll('.navitem').forEach(b=>{
+    b.onclick=e=>{if(!navPlain(e))return; e.preventDefault(); setAppMode(b.dataset.mode);};
+    b.onkeydown=navLinkKey;});
   navBtn.onclick=()=>navOpen(!navMenu.classList.contains('open'));
   navBack.onclick=()=>navOpen(false);
   creditsBtn.onclick=()=>{navOpen(false);openCredits();};

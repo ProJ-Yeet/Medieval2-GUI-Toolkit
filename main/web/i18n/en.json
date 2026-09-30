@@ -8397,6 +8397,8 @@
 "transfer.clear_the_text_cache_afterwards_a": "Clear the <b>{kind}-text cache</b> afterwards <span class=\"count\">A setting, so it applies to every job</span>",
 "transfer.click_one_to_import_that_field": "Click one to import that field from “{type}”; click again to put it back.",
 "transfer.click_to_go_back_to_s": "{rep} {editing}{rep2}. Click to go back to {base_type}'s ({x}).",
+"transfer.console_at_next_launch": "The console comes at the next launch",
+"transfer.console_at_next_launch_why": "This Python has no console interpreter (python.exe) beside the windowless one the toolkit runs on, so a restart would come back without a console. The setting is saved: start the tool again from its .bat and the console window stays open.",
 "transfer.console_hidden_from_the_next_launch": "Console hidden from the next launch.",
 "transfer.console_will_show_on_the_next": "Console will show on the next launch.",
 "transfer.copied_block_mounted": "Copied: the <code>{file}</code> block{groups} and the <code>reference_points</code> file it names.",

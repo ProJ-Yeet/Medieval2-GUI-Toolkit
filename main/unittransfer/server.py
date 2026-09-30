@@ -3013,6 +3013,13 @@ class Handler(BaseHTTPRequestHandler):
                 # and start a replacement, with or without a console as asked.
                 want_console = bool(body.get("console"))
                 log.info("RESTART requested from the UI (console=%s)", want_console)
+                # 93a: a console needs the console interpreter; with none beside
+                # this one a restart would come back just as it is, so it is not
+                # done, and the page says the setting waits for the next launch
+                from . import startup
+                if want_console and startup._python_console() is None:
+                    log.info("RESTART skipped: no console interpreter beside %s", startup.sys.executable)
+                    return self._json({"ok": True, "console": True, "console_later": True})
                 self._json({"ok": True, "console": want_console})
                 threading.Thread(target=_restart_into, args=(self.server, want_console),
                                  daemon=True).start()

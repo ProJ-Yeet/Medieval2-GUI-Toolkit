@@ -159,8 +159,10 @@ function homeResumeHtml(){
   const mod = state.src || '';
   return `<div class="homeresume">
     <span class="count">${tt('home.last_time_you_were_in')}</span>
-    <button class="primary" onclick="homeGo('${q1(esc(mod))}','${esc(d.id)}')">
-      ${d.icon} ${esc(d.name)}${mod?`: ${esc(mod)}`:''} →</button>
+    <a class="btn primary" role="button" href="${esc(navUrl({mode:d.id},mod))}"
+      onkeydown="navLinkKey(event)"
+      onclick="if(navPlain(event)){event.preventDefault();homeGo('${q1(esc(mod))}','${esc(d.id)}');}">
+      ${d.icon} ${esc(d.name)}${mod?`: ${esc(mod)}`:''} →</a>
   </div>`;
 }
 
@@ -229,11 +231,14 @@ function homeModulesHtml(m, r){
     const why = s.ready
       ? (s.partial.length ? tt('home.works_but_this_mod_has_no',{partial:s.partial.join(', ')}) : d.hint)
       : tt('home.needs_and_this_mod_has_none',{missing:s.missing.join(', ')});
-    return `<button class="hcmod${s.ready?'':' off'}" title="${esc(why)}"
-      onclick="homeGo('${q1(esc(m.name))}','${esc(d.id)}')">
+    // 93b: a link to that screen for this mod, so a middle click opens it in
+    // a new tab; a plain click still goes there in this one
+    return `<a class="btn hcmod${s.ready?'':' off'}" role="button" title="${esc(why)}"
+      href="${esc(navUrl({mode:d.id},m.name))}" onkeydown="navLinkKey(event)"
+      onclick="if(navPlain(event)){event.preventDefault();homeGo('${q1(esc(m.name))}','${esc(d.id)}');}">
       <span class="ic">${d.icon}</span><span class="nm">${esc(d.name)}</span>
       ${s.ready?(s.partial.length?'<span class="dot warn">●</span>':'')
-              :'<span class="dot bad">●</span>'}</button>`;
+              :'<span class="dot bad">●</span>'}</a>`;
   }).join('');
 }
 
