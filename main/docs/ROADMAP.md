@@ -1516,6 +1516,45 @@ Phase 88c's plurals by count should cover. Done when: every pool row on the
 Recruitment tab, existing and new, shows "= N turns" beside its rate, it
 follows ▲▼ and typing, and it reads correctly in every shipped language.
 
+*Phase 94 done 2026-09-30, uncut.* **94a, measured on Tsardoms 3.0 itself**
+(installed by the user for this). Its `militia_barracks` level holds **1,131
+recruit pools**; the largest in DaC is 343 (`militia_drill_square`) and in
+Reforged 166 (`barracks_2`). So the lag is general and Tsardoms is where it
+shows: every cost below grows with the level. The building's working copy is 5
+MB as JSON and the dialog 265,454 elements. Ten fast ▲ clicks took **4.2 s**,
+each a long task of 300-440 ms, of which the click itself was about 50 ms.
+Where the rest went, found by timing every timer callback, not by reading the
+list above:
+
+- **240-290 ms: the page-wide resize observer** (`rszInit` in `core.js`). It
+  takes any added node for "a box may have appeared", and the "= N turns" text
+  swapped on every click is an added text node, so each click re-queried the
+  whole page. Now only an added element counts. This was none of the four
+  suspects.
+- **about 100 ms: the dirty checks.** `bldDirty` stringified the whole building
+  twice per click, and `bldLevelDirty` parsed the 5 MB original on every call,
+  once per level on opening. The original is now parsed once per `b.orig`
+  (each level's string kept), and `paintDirty` and the level chip follow a
+  burst, 120 ms after its last edit.
+- **74-100 ms of layout** on a value change: pool rows off screen now skip it
+  (`content-visibility:auto` on `#bldBody [data-cap]`).
+
+**After:** ten fast clicks in **189 ms**, 12-40 ms each, the "= N turns"
+beside the box following each, ten undo steps, and Undo stepping back one click
+at a time (0.5, 0.333, 0.25, 0.2). **Left:** an undo on that level redraws all
+1,131 rows, about 2 s, and opening the level still takes about 2 s. Both are
+one-off and not per click.
+
+**94b.** Every pool row on the Unit Editor's Recruitment tab, existing and new,
+shows "= N turns" under its rate box (under, so the column keeps its 90 px and
+the delete button its place), following ▲▼ and typing. `poolTurns` takes "never"
+and a plural "N turns" (`buildings.turns_count`) from the catalogue. Checked on
+Reforged's Arnor Militia: six rows, "= 5 turns" going to "= 4 turns" on a ▲.
+`tests/test_bigbuilding` (9); `test_unit_recruitment` green. `test_buildings`
+cannot run for now: the M2EX EUR the user installed has a hand edit in its
+`battle_models.modeldb` (a stray `v` after a `0` in entry #88,
+`cardolan_sharpshooters`), which the modeldb reader refuses.
+
 # What else is open
 
 Every rated item is built: the five- and four-star rows, and the three-star
