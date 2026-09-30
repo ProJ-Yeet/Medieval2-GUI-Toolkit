@@ -1231,6 +1231,14 @@ class Registry:
                 regions = -1
                 log.info("MAP    %s: %s", name, exc)
             self._maps[name] = (sig, cm)
+            # 89d: a save that re-read the map (a settlement, a character) is
+            # not a reason to lose the strokes not yet saved. Carried here,
+            # where the map is read, so the page's own reload after that save
+            # already shows them - see campaint.PaintSession.rebase
+            held = campaint.peek(name)
+            if held is not None and held.cm is not cm and not held.rebase(mod, cm):
+                log.info("MAP    %s: a painted layer changed on disk; the "
+                         "unsaved strokes cannot follow the re-read", name)
         log.info("MAP    %s: %dx%d, %s, read in %.2fs", name,
                  cm.terrain.width, cm.terrain.height,
                  f"{regions} regions" if regions >= 0 else "no index (see above)",

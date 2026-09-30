@@ -1191,6 +1191,49 @@ else:
     shutil.rmtree(med2, ignore_errors=True)
     shutil.rmtree(cfg, ignore_errors=True)
 
+# ---------------------------------------------------------------------------
+print("\n89d: a save elsewhere on the map does not take the strokes with it")
+# Reported on the real-world map: paint a province, set its capital, and the
+# painting was gone. The settlement save re-read the mod, the map object the
+# session painted was dropped, and the session with it. Now the session moves
+# onto the map read again, unless a layer it painted changed on disk.
+t89 = Path(_tmp.mkdtemp(prefix="ut_tiny89_"))
+t89_root = t89 / "mods" / "Tiny"
+t89_base = tiny_map(t89_root)
+t89_mod = Mod(t89_root)
+cm_a = campmap.CampaignMap(t89_mod)
+s89, was = campaint.session("Tiny89", t89_mod, cm_a)
+campaint.paint(s89, {"tool": "pencil", "target": "regions", "region": "B_Province",
+                     "points": [[0, 0]]})
+painted = cm_a.layer("regions").tobytes()
+cm_b = campmap.CampaignMap(t89_mod)          # the registry's re-read after a save
+s89b, reset = campaint.session("Tiny89", t89_mod, cm_b)
+check("the map read again keeps the session, and says nothing was lost",
+      s89b is s89 and not reset and s89.cm is cm_b and len(s89.undo) == 1)
+check("  its unsaved pixels are on the new map, so every route shows them",
+      cm_b.layer("regions").tobytes() == painted)
+campaint.undo_stroke(s89)
+check("  and the stroke is still one Undo away, byte for byte",
+      encode(cm_b.layer("regions"), cm_b.info("regions"))
+      == (t89_base / "map_regions.tga").read_bytes())
+campaint.redo_stroke(s89)
+# a layer it painted, changed on disk underneath it (a Photoshop save)
+import os as _os
+tga = t89_base / "map_regions.tga"
+data = tga.read_bytes()
+tga.write_bytes(data)
+_os.utime(tga, ns=(tga.stat().st_atime_ns, tga.stat().st_mtime_ns + 5_000_000_000))
+cm_c = campmap.CampaignMap(t89_mod)
+s89c, reset = campaint.session("Tiny89", t89_mod, cm_c)
+check("a painted layer changed on disk still ends the session, and says so",
+      s89c is not s89 and reset and not s89c.undo)
+cm_d = campmap.CampaignMap(t89_mod)
+s89d, reset = campaint.session("Tiny89", t89_mod, cm_d)
+check("a session with nothing in it follows a re-read silently",
+      s89d is s89c and not reset)
+campaint.drop("Tiny89")
+shutil.rmtree(t89, ignore_errors=True)
+
 print(f"\n{sum(ok)}/{len(ok)} checks passed")
 print("ALL PASSED" if all(ok) else "SOME FAILED")
 sys.exit(0 if all(ok) else 1)

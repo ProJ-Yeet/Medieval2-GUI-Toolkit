@@ -37,6 +37,7 @@ second pass with a single combined pattern - the same trick
 from __future__ import annotations
 
 import bisect
+import os
 import re
 from dataclasses import dataclass
 from pathlib import Path
@@ -132,19 +133,29 @@ def mod_files(mod, limit: int = 4000) -> Dict[str, List[Path]]:
     out: Dict[str, List[Path]] = {"lua": [], "campaign": [], "text": []}
     if not root.is_dir():
         return out
+    # os.scandir, not Path.iterdir + is_dir: on Windows a directory entry
+    # already says whether it is a folder, where is_dir() asks the disk again
+    # for every file. On DaC's 49,544 entries that was 4.7 of the 6.2 seconds
+    # the first region rename spent before it showed anything (89d).
     stack = [root]
     while stack:
         cur = stack.pop()
         try:
-            children = sorted(cur.iterdir(), key=lambda p: p.name.lower())
+            with os.scandir(cur) as it:
+                children = sorted(it, key=lambda e: e.name.lower())
         except OSError:
             continue
-        for p in children:
-            if p.is_dir():
-                if p.name.lower() not in SKIP_DIRS:
-                    stack.append(p)
+        for entry in children:
+            try:
+                is_dir = entry.is_dir()
+            except OSError:
                 continue
-            name, suffix = p.name.lower(), p.suffix.lower()
+            if is_dir:
+                if entry.name.lower() not in SKIP_DIRS:
+                    stack.append(Path(entry.path))
+                continue
+            name = entry.name.lower()
+            suffix = os.path.splitext(name)[1]
             if MODELDB_SUFFIX in name:
                 # Never scanned as text, and never read as a second opinion about
                 # what is alive. A modeldb names thousands of files, so reading
@@ -156,11 +167,11 @@ def mod_files(mod, limit: int = 4000) -> Dict[str, List[Path]]:
                 continue
             if suffix == ".lua":
                 if len(out["lua"]) < limit:
-                    out["lua"].append(p)
+                    out["lua"].append(Path(entry.path))
             elif name in CAMPAIGN_NAMES:
-                out["campaign"].append(p)
+                out["campaign"].append(Path(entry.path))
             if suffix in TEXT_SUFFIXES:
-                out["text"].append(p)
+                out["text"].append(Path(entry.path))
     for kind, paths in out.items():
         paths.sort(key=lambda p: (len(p.relative_to(root).parts), str(p).lower()))
     return out

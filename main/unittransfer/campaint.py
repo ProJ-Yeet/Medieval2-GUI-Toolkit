@@ -477,6 +477,12 @@ class PaintSession:
     a layer edited in Photoshop under an unsaved session ends the session - the
     next request is told the map was re-read and the strokes are gone, which is
     a sentence somebody can act on, and better than writing a mixture of the two.
+
+    89d: but a save elsewhere on the map screen - a settlement made its
+    faction's capital, a character moved - invalidates the whole mod too, and
+    that used to end the session the same way, with a province half painted.
+    :meth:`rebase` carries the session onto the map read again whenever every
+    layer it painted is still, on disk, the file it read.
     """
 
     def __init__(self, mod, cm: CampaignMap):
@@ -494,6 +500,8 @@ class PaintSession:
         #: :func:`region_vocab`, read when a wizard first asks for it
         self.vocab: Optional[dict] = None
         self._bufs: Dict[str, bytearray] = {}
+        #: 89d: (size, mtime_ns) of each layer file when its buffer was taken
+        self._disk: Dict[str, Tuple[int, int]] = {}
 
     # -- pixels --------------------------------------------------------------
 
@@ -508,6 +516,7 @@ class PaintSession:
         if code not in self._bufs:
             img = self.cm.layer(code)
             self._bufs[code] = bytearray(img.tobytes())
+            self._disk[code] = _disk_sig(self.cm.path(code))
         img = self.cm.layer(code)
         return self._bufs[code], len(img.mode), img.width
 
@@ -517,6 +526,40 @@ class PaintSession:
             img.frombytes(bytes(self._bufs[code]))
             self.dirty.add(code)
         self.cm.repixel(*codes)
+
+    def has_work(self) -> bool:
+        """Is there anything here a reset would lose?"""
+        return bool(self.undo or self.redo or self.dropped or self.new_region
+                    or self.recolour)
+
+    def rebase(self, mod, cm: CampaignMap) -> bool:
+        """Move onto ``cm``, the same map read again, keeping every stroke (89d).
+
+        Only when each layer this session holds pixels for is, on disk, the
+        file it read, and the same size in ``cm``: then ``cm``'s copy is the
+        read this session started from, and writing the session's pixels over
+        it is exactly the picture before the re-read. A layer changed on disk
+        (a Photoshop save) is refused, and the caller resets as before.
+        Everything else the session holds is pixels and records not yet on
+        disk, so none of it depends on the object it came from.
+        """
+        if cm is self.cm:
+            return True
+        try:
+            for code in self._bufs:
+                if _disk_sig(cm.path(code)) != self._disk.get(code):
+                    return False
+                old, new = self.cm.layer(code), cm.layer(code)
+                if old.size != new.size or old.mode != new.mode:
+                    return False
+        except (MapError, OSError):
+            return False
+        for code, buf in self._bufs.items():
+            cm.layer(code).frombytes(bytes(buf))
+        if self._bufs:
+            cm.repixel(*self._bufs)
+        self.mod, self.cm, self.vocab = mod, cm, None
+        return True
 
     # -- the stack -----------------------------------------------------------
 
@@ -588,17 +631,23 @@ class PaintSession:
 _SESSIONS: Dict[str, PaintSession] = {}
 
 
+def _disk_sig(path: Path) -> Tuple[int, int]:
+    st = path.stat()
+    return st.st_size, st.st_mtime_ns
+
+
 def session(name: str, mod, cm: CampaignMap) -> Tuple[PaintSession, bool]:
     """``(session, was_reset)`` for one mod, made if there is not one.
 
-    ``was_reset`` is true when a session existed and was thrown away because the
-    map had been re-read from disk underneath it. The caller says so out loud;
-    silently starting a fresh one would lose work without a word.
+    ``was_reset`` is true when a session holding work was thrown away because a
+    layer it painted had changed on disk underneath it. The caller says so out
+    loud; silently starting a fresh one would lose work without a word. A map
+    re-read for any other reason keeps the session (:meth:`PaintSession.rebase`).
     """
     held = _SESSIONS.get(name)
-    if held is not None and held.cm is cm:
+    if held is not None and held.rebase(mod, cm):
         return held, False
-    reset = held is not None
+    reset = held is not None and held.has_work()
     _SESSIONS[name] = PaintSession(mod, cm)
     return _SESSIONS[name], reset
 

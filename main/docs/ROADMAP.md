@@ -983,6 +983,52 @@ is changed:
   chosen `admin_level`), historical names, or only an easier way to rename
   many at once. Build that answer, and nothing until it is known.
 
+*89d done 2026-09-30 but for the question, uncut.* No real-world campaign is
+installed here, so the first two were measured and reproduced on the two that
+are.
+
+- **Renaming a region is slow: the time was not in the provinces.** On a fresh
+  load of the mod, the first rename plan took **11.3 s** on DaC and 6.4 s on
+  Reforged, and the second 0.4 s. Of the first, 6.2 s was
+  `luascan.mod_files`, the one walk of the mod folder that also feeds the
+  mentions scan, and 4.7 s of that was a `stat` per entry (49,544 on DaC),
+  from `Path.is_dir()`. Every save invalidates the mod, so every rename paid it
+  again. The walk is now `os.scandir`, whose entries already know whether they
+  are a folder: DaC 5.6 s to 0.5 s, Reforged 3.1 s to 0.4 s, and the same lists
+  byte for byte on both. **After:** a rename on a copy of DaC's campaign files
+  plans in 1.0 s the first time (0.4 s after) and applies in 0.1 s. The walk
+  grows with the mod's files and not with its provinces, so a real-world map
+  with more provinces pays about the same. The reporter's own number is still
+  to hear.
+- **Painting stops after the capital is set: the unsaved painting was thrown
+  away.** Reproduced on a scratch copy of Reforged, through the page's own
+  calls: a stroke onto Pinnath-Gelin, then Anfalas made its faction's capital
+  in the Settlement panel. The save invalidated the mod, and the registry read
+  the map again. The paint session belonged to the old map object, so the next
+  request dropped it: the stroke was gone, with only a toast
+  ("the map was re-read from disk"), and the side panel was left on the
+  Province tab. Now `PaintSession.rebase` carries a session onto the map read
+  again, and it does so where the map is read (`Registry.campaign_map`), so the
+  page's own reload after the save already shows the strokes. The one
+  condition is that every layer it holds pixels for is still, on disk, the
+  file it read (size and mtime taken when the layer was first painted), so a
+  layer saved from Photoshop under it still ends the session, and says so. A
+  session with nothing in it no longer reports a reset either. The same run
+  after the fix: the stroke survives the save, one Undo away, and the next
+  stroke is the second.
+- **How to redraw a province was not found:** the region's own panel now has
+  **Paint its tiles** beside *Change colour…*. It opens the Paint tab's brush
+  with that province as its colour, armed, and says Save is on the Paint tab.
+- **The correct province names: asked, not built.** The question for the
+  reporter stands as written above: real administrative regions from
+  OpenStreetMap at a chosen `admin_level`, historical names, or an easier way
+  to rename many at once.
+
+`test_campaint` 89d (5): a re-read keeps the session and its pixels, Undo is
+byte for byte, a layer changed on disk still resets, an empty session follows
+silently. The walk: `test_eop_and_lua`, `test_cleaner`,
+`test_unit_rename_refs`, `test_renames` green.
+
 # Phase 90 - a layout that fits the window at every interface size, scheduled 2026-09-26
 
 **Reported by a user on 2026-09-26**, passed on by the user: "UI scaling seems

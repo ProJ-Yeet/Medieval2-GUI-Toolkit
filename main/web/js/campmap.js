@@ -3439,6 +3439,27 @@ function cmapRename(subject){
                                await cmapOpenRegion(subject === 'region' ? name : was); });
 }
 
+/* 89d: "how do I redraw a province?" - asked by someone who had painted one,
+   gone on to its settlement, and not found the way back. The brush lived only
+   on the Paint tab and the map's toolbar; this puts it on the province itself.
+   One press: the Paint tab's brush, this province as its colour, armed. */
+function cmapPaintProvince(name){
+  const c = state.cmap;
+  if(!c || typeof cpaintOpen !== 'function') return;
+  if(state.cpin && typeof cpinCancel === 'function') cpinCancel();
+  c.selectMode = false;
+  cpaintOpen();
+  const p = state.cpaint;
+  if(!p) return;
+  cpaintPickRegion({name});
+  if(!['brush', 'bucket', 'pencil'].includes(p.tool)) p.tool = 'brush';
+  if(!p.on) cpaintToggle();
+  if(!p.on) return;                     // refused, and the panel says why
+  cmapSub('paint', 'brush');
+  cpaintPaint();
+  toast(tt('campmap.painting_province',{name}), 5000);
+}
+
 function cmapFormHtml(){
   const d = state.cmap.det, w = d.w, v = d.vocab;
   //: `rename` is the subject the rename dialog opens on, for the two fields a
@@ -3471,7 +3492,8 @@ function cmapFormHtml(){
       ${lock(tt('campmap.colour'), d.rgb.join(' '), CMAP_LOCKED.rgb,
              `<i class="cmsw" style="background:rgb(${d.rgb.join(',')})"></i>
               ${tt('campmap.region_id',{x:px && px.region_id >= 0 ? px.region_id : '-'})}
-              <button class="cmrename" title="${ttA('campmap.repaint_every_tile_of_this_province')}" onclick="rclOpen('${esc(d.name)}')">${tt('campmap.change_colour')}</button>`)}
+              <button class="cmrename" title="${ttA('campmap.repaint_every_tile_of_this_province')}" onclick="rclOpen('${esc(d.name)}')">${tt('campmap.change_colour')}</button>
+              <button class="cmrename" title="${ttA('campmap.paint_tiles_title')}" onclick="cmapPaintProvince('${esc(d.name)}')">${tt('campmap.paint_tiles')}</button>`)}
       ${pick(tt('campmap.legion'), 'legion', [d.name])}
       ${d.has.faction ? pick(tt('campmap.creator_faction'), 'faction', v.factions, v.faction_labels) : ''}
       ${d.has.rebels ? pick(tt('campmap.rebel_type'), 'rebels', v.rebels) : ''}
