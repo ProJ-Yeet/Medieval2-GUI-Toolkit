@@ -1331,6 +1331,42 @@ Done when: a unit transferred into a text-model M2EX mod loads in the game
 with its own model, one taken out of such a mod lands in a `.modeldb` mod,
 and the suite covers both directions against the sample files.
 
+*92a done 2026-09-30, uncut; not yet loaded in game.* **Measured** on the
+M2EX install the user pointed to (`EUREXV1/M2EX`): the base game's
+`data/descr_caps_ex.txt` says `model_battle_source text` ("modeldb ... default
+for mods"; each of its four campaigns has its own caps file), and its
+`descr_model_battle.txt` is 701 models, 11,250 CRLF lines, "generated from
+battle_models.modelDB". The M2EX build of EUR installed in the mods folder
+still reads its `.modeldb` (no caps file). What the file holds, per model:
+`type`, `scale` (7 of 701; 1 when absent), `skeleton <pri>, <sec>` with a
+`skeleton_attachment_primary` / `_secondary` line per weapon skeleton, the same
+as `skeleton_horse`, `_camel`, `_elephant` for the other mount types,
+`mesh <path>, <distance>`, `texture <faction>, <diff>, <norm>, <sprite>`,
+`texture_attachments <faction>, <diff>, <norm>`, `torch <bone>, <6 offsets>`
+(677 of 701). **A distance is the square root of the `.modeldb`'s**: Tsardoms
+holds 953 of its 1,015 as perfect squares (6400, 121, 900) and the text's are
+80, 11, 30; a non-square (1200) is rounded, the one thing a trip through text
+changes. The first skeleton block is written `skeleton` whatever its mount
+type, so going back to a `.modeldb` its type comes from the units that wear the
+model (`horse` for a mounted unit, else `none`). No first entry is special.
+
+Built: `unittransfer/modeltext.py` reads the file, writes an entry as text and
+as a `.modeldb` entry, and `Mod.text_models` (the mod's own caps file) makes
+`Mod.modeldb` read the text, so transfer, the 79 skeleton check and the Models
+viewer read either. Transfer writes whichever file the destination reads,
+appending in its own line endings, and a transfer between one of each converts
+the entry. The Home card says **Battle models from descr_model_battle.txt**,
+and Health's **Battle models: which file the game reads** warns when the file
+the game does not read was changed after the one it does. Found on the way:
+Reforged's `.modeldb` holds a weapon skeleton name with a newline inside its
+length-prefixed string, which a line of text cannot, so every value is
+stripped as it is written. **Not covered:** the Models editor's own saves still
+write the `.modeldb`, and on a text-model mod they should be refused or moved
+to the text; that is left for when such a mod is installed here.
+`tests/test_modeltext` (23): all 701 models round trip both ways, the caps
+switch, the Health rule, and a transfer in each direction (Tsardoms into a
+text copy of Reforged, then out of it into a copy of Tsardoms), with Undo.
+
 **92b - recruitment set up by the transfer.** Today a transferred unit is
 recruitable nowhere until someone adds it in the Recruitment tab. The
 friend's tool does it in the same step, behind a tick (*Let the faction

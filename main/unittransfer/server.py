@@ -702,6 +702,7 @@ from typing import Dict, List, Optional
 from . import (bmdb, buildings, cards, cleaner, codeview, config, dupes, edit,
                modflags, modfiles, sounds, stratmap)
 from . import mapgen, mapnew, mapresize
+from . import modeltext
 from . import ancillaries, areaeffects, campimport, edbimport, mapbundle, osmmap, osmsites, settlemodel, heroabilities, hordestart, walls, characters, projectzip, campaint, campdb, campevents, campfiles, campmap, campnew, campstrat, cas, casanim, animedit, animpack, animslot, animview, modelexport, launchcheck, packhouse, settlemech, fileswap, factionsites, sidefiles, banners, changesets, health, climatenew, guilds, mapcheck, mapfe, mapquery, mapterrain, mercpools, regiondel, edusort, factionaudit, factionclone, factions, images, mesh, minorfiles, namekeys, portrecords, rawtext, rebelpools, renames, soundbanks, soundscripts, spawns, sprites, stratcamp, stratchar, stratedit, stratobj, strings, traits, triggers, winconds
 from . import eop as _eop
 from . import logutil
@@ -1903,7 +1904,9 @@ class Handler(BaseHTTPRequestHandler):
                 # before anything is read.
                 return self._json([{"name": n, "root": str(p),
                                     "pack": self.registry.is_pack(n),
-                                    "m2ex": modflags.is_m2ex(p)}
+                                    "m2ex": modflags.is_m2ex(p),
+                                    # 92a: reads descr_model_battle.txt, not the .modeldb
+                                    "text_models": modeltext.reads_text(p)}
                                    for n, p in self.registry.discover().items()])
             if u.path == "/api/units":
                 name = (q.get("mod") or [None])[0]

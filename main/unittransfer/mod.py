@@ -314,7 +314,18 @@ class Mod:
         return localization.Localization(entries=entries)
 
     @cached_property
+    def text_models(self) -> bool:
+        """92a: does this mod read ``descr_model_battle.txt`` (M2EX, set by
+        ``model_battle_source text`` in its own ``descr_caps_ex.txt``) rather
+        than the ``.modeldb``? See :mod:`unittransfer.modeltext`."""
+        from . import modeltext
+        return modeltext.reads_text(self) and modeltext.text_path(self).is_file()
+
+    @cached_property
     def modeldb(self) -> modeldb.ModelDb:
+        if self.text_models:
+            from . import modeltext
+            return modeltext.read_db(self)
         return self._read_required(
             self.modeldb_path, modeldb.parse_file,
             "It holds the battle models every unit names, so a unit cannot be "

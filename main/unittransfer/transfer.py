@@ -2981,11 +2981,23 @@ def apply_transfer(plan: TransferPlan) -> Dict:
                 main_textures=entry.main_textures, attach_textures=entry.attach_textures,
                 animations=entry.animations, torch_index=entry.torch_index,
                 torch=entry.torch, raw=raw)
+            new_entry.first_entry_pad = entry.first_entry_pad
             appended.append(new_entry)
-        db.entries.extend(appended)
-        text = db.to_text()
-        del db.entries[base:]          # keep cached db pristine
-        write_text("unit_models/battle_models.modeldb", text, modeldb.ENCODING)
+        if getattr(dest, "text_models", False):
+            # 92a: an M2EX mod that reads descr_model_battle.txt. The entries
+            # were renamed, relocated and given their factions' textures in
+            # .modeldb form above; each is read back and written as text.
+            from . import modeltext
+            rel = modeltext.TEXT_REL
+            ttext = kb.read_text(dest.data / rel, modeltext.ENCODING)
+            write_text(rel, modeltext.append(
+                ttext, [modeldb.parse_entry_text(e.raw, pad=e.first_entry_pad) for e in appended]),
+                modeltext.ENCODING, exact=True)
+        else:
+            db.entries.extend(appended)
+            text = db.to_text()
+            del db.entries[base:]          # keep cached db pristine
+            write_text("unit_models/battle_models.modeldb", text, modeldb.ENCODING)
 
     # ---- 3b) mount definition (descr_mount.txt) ----
     if plan.mount_raw:

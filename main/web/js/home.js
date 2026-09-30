@@ -201,7 +201,8 @@ function homeM2exHtml(m){
   return `<label class="chk hcm2ex" title="${ttA('home.tick_this_only_for_a_mod',{VANILLA_UNIT_LIMIT})}">
     <input type="checkbox" ${m.m2ex?'checked':''}
       onchange="homeSetM2ex('${q1(esc(m.name))}',this.checked)">
-    ${tt('home.runs_on_m2ex_no_engine_limits')}</label>`;
+    ${tt('home.runs_on_m2ex_no_engine_limits')}</label>${m.text_models
+    ? `<div class="count" title="${ttA('home.text_models_title')}">${tt('home.text_models')}</div>` : ''}`;
 }
 async function homeSetM2ex(name, on){
   const r = await api.post('/api/m2ex', {mod:name, on:!!on});

@@ -315,6 +315,30 @@ def _factionsites(mod, ctx) -> List[Finding]:
     return out
 
 
+@source("modelsource", "Battle models: which file the game reads", "bmdb",
+        "descr_caps_ex.txt, descr_model_battle.txt", "battle")
+def _modelsource(mod, ctx) -> List[Finding]:
+    """92a: a mod keeps one battle-model file the game reads and may keep the
+    other, which it does not. When the one it does not read has been changed
+    since, those changes are in a file nothing loads."""
+    from . import modeltext
+    data = Path(mod.data)
+    text, db = data / modeltext.TEXT_REL, data / "unit_models" / "battle_models.modeldb"
+    if not (text.is_file() and db.is_file()):
+        return []
+    reads_text = modeltext.reads_text(mod)
+    live, dead = (text, db) if reads_text else (db, text)
+    if dead.stat().st_mtime <= live.stat().st_mtime:
+        return []
+    msg = _i18n.msg("eng.health.dead_models_file_newer",
+                    "{dead} was changed after {live}, and the game reads only {live} ({why}), so those changes are in a file nothing loads",
+                    dead=dead.name, live=live.name,
+                    why=("model_battle_source text in descr_caps_ex.txt" if reads_text
+                         else "descr_caps_ex.txt does not say model_battle_source text"))
+    return [Finding("modelsource", "dead-file", "warn", msg, file=dead.relative_to(data).as_posix(),
+                    what=dead.name, when="battle", open={"mode": "bmdb"})]
+
+
 @source("banners", "Battle banners", "banners", "descr_banners_new.xml", "battle")
 def _banners(mod, ctx) -> List[Finding]:
     from . import banners
