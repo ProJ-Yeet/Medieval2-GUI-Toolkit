@@ -412,7 +412,7 @@ on its own. The order is now:
 | 88d | German, and the per-language workflow | - | M | both |
 | 88e, 88f | French, Spanish: one phase each | - | M each | both |
 | 88i | Polish | - | M | both |
-| 88m, 88n | Russian, Ukrainian: one phase each | - | M each | both |
+| 88m | Russian | - | M | both |
 | 88o | Simplified Chinese, and the CJK fonts and line breaking | - | M | both |
 | 88p-88r | Traditional Chinese, Japanese, Korean: one phase each | - | M each | both |
 
@@ -424,7 +424,8 @@ Arabic needs. Their write-ups below stay as the plan for when they come back;
 their termbase columns stay, and nothing offers them while they have no
 catalogue.
 Polish (88i) was brought back the same day ("bring back polish to
-roadmap").
+roadmap"), and 88n Ukrainian postponed with the rest ("postpone ukranian
+too").
 
 Releasing stays on request: each phase is committed to master as it lands.
 
@@ -849,8 +850,8 @@ shows as stale in the report.
 **88e to 88n - the other European and Cyrillic languages, one each:** 88e
 French `fr`, 88f Spanish `es`, 88g Italian `it`, 88h Portuguese (Brazil)
 `pt-BR`, 88i Polish `pl`, 88j Czech `cs`, 88k Hungarian `hu`, 88l Turkish
-`tr`, 88m Russian `ru`, 88n Ukrainian `uk`. **88g, 88h and 88j to 88l are
-postponed indefinitely** (2026-10-01, see the schedule). Each is the catalogue only,
+`tr`, 88m Russian `ru`, 88n Ukrainian `uk`. **88g, 88h, 88j to 88l and 88n
+are postponed indefinitely** (2026-10-01, see the schedule). Each is the catalogue only,
 through 88d's workflow. Polish, Czech, Russian and Ukrainian carry three or
 four plural forms each, and the checker holds every `ttN` string to them.
 Done when, for each: the checker passes, the report is empty, and Home,
