@@ -1121,12 +1121,12 @@ function renderCampmap(){
   main.innerHTML = `
     <div class="cmworkspace">
     <div class="cmwrap">
-      ${tt('campmap.x')}
+      <!-- 49: the colours, on the left, where the user asked for them. Empty and hidden until the brush is armed - see cpaintDockPaint. -->
       <aside class="cmpalcol" id="cmPalCol" hidden></aside>
       <div class="cmstage" id="cmStage">
         <canvas id="cmCanvas" aria-label="${ttA('campmap.campaign_map_drag_to_pan_scroll')}"${
           cmap3d() ? ' hidden' : ''}></canvas>
-        ${tt('campmap.x_2')}
+        <!-- M18: the mesh, over the same stage and under the same bar. Hidden until the mode is on; the flat canvas keeps its pixels while it is, so coming back is a repaint and not a reload. -->
         <canvas id="cm3Canvas" aria-label="${ttA('campmap.the_campaign_map_as_a_surface')}"${
           cmap3d() ? '' : ' hidden'}></canvas>
         <div class="cm3msg" id="cm3Msg" hidden></div>
@@ -1143,7 +1143,7 @@ function renderCampmap(){
             title="${ttA('campmap.show_region_names_and_coordinates_under')}">${tt('campmap.names')}</button>
           <button id="cmLabBtn" class="${c.labels ? 'on' : ''}" onclick="clnToggle()"
             title="${ttA('campmap.settlement_character_and_port_names_beside')}">${tt('campmap.aa_labels')}</button>
-          ${tt('campmap.x_3')}
+          <!-- M18: the same map, as a mesh. A MODE and not a screen - the layers, the opacities, the season and the colouring are the ones already set here. See map3d.js. -->
           <button id="cm3Btn" class="${cmap3d() ? 'on' : ''}" aria-pressed="${cmap3d()}"
             onclick="cm3Toggle()"
             title="${ttA('campmap.the_heights_as_a_surface_with')}">⛰ 3D</button>
@@ -1151,11 +1151,11 @@ function renderCampmap(){
             title="${ttA('campmap.put_the_map_back_to_how')}">${tt('campmap.reset')}</button>
             <span class="count" id="cmZoom"></span>
           </div>
-          ${tt('campmap.x_4')}
+          <!-- 28b: the brush, over the map it paints. A stroke is made with the eyes on the map, so the controls that make one are here rather than in a panel beside it. -->
           <div class="cmbarrow cmpaint" id="cmPaintBar"></div>
         </div>
         <div class="cmpin" id="cmPin" hidden></div>
-        ${tt('campmap.x_5')}
+        <!-- 50: the layer stack, over the map instead of under the column. Hidden until the foot's button opens it, and the same markup under the same id, so cmapRepanel and cmapWireLayers did not move with it. (No backticks in here: this is inside a template literal.) -->
         <div class="cmlaypop" id="cmLayPop"${c.layPop ? '' : ' hidden'}>
           <div class="cmlayers" id="cmLayers">${cmapLayersHtml()}</div>
         </div>

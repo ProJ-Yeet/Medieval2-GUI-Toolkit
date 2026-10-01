@@ -233,6 +233,8 @@ def runs_of(lit: jslex.Lit, joined: str, classes) -> List[Run]:
         # a masked element is a wall at each end and blank between, so the
         # sentence before it and the one after it are each still found
         masked = _STYLE.sub(lambda m: "<hr>" + " " * (len(m.group(0)) - 8) + "<hr>", joined)
+        # an HTML comment is a note to the next reader, never on screen (88d)
+        masked = re.sub(r"<!--.*?-->", lambda m: " " * len(m.group(0)), masked, flags=re.S)
         for s, e, kind in scan._runs(masked):
             s, e = scan._strip_edges(masked, s, e)
             frag = masked[s:e]

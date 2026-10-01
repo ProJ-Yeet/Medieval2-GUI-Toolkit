@@ -1935,7 +1935,7 @@ async function openCredits(){
       </div>
       <div style="margin-bottom:14px">
         <div class="lbl" style="margin-bottom:4px">${tt('core.built_on_the_work_of_and')}</div>
-        ${tt('core.x')}
+        <!-- Tool by Creator, and the TOOL NAME is the link. Two of these used to carry a bare URL off to the side instead, which read as a second, lesser thing on the row and made the name itself dead text. The work is what is being credited, so the work is what you click. -->
         <div>${tt('core.m2tw_editor_by_mylae')}</div>
         <div>${tt('core.medieval_ii_total_war_modding_tool')}</div>
         <div>${tt('core.bare_geomod_by_sinople_and_gigantus')}</div>

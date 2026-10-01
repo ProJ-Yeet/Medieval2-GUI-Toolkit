@@ -349,7 +349,7 @@ function renderSounds(){
     <div id="sndGui">
     ${all.length?`<div class="sndlist">
       <div class="sndrow hrow">${tt('sprites.unit_in_game_now_accent_class')}</div>
-      ${tt('sprites.x',{x:s.view.map(sndRowHtml).join('')})}</div>`
+      <!-- the unit card sits beside the name, the same picture the unit editor and the recruitment lists show: a voice bank is 900 rows of type names, and a type name is the one thing about a unit nobody recognises --> ${s.view.map(sndRowHtml).join('')}</div>`
      :`<div class="empty">${tt('common.no_units_match')}</div>`}
     </div>
     ${s.cv?`<div id="sndCodeCol">${cvHtml(s.cv)}</div>`:''}

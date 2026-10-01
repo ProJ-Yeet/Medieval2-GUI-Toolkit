@@ -221,6 +221,9 @@ def scan_source(src: str, rel: str, classes: Set[str]) -> List[Item]:
         if lit.start in skip:
             continue
         joined, offs = _join(lit)
+        # an HTML comment in a template is a note to the next reader, never on
+        # screen (blanked to its length, so the offsets still line up)
+        joined = re.sub(r"<!--.*?-->", lambda m: " " * len(m.group(0)), joined, flags=re.S)
         if TAG.search(joined) and re.search(r"<[a-zA-Z/]", joined):
             for s, e, kind in _runs(joined):
                 s, e = _strip_edges(joined, s, e)

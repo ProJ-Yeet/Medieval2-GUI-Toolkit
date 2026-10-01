@@ -1417,7 +1417,7 @@
    "tr": {
     "de": {
      "t": "General",
-     "stem": "general",
+     "stem": "general|generäl",
      "src": "game",
      "conf": "high"
     },
@@ -3679,10 +3679,10 @@
    "rule": 2,
    "en": "shield",
    "forms": [
-    "shield",
-    "shields"
+    "faction shield",
+    "faction shields"
    ],
-   "gloss": "a faction's coat of arms as drawn on the campaign screen",
+   "gloss": "a faction's coat of arms as drawn on the campaign screen; only as \"faction shield\": a bare shield is also a soldier's (EDU), which is Schild",
    "tr": {
     "de": {
      "t": "Wappen",
@@ -4690,10 +4690,14 @@
    "rule": 2,
    "en": "gate",
    "forms": [
-    "gate",
-    "gates"
+    "city gate",
+    "city gates",
+    "castle gate",
+    "castle gates",
+    "wall gate",
+    "wall gates"
    ],
-   "gloss": "a gate in a settlement's wall",
+   "gloss": "a gate in a settlement's wall; a bare gate in this toolkit is mostly a build condition, so only the wall's gate is matched",
    "tr": {
     "de": {
      "t": "Tor",
@@ -8202,10 +8206,9 @@
    "en": "ground types",
    "forms": [
     "ground types",
-    "ground type",
-    "ground"
+    "ground type"
    ],
-   "gloss": "the terrain (ground) type of a campaign tile",
+   "gloss": "the terrain (ground) type of a campaign tile; a bare \"ground\" is ordinary terrain",
    "tr": {
     "de": {
      "t": "Bodentypen",
@@ -10145,14 +10148,13 @@
    "en": "uv map",
    "forms": [
     "uv map",
-    "uv",
-    "uvs"
+    "uv maps"
    ],
-   "gloss": "UV coordinates that map a texture onto a mesh",
+   "gloss": "UV coordinates that map a texture onto a mesh; a bare UV is in keep",
    "tr": {
     "de": {
      "t": "UV-Map",
-     "stem": "uv-map",
+     "stem": "uv",
      "src": "loan",
      "conf": "medium",
      "note": "UV-Abbildung is the Blender UI word, rarely said"
@@ -10958,11 +10960,9 @@
    "en": "sprite sheet",
    "forms": [
     "sprite sheet",
-    "sprite sheets",
-    "sheet",
-    "sheets"
+    "sprite sheets"
    ],
-   "gloss": "one image that holds many sprites",
+   "gloss": "one image that holds many sprites; a bare \"sheet\" is not matched (a texture atlas, a spreadsheet)",
    "tr": {
     "de": {
      "t": "Sprite-Sheet",
@@ -11074,10 +11074,11 @@
    "en": "heights map",
    "forms": [
     "heights map",
+    "heights maps",
     "heightmap",
-    "heights"
+    "heightmaps"
    ],
-   "gloss": "the map of terrain heights",
+   "gloss": "the map of terrain heights; a bare \"heights\" is not matched",
    "tr": {
     "de": {
      "t": "Höhenkarte",
@@ -12322,7 +12323,7 @@
    "tr": {
     "de": {
      "t": "Block",
-     "stem": "block",
+     "stem": "block|blöck",
      "src": "community",
      "conf": "high",
      "note": "Plural Blöcke has an umlaut"
@@ -16684,7 +16685,7 @@
    "tr": {
     "de": {
      "t": "Ausblenden",
-     "stem": "ausblend",
+     "stem": "blend",
      "src": "ms",
      "conf": "high"
     },
@@ -19100,7 +19101,7 @@
    "tr": {
     "de": {
      "t": "Überschreiben",
-     "stem": "überschreib",
+     "stem": "überschr",
      "src": "ms",
      "conf": "high"
     },
