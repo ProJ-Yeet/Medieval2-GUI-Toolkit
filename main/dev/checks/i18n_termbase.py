@@ -230,8 +230,11 @@ def check_catalogue(en: dict, cat: dict, tb: Optional[dict], tag: str, pseudo: b
             continue
         sf, tf = forms_of(src), forms_of(tr)
         if not isinstance(src, str) and not pseudo and cats:
-            if set(tf) != set(cats):
-                out.append(f"{k}: plural forms {sorted(tf)} but {tag} needs {sorted(cats)}")
+            # an explicit zero form ("No changes") is the page's, not CLDR's: ttN
+            # takes it for 0 in any language, so a translation may carry it too
+            want_cats = set(cats) | ({"zero"} if "zero" in sf else set())
+            if set(tf) != want_cats and set(tf) != set(cats):
+                out.append(f"{k}: plural forms {sorted(tf)} but {tag} needs {sorted(want_cats)}")
         if not isinstance(src, str):
             want = set.union(*(placeholders(x) for x in sf.values())) - {"count"}
         else:
@@ -261,8 +264,11 @@ def check_catalogue(en: dict, cat: dict, tb: Optional[dict], tag: str, pseudo: b
             continue
         joined = " ".join(x for x in tf.values() if isinstance(x, str))
         joined_l = joined.lower()
+        # rule 1 tokens are read unescaped (&lt;key&gt; is <key>); so is the translation
+        joined_u = ENTITY.sub(lambda e: {"&lt;": "<", "&gt;": ">", "&amp;": "&", "&quot;": '"'}.get(
+            e.group(0).lower(), e.group(0)), joined)
         for tok in rule1_tokens(base, keep):
-            if tok not in joined:
+            if tok not in joined and tok not in joined_u:
                 out.append(f"{k}: rule 1: {tok!r} must appear as written")
         skip = set(exempt.get(k, []))
         for t in terms_in(base, cterms):
