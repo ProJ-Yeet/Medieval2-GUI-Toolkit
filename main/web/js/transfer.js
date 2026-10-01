@@ -1342,7 +1342,7 @@ function assetConflictUI(type,r){
           </div>
         </div>
       </div>
-      ${reloc?`<div class="count" style="margin-top:6px">${tt('transfer.files_keep_their_folder_structure_and')}</div>`:''}
+      ${reloc?`<div class="count" style="margin-top:6px">${tt(c.asset_conflict==='reroute'?'transfer.files_land_in_the_picked_folder':'transfer.files_keep_their_folder_structure_and')}</div>`:''}
       ${aDiff.length&&!reloc?`<div class="flist">${aDiff.map(x=>`<div class="frow"><span class="fp">${esc(x.rel)}</span><span class="fs">${tt('transfer.src_b_vs_dest_b',{src_size:x.src_size,dst_size:x.dst_size,x:x.src_size===x.dst_size?tt('transfer.same_size_different_bytes'):''})}</span></div>`).join('')}</div>`:''}
     </fieldset>`;
   }
@@ -1359,6 +1359,9 @@ function assetConflictUI(type,r){
         <label><input type="radio" name="ic" value="use_existing" ${c.icon_conflict!=='overwrite'?'checked':''}> ${tt('transfer.keep_the_existing_icon')}</label>
         <label><input type="radio" name="ic" value="overwrite" ${c.icon_conflict==='overwrite'?'checked':''}> ${tt('transfer.overwrite_with_the_sources')}</label>
       </div>
+      <div class="count" style="margin-top:6px">${c.icon_conflict==='overwrite'
+        ?tt('transfer.icons_overwrite_every_folder',{n:iDiff.length})
+        :tt('transfer.icons_keep_fills_only_empty_folders',{n:iDiff.length})}</div>
       <div class="flist">${iDiff.map(x=>`<div class="frow"><span class="fp">${esc(x.rel)}</span><span class="fs">${tt('transfer.src_b_vs_dest_b_2',{src_size:x.src_size,dst_size:x.dst_size})}</span></div>`).join('')}</div>`:''}
     </fieldset>`;
   }
@@ -1448,6 +1451,7 @@ async function doPreview(){
   let html=renderSummary((r.summary||'').split('\n')
     .filter(l=>!/ANIMATION WARNING \(soldier line\)/.test(l)).join('\n'));
   cfgFor(type)._conflict=r.unit_conflict;
+  cfgFor(type)._dictOwner=(r.unit_conflict&&!r.type_conflict)?(r.dict_conflict||''):'';
   // Having rendered the conflict fieldset (with its pre-filled rename defaults, editable
   // right here) IS the review step - don't also force a redundant "Apply again" pause in
   // doApply() for a unit whose resolution the user already saw and could adjust.
@@ -1663,7 +1667,11 @@ function wireEop(type){const c=cfgFor(type);
    It is prefilled with the source's name because that is what the record would
    have said, so the box shows the truth before it is touched. */
 function conflictUI(type){const c=cfgFor(type);const u=state.data.units.find(x=>x.type===type);
-  if(!c.new_type)c.new_type=type+' (copy)'; if(!c.new_dictionary)c.new_dictionary=u.dictionary+'_copy';
+  // Only the dictionary clashes: the type is free, so it keeps its own, and there
+  // is nothing of this type to overwrite.
+  const dictOnly=!!c._dictOwner;
+  if(dictOnly&&c.on_conflict==='overwrite')c.on_conflict='rename';
+  if(!c.new_type)c.new_type=dictOnly?type:type+' (copy)'; if(!c.new_dictionary)c.new_dictionary=u.dictionary+'_copy';
   if(c.new_name==null)c.new_name=u.name||'';
   const nameRow=`<label>${tt('transfer.displayed_name_what_the_player_reads')}
       <input id="nn" value="${esc(c.new_name)}"></label>`;
@@ -1680,10 +1688,12 @@ function conflictUI(type){const c=cfgFor(type);const u=state.data.units.find(x=>
       tt('transfer.type_and_dictionary_are_internal_keys'),
       tt('transfer.displayed_name_is_the_one_on'),
       tt('transfer.the_descriptions_are_copied_from_the')])}</div></fieldset>`;
-  return `<fieldset style="margin-top:10px;border-color:var(--warn)"><legend class="w-warn">${tt('transfer.unit_already_exists_in_destination')}</legend>
+  return `<fieldset style="margin-top:10px;border-color:var(--warn)"><legend class="w-warn">${dictOnly?tt('transfer.dictionary_already_used_in_destination'):tt('transfer.unit_already_exists_in_destination')}</legend>
+    ${dictOnly?`<div class="count">${docPoints(tt('transfer.dictionary_is_used_by',{dict:esc(u.dictionary),owner:esc(c._dictOwner)}),[
+      tt('transfer.two_units_on_one_dictionary_share')])}</div>`:''}
     <div class="radio-row">
       <label><input type="radio" name="cf" value="rename" ${c.on_conflict==='rename'?'checked':''}> ${tt('transfer.rename')}</label>
-      <label><input type="radio" name="cf" value="overwrite" ${c.on_conflict==='overwrite'?'checked':''}> ${tt('transfer.overwrite_existing')}</label>
+      ${dictOnly?'':`<label><input type="radio" name="cf" value="overwrite" ${c.on_conflict==='overwrite'?'checked':''}> ${tt('transfer.overwrite_existing')}</label>`}
       <label><input type="radio" name="cf" value="skip" ${c.on_conflict==='skip'?'checked':''}> ${tt('transfer.skip')}</label>
     </div>
     <div class="rename-fields" id="rf">

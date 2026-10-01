@@ -1623,6 +1623,11 @@ def _plan_payload(plan) -> dict:
         # what the player will see the unit called ("" = the source's own name)
         "resolved_name": plan.resolved_name,
         "unit_conflict": plan.unit_conflict,
+        # the destination type already using this unit's dictionary ("" = none)
+        "dict_conflict": plan.dict_conflict,
+        # True when the TYPE itself is taken, not just the dictionary
+        "type_conflict": plan.unit_conflict and not (
+            plan.dict_conflict and plan.unit_type not in plan.dest.edu.by_type()),
         "skipped": plan.skipped,
         "on_conflict": plan.options.on_conflict,
         "base_type": plan.options.base_type or "",

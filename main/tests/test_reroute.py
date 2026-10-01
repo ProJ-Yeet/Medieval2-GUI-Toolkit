@@ -96,6 +96,38 @@ undo(rec["id"])
 check("undo restored modeldb byte-exact", mdb_path.read_bytes() == orig_mdb)
 check("undo removed relocated files", not any(p.exists() for p in new_files))
 
+# 6) a reroute puts the files IN the picked folder: the source's own folder
+# (unit_models/_Units/<x>/) is dropped, not nested under the pick, which read
+# as <pick>/_Units/<x>/ in the tester's report.
+from unittransfer.transfer import _reroute_drops
+pick = "unit_models/_units/umbar_swap"
+rp = plan_transfer(src, UNIT, Mod(dest_root),
+                   TransferOptions(asset_conflict="reroute", asset_reroute_dir=pick))
+drops = _reroute_drops(rp.path_map)
+print("reroute drops:", drops)
+# this unit pulls from _Units/<x>/ AND AttachmentSets/, the usual pair
+check("reroute: each source tree's own folder is dropped",
+      len(drops) >= 2 and all(d != "unit_models" for d in drops))
+check("reroute: no source tree name is repeated under the pick", not any(
+    new.lower().startswith((pick + "/" + top).lower() + "/")
+    for new in rp.path_map.values() for top in ("_Units", "AttachmentSets")))
+check("reroute: no two files land on one path",
+      len({v.lower() for v in rp.path_map.values()}) == len(rp.path_map))
+# and when two would collide, the whole structure is kept instead
+check("reroute: a collision keeps the full structure", _reroute_drops([
+    "unit_models/_Units/A/x.texture", "unit_models/AttachmentSets/x.texture"]) == ())
+check("reroute: one tree lands flat", _reroute_drops([
+    "unit_models/_Units/Umbar/a.mesh", "unit_models/_units/umbar/textures/b.texture"])
+    == ("unit_models/_Units/Umbar",))
+rrec = apply_transfer(rp)
+check("reroute: the copied files exist", all((data / r).exists() for r in rp.path_map.values()))
+db3 = modeldb.parse_file(mdb_path).by_name()
+check("reroute: the added entries point into the pick", all(
+    p.startswith(pick + "/") for n, _ in rp.add_entries
+    for p in db3[n].mesh_files() + db3[n].texture_files() if p.lower().startswith("unit_models/")))
+undo(rrec["id"])
+check("reroute: undo restored modeldb byte-exact", mdb_path.read_bytes() == orig_mdb)
+
 shutil.rmtree(dest_root, ignore_errors=True); shutil.rmtree(cfg, ignore_errors=True)
 print("\n" + ("ALL PASSED" if all(ok) else "SOME FAILED"))
 sys.exit(0 if all(ok) else 1)

@@ -255,6 +255,10 @@ class TransferPlan:
     options: TransferOptions
     # unit conflict
     unit_conflict: bool = False
+    # The destination type that already uses this unit's DICTIONARY, when that is
+    # a different type. Two EDU entries sharing one dictionary share one
+    # export_units record and one set of cards, so it counts as a conflict too.
+    dict_conflict: str = ""
     resolved_type: str = ""            # type written into dest
     resolved_dict: str = ""            # dictionary written into dest
     # The name the PLAYER will see, written into the localisation record for
@@ -676,7 +680,10 @@ class TransferPlan:
         if self.unit_conflict:
             mode = self.options.on_conflict
             if mode == "rename":
-                L.append(f"  unit exists -> RENAMED to '{self.resolved_type}' (dict '{self.resolved_dict}')")
+                why = ("dictionary used by '" + self.dict_conflict + "'"
+                       if self.dict_conflict and self.resolved_type == self.unit_type
+                       else "unit exists")
+                L.append(f"  {why} -> RENAMED to '{self.resolved_type}' (dict '{self.resolved_dict}')")
                 if self.resolved_name:
                     L.append(f"      displayed name: '{self.resolved_name}'")
             elif mode == "overwrite":
@@ -1820,14 +1827,69 @@ def _reloc_target(opts: "TransferOptions", source: Mod) -> str:
     return ""
 
 
-def _canon_rel(rel: str, target: str) -> str:
+def _canon_rel(rel: str, target: str, drops: Tuple[str, ...] = ()) -> str:
     """Strip our relocation ``target`` prefix so a relocated path compares equal to
-    its pre-relocation form. Paths not under ``target`` are returned unchanged."""
+    its pre-relocation form. Paths not under ``target`` are returned unchanged.
+
+    ``drops`` are the source folders a reroute leaves out (`_reroute_drops`): a
+    source path under one reads the same way, so a rerouted copy still matches."""
     if target:
         p = target + "/"
         if rel.startswith(p):
             return UNIT_MODELS + "/" + rel[len(p):]
+    d = _drop_for(rel, drops)
+    if d and d != UNIT_MODELS:
+        return UNIT_MODELS + "/" + rel[len(d) + 1:]
     return rel
+
+
+def _drop_for(rel: str, drops) -> str:
+    """The folder in ``drops`` that ``rel`` sits under, or ''."""
+    low = rel.lower()
+    for d in drops:
+        if low.startswith(d.lower() + "/"):
+            return d
+    return ""
+
+
+def _reroute_drops(rels) -> Tuple[str, ...]:
+    """The source folders a reroute leaves out, one per top-level folder below
+    ``unit_models/``.
+
+    A reroute puts the files IN the folder the user picked. A unit's files sit in
+    a couple of trees at once - ``_Units/Umbar/...`` and ``AttachmentSets/...``
+    is the usual pair - so for each tree the folder all its files share is
+    dropped and only what lies below it is kept: ``_Units/Umbar/x.mesh`` lands as
+    ``<pick>/x.mesh``, not ``<pick>/_Units/Umbar/x.mesh``. Two files that would
+    then land on the same path keep the whole structure instead (``()`` - nothing
+    dropped), which is never wrong, only deeper. Case-insensitive throughout,
+    since one modeldb spells the same folder several ways."""
+    groups: Dict[str, List[str]] = {}
+    files = []
+    for rel in rels:
+        if not rel or not rel.lower().startswith(UNIT_MODELS + "/"):
+            continue
+        parts = rel.replace("\\", "/").split("/")
+        files.append(rel)
+        if len(parts) > 2:
+            groups.setdefault(parts[1].lower(), []).append(parts[:-1])
+    drops = []
+    for dirs in groups.values():
+        common = dirs[0]
+        for parts in dirs[1:]:
+            n = 0
+            while n < min(len(common), len(parts)) and common[n].lower() == parts[n].lower():
+                n += 1
+            common = common[:n]
+        drops.append("/".join(common))
+    landed = set()
+    for rel in files:
+        d = _drop_for(rel, drops)
+        key = (rel[len(d) + 1:] if d else rel[len(UNIT_MODELS) + 1:]).lower()
+        if key in landed:
+            return ()
+        landed.add(key)
+    return tuple(drops)
 
 
 def _canon_sprite(rel: str, tag: str) -> str:
@@ -1974,6 +2036,38 @@ def _unique_name(base: str, taken: set) -> str:
     while f"{base}_{i}" in taken:
         i += 1
     return f"{base}_{i}"
+
+
+def _unique_label(base: str, taken: set, sep: str) -> str:
+    """``base``, or ``base<sep>2``, ``base<sep>3``... - the first one not in
+    ``taken``. Compared case-insensitively: the game does not tell ``Foo`` and
+    ``foo`` apart as a type or a dictionary key."""
+    low = {t.lower() for t in taken}
+    if base.lower() not in low:
+        return base
+    i = 2
+    while f"{base}{sep}{i}".lower() in low:
+        i += 1
+    return f"{base}{sep}{i}"
+
+
+def _dict_owner(dest_units: dict, dictionary: str, unit_type: str) -> str:
+    """The destination type, other than ``unit_type``, whose dictionary is
+    ``dictionary``, or '' when none is."""
+    want = (dictionary or "").lower()
+    for t, u in dest_units.items():
+        if t != unit_type and (u.dictionary or "").lower() == want:
+            return t
+    return ""
+
+
+def _dest_dictionaries(dest: Mod, dest_units: dict) -> set:
+    """Every dictionary key the destination already uses: its units' and the
+    export_units records, an orphaned record included, since writing a new
+    unit over one would hand it someone else's text."""
+    out = {u.dictionary for u in dest_units.values() if u.dictionary}
+    out.update(dest.loc.entries.keys())
+    return out
 
 
 def _resolve_eop_target(plan: TransferPlan, unit) -> None:
@@ -2132,8 +2226,22 @@ def plan_transfer(source: Mod, unit_type: str, dest: Mod,
         plan.unit_conflict = False
         plan.dest_new_units = 0
     else:
-        plan.unit_conflict = unit_type in dest.edu.by_type()
+        dest_units = dest.edu.by_type()
+        type_clash = unit_type in dest_units
+        plan.dict_conflict = _dict_owner(dest_units, unit.dictionary, unit_type)
+        plan.unit_conflict = type_clash or bool(plan.dict_conflict)
         if plan.unit_conflict:
+            if opts.on_conflict == "overwrite" and not type_clash:
+                # Nothing of this type to overwrite: the clash is only the
+                # dictionary, and "overwriting" it would rewrite another unit's
+                # name and cards. Rename instead.
+                opts = dc_replace(opts, on_conflict="rename")
+                plan.options = opts
+                plan.warnings.append(_i18n.msg(
+                    "eng.transfer.dictionary_used_by_renamed",
+                    "'{type}' is new to the destination, but its dictionary '{dict}' "
+                    "belongs to '{owner}' - renamed instead of overwritten.",
+                    type=unit_type, dict=unit.dictionary, owner=plan.dict_conflict))
             if opts.on_conflict == "skip":
                 plan.skipped = True
                 plan.dest_new_units = 0
@@ -2141,8 +2249,20 @@ def plan_transfer(source: Mod, unit_type: str, dest: Mod,
             if opts.on_conflict == "overwrite":
                 plan.dest_new_units = 0    # replaces an existing type, no net add
             if opts.on_conflict == "rename":
-                plan.resolved_type = opts.new_type or (unit_type + " (copy)")
-                plan.resolved_dict = opts.new_dictionary or (unit.dictionary + "_copy")
+                want_type = (opts.new_type or "").strip() or (
+                    unit_type + " (copy)" if type_clash else unit_type)
+                want_dict = (opts.new_dictionary or "").strip() or (unit.dictionary + "_copy")
+                plan.resolved_type = _unique_label(want_type, set(dest_units), " ")
+                plan.resolved_dict = _unique_label(
+                    want_dict, _dest_dictionaries(dest, dest_units), "_")
+                for asked, got, what in ((want_type, plan.resolved_type, "type"),
+                                         (want_dict, plan.resolved_dict, "dictionary")):
+                    if asked != got:
+                        plan.warnings.append(_i18n.msg(
+                            "eng.transfer.rename_taken_used_instead",
+                            "the new {what} '{asked}' is already taken in the "
+                            "destination - '{got}' is used instead.",
+                            what=what, asked=asked, got=got))
 
     # ---- M2TWEOP: which file the block lands in ----
     if not models:
@@ -2244,7 +2364,16 @@ def plan_transfer(source: Mod, unit_type: str, dest: Mod,
     # back under the name it came with, for the same reason.
     reloc_target = _reloc_target(opts, source)
     sprite_tag = _tag(source) if opts.asset_conflict != "overwrite" else ""
-    canon = lambda p: _canon_sprite(_canon_rel(p, reloc_target), sprite_tag)
+    reroute_drops: Tuple[str, ...] = ()
+    if opts.asset_conflict == "reroute" and reloc_target:
+        seen_paths: List[str] = []
+        for nm in included:
+            e = source.modeldb.get(nm)
+            if e is not None:
+                e.content_key_mapped(lambda p: seen_paths.append(p) or p)
+        reroute_drops = _reroute_drops(p for p in dict.fromkeys(seen_paths)
+                                       if p and not p.startswith(reloc_target + "/"))
+    canon = lambda p: _canon_sprite(_canon_rel(p, reloc_target, reroute_drops), sprite_tag)
 
     def ckey(entry):
         return entry.content_key_mapped(canon)
@@ -2397,8 +2526,9 @@ def plan_transfer(source: Mod, unit_type: str, dest: Mod,
                     raw, projectile_map=plan.projectile_renames)
 
     # ---- relocation: reroute / mod_folder ----
-    # Move every copied mesh/texture under a target folder (keeping its structure
-    # below unit_models/), so nothing can collide with the destination's files.
+    # Move every copied mesh/texture under a target folder (mod_folder keeps its
+    # structure below unit_models/, reroute only what is below the unit's own
+    # folder), so nothing can collide with the destination's files.
     # The bmdb path strings are rewritten to match at apply time via path_map.
     if opts.asset_conflict in ("reroute", "mod_folder"):
         target = reloc_target
@@ -2407,17 +2537,25 @@ def plan_transfer(source: Mod, unit_type: str, dest: Mod,
                                  "under unit_models/ (e.g. unit_models/MyFolder)")
         else:
             plan.reroute_dir = target
-            prefix = UNIT_MODELS + "/"
+            # mod_folder keeps everything below unit_models/; a reroute drops the
+            # folders the unit's files share, so they land IN the picked folder
+            # rather than in <picked>/_Units/<source folder>/.
+            drops: Tuple[str, ...] = ()
+            if opts.asset_conflict == "reroute":
+                drops = _reroute_drops(rel for _a, rel in plan.asset_files
+                                       if not rel.startswith(target + "/"))
             remapped: List[Tuple[Path, str]] = []
             skipped_outside = 0
             for src_abs, rel in plan.asset_files:
-                if rel.startswith(prefix) and not rel.startswith(target + "/"):
-                    new_rel = f"{target}/{rel[len(prefix):]}"
+                if (rel.lower().startswith(UNIT_MODELS + "/")
+                        and not rel.startswith(target + "/")):
+                    cut = len(_drop_for(rel, drops) or UNIT_MODELS) + 1
+                    new_rel = f"{target}/{rel[cut:]}"
                     plan.path_map[rel] = new_rel
                     remapped.append((src_abs, new_rel))
                 else:
                     # outside unit_models/ (e.g. sprites) - cannot be relocated safely
-                    if not rel.startswith(prefix):
+                    if not rel.lower().startswith(UNIT_MODELS + "/"):
                         skipped_outside += 1
                     remapped.append((src_abs, rel))
             plan.asset_files = remapped
