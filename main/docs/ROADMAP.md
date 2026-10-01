@@ -409,7 +409,7 @@ on its own. The order is now:
 | 92 | Four things another import tool does that Unit Transfer does not | - | M, split 92a-92d | both |
 | 93 | Two reports on getting around | - | S, split 93a-93b | both |
 | 94 | A recruitment screen that lags, and its turns | - | M, split 94a-94b | both |
-| 88d | German, and the per-language workflow | - | M | both |
+| 88d | German, and the per-language workflow (done 2026-10-01) | - | M | both |
 | 88e, 88f | French, Spanish: one phase each | - | M each | both |
 | 88i | Polish | - | M | both |
 | 88m | Russian | - | M | both |
@@ -847,6 +847,45 @@ tooltip, never clip. Done when: the checker passes on `de`, `i18n_todo.py de`
 lists nothing, every screen is looked at in German at desktop width and
 375 px with nothing clipped or overlapping, and a reworded English string
 shows as stale in the report.
+
+*Done 2026-10-01.* **The workflow.** `dev/checks/i18n_todo.py <tag>` reports
+missing, stale and extra IDs by namespace; `--batch` writes the next strings
+with the termbase renderings they use, `--merge` holds each string to the
+checker on its own and merges only those that pass (under a lock, so several
+batches go in at once), and `--promote` checks the whole catalogue and moves
+it from `dev/i18n/` to `web/i18n/`, after which a merge writes there. The
+English each string was made from is hashed in `dev/i18n/<tag>.source.json`;
+a reworded English string shows as stale (checked). `dev/i18n/de.md` is
+German's style guide (Sie, infinitive buttons, „…“, the terms that need
+care) and holds the review notes: every `_exempt` taken, with why, and every
+coined word. **German**: 8,112 strings, 0 problems, written in nine batches
+(148 by hand to set the voice, the rest by helpers held to the guide and the
+checker), offered in Settings as *Deutsch (German) - Entwurf*.
+
+**What translating turned up**, fixed on the way: eight sites still made an
+English plural in code (`'y':'ies'`, `' is'`/`'s are'`), now `ttN` plurals
+that `i18n_joins.py` catches; eight HTML comments 88b had moved into the
+catalogue as text are comments again, and both scanners pass over comments;
+the checker read `<code>&lt;key&gt;</code>` two ways at once (no translation
+could pass) and refused English's explicit `zero` form in other languages;
+a stem may list alternatives for a vowel change (`stadt|städt`). The German
+termbase column: ancillary is *Gefolge* and turn *Runde* as in the German
+game, tier *Ausbaustufe*; shield, gate, ground types, sprite sheet, heights
+map, UV map and checkbox now match their whole term, not the bare common
+word that also means something else here.
+
+**The layout.** Every module measured for text clipped by a box that hides
+overflow, in German at the pane's desktop width and at 375 px: none from the
+translation (the cards' clipped names are the mod's own unit names, as in
+English). One squeeze at 375 px, the Buildings view toggle, fixed with
+`flex:none`; the page never scrolls sideways. The Settings dialog read at
+375 px.
+
+**Left for a native speaker**: the review notes in `dev/i18n/de.md`, the
+coined words there (*Gegenstück*, *Schmiede*, *Befund*, *Zuruf*...), and the
+`{noun}s` strings, which take an English word from the code and are worded
+around it. About 40 strings stay English on purpose: the unit file's own
+syntax (field orders, keyword values) as the file spells it.
 
 **88e to 88n - the other European and Cyrillic languages, one each:** 88e
 French `fr`, 88f Spanish `es`, 88g Italian `it`, 88h Portuguese (Brazil)

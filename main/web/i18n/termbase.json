@@ -16901,7 +16901,7 @@
    "tr": {
     "de": {
      "t": "Auswählen",
-     "stem": "auswähl",
+     "stem": "wähl",
      "src": "ms",
      "conf": "high"
     },
@@ -19868,10 +19868,9 @@
    "en": "checkbox",
    "forms": [
     "checkbox",
-    "tick",
-    "ticked"
+    "checkboxes"
    ],
-   "gloss": "a tick box; to tick it",
+   "gloss": "a tick box; to tick it; tick and ticked are the action, worded freely (angehakt, markiert)",
    "tr": {
     "de": {
      "t": "Kontrollkästchen",
