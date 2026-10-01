@@ -27,9 +27,12 @@ checker on its own; those that fail are reported and left out, the rest merged.
 """
 from __future__ import annotations
 
+import contextlib
 import hashlib
 import json
+import os
 import sys
+import time
 from pathlib import Path
 from typing import Dict, List, Optional
 
@@ -151,7 +154,35 @@ def batch(tag: str, spaces: List[str], limit: int, out: Optional[Path]) -> int:
     return 0
 
 
+@contextlib.contextmanager
+def _locked(tag: str):
+    """Several batches may be merged at once (one per helper); the catalogue
+    and its source hashes are read and written whole, so one at a time."""
+    lock = WORK / f"{tag}.lock"
+    WORK.mkdir(parents=True, exist_ok=True)
+    for _ in range(600):
+        try:
+            fd = os.open(lock, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+            break
+        except FileExistsError:
+            if time.time() - lock.stat().st_mtime > 120:
+                lock.unlink(missing_ok=True)  # a merge that died holding it
+            time.sleep(0.2)
+    else:
+        raise SystemExit(f"{lock} is held; remove it if no merge is running")
+    try:
+        yield
+    finally:
+        os.close(fd)
+        lock.unlink(missing_ok=True)
+
+
 def merge(tag: str, path: Path) -> int:
+    with _locked(tag):
+        return _merge(tag, path)
+
+
+def _merge(tag: str, path: Path) -> int:
     en = english()
     got = _read(path)
     exempt = got.pop("_exempt", {}) or {}

@@ -16,7 +16,8 @@ decides where its rendering comes from (see ROADMAP.md, Phase 88):
   **rule 4, the platform's standard term**: an entry with the English forms it is
   matched by, a gloss that says what it means here, and per language ``t`` (the
   rendering), ``stem`` (a lower-case piece present in every form of it a sentence
-  may use, so a case ending does not fail the check), ``src`` (where it comes
+  may use, so a case ending does not fail the check; ``|`` between stems where a
+  plural changes the vowel, ``stadt|städt``, the first inside ``t``), ``src`` (where it comes
   from: ``game``, ``community``, ``loan``, ``ms``) and ``conf`` (how sure the
   drafter was). A rendering with no source is *unsourced*, and reported.
 
@@ -113,7 +114,7 @@ def completeness(tb: dict) -> List[str]:
             t, stem, src = r.get("t", ""), r.get("stem", ""), r.get("src", "")
             if not t.strip():
                 out.append(f"{tid}/{lang}: empty rendering")
-            if not stem or stem not in t.lower():
+            if not stem or stem.split("|")[0] not in t.lower():
                 out.append(f"{tid}/{lang}: stem {stem!r} is not inside {t!r}")
             if not src:
                 out.append(f"{tid}/{lang}: unsourced")
@@ -270,7 +271,7 @@ def check_catalogue(en: dict, cat: dict, tb: Optional[dict], tag: str, pseudo: b
             r = (t.get("tr") or {}).get(tag)
             if not r:
                 out.append(f"{k}: term {t['id']} has no rendering in {tag}")
-            elif r["stem"].lower() not in joined_l:
+            elif not any(s in joined_l for s in r["stem"].lower().split("|")):
                 out.append(f"{k}: term {t['id']} ({t['en']}) should read {r['t']!r}")
     return out
 

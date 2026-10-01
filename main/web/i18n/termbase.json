@@ -851,7 +851,7 @@
    "tr": {
     "de": {
      "t": "Stadt",
-     "stem": "stadt",
+     "stem": "stadt|städt",
      "src": "game",
      "conf": "high",
      "note": "Plural Städte has an umlaut, so the stem covers only the singular"
@@ -1866,7 +1866,7 @@
    "tr": {
     "de": {
      "t": "Erbe",
-     "stem": "erb",
+     "stem": "erbe|erben",
      "src": "game",
      "conf": "high",
      "note": "Thronerbe in places"
@@ -2097,10 +2097,10 @@
    "gloss": "an item, follower or title a character can hold (a game term)",
    "tr": {
     "de": {
-     "t": "Gefolgsmann",
-     "stem": "gefolgs",
+     "t": "Gefolge",
+     "stem": "gefolg",
      "src": "game",
-     "conf": "low",
+     "conf": "medium",
      "note": "Game shows followers as Gefolgsleute; check the exact UI word"
     },
     "fr": {
@@ -4252,7 +4252,7 @@
    "tr": {
     "de": {
      "t": "Wachturm",
-     "stem": "wachtur",
+     "stem": "wachturm|wachtürm",
      "src": "game",
      "conf": "medium",
      "note": "Plural Wachtürme has an umlaut"
@@ -4585,7 +4585,7 @@
    "tr": {
     "de": {
      "t": "Turm",
-     "stem": "turm",
+     "stem": "turm|türm",
      "src": "game",
      "conf": "high",
      "note": "Plural Türme has an umlaut"
@@ -5037,9 +5037,9 @@
    "gloss": "a rung of a recruitment or upgrade chain (toolkit and modding usage)",
    "tr": {
     "de": {
-     "t": "Tier",
-     "stem": "tier",
-     "src": "loan",
+     "t": "Ausbaustufe",
+     "stem": "stufe",
+     "src": "community",
      "conf": "low",
      "note": "Kept English; Rang or Stufe would clash with level; also looks like the word Tier (animal)"
     },
@@ -7525,7 +7525,7 @@
    "tr": {
     "de": {
      "t": "Ratschlag",
-     "stem": "ratschlag",
+     "stem": "ratschlag|ratschläg",
      "src": "game",
      "conf": "medium",
      "note": "Plural Ratschläge; the advisor is Berater"
@@ -7869,10 +7869,10 @@
    "gloss": "a campaign turn",
    "tr": {
     "de": {
-     "t": "Zug",
-     "stem": "zug",
+     "t": "Runde",
+     "stem": "runde",
      "src": "game",
-     "conf": "high",
+     "conf": "medium",
      "note": "Plural Züge has an umlaut"
     },
     "fr": {
@@ -8096,7 +8096,7 @@
    "tr": {
     "de": {
      "t": "Kreuzzug",
-     "stem": "kreuzzug",
+     "stem": "kreuzzug|kreuzzüg",
      "src": "game",
      "conf": "high",
      "note": "Plural Kreuzzüge has an umlaut"
@@ -8548,7 +8548,7 @@
    "tr": {
     "de": {
      "t": "Fluss",
-     "stem": "fluss",
+     "stem": "fluss|flüss",
      "src": "game",
      "conf": "high",
      "note": "Plural Flüsse has an umlaut"
@@ -9469,11 +9469,9 @@
    "en": "animation pack",
    "forms": [
     "animation pack",
-    "animation packs",
-    "pack",
-    "packs"
+    "animation packs"
    ],
-   "gloss": "the game's packed animation archive (pack.dat + .pack)",
+   "gloss": "the game's packed animation archive (pack.dat + .pack); a bare \"pack\" is not matched, since the toolkit also calls a unit's zip a pack",
    "tr": {
     "de": {
      "t": "Animationspaket",
@@ -12435,7 +12433,7 @@
    "tr": {
     "de": {
      "t": "Eintrag",
-     "stem": "eintrag",
+     "stem": "eintrag|einträg",
      "src": "community",
      "conf": "high",
      "note": "Plural Einträge has an umlaut"
@@ -12549,7 +12547,7 @@
    "tr": {
     "de": {
      "t": "Datensatz",
-     "stem": "datensat",
+     "stem": "datensatz|datensätz",
      "src": "community",
      "conf": "high",
      "note": "Plural Datensätze has an umlaut"

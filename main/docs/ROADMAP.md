@@ -805,15 +805,16 @@ translation phase is only ever translation.
 after it:
 
 - **Work in progress is never offered.** Settings offers a locale as soon as
-  `web/i18n/<tag>.json` exists (`i18n.available`), so a catalogue is built
-  in `web/i18n/work/<tag>.json`, which nothing serves, and moved to
-  `web/i18n/<tag>.json` only when the checker passes on it whole. A half
+  `web/i18n/<tag>.json` exists (`i18n.available`), and `web/` ships whole,
+  so a catalogue is built in `dev/i18n/<tag>.json`, which never ships and
+  nothing serves, and moved to `web/i18n/<tag>.json` only when the checker
+  passes on it whole. A half
   translated language never reaches a user, and a session that stops in the
   middle leaves nothing broken.
 - **Resumable by namespace.** `dev/checks/i18n_todo.py <tag>` lists, for one
   language, the IDs still missing, the ones whose English changed since they
-  were translated (the catalogue's `_meta.source` keeps a hash of the English
-  each string was made from), and any the English no longer has, grouped by
+  were translated (`dev/i18n/<tag>.source.json` keeps a hash of the English
+  each string was made from, out of the catalogue the page loads whole), and any the English no longer has, grouped by
   namespace (`map.`, `transfer.`, `eng.buildings.`...). A language is written
   a namespace at a time, so a session ends at a namespace boundary and the
   next one starts from the list. The same report is what keeps a finished
@@ -825,8 +826,9 @@ after it:
   (the termbase it leans on is a model's draft); a native speaker who mods
   the game reading it is what makes it `reviewed`.
 
-**88d - German, and the workflow.** `i18n_todo.py`, the `work/` folder and
-its promotion step, `_meta.source`, and the German catalogue. German is
+**88d - German, and the workflow.** `i18n_todo.py`, the `dev/i18n/` work
+catalogue and its promotion step, the source hashes, a style guide per
+language (`dev/i18n/de.md`), and the German catalogue. German is
 first because it is the longest of the sixteen (often 30% past English), so
 it sets the layout: panels, toolbar and tabs wrap or truncate with a
 tooltip, never clip. Done when: the checker passes on `de`, `i18n_todo.py de`
