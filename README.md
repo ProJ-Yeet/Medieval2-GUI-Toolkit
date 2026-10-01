@@ -30,6 +30,9 @@ Then, in this order:
 On first run, open Settings and point it at your Medieval II install folder (the
 one containing `mods`).
 
+The interface is in English, or in German (*Deutsch*, a draft until a native
+speaker has read it over): Settings > Interface language.
+
 ## Modules
 
 | Module | What it does |
