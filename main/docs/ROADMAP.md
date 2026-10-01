@@ -396,8 +396,10 @@ notes on 74-76, is in `ROADMAP_ARCHIVE.md` under *The 2026-09-23 schedule*.
 
 On 2026-09-30 the user moved the translations to the end ("skip the languages
 phases for now and group them move it to later and do the other stages
-first"): 88a-88c are done, and 88d-88f (the catalogues themselves, several
-million tokens of output) wait until 89-94 are built. The order is now:
+first"): 88a-88c are done, and the catalogues themselves (several million
+tokens of output) wait until 89-94 are built. On 2026-10-01 the user had them
+split one language per phase, 88d-88t, so each can be done and stopped after
+on its own. The order is now:
 
 | # | Phase | Stars | Size | Line |
 |---|---|---|---|---|
@@ -407,7 +409,12 @@ million tokens of output) wait until 89-94 are built. The order is now:
 | 92 | Four things another import tool does that Unit Transfer does not | - | M, split 92a-92d | both |
 | 93 | Two reports on getting around | - | S, split 93a-93b | both |
 | 94 | A recruitment screen that lags, and its turns | - | M, split 94a-94b | both |
-| 88d-88f | The translations: European and Cyrillic, then CJK, then Arabic and right-to-left | - | L | both |
+| 88d | German, and the per-language workflow | - | M | both |
+| 88e-88n | French, Spanish, Italian, Portuguese (Brazil), Polish, Czech, Hungarian, Turkish, Russian, Ukrainian: one phase each | - | M each | both |
+| 88o | Simplified Chinese, and the CJK fonts and line breaking | - | M | both |
+| 88p-88r | Traditional Chinese, Japanese, Korean: one phase each | - | M each | both |
+| 88s | The right-to-left layout, under the `ar-XB` pseudo-locale | - | M | both |
+| 88t | Arabic | - | M | both |
 
 Releasing stays on request: each phase is committed to master as it lands.
 
@@ -784,28 +791,84 @@ Full suite: 14 of 167 red, each failing the same way on a worktree of the
 commit before (the 13 of 88b, and `modeldb_header`, which reads a mod file
 with a hand edit in it).
 
-**88d - the European and Cyrillic languages.** `de`, `fr`, `es`, `it`,
-`pt-BR`, `pl`, `cs`, `hu`, `tr`, `ru`, `uk`, translated against the
-termbase. German, the longest, sets the layout: panels, toolbar and tabs
-wrap or truncate with a tooltip, never clip. Done when: the checker passes
-for all eleven, and every screen is looked at in German at desktop width and
-375 px with nothing clipped or overlapping.
+**88d onward - one language per phase.** Split on 2026-10-01 on the user's
+word ("split apart the next phases into different languages so that i can
+safely do one at a time and start with one language"). Each phase is one
+catalogue, about 8,000 strings and 60,000 English words, and stands alone:
+stopping after any of them leaves a working toolkit with one more language in
+it, and nothing in a later phase depends on an earlier one's words. The
+order puts the one that tests the layout hardest first, and keeps the CJK
+groundwork and the right-to-left layout in their own first phases, so a
+translation phase is only ever translation.
 
-**88e - Chinese, Japanese and Korean.** The four catalogues, a font fallback
-stack of Windows system fonts per language (Microsoft YaHei, Microsoft
-JhengHei, Yu Gothic UI, Malgun Gothic), line breaking set for CJK
-(`line-break: strict` for Japanese), and no synthetic italics or letter
-spacing on CJK text. Done when: the checker passes, and every screen renders
-with no missing-glyph boxes and no line broken inside a word.
+**How a language is done safely**, set up in 88d and used by every phase
+after it:
 
-**88f - Arabic and right-to-left.** The Arabic catalogue, and the layout
-mirrored with `dir="rtl"`: `index.html` and the modules moved to CSS logical
-properties (`margin-inline-start`, `inset-inline-end`, `text-align: start`),
-panels and toolbars mirrored. What must **not** mirror stays left-to-right:
-the campaign map, the 3D viewer and every canvas, Code View's raw pane, file
-paths, coordinates and code names. Done when: every screen is walked in
-Arabic, and on the map a click, the tile pin and a drag land on the same tile
-as in English.
+- **Work in progress is never offered.** Settings offers a locale as soon as
+  `web/i18n/<tag>.json` exists (`i18n.available`), so a catalogue is built
+  in `web/i18n/work/<tag>.json`, which nothing serves, and moved to
+  `web/i18n/<tag>.json` only when the checker passes on it whole. A half
+  translated language never reaches a user, and a session that stops in the
+  middle leaves nothing broken.
+- **Resumable by namespace.** `dev/checks/i18n_todo.py <tag>` lists, for one
+  language, the IDs still missing, the ones whose English changed since they
+  were translated (the catalogue's `_meta.source` keeps a hash of the English
+  each string was made from), and any the English no longer has, grouped by
+  namespace (`map.`, `transfer.`, `eng.buildings.`...). A language is written
+  a namespace at a time, so a session ends at a namespace boundary and the
+  next one starts from the list. The same report is what keeps a finished
+  language current after later phases add or reword text.
+- **Never the whole catalogue in context.** A batch is the report's slice of
+  `en.json` and the termbase's column for that language, and only the new
+  strings come back.
+- **Draft until reviewed.** Every language lands as `draft` in the picker
+  (the termbase it leans on is a model's draft); a native speaker who mods
+  the game reading it is what makes it `reviewed`.
+
+**88d - German, and the workflow.** `i18n_todo.py`, the `work/` folder and
+its promotion step, `_meta.source`, and the German catalogue. German is
+first because it is the longest of the sixteen (often 30% past English), so
+it sets the layout: panels, toolbar and tabs wrap or truncate with a
+tooltip, never clip. Done when: the checker passes on `de`, `i18n_todo.py de`
+lists nothing, every screen is looked at in German at desktop width and
+375 px with nothing clipped or overlapping, and a reworded English string
+shows as stale in the report.
+
+**88e to 88n - the other European and Cyrillic languages, one each:** 88e
+French `fr`, 88f Spanish `es`, 88g Italian `it`, 88h Portuguese (Brazil)
+`pt-BR`, 88i Polish `pl`, 88j Czech `cs`, 88k Hungarian `hu`, 88l Turkish
+`tr`, 88m Russian `ru`, 88n Ukrainian `uk`. Each is the catalogue only,
+through 88d's workflow. Polish, Czech, Russian and Ukrainian carry three or
+four plural forms each, and the checker holds every `ttN` string to them.
+Done when, for each: the checker passes, the report is empty, and Home,
+Settings, Transfer and the map are walked in it at desktop width.
+
+**88o - Simplified Chinese, and the CJK groundwork.** The `zh-Hans`
+catalogue, plus what all four CJK languages share: a font fallback stack of
+Windows system fonts per language (Microsoft YaHei, Microsoft JhengHei, Yu
+Gothic UI, Malgun Gothic), line breaking set for CJK, and no synthetic
+italics or letter spacing on CJK text. Done when: the checker passes, and
+every screen renders with no missing-glyph boxes and no line broken inside a
+word.
+
+**88p to 88r - the other CJK languages, one each:** 88p Chinese
+(Traditional) `zh-Hant`, 88q Japanese `ja` (with `line-break: strict`), 88r
+Korean `ko`. Done when, for each: the checker passes, the report is empty,
+and the screens show no missing-glyph boxes.
+
+**88s - the right-to-left layout, no translation.** Done under the `ar-XB`
+pseudo-locale (English mirrored), so the layout work is separate from any
+Arabic words: `index.html` and the modules moved to CSS logical properties
+(`margin-inline-start`, `inset-inline-end`, `text-align: start`), panels and
+toolbars mirrored. What must **not** mirror stays left-to-right: the campaign
+map, the 3D viewer and every canvas, Code View's raw pane, file paths,
+coordinates and code names. Done when: every screen is walked in `ar-XB`, and
+on the map a click, the tile pin and a drag land on the same tile as in
+English.
+
+**88t - Arabic.** The `ar` catalogue, with its six plural forms, on 88s's
+layout. Done when: the checker passes, the report is empty, and every screen
+is walked in Arabic.
 
 # Phase 89 - four reports from users, scheduled 2026-09-26
 
