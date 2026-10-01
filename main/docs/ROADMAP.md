@@ -410,11 +410,18 @@ on its own. The order is now:
 | 93 | Two reports on getting around | - | S, split 93a-93b | both |
 | 94 | A recruitment screen that lags, and its turns | - | M, split 94a-94b | both |
 | 88d | German, and the per-language workflow | - | M | both |
-| 88e-88n | French, Spanish, Italian, Portuguese (Brazil), Polish, Czech, Hungarian, Turkish, Russian, Ukrainian: one phase each | - | M each | both |
+| 88e, 88f | French, Spanish: one phase each | - | M each | both |
+| 88m, 88n | Russian, Ukrainian: one phase each | - | M each | both |
 | 88o | Simplified Chinese, and the CJK fonts and line breaking | - | M | both |
 | 88p-88r | Traditional Chinese, Japanese, Korean: one phase each | - | M each | both |
-| 88s | The right-to-left layout, under the `ar-XB` pseudo-locale | - | M | both |
-| 88t | Arabic | - | M | both |
+
+**Postponed indefinitely** on 2026-10-01 (the user: "Postpone italian,
+portugese, polish, czech, hungarian, turkish, arabic indefinitely for now"):
+88g Italian, 88h Portuguese (Brazil), 88i Polish, 88j Czech, 88k Hungarian,
+88l Turkish, and 88t Arabic with 88s, the right-to-left layout, which only
+Arabic needs. Their write-ups below stay as the plan for when they come back;
+their termbase columns stay, and nothing offers them while they have no
+catalogue.
 
 Releasing stays on request: each phase is committed to master as it lands.
 
@@ -839,7 +846,8 @@ shows as stale in the report.
 **88e to 88n - the other European and Cyrillic languages, one each:** 88e
 French `fr`, 88f Spanish `es`, 88g Italian `it`, 88h Portuguese (Brazil)
 `pt-BR`, 88i Polish `pl`, 88j Czech `cs`, 88k Hungarian `hu`, 88l Turkish
-`tr`, 88m Russian `ru`, 88n Ukrainian `uk`. Each is the catalogue only,
+`tr`, 88m Russian `ru`, 88n Ukrainian `uk`. **88g to 88l are postponed
+indefinitely** (2026-10-01, see the schedule). Each is the catalogue only,
 through 88d's workflow. Polish, Czech, Russian and Ukrainian carry three or
 four plural forms each, and the checker holds every `ttN` string to them.
 Done when, for each: the checker passes, the report is empty, and Home,
@@ -858,7 +866,8 @@ word.
 Korean `ko`. Done when, for each: the checker passes, the report is empty,
 and the screens show no missing-glyph boxes.
 
-**88s - the right-to-left layout, no translation.** Done under the `ar-XB`
+**88s - the right-to-left layout, no translation.** *Postponed indefinitely
+with Arabic (2026-10-01).* Done under the `ar-XB`
 pseudo-locale (English mirrored), so the layout work is separate from any
 Arabic words: `index.html` and the modules moved to CSS logical properties
 (`margin-inline-start`, `inset-inline-end`, `text-align: start`), panels and
@@ -868,7 +877,7 @@ coordinates and code names. Done when: every screen is walked in `ar-XB`, and
 on the map a click, the tile pin and a drag land on the same tile as in
 English.
 
-**88t - Arabic.** The `ar` catalogue, with its six plural forms, on 88s's
+**88t - Arabic.** *Postponed indefinitely (2026-10-01).* The `ar` catalogue, with its six plural forms, on 88s's
 layout. Done when: the checker passes, the report is empty, and every screen
 is walked in Arabic.
 
