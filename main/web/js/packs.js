@@ -116,7 +116,7 @@ function packImportRender(){
             <div class="bs">${esc(u.type)} · ${esc([u.kind,u.class].filter(Boolean).join(' · '))}${
               u.mount?` ${tt('packs.rides')} <code>${esc(u.mount)}</code>`:''}</div></div>
         </div>`).join('')||`<div class="caprow"><span class="count">${tt('packs.this_pack_names_no_units')}</span></div>`}</div>
-      <div class="bnote">${tt('packs.battle_model_entr_travel_with_them',{entries_n:r.entries.length,x:r.entries.length===1?'y':'ies'})}</div>
+      <div class="bnote">${ttN('packs.battle_model_entr_travel_with_them',r.entries.length)}</div>
     </div>
     <div class="foot">
       <button onclick="closeModal()">${tt('common.cancel')}</button>
@@ -197,8 +197,8 @@ function renderCleanup(){
       ${sec('orphans',tt('packs.files_under_unit_models_no_entry'),()=>clOrphanBody())}
 
       ${clLuaBox(a)}
-      ${a.mentioned.length?`<div class="count">${tt('packs.more_entr_used_by_no_unit',{mentioned_n:a.mentioned.length,mentioned:a.mentioned.length===1?tt('packs.y_is'):tt('packs.ies_are'),x:[...new Set(a.mentioned.map(m=>m.file))].slice(0,4).map(esc).join('</code>, <code>')})}</div>`:''}
-      ${a.mentioned_mounts.length?`<div class="count">${tt('packs.mount_ridden_by_no_unit_but',{mentioned_mounts_n:a.mentioned_mounts.length,mentioned_mounts:a.mentioned_mounts.length===1?' is':tt('common.s_are')})}</div>`:''}
+      ${a.mentioned.length?`<div class="count">${ttN('packs.more_entr_used_by_no_unit',a.mentioned.length,{x:[...new Set(a.mentioned.map(m=>m.file))].slice(0,4).map(esc).join('</code>, <code>')})}</div>`:''}
+      ${a.mentioned_mounts.length?`<div class="count">${ttN('packs.mount_ridden_by_no_unit_but',a.mentioned_mounts.length)}</div>`:''}
       ${a.campaign_files.length?`<div class="count">${tt('packs.campaign_and_battle_scripts_also_read',{campaign_files_n:a.campaign_files.length,campaign_files:a.campaign_files.slice(0,8).map(esc).join('</code>, <code>'),campaign_files2:a.campaign_files.length>8?tt('packs.and_more',{campaign_files:a.campaign_files.length-8}):''})}</div>`:''}
       <div id="clPreview"></div>
     </div>
@@ -334,7 +334,7 @@ function clCountText(k){
   if(k==='merges')return tt('packs.ticked_needs_your_eye',{merges_n:c.merges.size,merges_n2:a.merges.length});
   if(k==='mounts'){
     const frees=a.unused_mounts.filter(m=>c.mounts.has(m.mount)&&m.frees_model).length;
-    return tt('packs.ticked_2',{mounts_n:c.mounts.size,unused_mounts_n:a.unused_mounts.length,frees:frees?tt('packs.frees_entr',{frees,frees2:frees===1?'y':'ies'}):''});
+    return tt('packs.ticked_2',{mounts_n:c.mounts.size,unused_mounts_n:a.unused_mounts.length,frees:frees?ttN('packs.frees_entr',frees):''});
   }
   const bytes=a.orphans.reduce((n,o)=>n+(c.orphans.has(o.rel)?o.size:0),0);
   return tt('packs.ticked_3',{orphans_n:c.orphans.size,orphans_n2:a.orphans.length,x:MB(bytes)});
@@ -494,7 +494,7 @@ function rcRunsHtml(r){
       <div class="grow"><span class="nm">${esc(x.when)}</span>
         ${x.hits?`<span class="badge w-bad" style="border-color:var(--bad)">${tt('packs.flagged',{hits:x.hits})}</span>`
           :`<span class="badge" style="color:var(--good);border-color:var(--good)">${tt('packs.nothing_flagged')}</span>`}
-        <div class="sub">${tt('packs.file_s_and_entr_removed_still',{files:x.files,x:x.entries,x2:x.entries===1?'y':'ies',missing:x.missing})}</div>
+        <div class="sub">${tt('packs.file_s_and_entr_removed_still',{files:x.files,entries:ttN('packs.entry_count',x.entries),missing:x.missing})}</div>
         <div class="sub">${tt('packs.backup_export_folder',{backup_here:x.backup_here?`<b class="w-good">${tt('packs.present')}</b>`
           :tt('packs.gone',{backup:esc(x.backup||tt('packs.not_recorded'))}),export_here:x.export_here?`<b class="w-good">${tt('packs.present')}</b>`
           :tt('packs.gone_2',{export:esc(x.export||tt('packs.not_recorded'))})})}</div>

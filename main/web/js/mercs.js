@@ -226,7 +226,7 @@ function mcpNotesHtml(d){
   // 32c's one repair. Which pool a province stays in is a choice, so it is
   // offered both ways and goes through 32a's region_move like any other move
   const two = Object.entries(d.in_two || {});
-  if(two.length) out.push(`<div class="w-warn">${tt('mercs.province_in_more_than_one_pool',{two_n:two.length,two:two.length === 1 ? ' is' : tt('common.s_are'),x:two.map(([low, pools]) => {
+  if(two.length) out.push(`<div class="w-warn">${ttN('mercs.province_in_more_than_one_pool',two.length,{x:two.map(([low, pools]) => {
       const name = mcpRegionName(d, low);
       return `<div class="cmbar2"><code>${esc(name)}</code><span class="sp"></span>${
         pools.map(p => `<button onclick="mcpKeepIn('${q1(esc(name))}', '${q1(esc(p))}')"

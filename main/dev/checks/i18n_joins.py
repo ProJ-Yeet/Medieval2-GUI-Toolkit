@@ -43,7 +43,10 @@ CALL = re.compile(r"(?<![\w$.])(tt[AN]?)\(")
 # an English plural made in code: a ternary that yields '' or 's' (or 'es', 'ies')
 PLURAL = re.compile(
     r"""(?:[?]\s*(?:''|"")\s*:\s*(?:'s'|"s"|'es'|"es"|'ies'|"ies"|'y'|"y")"""
-    r"""|[?]\s*(?:'s'|"s"|'es'|"es"|'ies'|"ies")\s*:\s*(?:''|""))""")
+    r"""|[?]\s*(?:'s'|"s"|'es'|"es"|'ies'|"ies")\s*:\s*(?:''|"")"""
+    # 88d: 'y' : 'ies' (entr-y), and ' is' : the catalogue's 's are' in either order
+    r"""|[?]\s*(?:'y'|"y")\s*:\s*(?:'ies'|"ies")"""
+    r"""|[?]\s*(?:' is'|" is"|'is'|"is")\s*:)""")
 # an s glued straight onto a counted noun: `${n} file${n===1?'':'s'}` is caught above;
 # this is the bare  + 's'  and  + (n===1?'':'s')  forms
 PLURAL_CAT = re.compile(r"""\+\s*(?:'s'|"s")(?![\w])""")

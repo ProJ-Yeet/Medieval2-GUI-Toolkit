@@ -126,7 +126,6 @@
 "app.settings_medieval_ii_root_folder_launcher": "Settings: Medieval II root folder, launcher, defaults",
 "app.settlement": "Settlement",
 "app.shows": "Shows",
-"app.the_uis_code_split_by_module": "<!-- The UI's code, split by module. Plain",
 "app.title": "Medieval 2 GUI Toolkit",
 "app.to": "→ To",
 "app.transfer_selected_0": "Transfer selected (0)",
@@ -2285,7 +2284,6 @@
 "common.resources": "Resources",
 "common.retry": "Retry",
 "common.revert": "Revert",
-"common.s_are": "s are",
 "common.save": "Save",
 "common.save_changes": "Save changes",
 "common.saved_log_can_undo_it": "Saved. 🕑 Log can undo it.",
@@ -6441,7 +6439,10 @@
 "one": "{count} province",
 "other": "{count} provinces"
 },
-"mercs.province_in_more_than_one_pool": "{two_n} province{two} in more than one pool, which the file's own header forbids. Keep each in one: {x}",
+"mercs.province_in_more_than_one_pool": {
+"one": "{count} province is in more than one pool, which the file's own header forbids. Keep it in one: {x}",
+"other": "{count} provinces are in more than one pool, which the file's own header forbids. Keep each in one: {x}"
+},
 "mercs.provinces_and_lines": "{provinces} · {lines}{x}",
 "mercs.reading_descr_mercenaries_txt_and_the": "reading <code>descr_mercenaries.txt</code> and the five files its gates name…",
 "mercs.reading_the_mercenary_pools": "reading the mercenary pools",
@@ -6851,7 +6852,10 @@
 "one": "The other <b>{count}</b> cannot - the backup and the export folder are both gone, so that file has to come from a fresh copy of the mod.",
 "other": "The other <b>{count}</b> cannot - the backup and the export folder are both gone, so they have to come from a fresh copy of the mod."
 },
-"packs.battle_model_entr_travel_with_them": "{entries_n} battle-model entr{x} travel with them. Importing mounts the pack as a source mod and drops you in the normal transfer screen, so name clashes, the base unit, ownership and every other option are asked there. Nothing is written until you press Transfer.",
+"packs.battle_model_entr_travel_with_them": {
+"one": "{count} battle-model entry travels with them. Importing mounts the pack as a source mod and drops you in the normal transfer screen, so name clashes, the base unit, ownership and every other option are asked there. Nothing is written until you press Transfer.",
+"other": "{count} battle-model entries travel with them. Importing mounts the pack as a source mod and drops you in the normal transfer screen, so name clashes, the base unit, ownership and every other option are asked there. Nothing is written until you press Transfer."
+},
 "packs.battle_model_entries": {
 "one": "{count} battle-model entry",
 "other": "{count} battle-model entries"
@@ -6899,7 +6903,11 @@
 "one": "Export {count} unit as a pack",
 "other": "Export {count} units as a pack"
 },
-"packs.file_s_and_entr_removed_still": "{files} file(s) and {x} entr{x2} removed · {missing} still missing from the mod",
+"packs.file_s_and_entr_removed_still": "{files} file(s) and {entries} removed · {missing} still missing from the mod",
+"packs.entry_count": {
+"one": "{count} entry",
+"other": "{count} entries"
+},
 "packs.files": {
 "one": "{count} file",
 "other": "{count} files"
@@ -6909,7 +6917,10 @@
 "packs.flagged": "{hits} flagged",
 "packs.folder_to_move_the_unused_assets": "Folder to move the unused assets into",
 "packs.frees": "frees {model}",
-"packs.frees_entr": " · frees {frees} entr{frees2}",
+"packs.frees_entr": {
+"one": " · frees {count} entry",
+"other": " · frees {count} entries"
+},
 "packs.from_the": "from the {source}",
 "packs.gone": "<b class=\"w-bad\">gone</b> ({backup})",
 "packs.gone_2": "<b class=\"w-bad\">gone</b> ({export})",
@@ -6917,7 +6928,6 @@
 "one": "{count} icon",
 "other": "{count} icons"
 },
-"packs.ies_are": "ies are",
 "packs.import_a_unit_pack": "Import a unit pack",
 "packs.in_a_comment_and_still_protected": " (in a comment, and still protected)",
 "packs.into": "into",
@@ -6949,8 +6959,14 @@
 "other": "{count} modeldb entries"
 },
 "packs.modeldb_entry": "modeldb entry",
-"packs.more_entr_used_by_no_unit": "{mentioned_n} more entr{mentioned} used by no unit but named in another file (<code>{x}</code>) They are left alone.",
-"packs.mount_ridden_by_no_unit_but": "{mentioned_mounts_n} mount{mentioned_mounts} ridden by no unit but still named in a <code>descr_*.txt</code>, so they are not offered above.",
+"packs.more_entr_used_by_no_unit": {
+"one": "{count} more entry is used by no unit but named in another file (<code>{x}</code>). It is left alone.",
+"other": "{count} more entries are used by no unit but named in another file (<code>{x}</code>). They are left alone."
+},
+"packs.mount_ridden_by_no_unit_but": {
+"one": "{count} mount is ridden by no unit but still named in a <code>descr_*.txt</code>, so it is not offered above.",
+"other": "{count} mounts are ridden by no unit but still named in a <code>descr_*.txt</code>, so they are not offered above."
+},
 "packs.mount_s_are_removed_from_descr": "{mount_deletes_n} mount(s) are removed from descr_mount.txt.\n\n",
 "packs.mounts_list": {
 "one": "mount: {list}",
@@ -7044,7 +7060,6 @@
 "packs.working_out_what_has_to_travel": "Working out what has to travel…",
 "packs.writing_the_pack": "Writing the pack…",
 "packs.wrote_file_s": "Wrote <code>{path}</code>: {files} file(s), {x}",
-"packs.y_is": "y is",
 "portui.already_here_and_left_alone": "{skipped_n} already here and left alone: {x}{x2}",
 "portui.already_in_this_mod": "· <b class=\"w-warn\">already in this mod</b>",
 "portui.and_more": "…and {x} more",
@@ -8127,7 +8142,10 @@
 "one": "{count} file",
 "other": "{count} files"
 },
-"stratmap.file_named_by_no_model_but": "{held_file_count} file{held_file_count2} named by no model, but their bare filename turns up in a <code>descr_*.txt</code> or a script - so they are not offered above either.",
+"stratmap.file_named_by_no_model_but": {
+"one": "{count} file is named by no model, but its bare filename turns up in a <code>descr_*.txt</code> or a script - so it is not offered above either.",
+"other": "{count} files are named by no model, but their bare filename turns up in a <code>descr_*.txt</code> or a script - so they are not offered above either."
+},
 "stratmap.files_sitting_in_data_models_strat": "Files sitting in <code>data/models_strat</code> that <b>nothing</b> in the mod names - not a model block, not a faction symbol, not a resource, not a script. They go to <code>unused_files\\</code> in the destination, paths mirrored. A <code>.tga</code> and the <code>.tga.dds</code> beside it count as one texture, so ticking one never leaves the other stranded.",
 "stratmap.files_under_no_model_names": "Files under {x} no model names",
 "stratmap.folder_to_move_the_unused_strat": "Folder to move the unused strat-map assets into",
@@ -8162,7 +8180,10 @@
 "other": "<b>{count}</b> models are named by one of this mod's {scripts} and nothing else, so they are not offered for removal."
 },
 "stratmap.more": " +{use_count} more",
-"stratmap.more_model_used_by_no_character": "{mentioned_n} more model{mentioned} used by no character but named in another file (<code>{x}</code>). They are left alone.",
+"stratmap.more_model_used_by_no_character": {
+"one": "{count} more model is used by no character but named in another file (<code>{x}</code>). It is left alone.",
+"other": "{count} more models are used by no character but named in another file (<code>{x}</code>). They are left alone."
+},
 "stratmap.move_strat_models_confirm": {
 "one": "Move {count} strat model and {export_count} file(s) out of “{mod}”?\n\nThey are copied to:\n{target}\n\nEverything touched is backed up first. 🕑 Log → Undo puts it all back.",
 "other": "Move {count} strat models and {export_count} file(s) out of “{mod}”?\n\nThey are copied to:\n{target}\n\nEverything touched is backed up first. 🕑 Log → Undo puts it all back."

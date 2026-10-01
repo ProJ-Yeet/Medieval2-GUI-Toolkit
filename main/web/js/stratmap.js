@@ -324,8 +324,8 @@ function renderStratCleanup(){
       ${sec('orphans',tt('stratmap.files_under_no_model_names',{x:esc(a.skipped_dir.split('/')[0])}),()=>stmOrphanBody())}
 
       ${stmLuaBox(a)}
-      ${a.mentioned.length?`<div class="count">${tt('stratmap.more_model_used_by_no_character',{mentioned_n:a.mentioned.length,mentioned:a.mentioned.length===1?' is':tt('common.s_are'),x:[...new Set(a.mentioned.map(m=>m.file))].slice(0,4).map(esc).join('</code>, <code>')})}</div>`:''}
-      ${a.held_file_count?`<div class="count">${tt('stratmap.file_named_by_no_model_but',{held_file_count:a.held_file_count,held_file_count2:a.held_file_count===1?' is':tt('common.s_are')})}</div>`:''}
+      ${a.mentioned.length?`<div class="count">${ttN('stratmap.more_model_used_by_no_character',a.mentioned.length,{x:[...new Set(a.mentioned.map(m=>m.file))].slice(0,4).map(esc).join('</code>, <code>')})}</div>`:''}
+      ${a.held_file_count?`<div class="count">${ttN('stratmap.file_named_by_no_model_but',a.held_file_count)}</div>`:''}
       <div class="count"><code>${esc(a.skipped_dir)}</code> ${tt('stratmap.is_skipped_entirely_the_game_picks')}</div>
       <div id="stmPreview"></div>
     </div>
