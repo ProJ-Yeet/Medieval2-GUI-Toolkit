@@ -414,7 +414,7 @@ on its own. The order is now:
 | 88i | Polish | - | M | both |
 | 88m | Russian | - | M | both |
 | 88o | Simplified Chinese, and the CJK fonts and line breaking | - | M | both |
-| 88p-88r | Traditional Chinese, Japanese, Korean: one phase each | - | M each | both |
+| 88p | Traditional Chinese | - | M | both |
 
 **Postponed indefinitely** on 2026-10-01 (the user: "Postpone italian,
 portugese, polish, czech, hungarian, turkish, arabic indefinitely for now"):
@@ -425,6 +425,7 @@ their termbase columns stay, and nothing offers them while they have no
 catalogue.
 Polish (88i) was brought back the same day ("bring back polish to
 roadmap"), and 88n Ukrainian postponed with the rest ("postpone ukranian
+too"), then 88q Japanese and 88r Korean ("postpone japanese and korean
 too").
 
 Releasing stays on request: each phase is committed to master as it lands.
@@ -865,7 +866,8 @@ italics or letter spacing on CJK text. Done when: the checker passes, and
 every screen renders with no missing-glyph boxes and no line broken inside a
 word.
 
-**88p to 88r - the other CJK languages, one each:** 88p Chinese
+**88p to 88r - the other CJK languages, one each** (*88q and 88r postponed
+indefinitely, 2026-10-01*): 88p Chinese
 (Traditional) `zh-Hant`, 88q Japanese `ja` (with `line-break: strict`), 88r
 Korean `ko`. Done when, for each: the checker passes, the report is empty,
 and the screens show no missing-glyph boxes.
