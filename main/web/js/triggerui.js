@@ -109,7 +109,7 @@ function trgHtml(tr){
       ${tt('triggerui.whentotest',{x:trgEventSelect(tr)})}
     </div>
     <div class="trghint">${ev
-      ? tt('triggerui.exports',{x:esc(ev.hint||''),x2:(ev.exports||[]).map(esc).join(', ')||'nothing'})
+      ? tt('triggerui.exports',{x:esc(ev.hint||''),x2:(ev.exports||[]).map(esc).join(', ')||tt('triggerui.nothing')})
       : (tr.when?`<span class="w-bad">${tt('triggerui.no_engine_event_is_called',{when:esc(tr.when)})}</span>`
                :`<span class="count">${tt('triggerui.pick_the_moment_this_trigger_is')}</span>`)}</div>
     <div class="trgconds" id="trgc-${tr.uid}">

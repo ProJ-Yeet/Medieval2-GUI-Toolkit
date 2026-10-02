@@ -410,7 +410,8 @@ on its own. The order is now:
 | 93 | Two reports on getting around | - | S, split 93a-93b | both |
 | 94 | A recruitment screen that lags, and its turns | - | M, split 94a-94b | both |
 | 88d | German, and the per-language workflow (done 2026-10-01) | - | M | both |
-| 88e, 88f | French, Spanish: one phase each | - | M each | both |
+| 88e | French | - | M | both |
+| 88f | Spanish (done 2026-10-02) | - | M | both |
 | 88i | Polish | - | M | both |
 | 88m | Russian | - | M | both |
 | 88o | Simplified Chinese, and the CJK fonts and line breaking | - | M | both |
@@ -896,6 +897,34 @@ through 88d's workflow. Polish, Czech, Russian and Ukrainian carry three or
 four plural forms each, and the checker holds every `ttN` string to them.
 Done when, for each: the checker passes, the report is empty, and Home,
 Settings, Transfer and the map are walked in it at desktop width.
+
+*88f done 2026-10-02, ahead of 88e on the user's word ("start spanish
+next").* **Spanish**: 8,120 strings, 0 problems, offered in Settings as
+*Español (Spanish) - borrador*. Spain Spanish as the Spanish release of the
+game, *tú* but impersonal where it can be, infinitive buttons, «…».
+`dev/i18n/es.md` is the style guide and the review notes. 92 strings by hand
+to set the voice, the rest in eight batches by helpers held to the guide and
+the checker. The Spanish termbase column narrowed where it collided:
+ancillary *séquito*, tier *grado* (level is *nivel*), log *Historial*
+(record is *registro*), add *Añadir*, tooltip *descripción emergente*; the
+stems of battle model, strat model, mount and view take their plurals and
+participles. Every module measured for clipped text at desktop width, and
+Home, Transfer, the map, My Changes, the unit editor, Buildings and Settings
+at 375 px: nothing clipped but the mod's own unit names, no sideways scroll.
+
+**What translating turned up**, fixed for every language: the trigger
+editor's *and*/*or* joiner was read back from its translated label, so a
+German user wrote `oder` into the trigger file (the options now carry
+`value`); about thirty sites filled a placeholder with English typed in the
+code (`' has'`/`'s have'`, `'an'`, `'wider'`, `'summer or winter'`,
+`' to '`, `'(nobody)'`...), now whole sentences, plurals or translated
+values (42 new IDs, 8,162 in all). **Still English from the server**: the
+`noun` in the `eng.minorfiles`, `eng.flatrecord` and `eng.portrecords`
+messages, Home's module rows (`_module_rows` in `modfiles.py`), the
+`{tail}` clause `mapcheck.py` builds for an unreachable settlement, and the
+terrain names in the ground messages; My Changes no longer throws when it is reopened before its first
+load lands. German's 8 strings from the 2026-10-01 transfer fixes were
+filled.
 
 **88o - Simplified Chinese, and the CJK groundwork.** The `zh-Hans`
 catalogue, plus what all four CJK languages share: a font fallback stack of

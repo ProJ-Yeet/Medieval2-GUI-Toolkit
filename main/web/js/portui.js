@@ -31,7 +31,13 @@
 // {kind, source, dest, ov, sel:Set, q, plan, busy, withTriggers, overwrite}
 let portState = null;
 
-const PORT_NOUN = {traits:'trait', ancillaries:'ancillary'};
+//: What the list holds, in the page's language: one catalogue entry per kind,
+//: asked for one (n = 1) or several (n = 2).
+function portNoun(kind, n){
+  return kind === 'traits' ? ttN('portui.noun_trait', n)
+    : kind === 'ancillaries' ? ttN('portui.noun_ancillary', n)
+    : ttN('portui.noun_record', n);
+}
 
 /* Opened from the Traits or the Ancillaries list. The destination is always the
    mod being edited - this is a way IN to the mod on screen, not a general
@@ -83,13 +89,13 @@ function portRows(){
 
 function portRender(){
   const p = portState; if(!p) return;
-  const noun = PORT_NOUN[p.kind] || 'record';
+  const noun = portNoun(p.kind, 1), nouns = portNoun(p.kind, 2);
   const others = (state.mods||[]).map(m=>m.name).filter(n=>n!==p.dest);
   const ov = p.ov;
   const rows = portRows();
-  const body = !ov ? `<div class="empty">${tt('portui.reading_s_s',{source:esc(p.source),noun:esc(noun)})}</div>`
+  const body = !ov ? `<div class="empty">${tt('portui.reading_s_s',{source:esc(p.source),nouns:esc(nouns)})}</div>`
     : ov.error ? `<div class="w-bad">${esc(ov.error)}</div>`
-    : `<div class="count" style="margin:8px 0">${ttN('portui.n_nouns_in_source_already_exist_in_dest',ov.count,{noun:esc(noun),source:esc(ov.source),already:ov.already,dest:esc(ov.dest),error:ov.dest_error?`<br><span class="w-bad">${esc(ov.dest_error)}</span>`:''})}</div>
+    : `<div class="count" style="margin:8px 0">${ttN('portui.n_nouns_in_source_already_exist_in_dest',ov.count,{noun:esc(noun),nouns:esc(nouns),source:esc(ov.source),already:ov.already,dest:esc(ov.dest),error:ov.dest_error?`<br><span class="w-bad">${esc(ov.dest_error)}</span>`:''})}</div>
       <div class="barrow">
         <input placeholder="${ttA('portui.filter')}" value="${esc(p.q)}" style="flex:1"
           oninput="portState.q=this.value;portRowsPaint()">
@@ -100,7 +106,7 @@ function portRender(){
       </div>
       <div class="portlist" id="portList">${rows.map(portRowHtml).join('')}</div>`;
   document.getElementById('modal').innerHTML = `
-    <h2>${tt('portui.port_s_into',{noun:esc(noun)})} <span class="pill">${esc(p.dest)}</span></h2>
+    <h2>${tt('portui.port_s_into',{nouns:esc(nouns)})} <span class="pill">${esc(p.dest)}</span></h2>
     <div class="mbody">
       <div class="count" style="margin-bottom:8px">${docPoints(
         tt('portui.each_one_brings_three_things_because',{noun:esc(noun)}),[
@@ -183,7 +189,7 @@ const portBody = () => ({kind:portState.kind, source:portState.source,
 async function portPreview(){
   const p = portState, box = document.getElementById('portPreview');
   if(!p || !box) return null;
-  if(!p.sel.size){ toast(tt('portui.tick_at_least_one',{x:PORT_NOUN[p.kind]||'record'})); return null; }
+  if(!p.sel.size){ toast(tt('portui.tick_at_least_one',{x:portNoun(p.kind, 1)})); return null; }
   box.innerHTML = `<div class="preview">${tt('common.planning')}</div>`;
   let r;
   try{ r = await api.post('/api/port/plan', portBody()); }
@@ -220,7 +226,7 @@ async function portApply(){
   if(!pl) return;
   if((pl.errors||[]).length){ toast('✗ ' + pl.errors[0], 6000); return; }
   if(!pl.ok){ toast(tt('portui.nothing_to_write_everything_picked_is'), 5000); return; }
-  const noun = PORT_NOUN[p.kind] || 'record';
+  const noun = portNoun(p.kind, 1);
   const lines = (pl.changes||[]).slice(0, 12);
   const warn = (pl.warnings||[]).slice(0, 5).map(w => '⚠ ' + w);
   if(!confirm(tt('portui.port_from_into_confirm',{sel_n:p.sel.size,noun,source:p.source,dest:p.dest,

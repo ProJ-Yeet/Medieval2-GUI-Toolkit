@@ -81,6 +81,7 @@ function chgPaint(){
     return;
   }
   const s = k.sum;
+  if(!s) return;   // still loading: loadChanges paints when it lands
   main.innerHTML = `<div class="chgwrap">
     ${chgHeadHtml(s)}
     ${typeof pzHtml === 'function' ? pzHtml() : ''}

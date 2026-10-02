@@ -189,7 +189,7 @@ async function hzSave(){
   finally{ z.busy = false; }
   if(res.error){ toast('✗ ' + res.error, 8000); return; }
   toast(tt('hordestart.horde_start_written_log_can_undo'));
-  activity('horde', tt('hordestart.files',{mod:k.mod,faction:k.faction,mode:body.mode,n:(res.files || []).length}));
+  activity('horde', tt('hordestart.files',{mod:k.mod,faction:k.faction,mode:body.mode === 'start' ? tt('hordestart.on_the_map_from_turn_one') : tt('hordestart.arrives_later_as_vanillas_mongols_do'),n:(res.files || []).length}));
   if(state.cmap !== map || !map || map.campaign !== campaign || state.cx !== k) return;
   const open = k.open;
   k.d = null;

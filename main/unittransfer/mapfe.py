@@ -391,8 +391,9 @@ def view(mod, campaign: str, cm: "campmap.CampaignMap") -> dict:
     out["zoom"] = round(fr.zoom(img.width), 6)
     # what the screen was doing before this panel existed, said plainly,
     # because it is the reason the panel is worth opening
-    out["was"] = (f"{img.width}x{img.height} squeezed into {grid[0]}x{grid[1]} "
-                  f"and scaled again" if (img.width, img.height) != grid else "")
+    # [picture w, h, grid w, h], or [] when nothing was squeezed; the page words it
+    out["was"] = ([img.width, img.height, grid[0], grid[1]]
+                  if (img.width, img.height) != grid else [])
     return out
 
 

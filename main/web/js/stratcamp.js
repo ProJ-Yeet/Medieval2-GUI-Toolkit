@@ -412,8 +412,7 @@ async function cjSave(extra){
     ? tt('stratcamp.runs_and_more',{runs:runs.slice(0, 6).join(', '),more:runs.length - 6})
     : runs.join(', ');
   if(!confirm(tt('stratcamp.write_confirm',{
-    head:body.faction ? tt('stratcamp.write_for_in',{what:body.what,faction:body.faction,campaign:k.d.campaign})
-      : tt('stratcamp.write_in',{what:body.what,campaign:k.d.campaign}),
+    head:cjWriteHead(body),
     changes:lines.join('\n') || tt('common.no_visible_change'),
     more:(p.changes || []).length > 14
        ? tt('stratcamp.and_more',{changes:p.changes.length - 14}) : '',
@@ -434,6 +433,20 @@ async function cjSave(extra){
   if(at && state.cmap) cmapPick(at);
 }
 
+//: The first line of the write confirmation: one whole sentence per thing written.
+function cjWriteHead(body){
+  const p = {faction:body.faction, campaign:state.cj.d.campaign};
+  switch(body.what){
+    case 'globals': return tt('stratcamp.write_header_in',p);
+    case 'rosters': return tt('stratcamp.write_lists_in',p);
+    case 'standings': return tt('stratcamp.write_standings_for_in',p);
+    case 'create': return tt('stratcamp.write_new_faction_in',p);
+    case 'relationships': return tt('stratcamp.write_relationships_for_in',p);
+    case 'delete': return tt('stratcamp.write_delete_in',p);
+    default: return tt('stratcamp.write_faction_in',p);
+  }
+}
+
 async function cjWinSave(extra){
   const k = state.cj;
   const body = Object.assign(cjWinBody(), extra || {});
@@ -448,7 +461,10 @@ async function cjWinSave(extra){
   k.preview = p;
   cjPaint();
   const warn = (p.warnings || []).slice(0, 4).map(x => '⚠ ' + x);
-  if(!confirm(tt('stratcamp.write_wins_confirm',{action:body.action,faction:body.faction,
+  const winsId = body.action === 'add' ? 'stratcamp.write_wins_add'
+    : body.action === 'delete' ? 'stratcamp.write_wins_delete'
+    : 'stratcamp.write_wins_edit';
+  if(!confirm(tt(winsId,{faction:body.faction,
     changes:(p.changes || []).join('\n') || tt('common.no_visible_change'),
     warnings:warn.length ? '\n\n' + warn.join('\n') : ''}))) return;
   k.busy = true;
@@ -546,7 +562,7 @@ function cjGlobalsHtml(){
     ${note ? `<div class="count">${note}</div>` : ''}</div>`;
   return `<div class="cxform">
     <div class="csrow2">
-      ${box('start_date', tt('stratcamp.starts'), tt('stratcamp.a_year_and_season',{seasons:v.seasons.join(' or ')}))}
+      ${box('start_date', tt('stratcamp.starts'), tt('stratcamp.a_year_and_season',{seasons:v.seasons.map(x => `<code>${esc(x)}</code>`).join(' / ')}))}
       ${box('end_date', tt('stratcamp.ends'), '')}
     </div>
     <div class="csrow2">

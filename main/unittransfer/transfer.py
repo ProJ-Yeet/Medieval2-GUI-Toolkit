@@ -1002,7 +1002,7 @@ def officer_base_import(base_unit, dest: Mod, unit, opts: "TransferOptions"):
 
 
 def _swap_entry_animations(plan: "TransferPlan", dest: Mod, model_name: str,
-                           donor, what: str, undo_hint: str):
+                           donor, what: str):
     """Give one copied modeldb entry ``donor``'s animation set.
 
     A skeleton is an ``animations/*.cas`` pack the destination either has or
@@ -1027,7 +1027,9 @@ def _swap_entry_animations(plan: "TransferPlan", dest: Mod, model_name: str,
             return "", []                # its own animations work here - keep them
         if donor is None or not donor.animations:
             plan.warnings.append(
-                _i18n.msg("eng.transfer.model_needs_animation_s_which_does", "{what} model '{name}' needs animation(s) {missing}, which {name2} does not have, and the base unit's {what2} has no readable modeldb entry to borrow an animation set from. Copy the .cas files over by hand, or the game will crash on load.", what=what, name=entry.name, missing=', '.join(missing), name2=dest.name, what2=what))
+                _i18n.msg("eng.transfer.model_needs_animation_s_which_does_mount", "mount model '{name}' needs animation(s) {missing}, which {name2} does not have, and the base unit's mount has no readable modeldb entry to borrow an animation set from. Copy the .cas files over by hand, or the game will crash on load.", name=entry.name, missing=', '.join(missing), name2=dest.name)
+                if what == "mount" else
+                _i18n.msg("eng.transfer.model_needs_animation_s_which_does_officer", "officer model '{name}' needs animation(s) {missing}, which {name2} does not have, and the base unit's officer has no readable modeldb entry to borrow an animation set from. Copy the .cas files over by hand, or the game will crash on load.", name=entry.name, missing=', '.join(missing), name2=dest.name))
             return "", []
         raw = modeldb.rewrite_animations(entry.raw, donor.animations,
                                          pad=entry.first_entry_pad)
@@ -1044,7 +1046,9 @@ def _swap_entry_animations(plan: "TransferPlan", dest: Mod, model_name: str,
         plan.missing_skeletons = [s for s in plan.missing_skeletons
                                   if s not in missing or s in still_wanted]
         plan.warnings.append(
-            _i18n.msg("eng.transfer.the_s_model_uses_animation_s", "the {what}'s model '{name}' uses animation(s) {missing}, which {name2} does not have. It was given '{name3}'s instead (the base unit's {what2}), so it animates like the base's - it may move unexpectedly in battle. {undo_hint}", what=what, name=entry.name, missing=', '.join(missing), name2=dest.name, name3=donor.name, what2=what, undo_hint=undo_hint))
+            _i18n.msg("eng.transfer.the_s_model_uses_animation_s_mount", "the mount's model '{name}' uses animation(s) {missing}, which {name2} does not have. It was given '{name3}'s instead (the base unit's mount), so it animates like the base's - it may move unexpectedly in battle. Pick “port as is” for the mount to keep the original skeletons and copy them over yourself.", name=entry.name, missing=', '.join(missing), name2=dest.name, name3=donor.name)
+            if what == "mount" else
+            _i18n.msg("eng.transfer.the_s_model_uses_animation_s_officer", "the officer's model '{name}' uses animation(s) {missing}, which {name2} does not have. It was given '{name3}'s instead (the base unit's officer), so it animates like the base's - it may move unexpectedly in battle. Pick “port as is” for the officers to keep the original skeletons and copy them over yourself.", name=entry.name, missing=', '.join(missing), name2=dest.name, name3=donor.name))
         return donor.name, missing
     return "", []
 
@@ -1106,9 +1110,7 @@ def _plan_anim_port(plan: "TransferPlan", source: Mod, dest: Mod) -> None:
 def _apply_mount_anim_donor(plan: "TransferPlan", source: Mod, dest: Mod,
                             unit, donor) -> None:
     name, missing = _swap_entry_animations(
-        plan, dest, source.mount_model(unit.mount), donor, "mount",
-        "Pick “port as is” for the mount to keep the original skeletons and copy "
-        "them over yourself.")
+        plan, dest, source.mount_model(unit.mount), donor, "mount")
     plan.mount_anim_donor, plan.mount_skeletons_swapped = name, missing
 
 
@@ -1116,9 +1118,7 @@ def _apply_officer_anim_donor(plan: "TransferPlan", source: Mod, dest: Mod,
                               unit, donor) -> None:
     for off in unit.officers:
         name, missing = _swap_entry_animations(
-            plan, dest, off, donor, "officer",
-            "Pick “port as is” for the officers to keep the original skeletons and "
-            "copy them over yourself.")
+            plan, dest, off, donor, "officer")
         if name:
             plan.officer_anim_donor = name
             plan.officer_skeletons_swapped += [s for s in missing
@@ -2259,10 +2259,15 @@ def plan_transfer(source: Mod, unit_type: str, dest: Mod,
                                          (want_dict, plan.resolved_dict, "dictionary")):
                     if asked != got:
                         plan.warnings.append(_i18n.msg(
-                            "eng.transfer.rename_taken_used_instead",
-                            "the new {what} '{asked}' is already taken in the "
+                            "eng.transfer.rename_taken_used_instead_type",
+                            "the new type '{asked}' is already taken in the "
                             "destination - '{got}' is used instead.",
-                            what=what, asked=asked, got=got))
+                            asked=asked, got=got)
+                            if what == "type" else _i18n.msg(
+                            "eng.transfer.rename_taken_used_instead_dictionary",
+                            "the new dictionary '{asked}' is already taken in the "
+                            "destination - '{got}' is used instead.",
+                            asked=asked, got=got))
 
     # ---- M2TWEOP: which file the block lands in ----
     if not models:

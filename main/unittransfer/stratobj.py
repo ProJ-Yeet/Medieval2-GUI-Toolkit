@@ -553,6 +553,12 @@ class Vocabulary:
         except MapError:
             return None
 
+    def marker_of(self, gx: int, gy: int) -> Tuple[str, str]:
+        """``(name, "settlement" | "port")`` for a marker pixel, else ``("", "")``."""
+        if self.cm is None:
+            return "", ""
+        return self.markers.get(self.cm.image_xy(gx, gy), ("", ""))
+
     def marker(self, gx: int, gy: int) -> str:
         """``"Nottingham_Province's settlement"`` for a marker pixel, else ``""``."""
         if self.cm is None:
@@ -808,7 +814,9 @@ def check_object(voc: Vocabulary, spec: Spec, sf: StratFile,
         v = getattr(spec, slot)
         if not is_int(v):
             out.append(finding(f"obj.{slot}", True,
-                               _i18n.msg("eng.stratobj.is_which_is_not_a_whole", "{slot} is {x}, which is not a whole number.", slot=slot, x=v if v not in (None, '') else '(nothing)')))
+                               _i18n.msg("eng.stratobj.is_which_is_not_a_whole", "{slot} is {x}, which is not a whole number.", slot=slot, x=v)
+                               if v not in (None, '') else
+                               _i18n.msg("eng.stratobj.is_empty_which_is_not_a_whole", "{slot} is empty, which is not a whole number.", slot=slot)))
     xy = spec.xy()
     if xy is not None and voc.cm is not None:
         gx, gy = xy
@@ -985,11 +993,13 @@ def _tile_findings(voc: Vocabulary, spec: Spec, sf: StratFile, section: str,
                 "obj.ground", False,
                 _i18n.msg("eng.stratobj.is_which_no_army_can_walk", "{gx},{gy} is {name}, which no army can walk onto. Four of DaC's watchtowers stand on it and no fort does.", gx=gx, gy=gy, name=g['name']),
                 x=gx, y=gy))
-    mark = voc.marker(gx, gy)
-    if mark:
+    mark_name, mark_kind = voc.marker_of(gx, gy)
+    if mark_kind:
         out.append(finding(
             "obj.marker", False,
-            _i18n.msg("eng.stratobj.is_pixel_none_of_the_800", "{gx},{gy} is {mark} pixel. None of the 800 forts and watchtowers measured stands on a settlement or a port.", gx=gx, gy=gy, mark=mark), x=gx, y=gy))
+            _i18n.msg("eng.stratobj.is_pixel_none_of_the_800_port", "{gx},{gy} is {name}'s port pixel. None of the 800 forts and watchtowers measured stands on a settlement or a port.", gx=gx, gy=gy, name=mark_name)
+            if mark_kind == "port" else
+            _i18n.msg("eng.stratobj.is_pixel_none_of_the_800_settlement", "{gx},{gy} is {name}'s settlement pixel. None of the 800 forts and watchtowers measured stands on a settlement or a port.", gx=gx, gy=gy, name=mark_name), x=gx, y=gy))
     others = [n for n in cen.at.get((gx, gy), []) if n is not me
               and n.kind in SECTIONED]
     if others:

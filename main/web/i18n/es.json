@@ -540,10 +540,6 @@
   "home.mounted_pack": [
    "mount"
   ],
-  "eng.stratobj.is_pixel_none_of_the_800": [
-   "port",
-   "port_verb"
-  ],
   "eng.stratobj.there_is_no_folder_under_any": [
    "settlement"
   ],
@@ -927,6 +923,12 @@
   ],
   "viewer3d.groups_over_pool": [
    "pool"
+  ],
+  "eng.stratobj.is_pixel_none_of_the_800_port": [
+   "port_verb"
+  ],
+  "eng.stratobj.is_pixel_none_of_the_800_settlement": [
+   "port_verb"
   ]
  },
  "ancillaries.a_character_holds_one_ancillary_per": "Un personaje solo puede tener un séquito de cada tipo, así que este es el que sustituiría uno nuevo",
@@ -5999,7 +6001,6 @@
  "eng.stratobj.is_in_no_declared_province_and_this_is_filed_under": "{gx},{gy} no está en ninguna provincia declarada, y este elemento ({what}) está archivado bajo {section}. {good} de los {total} de esta campaña están en la provincia bajo la que se archivan.",
  "eng.stratobj.is_not_a_province_this_map": "{want} no es una provincia que declare este mapa",
  "eng.stratobj.is_off_the_x_tile_grid": "{gx},{gy} queda fuera de la cuadrícula de casillas de {width}x{height}, así que este elemento ({what}) no tiene dónde estar.",
- "eng.stratobj.is_pixel_none_of_the_800": "En {gx},{gy} hay un píxel de {mark}. Ninguno de los 800 fuertes y atalayas medidos está sobre un asentamiento o un puerto.",
  "eng.stratobj.is_sea_a_is_built_on": "{gx},{gy} es mar. Un elemento ({what}) se construye en tierra: una atalaya de las 800 de las dos campañas de DaC está en el mar, y ningún fuerte.",
  "eng.stratobj.is_which_is_not_a_whole": "{slot} es {x}, que no es un número entero.",
  "eng.stratobj.is_which_no_army_can_walk": "{gx},{gy} es {name}, por donde ningún ejército puede pasar. Cuatro de las atalayas de DaC están ahí y ningún fuerte.",
@@ -6101,7 +6102,6 @@
  "eng.transfer.mercenary_attribute_attribute_added_bmdb_entries": "atributo de mercenario: se añade el atributo '{MERC_ATTR}' y las entradas de BMDB reciben una máscara '{MERC_TEX_FACTION}'.",
  "eng.transfer.mercenary_icons_card_info_card_go": "iconos de mercenario: la tarjeta y la tarjeta de información van a ui/units/{MERC_CARD_DIR}/ + ui/unit_info/{MERC_INFO_DIR}/ (fijadas mediante card_pic_dir/info_pic_dir).",
  "eng.transfer.mercenary_to_actually_recruit_it_add": "mercenario: para poder reclutarlo de verdad, hay que añadir una entrada de reserva en data/world/maps/campaign/imperial_campaign/descr_mercenaries.txt; esta herramienta no escribe ese archivo.",
- "eng.transfer.model_needs_animation_s_which_does": "el modelo ({what}) '{name}' necesita animaciones {missing}, que {name2} no tiene, y la unidad base ({what2}) no tiene ninguna entrada de modeldb legible de la que tomar un conjunto de animaciones. Hay que copiar los archivos .cas a mano, o el juego se cerrará de forma inesperada al cargar.",
  "eng.transfer.mount_definition_is_being_added_but": "se está añadiendo la definición de montura '{mount_name}', pero su modelo '{model}' se ha excluido; ese modelo ya tiene que existir en el destino.",
  "eng.transfer.mount_has_no_entry_in_the": "la montura '{mount}' no tiene ninguna entrada en el descr_mount.txt del origen",
  "eng.transfer.no_sheet_textures_000_texture_found": "no se han encontrado texturas de hoja (<name>_000.texture) junto a '{rel}'; puede que los sprites lejanos no se dibujen.",
@@ -6122,7 +6122,6 @@
   "many": "RECLUTAMIENTO: se añaden {count} de reservas de reclutamiento para {unit} ({owners}).",
   "other": "RECLUTAMIENTO: se añaden {count} reservas de reclutamiento para {unit} ({owners})."
  },
- "eng.transfer.rename_taken_used_instead": "el nombre nuevo '{asked}' ({what}) ya está ocupado en el destino; se usa '{got}' en su lugar.",
  "eng.transfer.replacing_its_edu_block_is_rewritten": "sustitución de '{type}': su bloque del EDU se reescribe en su sitio, así que no se añade ningún tipo de unidad ni ninguna entrada de diccionario. Conserva su nombre, descripción, estadísticas, pertenencia y época; solo cambian los modelos.",
  "eng.transfer.s_previous_battle_models_are_left": "los modelos de batalla anteriores de '{type}' se dejan en battle_models.modeldb (puede que otras unidades aún los usen). Si no los usa nada más, después se puede usar la limpieza del editor de BMDB.",
  "eng.transfer.secondary_model_s_excluded_their_edu": "{excluded_n} modelo(s) secundario(s) excluido(s); sus nombres del EDU se conservan y ya tienen que existir en el destino.",
@@ -6136,7 +6135,6 @@
  "eng.transfer.the_destinations_skeleton_pack_changed_since": "el paquete de esqueletos del destino ha cambiado desde que se planificó esta transferencia, y los esqueletos quedarían con otros nombres; hay que planificarla de nuevo",
  "eng.transfer.the_imported_card_s_would_replace": "las tarjetas importadas sustituirían los archivos propios de '{replace_type}', pero la regla de iconos está en conservar los del destino, así que no se escribiría nada. Hay que elegir «sobrescribir» en Tarjeta de unidad / iconos de información.",
  "eng.transfer.the_models_existing_skin": "la máscara que ya tiene el modelo",
- "eng.transfer.the_s_model_uses_animation_s": "el modelo '{name}' ({what}) usa animaciones {missing}, que {name2} no tiene. Se le han dado las de '{name3}' (la unidad base, {what2}), así que se anima como la base y puede moverse de forma inesperada en la batalla. {undo_hint}",
  "eng.transfer.the_soldier_line_comes_from_but_the_armour_only": "la línea de soldado viene de '{who}', pero los modelos de mejora de armadura son solo '{soldier}', el modelo de soldado del origen. El juego dibuja la entrada de mejora según el nivel de armadura de la unidad, así que en ese nivel la unidad sigue viéndose como '{soldier}'. Si no es lo que se quiere, hay que poner también Mejoras de armadura en '{who}'.",
  "eng.transfer.the_soldier_line_comes_from_but_the_armour_still": "la línea de soldado viene de '{who}', pero los modelos de mejora de armadura siguen listando '{soldier}', el modelo de soldado del origen. El juego dibuja la entrada de mejora según el nivel de armadura de la unidad, así que en ese nivel la unidad sigue viéndose como '{soldier}'. Si no es lo que se quiere, hay que poner también Mejoras de armadura en '{who}'.",
  "eng.transfer.the_soldier_line_comes_from_so": "la línea de soldado viene de '{who}', así que la unidad se anima como {soldier_anim_changed} en lugar de {soldier_anim_changed2}. No provocará un cierre inesperado, pero puede moverse y luchar de forma inesperada en la batalla: otro conjunto de animaciones implica otros tiempos de ataque y otro alcance.",
@@ -7200,7 +7198,7 @@
  "mapcheck.warnings": "Advertencias",
  "mapcheck.went_to_at": "fue a {code} en {x}",
  "mapcheck.write_it": "Escribirlo",
- "mapfe.before_this_panel_the_picture_was": "Antes de este panel, la imagen quedaba así al meterla en el lienzo: {was}. Ahora se dibuja a su propio tamaño sobre el marco de abajo, así que nada la remuestrea.",
+ "mapfe.before_this_panel_the_picture_was": "Antes de este panel, la imagen ({was}) se comprimía a {grid} y se escalaba de nuevo para caber en el lienzo. Ahora se dibuja a su propio tamaño sobre el marco de abajo, de modo que nada la remuestrea.",
  "mapfe.compose_the_ticked_layers_at_the": "Compone las capas marcadas al tamaño propio de la imagen y escribe un TGA\nen la caché, con la cabecera del map_FE.tga de este mod.",
  "mapfe.export_at": "⭳ Exportar a {x}×{x2}",
  "mapfe.fe_zoom": "⊹ Zoom FE",
@@ -7695,8 +7693,8 @@
  "minorfiles.opened_record": "abrió el registro",
  "minorfiles.pick_a_noun_on_the_left": {
   "one": "Hay que elegir uno a la izquierda: {noun}.<br> <span class=\"count\">{noun}: {count} en data/{file}</span>{refused}",
-  "many": "Hay que elegir uno a la izquierda: {noun}.<br> <span class=\"count\">{noun}: {count} en data/{file}</span>{refused}",
-  "other": "Hay que elegir uno a la izquierda: {noun}.<br> <span class=\"count\">{noun}: {count} en data/{file}</span>{refused}"
+  "many": "Hay que elegir uno a la izquierda: {nouns}.<br> <span class=\"count\">{nouns}: {count} en data/{file}</span>{refused}",
+  "other": "Hay que elegir uno a la izquierda: {nouns}.<br> <span class=\"count\">{nouns}: {count} en data/{file}</span>{refused}"
  },
  "minorfiles.pip": "Pip",
  "minorfiles.pip_from": "Pip de",
@@ -7817,7 +7815,6 @@
   "other": "{count} usuarios"
  },
  "osmmap.a_chunk_to_fetch_again": "un fragmento que volver a descargar",
- "osmmap.a_planned_on_where_stands_check_it": "Previsto en {gx}, {gy}, donde está {x}: {kind}. Hay que revisarlo y guardarlo desde el panel Fuertes.",
  "osmmap.a_region": "una región",
  "osmmap.a_town_a_region_a_country": "una localidad, una región, un país",
  "osmmap.ad": "d. C.",
@@ -7909,7 +7906,6 @@
  "osmmap.style": "Estilo",
  "osmmap.svg": "SVG",
  "osmmap.the_box": "El recuadro",
- "osmmap.the_box_stretches_the_map_than": "Comparado con el suelo real, el recuadro estira el mapa un {st}% ({st2}): el selector de mundo puede darle la forma del mapa.",
  "osmmap.the_coastline_has_a_gap_the": "La costa tiene un hueco: el lado del agua llega a {leak} casillas que según su propio cálculo son tierra, así que no se puede rellenar. Hay que usar la línea como guía para el pincel de agua.",
  "osmmap.the_historical_borders_as_openhistoricalmap_has": "Las fronteras históricas tal como las tiene OpenHistoricalMap para el 1 de enero de ese año: una guía de calco para las regiones.",
  "osmmap.the_label": "{label}",
@@ -7970,7 +7966,6 @@
  "osmworld.the_box": "El recuadro",
  "osmworld.the_box_cannot_take_this_maps": "El recuadro no puede tomar allí la forma de este mapa sin pasar del polo.",
  "osmworld.the_box_is_this_maps_shape": "El recuadro tiene la forma de este mapa.",
- "osmworld.the_box_would_stretch_the_map": "Comparado con el suelo real, el recuadro estiraría el mapa un {st}% ({st2}).",
  "osmworld.the_cities": "Las ciudades",
  "osmworld.the_new_maps_width": "El ancho del mapa nuevo",
  "osmworld.the_world_as": "El mundo como",
@@ -8249,8 +8244,8 @@
  "portui.its_text_keys_without_them_the_character_screen_crashes": "sus claves de texto: sin ellas, la pantalla de personajes sufre un cierre inesperado la primera vez que alguien tiene el elemento ({noun})",
  "portui.n_nouns_in_source_already_exist_in_dest": {
   "one": "{count} × {noun} en <b>{source}</b> · {already} ya existen en <b>{dest}</b> {error}",
-  "many": "{count} × {noun} en <b>{source}</b> · {already} ya existen en <b>{dest}</b> {error}",
-  "other": "{count} × {noun} en <b>{source}</b> · {already} ya existen en <b>{dest}</b> {error}"
+  "many": "{count} × {nouns} en <b>{source}</b> · {already} ya existen en <b>{dest}</b> {error}",
+  "other": "{count} × {nouns} en <b>{source}</b> · {already} ya existen en <b>{dest}</b> {error}"
  },
  "portui.n_text_keys": {
   "one": "{count} clave de texto",
@@ -8268,11 +8263,11 @@
  "portui.off_the_exists_in_this_mod": "Desactivado, el elemento ({noun}) existe en este mod y nada lo concede nunca; solo sirve para cuando se quiere escribir un disparador propio.",
  "portui.off_the_safe_default_a_name": "Desactivado (lo más seguro, y la opción por defecto): un nombre que este mod ya tiene se omite y se avisa. Activado, su bloque <b>y su texto</b> se sobrescriben con los del otro mod.",
  "portui.port_from_into_confirm": "¿Portar {sel_n} de {source} a {dest}? Tipo: {noun}.\n\n{changes}{warnings}\n\nAntes se hace una copia de seguridad de ambos archivos, y 🕑 Historial → Deshacer los devuelve.",
- "portui.port_s_into": "Portar a este mod ({noun})",
+ "portui.port_s_into": "Portar a este mod ({nouns})",
  "portui.port_them": "Portarlos",
  "portui.ported_n_noun_into_dest_undo_in_log": "Hecho en {dest}: {n} ({noun}) ✓  (se deshace en 🕑 Historial)",
  "portui.read_from": "Leer de",
- "portui.reading_s_s": "Leyendo {source}: {noun}…",
+ "portui.reading_s_s": "Leyendo {source}: {nouns}…",
  "portui.replace_what_is_already_there": "reemplazar lo que ya hay",
  "portui.there_is_only_one_mod_here_to": "Aquí solo hay un mod del que leer. Si no es correcto, hay que apuntar la herramienta a la carpeta de mods en ⚙ Configuración.",
  "portui.tick_at_least_one": "Hay que marcar al menos uno ({x}).",
@@ -8625,7 +8620,6 @@
  "settings.filter_units": "Filtrar unidades…",
  "settings.forget_the_old_packs": "Olvidar los paquetes antiguos",
  "settings.found": "Encontrados {mods_n}: {x}",
- "settings.in": "🏰 {x} en {dest}",
  "settings.interface_language": "Idioma de la interfaz",
  "settings.interface_language_hint": "Los botones, encabezados y mensajes propios de la herramienta. El texto de un mod es siempre el del propio mod, sea cual sea la elección, y nada de lo escrito en un mod cambia. La página se vuelve a cargar para aplicarlo.",
  "settings.interface_size": "Tamaño de la interfaz",
@@ -8690,7 +8684,6 @@
  "settings.remove": "Quitar",
  "settings.remove_them_all_to_go_back": "Quitarlas todas para volver a la detección automática.",
  "settings.repaired_in": "🛡 reparado en {dest}",
- "settings.resource_in": "◆ recurso ({x}) en {dest}",
  "settings.restart_now_to_apply_it": "↻ Reiniciar ahora para aplicarlo",
  "settings.restore_to_its_state_at_this": "Restaurar «{dest}» al estado que tenía en este punto (deshacer todo lo posterior)",
  "settings.revert_error_message": "Error al revertir: {error}",
@@ -9188,9 +9181,6 @@
  "stratcamp.winning": "Victoria",
  "stratcamp.write_confirm": "{head}\n\n{changes}{more}{warnings}{only}\n\nAntes se hace una copia de seguridad, y 🕑 Historial puede deshacerlo.",
  "stratcamp.write_files_confirm": "¿Escribir: {what}?\n\n{changes}{warnings}{keys}\n\nAntes se hace una copia de seguridad, y 🕑 Historial puede deshacerlo.",
- "stratcamp.write_for_in": "¿Escribir: {what} para {faction} en {campaign}?",
- "stratcamp.write_in": "¿Escribir: {what} en {campaign}?",
- "stratcamp.write_wins_confirm": "¿Escribir las condiciones de victoria de {faction} ({action})?\n\n{changes}{warnings}\n\nAntes se hace una copia de seguridad, y 🕑 Historial puede deshacerlo.",
  "stratcamp.years_per_turn": "Años por turno",
  "stratchar.a_new_character": "Un personaje nuevo",
  "stratchar.add_a_character": "+ Añadir un personaje",
@@ -9245,7 +9235,7 @@
  "stratchar.no_army": "Sin ejército.",
  "stratchar.no_export_descr_character_traits_txt": " · no hay export_descr_character_traits.txt en el disco",
  "stratchar.no_export_descr_unit_names": " · no hay export_descr_unit.txt en el disco, así que estos son los nombres que escribe la propia campaña",
- "stratchar.nobody": "Nadie.",
+ "stratchar.nobody": "(nadie)",
  "stratchar.not_read": "No leído",
  "stratchar.nothing_to_save_yet": "Aún no hay nada que guardar.",
  "stratchar.of": "de {x}",
@@ -9759,7 +9749,6 @@
  "transfer.keep_the_destinations_default_the_imported": "Conservar el del destino <b class=\"w-good\">(predeterminado)</b>. La máquina importada puede llevar su aspecto.",
  "transfer.keep_the_destinations_files": "Conservar los archivos del destino",
  "transfer.keep_the_existing_icon": "Conservar el icono existente",
- "transfer.keeping": "Se conserva",
  "transfer.keeping_s_own": "→ se conserva el propio de {x}",
  "transfer.keeps_its_own_cards_unless_you": "«{base_type}» conserva sus propias tarjetas salvo que se marquen estas. Una tarjeta importada sustituye a su archivo, con su propio nombre y las carpetas de facción.",
  "transfer.keeps_the_barks_it_already_has": "«{name}» conserva las frases de voz que ya tiene; el banco de voces no se toca. Con «otra unidad» se le da una voz distinta.",
@@ -9899,7 +9888,6 @@
  "transfer.run_launch_medieval2_gui_toolkit_bat": "Hay que ejecutar Launch-Medieval2-GUI-Toolkit.bat para iniciarla de nuevo.",
  "transfer.s_own_value": ": valor propio",
  "transfer.s_sounds_are_copied_to_in": "🔒 Los sonidos de <b>{name}</b> se copian en <b>{x}</b>, dentro de <b>{accent} / {cls}</b>, con <code>accent</code> y <code>voice_type</code> ajustados para coincidir. {why}",
- "transfer.s_value_click_to_s_own": "{rep} el valor de {base_type}. Clic para cambiar al valor propio de {editing} ({src}) [{rep2}].",
  "transfer.same_as_keeping_it": "igual que conservarlo",
  "transfer.same_as_the_source": "Igual que el origen ({auto})",
  "transfer.same_size_different_bytes": " (mismo tamaño, bytes distintos)",
@@ -10399,5 +10387,92 @@
  "walls.wall_level": "Nivel de muralla {level}",
  "walls.wall_level_line": "Nivel de muralla {level} <span class=\"count\">línea {line}</span>",
  "walls.with_tower_level_its_tower_needs": ", con <code>tower_level {tower_levels}</code>: su torre necesita tantos niveles de disparo",
- "walls.write_changes_confirm": "¿Escribir {n} cambio(s)?\n\n{changes}{warnings}\n\nSe hace antes una copia de seguridad, y 🕑 Historial puede deshacerlo."
+ "walls.write_changes_confirm": "¿Escribir {n} cambio(s)?\n\n{changes}{warnings}\n\nSe hace antes una copia de seguridad, y 🕑 Historial puede deshacerlo.",
+ "minorfiles.noun_rebel_faction": {
+  "one": "facción rebelde",
+  "many": "facciones rebeldes",
+  "other": "facciones rebeldes"
+ },
+ "minorfiles.noun_religion": {
+  "one": "religión",
+  "many": "religiones",
+  "other": "religiones"
+ },
+ "minorfiles.noun_resource": {
+  "one": "recurso",
+  "many": "recursos",
+  "other": "recursos"
+ },
+ "minorfiles.noun_culture": {
+  "one": "cultura",
+  "many": "culturas",
+  "other": "culturas"
+ },
+ "minorfiles.noun_faction": {
+  "one": "facción",
+  "many": "facciones",
+  "other": "facciones"
+ },
+ "portui.noun_trait": {
+  "one": "rasgo",
+  "many": "rasgos",
+  "other": "rasgos"
+ },
+ "portui.noun_ancillary": {
+  "one": "séquito",
+  "many": "séquitos",
+  "other": "séquitos"
+ },
+ "portui.noun_record": {
+  "one": "registro",
+  "many": "registros",
+  "other": "registros"
+ },
+ "renameui.what_province": "provincia",
+ "renameui.what_settlement": "asentamiento",
+ "renameui.what_faction": "facción",
+ "soundbanks.range_to": "{min} a {max}",
+ "settings.fort_added_in": "🏰 Fuerte o atalaya añadido en {dest}",
+ "settings.fort_moved_in": "🏰 Fuerte o atalaya movido en {dest}",
+ "settings.fort_removed_from": "🏰 Fuerte o atalaya eliminado de {dest}",
+ "settings.fort_edited_in": "🏰 Fuerte o atalaya modificado en {dest}",
+ "settings.resource_added_in": "◆ Recurso añadido en {dest}",
+ "settings.resource_moved_in": "◆ Recurso movido en {dest}",
+ "settings.resource_removed_from": "◆ Recurso eliminado de {dest}",
+ "settings.resource_edited_in": "◆ Recurso modificado en {dest}",
+ "stratcamp.write_header_in": "¿Escribir la cabecera de la campaña en {campaign}?",
+ "stratcamp.write_lists_in": "¿Escribir las tres listas en {campaign}?",
+ "stratcamp.write_standings_for_in": "¿Escribir las posiciones de {faction} en {campaign}?",
+ "stratcamp.write_new_faction_in": "¿Escribir la nueva facción {faction} en {campaign}?",
+ "stratcamp.write_faction_in": "¿Escribir los cambios de {faction} en {campaign}?",
+ "stratcamp.write_relationships_for_in": "¿Escribir las relaciones de {faction} en {campaign}?",
+ "stratcamp.write_delete_in": "¿Escribir la eliminación de {faction} de {campaign}?",
+ "stratcamp.write_wins_edit": "¿Escribir las condiciones de victoria modificadas de {faction}?\n\n{changes}{warnings}\n\nAntes se hace una copia de seguridad, y 🕑 Historial puede deshacerlo.",
+ "stratcamp.write_wins_add": "¿Escribir condiciones de victoria nuevas para {faction}?\n\n{changes}{warnings}\n\nAntes se hace una copia de seguridad, y 🕑 Historial puede deshacerlo.",
+ "stratcamp.write_wins_delete": "¿Escribir la eliminación de las condiciones de victoria de {faction}?\n\n{changes}{warnings}\n\nAntes se hace una copia de seguridad, y 🕑 Historial puede deshacerlo.",
+ "osmmap.the_box_stretches_the_map_wider": "El recuadro estira el mapa un {st} % más ancho que el terreno real: el selector de mundo puede darle la forma del mapa.",
+ "osmmap.the_box_stretches_the_map_taller": "El recuadro estira el mapa un {st} % más alto que el terreno real: el selector de mundo puede darle la forma del mapa.",
+ "osmworld.the_box_would_stretch_the_map_wider": "El recuadro estiraría el mapa un {st} % más ancho que el terreno real.",
+ "osmworld.the_box_would_stretch_the_map_taller": "El recuadro estiraría el mapa un {st} % más alto que el terreno real.",
+ "osmmap.a_planned_on_where_stands_check_it_fort": "Hay un fuerte planeado en {gx}, {gy}, donde está {x}. Compruébelo y guárdelo desde el panel de fuertes.",
+ "osmmap.a_planned_on_where_stands_check_it_watchtower": "Hay una atalaya planeada en {gx}, {gy}, donde está {x}. Compruébela y guárdela desde el panel de fuertes.",
+ "osmmap.box_north": "norte",
+ "osmmap.box_south": "sur",
+ "osmmap.box_west": "oeste",
+ "osmmap.box_east": "este",
+ "osmmap.box_rotation": "rotación",
+ "transfer.s_value_click_to_s_own_keeping": "Se conserva el valor de {base_type}. Clic para importar el valor propio de {editing} ({src}).",
+ "transfer.s_value_click_to_s_own_using": "Se usa el valor de {base_type}. Clic para conservar el valor propio de {editing} ({src}).",
+ "transfer.added": "añadido",
+ "v3anim.or": "o",
+ "triggerui.nothing": "nada",
+ "eng.stratobj.is_empty_which_is_not_a_whole": "{slot} está vacío, y eso no es un número entero.",
+ "eng.transfer.model_needs_animation_s_which_does_mount": "el modelo de montura '{name}' necesita las animaciones {missing}, que {name2} no tiene, y la montura de la unidad base no tiene una entrada legible en modeldb de la que tomar prestado un conjunto de animaciones. Copie los archivos .cas a mano o el juego se cerrará al cargar.",
+ "eng.transfer.model_needs_animation_s_which_does_officer": "el modelo de oficial '{name}' necesita las animaciones {missing}, que {name2} no tiene, y el oficial de la unidad base no tiene una entrada legible en modeldb de la que tomar prestado un conjunto de animaciones. Copie los archivos .cas a mano o el juego se cerrará al cargar.",
+ "eng.transfer.the_s_model_uses_animation_s_mount": "el modelo '{name}' de la montura usa las animaciones {missing}, que {name2} no tiene. Se le dieron en su lugar las de '{name3}' (la montura de la unidad base), así que se anima como la de la base y puede moverse de forma inesperada en la batalla. Elija «portar tal cual» para la montura para conservar los esqueletos originales y cópielos usted mismo.",
+ "eng.transfer.the_s_model_uses_animation_s_officer": "el modelo '{name}' del oficial usa las animaciones {missing}, que {name2} no tiene. Se le dieron en su lugar las de '{name3}' (el oficial de la unidad base), así que se anima como el de la base y puede moverse de forma inesperada en la batalla. Elija «portar tal cual» para los oficiales para conservar los esqueletos originales y cópielos usted mismo.",
+ "eng.transfer.rename_taken_used_instead_type": "el tipo nuevo '{asked}' ya está ocupado en el destino; se usa '{got}' en su lugar.",
+ "eng.transfer.rename_taken_used_instead_dictionary": "el diccionario nuevo '{asked}' ya está ocupado en el destino; se usa '{got}' en su lugar.",
+ "eng.stratobj.is_pixel_none_of_the_800_port": "{gx},{gy} es el píxel del puerto de {name}. Ninguno de los 800 fuertes y atalayas medidos está sobre un asentamiento o un puerto.",
+ "eng.stratobj.is_pixel_none_of_the_800_settlement": "{gx},{gy} es el píxel del asentamiento de {name}. Ninguno de los 800 fuertes y atalayas medidos está sobre un asentamiento o un puerto."
 }

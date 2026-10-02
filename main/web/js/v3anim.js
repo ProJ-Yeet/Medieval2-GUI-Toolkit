@@ -825,7 +825,7 @@ function v3AnimMountHtml(set){
   if(m.err) return `<div class="w-bad">${tt('v3anim.the_mounts',{err:esc(m.err)})}</div>`;
   if(!m.list) return `<div class="count">${tt('v3anim.finding_its_mounts')}</div>`;
   const rows = m.list.mounts || [];
-  if(!rows.length) return `<div class="count">${tt('v3anim.no_mount_in_descr_mount_txt',{x:esc((m.list.classes || []).join(' or '))})}</div>`;
+  if(!rows.length) return `<div class="count">${tt('v3anim.no_mount_in_descr_mount_txt',{x:esc((m.list.classes || []).join(` ${tt('v3anim.or')} `))})}</div>`;
   const opts = rows.map((r, n) => `<option value="${n}" ${n === m.pick ? 'selected' : ''}>${esc(r.type)} · ${
     esc(r.entry)}${r.units.length ? ttN('v3anim.ridden_by_units',r.units.length) : ''}</option>`).join('');
   const r = rows[m.pick] || rows[0];

@@ -378,13 +378,13 @@ function logItemHtml(e){
       :e.mode==='changeset'?tt('settings.changes_ported_into',{dest:esc(e.dest)})
       :e.mode==='factions'&&e.action==='repair'?tt('settings.repaired_in',{dest:esc(e.dest)})
       // 22a: one fort or watchtower line placed, moved, changed or taken out
-      :e.mode==='campmap'&&e.action==='fortification'?tt('settings.in',{x:esc((e.options||{}).what||'edit'),dest:esc(e.dest)})
+      :e.mode==='campmap'&&e.action==='fortification'?tt(({add:'settings.fort_added_in',move:'settings.fort_moved_in',delete:'settings.fort_removed_from'})[(e.options||{}).what]||'settings.fort_edited_in',{dest:esc(e.dest)})
       // 22b: one trade resource line, the same writer
-      :e.mode==='campmap'&&e.action==='resource'?tt('settings.resource_in',{x:esc((e.options||{}).what||'edit'),dest:esc(e.dest)})
+      :e.mode==='campmap'&&e.action==='resource'?tt(({add:'settings.resource_added_in',move:'settings.resource_moved_in',delete:'settings.resource_removed_from'})[(e.options||{}).what]||'settings.resource_edited_in',{dest:esc(e.dest)})
       // 81 and 85: a mod's animation packs appended to, or written again
       :e.action==='pack port'?tt('settings.animations_ported_into',{dest:esc(e.dest)})
       :e.action==='pack compact'?tt('settings.animation_packs_compacted_in',{dest:esc(e.dest)})
-      :e.mode&&e.mode!=='transfer'?tt('settings.edit_in',{mode:esc(e.mode),dest:esc(e.dest)})
+      :e.mode&&e.mode!=='transfer'?tt('settings.edit_in',{mode:esc((LOG_MODES.find(m=>m.id===e.mode)||{}).label||e.mode),dest:esc(e.dest)})
       // a transfer that wrote no unit: its models only, which is what the row
       // would otherwise claim was a unit called after the source's
       :e.action==='models'?tt('settings.battle_models_only',{source:esc(e.source),dest:esc(e.dest)})

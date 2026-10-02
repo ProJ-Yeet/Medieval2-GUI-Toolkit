@@ -13,8 +13,13 @@
    toolkit; the difference is only that here the preview is the point rather
    than a courtesy. */
 
-const RENAME_WHAT = {region: 'province', settlement: 'settlement',
-                     faction: 'faction'};
+//: What is being renamed, in the page's language.
+function renameWhat(subject){
+  return subject === 'region' ? tt('renameui.what_province')
+    : subject === 'settlement' ? tt('renameui.what_settlement')
+    : subject === 'faction' ? tt('renameui.what_faction')
+    : subject;
+}
 
 //: One rename in flight: the plan, the boxes, and who to tell when it lands.
 const renameUi = {subject: '', old: '', next: '', mod: '', plan: null,
@@ -27,7 +32,7 @@ async function renameOpen(mod, subject, old, after){
   renameUi.subject = subject; renameUi.old = old; renameUi.next = old;
   renameUi.mod = mod; renameUi.plan = null; renameUi.done = after || null;
   renameUi.busy = false; renameUi.showAll = false;
-  activity(tt('renameui.opened_rename'), `${RENAME_WHAT[subject]} ${old} in ${mod}`);
+  activity(tt('renameui.opened_rename'), `${renameWhat(subject)} ${old} in ${mod}`);
   const modal = document.getElementById('modal');
   modal.className = 'modal wide';
   overlay.classList.add('open');
@@ -41,7 +46,7 @@ function renameSet(value){
 }
 
 function renamePaint(){
-  const u = renameUi, what = RENAME_WHAT[u.subject] || u.subject;
+  const u = renameUi, what = renameWhat(u.subject);
   const modal = document.getElementById('modal');
   const p = u.plan;
   modal.innerHTML = `<h2>${tt('renameui.rename',{what:esc(what)})} <b>${esc(u.old)}</b></h2>
@@ -132,7 +137,7 @@ async function renameApply(){
   const u = renameUi;
   if(u.busy || !u.plan || !u.plan.ok) return;
   const p = u.plan;
-  if(!confirm(tt('renameui.confirm_rename',{x:RENAME_WHAT[u.subject],old:u.old,next:u.next,
+  if(!confirm(tt('renameui.confirm_rename',{x:renameWhat(u.subject),old:u.old,next:u.next,
     hits:p.hits,files_n:p.files.length,
     art:p.assets.length ? tt('renameui.confirm_art_moved',{assets_n:p.assets.length}) : '',
     script:p.script.length ? tt('renameui.confirm_script_not_changed',{script_n:p.script.length}) : ''}))) return;

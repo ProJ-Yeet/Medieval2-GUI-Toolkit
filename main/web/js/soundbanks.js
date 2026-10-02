@@ -245,7 +245,7 @@ function sbkSetItem(at, value, el){
 function sbkVocabHtml(v){
   const r = v.ranges || {};
   return `<details class="sbkvocab"><summary class="count">${tt('soundbanks.attributes_these_scripts_write')}</summary>
-    <div class="count">${tt('soundbanks.numbers',{x:v.num.map(x => `<code>${esc(x)}</code>${r[x] ? ` ${r[x][0]} to ${r[x][1]}` : ''}`).join(' · ')})}</div>
+    <div class="count">${tt('soundbanks.numbers',{x:v.num.map(x => `<code>${esc(x)}</code>${r[x] ? ` ${tt('soundbanks.range_to',{min:r[x][0],max:r[x][1]})}` : ''}`).join(' · ')})}</div>
     <div class="count">${tt('soundbanks.on_their_own_pref_and_one',{flags:v.flags.map(x => `<code>${esc(x)}</code>`).join(' '),prefs:(v.prefs || []).map(x => `<code>${esc(x)}</code>`).join(' ')})}</div>
     <div class="count">${tt('soundbanks.the_ranges_are_what_this_mods')}</div></details>`;
 }

@@ -45,6 +45,27 @@ function renderCultures(){
   renderMinor();
 }
 
+//: The server names each tab's thing in English (`rebel faction`); this is the
+//: same word in the page's language, one catalogue entry per tab.
+function mfNoun(tab){
+  switch(tab){
+    case 'rebels': return ttN('minorfiles.noun_rebel_faction', 1);
+    case 'religions': return ttN('minorfiles.noun_religion', 1);
+    case 'resources': return ttN('minorfiles.noun_resource', 1);
+    case 'cultures': return ttN('minorfiles.noun_culture', 1);
+    default: return ttN('minorfiles.noun_faction', 1);
+  }
+}
+function mfNouns(tab){
+  switch(tab){
+    case 'rebels': return ttN('minorfiles.noun_rebel_faction', 2);
+    case 'religions': return ttN('minorfiles.noun_religion', 2);
+    case 'resources': return ttN('minorfiles.noun_resource', 2);
+    case 'cultures': return ttN('minorfiles.noun_culture', 2);
+    default: return ttN('minorfiles.noun_faction', 2);
+  }
+}
+
 async function loadMinor(){
   const mod = state.src, mode = state.mode;
   let tab = minorWantTab || (state.mf && state.mf.tab) || 'rebels';
@@ -60,7 +81,7 @@ async function loadMinor(){
       <span class="count">${esc(errText(e))}</span><br><br>
       <button class="primary" onclick="loadMinor()">${tt('common.retry')}</button></div>`; return; }
   if(stale(mode, mod)) return;
-  state.mf = Object.assign({tab, sel:'', d:null, busy:false, adding:false}, r);
+  state.mf = Object.assign({tab, sel:'', d:null, busy:false, adding:false}, r, {noun:mfNoun(tab)});
   undoReset();
   renderMinor();
 }
@@ -249,7 +270,7 @@ function mfPaintForm(){
 /* ---- the detail pane ---- */
 function mfDetailHtml(){
   const f = state.mf, d = f.d;
-  if(!f.sel && !f.adding) return `<div class="empty">${ttN('minorfiles.pick_a_noun_on_the_left',f.count,{noun:esc(f.noun),file:esc(f.file),refused:f.refused ? `<div class="trnote"
+  if(!f.sel && !f.adding) return `<div class="empty">${ttN('minorfiles.pick_a_noun_on_the_left',f.count,{noun:esc(f.noun),nouns:esc(mfNouns(f.tab)),file:esc(f.file),refused:f.refused ? `<div class="trnote"
       style="max-width:560px;margin:14px auto;text-align:left">${esc(f.refused)}</div>`
       : ''})}</div>`;
   if(!d) return `<div class="empty">${tt('minorfiles.reading_the',{noun:esc(f.noun)})}</div>`;
@@ -282,7 +303,7 @@ function mfFindingsHtml(d){
   const out = (d.findings||[]).map(f =>
     `<div class="trfind w-warn">${tt('minorfiles.line',{line:f.line,message:esc(f.message)})}</div>`);
   if((d.missing_loc||[]).length && d.loc_writable) out.push(`<div class="trfind w-warn">
-    ${tt('minorfiles.there_is_no_entry_in_so',{loc_tag:esc(d.loc_tag),loc_file:esc(d.loc_file),noun:esc(d.noun)})}</div>`);
+    ${tt('minorfiles.there_is_no_entry_in_so',{loc_tag:esc(d.loc_tag),loc_file:esc(d.loc_file),noun:esc(state.mf.noun)})}</div>`);
   return out.join('');
 }
 

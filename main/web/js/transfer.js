@@ -949,7 +949,7 @@ function baseBadge(c,label,cur){
   const on=cur===c._orig[label];
   return `<button type="button" class="ibadge${on?'':' off'}" data-b="${esc(label)}"
     onclick="toggleBaseField('${q1(esc(label))}')"
-    title="${on?tt('transfer.s_value_click_to_s_own',{rep:rep?tt('transfer.keeping'):tt('transfer.using'),base_type:esc(c.base_type),rep2:rep?'import':'keep',editing:esc(state.editing),src:esc(src)})
+    title="${on?tt(rep?'transfer.s_value_click_to_s_own_keeping':'transfer.s_value_click_to_s_own_using',{base_type:esc(c.base_type),editing:esc(state.editing),src:esc(src)})
               :tt('transfer.click_to_go_back_to_s',{rep:rep?tt('transfer.imported_from'):tt('transfer.using'),editing:esc(state.editing),rep2:rep?'':tt('transfer.s_own_value'),base_type:esc(c.base_type),x:esc(c._orig[label])})}">B</button>`;
 }
 function toggleBaseField(label){
@@ -1533,7 +1533,7 @@ function animPortHtml(r){
   if(!on) return `<b>${tt('transfer.animations')}</b><div>${box}</div>`;
   if(err) return `<b>${tt('transfer.animations_not_brought')}</b><div>${box}</div><div class="count">${esc(err)}</div>`;
   const t=p.totals, mb=((t['anim bytes appended']+t['skeleton bytes appended'])/1e6).toFixed(2);
-  const say={add:'added',rename:tt('transfer.added_as'),reuse:tt('transfer.already_there'),reuse_as:tt('transfer.already_there_as')};
+  const say={add:tt('transfer.added'),rename:tt('transfer.added_as'),reuse:tt('transfer.already_there'),reuse_as:tt('transfer.already_there_as')};
   const rows=p.skeletons.map(k=>{
     const a=k.animations||{}, app=(a.append||0)+(a.append_renamed||0), re=(a.reuse||0)+(a.reuse_content||0);
     return `<li><code>${esc(k.name)}</code>${tt('transfer.slots_from_animations_appended',{weapon:k.weapon?` <span class="v3tag">${tt('transfer.weapon')}</span>`:'',x:say[k.action],x2:k.dest_name!==k.name?` <code>${esc(k.dest_name)}</code>`:'',slots:k.slots,app,re:re?tt('transfer.from_ones_already_has',{re,dst:esc(state.dst)}):''})}</li>`;}).join('');

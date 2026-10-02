@@ -673,7 +673,7 @@ async function cxPoolAdd(part){
 function cxFamilyHtml(){
   const d = state.cx.d;
   const rel = (d.relatives || []).map(r => `<div class="cxfam">
-    ${tt('stratchar.line',{line:r.line,names:esc(r.names[0] || ''),names2:esc(r.names[1] || '(nobody)'),x:r.names.length > 2 ? '&rarr; ' + r.names.slice(2).map(esc).join(', ') : ''})}
+    ${tt('stratchar.line',{line:r.line,names:esc(r.names[0] || ''),names2:esc(r.names[1] || tt('stratchar.nobody')),x:r.names.length > 2 ? '&rarr; ' + r.names.slice(2).map(esc).join(', ') : ''})}
   </div>`).join('');
   const rec = (d.records || []).map(r => `<div class="cxfam">
     ${tt('stratchar.line_age',{line:r.line,name:esc(r.name),gender:esc(r.gender),age:r.age,x:r.dead === null || r.dead === undefined ? tt('stratchar.alive') : tt('stratchar.dead_at',{dead:r.dead}),x2:r.leadership ? ' · ' + esc(r.leadership) : ''})}

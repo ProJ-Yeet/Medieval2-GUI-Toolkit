@@ -527,13 +527,13 @@ function owpReadout(){
   const [ew, ns] = osmKmPerTile(b, o.W, o.H), st = osmStretch(b, o.W, o.H);
   const f = v => v >= 10 ? v.toFixed(0) : v.toFixed(1);
   return tt('osmworld.one_tile_of_this_map_km',{W:o.W,H:o.H,x:f(ew),x2:f(ns),x3:Math.abs(st) < 0.005 ? `<span class="w-good">${tt('osmworld.the_box_is_this_maps_shape')}</span>`
-      : `<span class="w-warn">${tt('osmworld.the_box_would_stretch_the_map',{st:Math.abs(st * 100).toFixed(1),st2:st > 0 ? 'wider' : 'taller'})}</span>`});
+      : `<span class="w-warn">${tt(st > 0 ? 'osmworld.the_box_would_stretch_the_map_wider' : 'osmworld.the_box_would_stretch_the_map_taller',{st:Math.abs(st * 100).toFixed(1)})}</span>`});
 }
 
 function owpSideHtml(){
   const o = state.owp, b = o.box;
   const res = o.results || [];
-  const num = (k, step) => `<label style="flex:1 1 90px">${k}
+  const num = (k, step) => `<label style="flex:1 1 90px">${osmBoxLabel(k)}
       <input type="number" id="owpF_${k}" step="${step}"
         value="${b ? (+b[k] || 0).toFixed(k === 'rotation' ? 1 : 4) : ''}"
         onchange="owpField('${k}',this.value)" ${b ? '' : 'disabled'}></label>`;
@@ -665,7 +665,7 @@ function owpField(k, v){
   const nb = Object.assign({}, o.box, {[k]: parseFloat(v)});
   if(!isFinite(nb[k])){ owpSide(); return; }
   if(osmBoxOk(nb) && owpSane(nb)){ o.box = nb; o.err = ''; }
-  else o.err = tt('osmworld.that_would_put_the_box_past',{x:k});
+  else o.err = tt('osmworld.that_would_put_the_box_past',{x:osmBoxLabel(k)});
   owpSizeFromBox();
   owpSide(); owpDraw();
 }

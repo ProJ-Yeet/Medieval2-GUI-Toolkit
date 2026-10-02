@@ -351,7 +351,7 @@ function cfeHtml(){
     rows.push(`<div class="cmnote w-warn">${esc(v.problem)}</div>`);
   }
   if(v.was){
-    rows.push(`<div class="cmnote">${tt('mapfe.before_this_panel_the_picture_was',{was:esc(v.was)})}</div>`);
+    rows.push(`<div class="cmnote">${tt('mapfe.before_this_panel_the_picture_was',{was:`${v.was[0]}x${v.was[1]}`,grid:`${v.was[2]}x${v.was[3]}`})}</div>`);
   }
   rows.push(`<div class="cmrow">${tt('mapfe.the_frame_2',{cfeFigureText:esc(cfeFigureText())})}</div>`);
   rows.push(`<div class="cmnote">${tt('mapfe.the_frame_is_which_rectangle_of')}</div>`);

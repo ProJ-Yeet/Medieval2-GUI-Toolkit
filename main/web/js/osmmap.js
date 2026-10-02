@@ -32,6 +32,13 @@ const OSM_TILE_PX = 256;
 //: steps down, so a whole-map view never fires a hundred requests.
 const OSM_MAX_TILES = 48;
 
+
+/* The five box fields' labels, by field name (whole IDs, so the catalogue
+   scanner sees each one). osmworld.js labels the same fields. */
+function osmBoxLabel(k){
+  return {north:tt('osmmap.box_north'), south:tt('osmmap.box_south'), west:tt('osmmap.box_west'),
+          east:tt('osmmap.box_east'), rotation:tt('osmmap.box_rotation')}[k] || k;
+}
 function osmNew(mod){
   return {mod, open: false, st: null, busy: false, err: '', box: null,
           show: true, alpha: 0.5, coast: null, showCoast: true, over: null,
@@ -677,7 +684,7 @@ async function osmSiteObject(i, kind){
   // asked for, so shown: not 28a's once-per-map switch meant for map clicks
   const where = typeof cmapSubOf === 'function' && cmapSubOf('cmForts');
   if(where) cmapSub(where.tab, where.sub);
-  toast(tt('osmmap.a_planned_on_where_stands_check_it',{kind,gx:s.gx,gy:s.gy,x:s.name || tt('osmmap.the_label',{label:s.label.toLowerCase()})}), 7000);
+  toast(tt(kind === 'watchtower' ? 'osmmap.a_planned_on_where_stands_check_it_watchtower' : 'osmmap.a_planned_on_where_stands_check_it_fort',{gx:s.gx,gy:s.gy,x:s.name || tt('osmmap.the_label',{label:s.label.toLowerCase()})}), 7000);
 }
 
 function osmSiteRegion(i){
@@ -882,7 +889,7 @@ function osmHtml(){
       tt('osmmap.tiles_are_kept_on_disk_for')])}</div>
     <button onclick="openSettings()">${tt('osmmap.open_settings_to_turn_it_on')}</button>`;
   const b = k.box || {north: '', south: '', west: '', east: '', rotation: ''};
-  const box = ['north', 'south', 'west', 'east', 'rotation'].map(f => `<label style="flex:1 1 90px">${f}
+  const box = ['north', 'south', 'west', 'east', 'rotation'].map(f => `<label style="flex:1 1 90px">${osmBoxLabel(f)}
       <input type="number" step="${f === 'rotation' ? 1 : 0.01}" value="${esc(osmNum(b[f] ?? (f === 'rotation' && k.box ? 0 : ''), f === 'rotation' ? 1 : 6))}"
         onchange="osmBoxSet('${f}',this.value)"></label>`).join('');
   // 87a: how the box sits on this map - the size of a tile, and any stretch
@@ -891,7 +898,7 @@ function osmHtml(){
   if(osmBoxOk(k.box)){
     const [ew, ns] = osmKmPerTile(k.box, W, H), st = osmStretch(k.box, W, H);
     const f = v => v >= 10 ? v.toFixed(0) : v.toFixed(1);
-    shape = `<div class="count">${tt('osmmap.one_tile_km_east_west_km',{x:f(ew),x2:f(ns),x3:Math.abs(st) < 0.005 ? '' : `<span class="w-warn">${tt('osmmap.the_box_stretches_the_map_than',{st:Math.abs(st * 100).toFixed(1),st2:st > 0 ? 'wider' : 'taller'})}</span>`})}</div>`;
+    shape = `<div class="count">${tt('osmmap.one_tile_km_east_west_km',{x:f(ew),x2:f(ns),x3:Math.abs(st) < 0.005 ? '' : `<span class="w-warn">${tt(st > 0 ? 'osmmap.the_box_stretches_the_map_wider' : 'osmmap.the_box_stretches_the_map_taller',{st:Math.abs(st * 100).toFixed(1)})}</span>`})}</div>`;
   }
   const kept = k.st.box_from === 'kept' ? tt('osmmap.kept_for_this_map')
     : k.st.box_from === 'file' ? tt('osmmap.read_from_bbox_coords_txt_beside') : tt('osmmap.not_set_yet');
