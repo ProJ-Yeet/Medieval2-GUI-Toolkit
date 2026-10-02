@@ -2111,11 +2111,11 @@
      "note": "FR game term uncertain; check"
     },
     "es": {
-     "t": "accesorio",
-     "stem": "accesori",
+     "t": "séquito",
+     "stem": "séquit",
      "src": "game",
-     "conf": "low",
-     "note": "official release term not firmly remembered; check the game strings"
+     "conf": "medium",
+     "note": "88f: séquito (retinue) as the Spanish Total War releases word it; accesorio read as a fashion item"
     },
     "it": {
      "t": "accessorio",
@@ -5055,11 +5055,11 @@
      "note": "toolkit usage, no game term; niveau is taken by level"
     },
     "es": {
-     "t": "escalón",
-     "stem": "escal",
+     "t": "grado",
+     "stem": "grado",
      "src": "community",
      "conf": "low",
-     "note": "toolkit usage; alternative: nivel"
+     "note": "88f: grado, so it does not collide with level (nivel)"
     },
     "it": {
      "t": "livello",
@@ -5178,9 +5178,10 @@
     },
     "es": {
      "t": "montura",
-     "stem": "montura",
+     "stem": "montura|montad",
      "src": "game",
-     "conf": "medium"
+     "conf": "medium",
+     "note": "88f: mounted (montado, montada) passes"
     },
     "it": {
      "t": "cavalcatura",
@@ -6964,7 +6965,7 @@
     },
     "es": {
      "t": "voz",
-     "stem": "vo",
+     "stem": "voz|voces",
      "src": "game",
      "conf": "medium",
      "note": "plural: voces"
@@ -9831,9 +9832,10 @@
     },
     "es": {
      "t": "modelo de batalla",
-     "stem": "modelo de batalla",
+     "stem": "modelo de batalla|modelos de batalla",
      "src": "community",
-     "conf": "medium"
+     "conf": "medium",
+     "note": "88f: plural allowed"
     },
     "it": {
      "t": "modello di battaglia",
@@ -9942,9 +9944,10 @@
     },
     "es": {
      "t": "modelo estratégico",
-     "stem": "modelo estratégico",
+     "stem": "modelo estratégico|modelos estratégicos",
      "src": "community",
-     "conf": "medium"
+     "conf": "medium",
+     "note": "88f: plural allowed"
     },
     "it": {
      "t": "modello strategico",
@@ -15697,11 +15700,11 @@
      "conf": "high"
     },
     "es": {
-     "t": "Agregar",
-     "stem": "agreg",
+     "t": "Añadir",
+     "stem": "añad",
      "src": "ms",
      "conf": "high",
-     "note": "Spain also uses Añadir; Windows says Agregar"
+     "note": "88f: Spain Spanish, as the Spanish release of the game; Windows says Agregar"
     },
     "it": {
      "t": "Aggiungi",
@@ -17470,10 +17473,10 @@
     },
     "es": {
      "t": "Ver",
-     "stem": "ver",
+     "stem": "ver|vista",
      "src": "ms",
      "conf": "high",
-     "note": "very short stem"
+     "note": "88f: the noun (Vista, Vistas) as well as the verb"
     },
     "it": {
      "t": "Visualizza",
@@ -18779,10 +18782,11 @@
      "note": "plural journaux; stem is shared prefix"
     },
     "es": {
-     "t": "Registro",
-     "stem": "registro",
+     "t": "Historial",
+     "stem": "historial",
      "src": "ms",
-     "conf": "high"
+     "conf": "high",
+     "note": "88f: Historial, so it does not collide with record (registro)"
     },
     "it": {
      "t": "registro",
@@ -19552,11 +19556,11 @@
      "conf": "high"
     },
     "es": {
-     "t": "información sobre herramientas",
-     "stem": "información sobre herramientas",
+     "t": "descripción emergente",
+     "stem": "emergente",
      "src": "ms",
      "conf": "medium",
-     "note": "Microsoft term; short form: sugerencia"
+     "note": "88f: the name used throughout the catalogue"
     },
     "it": {
      "t": "descrizione comando",

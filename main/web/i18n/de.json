@@ -1870,7 +1870,10 @@
  "campaint.nothing_to_redo_2": "Nichts zu wiederholen",
  "campaint.nothing_to_undo": "nichts rückgängig zu machen",
  "campaint.nothing_to_undo_2": "Nichts rückgängig zu machen",
- "campaint.of_the_oldest_stroke_been_let": "{dropped} der ältesten Striche{x} wurden verworfen: Der Stapel hält jede Stufe, bis er zu viele Pixel hält, als dass es sich lohnt.",
+ "campaint.of_the_oldest_stroke_been_let": {
+  "one": "{count} der ältesten Striche wurde verworfen: Der Stapel hält jede Stufe, bis er zu viele Pixel hält, als dass es sich lohnt.",
+  "other": "{count} der ältesten Striche wurden verworfen: Der Stapel hält jede Stufe, bis er zu viele Pixel hält, als dass es sich lohnt."
+ },
  "campaint.one_tile_per_click_or_drag": "Eine Kachel pro Klick oder Ziehen",
  "campaint.open_it_and_paint": "Öffnen und malen",
  "campaint.own_map_no_readers": "{campaign} liest ihre eigene Karte aus {folder}, und der Pinsel malt world/maps/base, das sie nicht anzeigt. Keine Kampagne dieser Mod liest die Basiskarte.",
@@ -3394,14 +3397,13 @@
  "editor.3d_preview": "&#129482; 3D-Vorschau",
  "editor.4_new_entry_from_a_tier": "4 · Neuer Eintrag aus einer Ausbaustufe",
  "editor.a_name_for_the_new_variant": "Ein Name für die neue Variante",
- "editor.a_repeated": "eine wiederholte",
  "editor.add_a_missing_field": "{qm}Fehlendes Feld hinzufügen",
  "editor.add_a_missing_field_2": "Fehlendes Feld hinzufügen",
  "editor.add_a_variant_this_mod_has": "Eine Variante hinzufügen, die diese Mod noch nie verwendet hat.\nSie kommt zu dieser Einheit und steht danach in der Liste für alle anderen.",
  "editor.add_an_armour_upgrade_tier": "Ausbaustufe für die Rüstungsaufrüstung hinzufügen",
  "editor.add_entry": "Eintrag hinzufügen",
  "editor.add_ticked_tier_s": "Markierte Ausbaustufe(n) hinzufügen",
- "editor.added_as_armour_tier": "„{name}“ als {again} Rüstungsstufe hinzugefügt ✓",
+ "editor.added_as_armour_tier": "„{name}“ als Rüstungsstufe hinzugefügt ✓",
  "editor.added_by_you_drag_to_reorder": "Von Ihnen hinzugefügt · zum Umsortieren ziehen",
  "editor.adds_the_mercenary_unit_attribute": "Fügt das Attribut <code>mercenary_unit</code> hinzu.",
  "editor.adds_the_tier_and_opens_the": "Fügt die Ausbaustufe hinzu und öffnet das Formular für einen neuen Eintrag im Tab <b>Schlachtmodelle</b>: Geben Sie ihm einen Namen, wählen Sie den Ordner und weisen Sie ihm ein eigenes Mesh und eine eigene Textur zu. Alles andere wird aus dem Eintrag kopiert, auf dem er basiert.",
@@ -9940,5 +9942,6 @@
  "walls.wall_level": "Mauerstufe {level}",
  "walls.wall_level_line": "Mauerstufe {level} <span class=\"count\">Zeile {line}</span>",
  "walls.with_tower_level_its_tower_needs": ", mit <code>tower_level {tower_levels}</code>: sein Turm braucht so viele Schussstufen",
- "walls.write_changes_confirm": "{n} Änderung(en) schreiben?\n\n{changes}{warnings}\n\nVorher gesichert, und 🕑 Protokoll kann es rückgängig machen."
+ "walls.write_changes_confirm": "{n} Änderung(en) schreiben?\n\n{changes}{warnings}\n\nVorher gesichert, und 🕑 Protokoll kann es rückgängig machen.",
+ "editor.added_as_repeated_armour_tier": "„{name}“ als wiederholte Rüstungsstufe hinzugefügt ✓"
 }

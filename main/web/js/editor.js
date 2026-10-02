@@ -1603,7 +1603,7 @@ function edUgAddOne(name){
   const e=state.ed,again=csv(edFieldVal('armour_ug_models')).includes(name);
   if(!edUgAppend([name],null,{repeat:true}).length)return;
   e.ug=null; edRenderTab(); edPreview();
-  toast(tt('editor.added_as_armour_tier',{name,again:again?tt('editor.a_repeated'):'an'}));
+  toast(tt(again?'editor.added_as_repeated_armour_tier':'editor.added_as_armour_tier',{name}));
 }
 
 /* -- mode 4: a new entry based on one of this unit's -- */

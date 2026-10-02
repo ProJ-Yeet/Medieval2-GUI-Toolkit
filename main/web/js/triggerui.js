@@ -150,8 +150,8 @@ function trgCondHtml(tr, cond, i){
     ${i===0?`<span class="jn">${tt('triggerui.condition')}</span>`
       :`<select class="jn" ${tr.readOnly?'disabled':''}
           onchange="trgSet(trgOf('${tr.uid}'),'joiner',this.value,${i})">
-        <option ${cond.joiner!=='or'?'selected':''}>${tt('triggerui.and')}</option>
-        <option ${cond.joiner==='or'?'selected':''}>${tt('triggerui.or')}</option></select>`}
+        <option value="and" ${cond.joiner!=='or'?'selected':''}>${tt('triggerui.and')}</option>
+        <option value="or" ${cond.joiner==='or'?'selected':''}>${tt('triggerui.or')}</option></select>`}
     <label class="chk" title="${ttA('triggerui.invert_this_clause')}"><input type="checkbox"
       ${cond.negated?'checked':''} ${tr.readOnly?'disabled':''}
       onchange="trgSet(trgOf('${tr.uid}'),'negated',this.checked,${i})">${tt('common.not')}</label>

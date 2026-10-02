@@ -916,7 +916,7 @@ function cpaintFootHtml(){
         >${tt('campaint.redo',{x:st.redo ? ` (${st.redo})` : ''})}</button>
       <span class="count">${st.last ? esc(st.last) : tt('campaint.no_stroke_yet')}</span>
     </div>
-    ${st.dropped ? `<div class="count">${tt('campaint.of_the_oldest_stroke_been_let',{dropped:st.dropped,x:st.dropped === 1 ? ' has' : 's have'})}</div>` : ''}
+    ${st.dropped ? `<div class="count">${ttN('campaint.of_the_oldest_stroke_been_let',st.dropped)}</div>` : ''}
     ${(st.dirty.length || st.new_region) ? `<div class="cprow">
       <button class="primary" onclick="cpaintSave()">${tt('campaint.save_the_map')}</button>
       <button onclick="cpaintDiscard()"
