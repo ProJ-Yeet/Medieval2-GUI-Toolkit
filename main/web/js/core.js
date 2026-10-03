@@ -1838,7 +1838,7 @@ function updateBatchBtn(){batchBtn.textContent=tt('core.transfer_selected',{sele
   const on=state.selMode&&state.selected.size?'inline-block':'none';
   clearSelBtn.style.display=on;
   packBtn.style.display=state.mode==='transfer'?on:'none';
-  packBtn.textContent=tt('core.export_pack',{selected_n:state.selected.size});}
+  packBtn.textContent=tt('core.export_pack',{selected_n:state.selected.size});
   deleteSelectedBtn.style.display=state.mode==='edit'?on:'none';
   deleteSelectedBtn.textContent=`Delete selected (${state.selected.size})`;}
 
