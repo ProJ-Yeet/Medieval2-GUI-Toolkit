@@ -5,6 +5,7 @@ const path = require('node:path');
 const vm = require('node:vm');
 const context = {
   state: {}, window: {}, esc: String,
+  tt:key => key, ttA:key => key, ttN:key => key,
   document: {addEventListener(){}, createElement(){
     const canvas = {width:0, height:0};
     canvas.getContext = () => ({
@@ -49,6 +50,27 @@ context.activity = () => {};
 context.cfdGo(0);
 assert(selected,'choosing a region enters selection mode');
 assert.equal(destination,'Alpha','browse selection navigates to the region');
+const second = {name:'Beta', key:0x0000ff, anchor:[1,0], declared:true};
+c.man.regions.push(second);
+c.multi = new Set([region.key, second.key]);
+c.sel = region;
+raw.data.set([255,0,0,255,0,0,255,255]);
+c.outline = null; c.outlineKey = -1;
+context.cmapOverlay(draw,0,0,2,1);
+assert.equal(c.outline.pixels[3],255,'multi-selection outlines its first region');
+assert.equal(c.outline.pixels[7],255,'multi-selection outlines every selected region');
+context.cpaintWorkspacePaint = context.cmapPaint = context.cmapPickPaint = () => {};
+context.cmapSub = context.cmapSurface = context.cmapProbe = context.cmapOpenRegion = context.csOpen = context.cmapOpenPeople = () => {};
+context.cpaintArmed = () => false;
+context.activity = () => {};
+context.cmapRegionAt = x => x ? second : region;
+c.man.markers = {settlement:[0,0,0], port:[255,255,255]};
+context.cmapPick([0,0], false);
+context.cmapPick([1,0], true);
+assert.deepEqual([...c.multi].sort((a,b)=>a-b), [second.key, region.key].sort((a,b)=>a-b),
+  'Shift-click retains both selected regions');
+context.cmapPick([1,0], true);
+assert.deepEqual([...c.multi], [region.key], 'Shift-click toggles a selected region off');
 console.log('PASS: outline rebuild, cache, clear and region browsing/selection');
 
 vm.runInContext(fs.readFileSync(path.join(__dirname,'../web/js/campaint.js'),'utf8'),context);

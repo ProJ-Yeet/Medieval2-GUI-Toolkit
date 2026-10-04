@@ -853,7 +853,8 @@ function cmapNew(mod, man){
     // who turned them off saved that, and it is a habit like the rest.
     labels: saved.labels === undefined ? true : !!saved.labels, lab: null,
     view: {zoom: 1, ox: 0, oy: 0, fitted: false},
-    hover: null, sel: null, outline: null, outlineKey: -1,
+    hover: null, sel: null, multi: new Set(), multiDetails: null,
+    outline: null, outlineKey: -1,
     // 17e's tooltip: where the pointer is in the stage, whether the panel is
     // wanted at all, and whether a drag is holding it down
     ptr: null, tip: saved.tip !== false, tipHold: false, saidTip: '', tipKey: '',
@@ -2393,7 +2394,7 @@ function cmapPointers(cv){
         if(state.cmk) state.cmk.drag = null;
         cmapPaint();
         const tile = cmapEventTile(cv, e);
-        if(!cmapObjectPick(tile)) cmapPick(tile);
+        if(!cmapObjectPick(tile)) cmapPick(tile, e.shiftKey);
       }else cmkDrop();
     }
     else if(last && moved < CMAP_DRAG_SLOP && state.cmap){
@@ -2401,7 +2402,7 @@ function cmapPointers(cv){
       // press that travelled is still a pan while the pin waits.
       const tile = cmapEventTile(cv, e);
       if(!(e.button === 0 && typeof cpinTake === 'function' && cpinTake(tile))){
-        if(e.button !== 0 || !cmapObjectPick(tile)) cmapPick(tile);
+        if(e.button !== 0 || !cmapObjectPick(tile)) cmapPick(tile, e.shiftKey);
         if(e.button === 2) cpaintPickRegion(state.cmap.sel);
       }
     }
@@ -2895,8 +2896,10 @@ function cmapRegionAt(tx, ty){
    forth between two provinces should not pay for it twice. */
 function cmapOutline(r){
   const c = state.cmap;
-  if(!r){ c.outline = null; c.outlineKey = -1; return; }
-  if(c.outlineKey === r.key) return;
+  const wants = c.multi && c.multi.size ? [...c.multi].sort((a, b) => a - b) : (r ? [r.key] : []);
+  if(!r || !wants.length){ c.outline = null; c.outlineKey = -1; return; }
+  const outlineKey = wants.join(',');
+  if(c.outlineKey === outlineKey) return;
   const W = c.man.width, H = c.man.height;
   const R = cmapRawOf(c.layers.regions);
   if(!R){ c.outline = null; return; }
@@ -2905,7 +2908,7 @@ function cmapOutline(r){
   out.width = W; out.height = H;
   const im = out.getContext('2d').createImageData(W, H);
   const dst = im.data;
-  const want = r.key;
+  const want = new Set(wants);
   // one packed key per pixel, once, so the neighbour tests below are integer
   // comparisons rather than four more shifts each
   const keys = new Int32Array(W * H);
@@ -2914,20 +2917,20 @@ function cmapOutline(r){
   for(let y = 0; y < H; y++){
     for(let xx = 0; xx < W; xx++){
       const j = y * W + xx;
-      if(keys[j] !== want) continue;
+      if(!want.has(keys[j])) continue;
       // The map's own edge counts as an edge of the region: a province running
       // off the side of the map is outlined there too, rather than opening.
-      const edge = xx === 0     || keys[j - 1] !== want
-                || xx === W - 1 || keys[j + 1] !== want
-                || y === 0      || keys[j - W] !== want
-                || y === H - 1  || keys[j + W] !== want;
+      const edge = xx === 0     || !want.has(keys[j - 1])
+                || xx === W - 1 || !want.has(keys[j + 1])
+                || y === 0      || !want.has(keys[j - W])
+                || y === H - 1  || !want.has(keys[j + W]);
       if(!edge) continue;
       const i = j * 4;
       dst[i] = 255; dst[i + 1] = 232; dst[i + 2] = 100; dst[i + 3] = 255;
     }
   }
   out.getContext('2d').putImageData(im, 0, 0);
-  c.outline = out; c.outlineKey = r.key;
+  c.outline = out; c.outlineKey = outlineKey;
 }
 
 /* ---------- the legend ---------- */
@@ -3215,7 +3218,7 @@ function cmapHideColour(code, key, on){
    it - answered in the browser off the region layer it already has - because
    that one runs per pointer event and a round trip there would be the exact
    thing this phase's rules exist to prevent. */
-async function cmapPick(tile){
+async function cmapPick(tile, multi){
   const c = state.cmap;
   c.objectRequest = (c.objectRequest || 0) + 1;
   c.objectSel = null;
@@ -3241,6 +3244,13 @@ async function cmapPick(tile){
     const own = cmapMarkerOwner(tx, ty);
     if(own){ r = own.region; c.marker = own.kind; }
     else c.marker = `${hit}-orphan`;
+  }
+  const selected = c.multi || (c.multi = new Set());
+  if(multi && r && r.name){
+    if(selected.has(r.key)) selected.delete(r.key); else selected.add(r.key);
+  }else{
+    selected.clear();
+    if(r && r.name) selected.add(r.key);
   }
   c.sel = r;
   c.pick = (tx >= 0 && ty >= 0 && tx < c.man.width && ty < c.man.height) ? [tx, ty] : null;
@@ -3310,7 +3320,10 @@ async function cmapOpenPeople(region){
    flag somebody has to remember to set. */
 async function cmapOpenRegion(name, refresh){
   const c = state.cmap;
-  if(!refresh && c.det && c.det.name === name && !c.det.error) return;
+  if(!refresh && c.det && c.det.name === name && !c.det.error){
+    cmapMultiRegionLoad(c, c.det);
+    return;
+  }
   c.det = {name, loading: true};
   c.cv = null;
   cmapPickPaint();
@@ -3323,10 +3336,26 @@ async function cmapOpenRegion(name, refresh){
     w: {legion: d.legion, faction: d.faction, rebels: d.rebels,
         resources: d.resources.slice(), triumph: d.triumph, farming: d.farming,
         religions: Object.assign({}, d.religions)},
-    raw: '',
+    raw: '', touched: new Set(),
   });
   cmapPickPaint();
   undoReset();          // the working copy exists now: this is Ctrl+Z's baseline
+  cmapMultiRegionLoad(c, c.det);
+}
+
+async function cmapMultiRegionLoad(c, d){
+  const names = [...(c.multi || [])].map(key => c.byKey.get(key)).filter(Boolean)
+    .map(r => r.name).filter(Boolean);
+  if(names.length < 2){ d.multi = null; return; }
+  let rows;
+  try{ rows = await Promise.all(names.map(name => api.get(`/api/map/region?mod=${enc(c.mod)}&name=${enc(name)}`
+    + cmapCampQ()))); }
+  catch(e){ return; }
+  if(state.cmap !== c || c.det !== d) return;
+  const slots = ['legion', 'faction', 'rebels', 'resources', 'triumph', 'farming', 'religions'];
+  d.multi = {names, differs: slots.filter(slot =>
+    new Set(rows.map(row => JSON.stringify(row[slot]))).size > 1)};
+  cmapPickPaint();
 }
 
 //: Everything below the layer stack: what the tile is, and what the region is.
@@ -3874,11 +3903,13 @@ function cmapGoRegion(key){
 function cmapSet(slot, value){
   const d = state.cmap.det; if(!d || !d.w) return;
   d.w[slot] = value;
+  d.touched.add(slot);
   cmapTouched(false);
 }
 function cmapSetResources(text){
   const d = state.cmap.det; if(!d || !d.w) return;
   d.w.resources = text.split(',').map(v => v.trim()).filter(Boolean);
+  d.touched.add('resources');
   // the chips under the box are the point of it, so this one does repaint -
   // and it repaints the FORM, not the pane, because the caret is in the box
   cmapTouched(true);
@@ -3888,6 +3919,7 @@ function cmapSetReligion(name, value){
   const v = value.trim();
   if(v === '') delete d.w.religions[name];
   else d.w.religions[name] = parseInt(v, 10) || 0;
+  d.touched.add('religions');
   cmapTouched(true);
 }
 function cmapTouched(repaint){
@@ -3938,7 +3970,16 @@ async function cmapCvToggle(){
    `edits` is exactly what campmap.render_block takes, so the pane and the save
    cannot produce different bytes. */
 function cmapEdits(){
-  const w = state.cmap.det.w;
+  const d = state.cmap.det, w = d.w;
+  if(d.multi && d.multi.names.length > 1){
+    const edits = {};
+    for(const slot of d.touched){
+      if(slot === 'religions') edits.religions = Object.assign({}, w.religions);
+      else if(slot === 'resources') edits.resources = w.resources.map(r => r.trim()).filter(Boolean);
+      else edits[slot] = (w[slot] || '').trim();
+    }
+    return edits;
+  }
   return {legion:(w.legion || '').trim(), faction:(w.faction || '').trim(),
           rebels:(w.rebels || '').trim(),
           resources:w.resources.map(r => r.trim()).filter(Boolean),
@@ -3950,7 +3991,8 @@ async function cmapSave(){
   const c = state.cmap, d = c.det;
   if(!d || !d.w || c.busy) return;
   const total = cmapReligionTotal();
-  if(total !== 100 && d.has.religions){
+  const regions = d.multi && d.multi.names.length > 1 ? d.multi.names : [d.name];
+  if(regions.length === 1 && total !== 100 && d.has.religions){
     toast(tt(total > 100 ? 'campmap.religion_total_take_off' : 'campmap.religion_total_add_on',{total,amount:Math.abs(total - 100)}), 7000);
     return;
   }
@@ -3960,23 +4002,31 @@ async function cmapSave(){
      Reforged's Fellowship, a file that campaign does not read. */
   const body = {mod:c.mod, campaign:c.campaign || '', region:d.name,
                 edits:cmapEdits()};
-  if(d.raw) body.raw_block = d.raw;
+  if(d.raw && regions.length === 1) body.raw_block = d.raw;
   c.busy = true;
-  let plan;
-  try{ plan = await api.post('/api/map/plan', body); }
+  let plans;
+  try{ plans = await Promise.all(regions.map(region => api.post('/api/map/plan',
+    Object.assign({}, body, {region})))); }
   finally{ c.busy = false; }
-  if(plan.error){ toast('✗ ' + plan.error, 7000); return; }
-  const p = plan.plan || {};
+  const failedPlan = plans.find(plan => plan.error && plan.error !== 'nothing to change');
+  if(failedPlan){ toast('✗ ' + failedPlan.error, 7000); return; }
+  const ready = plans.filter(plan => !plan.error);
+  if(!ready.length){ toast(tt('common.no_visible_change')); return; }
+  const p = ready[0].plan || {};
   const lines = (p.changes || []).slice(0, 14);
   const warn = (p.warnings || []).slice(0, 4).map(x => '⚠ ' + x);
-  if(!confirm(tt('campmap.write_save_confirm',{name:d.name,changes:lines.join('\n') || tt('common.no_visible_change'),
+  if(!confirm(tt('campmap.write_save_confirm',{name:regions.length === 1 ? d.name : `${regions.length} regions`,changes:lines.join('\n') || tt('common.no_visible_change'),
       more:(p.changes || []).length > 14 ? tt('campmap.and_more_2',{changes:p.changes.length - 14}) : '',
       warnings:warn.length ? '\n\n' + warn.join('\n') : ''}))) return;
   c.busy = true;
-  let res;
-  try{ res = await api.post('/api/map/apply', body); }
+  let results;
+  try{ results = [];
+    for(let i = 0; i < regions.length; i++) if(!plans[i].error)
+      results.push(await api.post('/api/map/apply', Object.assign({}, body, {region: regions[i]})));
+  }
   finally{ c.busy = false; }
-  if(res.error){ toast('✗ ' + res.error, 7000); return; }
+  const failedApply = results.find(res => res.error);
+  if(failedApply){ toast('✗ ' + failedApply.error, 7000); return; }
   toast(tt('campmap.saved_map_rwm_deleted_log_can'));
   // The region record is the only data this save changes.  Re-reading the
   // complete map recreated the workspace and could race its restored pick
@@ -4130,6 +4180,7 @@ function cmapKeys(){
     else if(e.key === 'Escape' && (state.cmap.sel || state.cmap.pick)){
       const c = state.cmap;
       c.sel = null; c.pick = null; c.probe = null; c.det = null;
+      if(c.multi) c.multi.clear();
       c.objectSel = null; c.objectRequest = (c.objectRequest || 0) + 1;
       cpaintWorkspacePaint();
       state.cset = null; state.cx = null;

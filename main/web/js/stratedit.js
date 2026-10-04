@@ -49,7 +49,7 @@ const CS_DEBOUNCE = 450;
 function csNew(mod, region){
   return {mod, region, open: true, loading: false, err: '', d: null,
           w: null, blds: [], owner: '', place: '', busy: false,
-          preview: null, timer: 0};
+          preview: null, timer: 0, multi: null, touched: new Set()};
 }
 
 //: Called from the map's own pick, so opening a province opens its settlement.
@@ -59,7 +59,10 @@ async function csOpen(region, refresh){
   if(!c) return;
   const was = state.cset;
   if(!region){ state.cset = null; csPaint(); return; }
-  if(!refresh && was && was.mod === c.mod && was.region === region && was.d) return;
+  if(!refresh && was && was.mod === c.mod && was.region === region && was.d){
+    csMultiLoad(was);
+    return;
+  }
   const k = state.cset = csNew(c.mod, region);
   k.open = was ? was.open : true;
   k.loading = true;
@@ -72,6 +75,21 @@ async function csOpen(region, refresh){
   k.loading = false;
   if(d.error){ k.err = d.error; csPaint(); return; }
   csAdopt(k, d);
+  csPaint();
+  csMultiLoad(k);
+}
+
+async function csMultiLoad(k){
+  const c = state.cmap;
+  const regions = c && c.multi ? [...c.multi].map(key => c.byKey.get(key))
+    .filter(Boolean).map(r => r.name).filter(Boolean) : [];
+  if(regions.length < 2){ k.multi = null; return; }
+  let rows;
+  try{ rows = await Promise.all(regions.map(region => api.get(`/api/map/settlement?mod=${enc(k.mod)}`
+    + `&region=${enc(region)}${cmapCampQ()}`).then(d => ({region, d}), () => ({region, d: null})))); }
+  catch(e){ return; }
+  if(state.cset !== k) return;
+  k.multi = {regions: rows.filter(row => row.d && !row.d.error).map(row => row.region)};
   csPaint();
 }
 
@@ -88,6 +106,7 @@ function csAdopt(k, d){
   k.owner = d.owner;
   k.place = '';
   k.preview = null;
+  k.touched.clear();
 }
 
 function csToggle(){
@@ -103,6 +122,7 @@ function csSet(slot, value){
   const k = state.cset;
   if(!k || !k.w) return;
   k.w[slot] = value;
+  k.touched.add(slot);
   // The tier beside Kind/Level changes with those controls. Text inputs do not:
   // rebuilding their parent on every keypress removes the input and its focus.
   csPlanSoon();
@@ -113,6 +133,7 @@ function csBld(i, slot, value){
   const k = state.cset;
   if(!k || !k.blds[i]) return;
   k.blds[i][slot] = value;
+  k.touched.add('buildings');
   if(slot === 'line'){
     // a line without one of its own levels is not a building the engine can
     // find, so picking a line picks its first level with it
@@ -127,6 +148,7 @@ function csBldDrop(i){
   const k = state.cset;
   if(!k) return;
   k.blds.splice(i, 1);
+  k.touched.add('buildings');
   csPlanSoon();
   csPaint();
 }
@@ -138,6 +160,7 @@ function csBldMove(i, by){
   const row = k.blds[i];
   k.blds[i] = k.blds[j];
   k.blds[j] = row;
+  k.touched.add('buildings');
   csPlanSoon();
   csPaint();
 }
@@ -148,6 +171,7 @@ function csBldAdd(name){
   const line = (k.d.vocab.lines || []).find(L => L.name === name);
   k.blds.push({line: name,
                level: line && line.levels.length ? line.levels[0].level : ''});
+  k.touched.add('buildings');
   csPlanSoon();
   csPaint();
 }
@@ -156,6 +180,7 @@ function csOwner(value){
   const k = state.cset;
   if(!k) return;
   k.owner = value;
+  k.touched.add('owner');
   // a province given to somebody else has to land somewhere in their block,
   // and the file's own habit is at the end
   if(value !== k.d.owner && !k.place) k.place = 'last';
@@ -168,6 +193,7 @@ function csPlace(value){
   const k = state.cset;
   if(!k) return;
   k.place = value;
+  k.touched.add('owner');
   csPlanSoon();
   csPaint();
 }
@@ -178,16 +204,16 @@ function csPlace(value){
 //: about what is being asked for.
 function csBody(){
   const k = state.cset;
-  const body = {mod: k.mod, region: k.region, campaign: k.d.campaign,
-                edits: {settlement_type: k.w.settlement_type,
-                        level: (k.w.level || '').trim(),
-                        population: String(k.w.population).trim(),
-                        year_founded: String(k.w.year_founded).trim(),
-                        plan_set: (k.w.plan_set || '').trim(),
-                        faction_creator: (k.w.faction_creator || '').trim()},
-                buildings: k.blds.map(b => ({line: b.line, level: b.level}))};
-  if(k.owner && k.owner !== k.d.owner) body.owner = k.owner;
-  if(k.place) body.place = k.place;
+  const bulk = k.multi && k.multi.regions.length > 1;
+  const edits = {};
+  for(const slot of ['settlement_type', 'level', 'population', 'year_founded', 'plan_set', 'faction_creator'])
+    if(!bulk || k.touched.has(slot))
+      edits[slot] = slot === 'population' || slot === 'year_founded'
+        ? String(k.w[slot]).trim() : (k.w[slot] || '').trim();
+  const body = {mod: k.mod, region: k.region, campaign: k.d.campaign, edits};
+  if(!bulk || k.touched.has('buildings')) body.buildings = k.blds.map(b => ({line: b.line, level: b.level}));
+  if((!bulk || k.touched.has('owner')) && k.owner && k.owner !== k.d.owner) body.owner = k.owner;
+  if((!bulk || k.touched.has('owner')) && k.place) body.place = k.place;
   return body;
 }
 
@@ -213,13 +239,18 @@ async function csSave(){
   if(!k || !k.d || k.busy) return;
   clearTimeout(k.timer);
   k.busy = true;
-  let plan;
-  try{ plan = await api.post('/api/map/settlement_plan', csBody()); }
-  catch(e){ plan = {error: errText(e)}; }
+  const regions = k.multi && k.multi.regions.length > 1 ? k.multi.regions : [k.region];
+  const bodies = regions.map(region => Object.assign({}, csBody(), {region}));
+  let plans;
+  try{ plans = await Promise.all(bodies.map(body => api.post('/api/map/settlement_plan', body))); }
+  catch(e){ plans = [{error: errText(e)}]; }
   finally{ k.busy = false; }
-  if(plan.error){ toast('✗ ' + plan.error, 8000); k.preview = plan.plan || null;
+  const failedPlan = plans.find(plan => plan.error && plan.error !== 'nothing to change');
+  if(failedPlan){ toast('✗ ' + failedPlan.error, 8000); k.preview = failedPlan.plan || null;
     csPaint(); return; }
-  const p = plan.plan || {};
+  const ready = plans.filter(plan => !plan.error);
+  if(!ready.length){ toast(tt('common.no_visible_change')); return; }
+  const p = ready[0].plan || {};
   k.preview = p;
   csPaint();
   const lines = (p.changes || []).slice(0, 14);
@@ -230,11 +261,15 @@ async function csSave(){
     notes.length ? '\n\n' + notes.join('\n') : ''}`;
   if(!confirm(tt('stratedit.confirm_write_settlement',{region:k.region,changes}))) return;
   k.busy = true;
-  let res;
-  try{ res = await api.post('/api/map/settlement_apply', csBody()); }
+  let results, res;
+  try{ results = [];
+    for(let i = 0; i < bodies.length; i++) if(!plans[i].error)
+      results.push(await api.post('/api/map/settlement_apply', bodies[i]));
+  }
   catch(e){ res = {error: errText(e)}; }
   finally{ k.busy = false; }
-  if(res.error){ toast('✗ ' + res.error, 8000); return; }
+  const failedApply = results && results.find(res => res.error);
+  if(!results || failedApply){ toast('✗ ' + (failedApply || res).error, 8000); return; }
   toast(tt('common.saved_log_can_undo_it'));
   activity('settlement', `${k.mod} ${k.region} saved`);
   // The map canvas, layer choices and open tabs do not depend on this one
