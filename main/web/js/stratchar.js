@@ -358,6 +358,45 @@ async function cxSave(action){
   }
 }
 
+async function cxFillRebelSettlements(){
+  const k = state.cx;
+  if(!k || !k.d || k.busy) return;
+  const map = state.cmap, campaign = map && map.campaign;
+  const body = {mod: k.mod, campaign: k.d.campaign};
+  k.busy = true;
+  let preview;
+  try{ preview = await api.post('/api/map/rebel_fill_plan', body); }
+  catch(e){ preview = {error: errText(e)}; }
+  finally{ k.busy = false; }
+  const p = preview.plan || {};
+  if(preview.error){ toast('✗ ' + preview.error, 8000); return; }
+  const made = p.created || [], skipped = p.skipped || [];
+  body.seed = p.seed;
+  const lines = (p.changes || []).slice(0, 12);
+  if(!confirm(`Write: add ${made.length} rebel character${made.length === 1 ? '' : 's'}?\n\n`
+    + (lines.join('\n') || 'no visible change')
+    + ((p.changes || []).length > lines.length
+      ? `\n…and ${(p.changes || []).length - lines.length} more` : '')
+    + (skipped.length ? `\n\nSkipped ${skipped.length} settlement${skipped.length === 1 ? '' : 's'}:`
+      + '\n' + skipped.slice(0, 5).map(x => `${x.region}: ${x.reason}`).join('\n')
+      + (skipped.length > 5 ? `\n…and ${skipped.length - 5} more` : '') : '')
+    + '\n\nOne campaign-file write, backed up first. 🕑 Log can undo it.')) return;
+  k.busy = true;
+  let res;
+  try{ res = await api.post('/api/map/rebel_fill_apply', body); }
+  catch(e){ res = {error: errText(e)}; }
+  finally{ k.busy = false; }
+  if(res.error){ toast('✗ ' + res.error, 8000); return; }
+  toast(`Added ${res.created.length} rebel character${res.created.length === 1 ? '' : 's'}. 🕑 Log can undo it.`);
+  activity('character', `${k.mod}: filled ${res.created.length} rebel settlements`);
+  if(state.cmap !== map || !map || map.campaign !== campaign || state.cx !== k) return;
+  const open = k.open, tab = k.tab, faction = k.faction;
+  k.d = null;
+  await cxOpen(faction);
+  if(state.cx && state.cx.d){ state.cx.open = open; state.cx.tab = tab; cxPaint(); }
+  if(state.cmk){ state.cmk.d = null; await cmkLoad(); }
+}
+
 /* ---------- drawing ---------- */
 
 function cxPaint(){
@@ -429,6 +468,9 @@ function cxPeopleHtml(){
       `<div class="${f.fatal ? 'w-bad' : 'w-warn'}">${esc(f.message)}</div>`).join('')}
     <div class="csbtns">
       <button onclick="cxAdd()">+ Add a character</button>
+      <button onclick="cxFillRebelSettlements()"
+        title="Add a general to every unoccupied rebel-held settlement tile, using the region creator's name pool and units"
+        >⚑ Fill rebel settlements</button>
       ${d.characters.length ? '' : `<button onclick="cxTab('horde')"
         title="Leaders and armies on free land in one province, or an emergent_faction event"
         >⚑ Give it a horde start</button>`}

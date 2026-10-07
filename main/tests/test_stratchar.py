@@ -34,6 +34,7 @@ import urllib.error
 import urllib.request
 from collections import Counter
 from pathlib import Path
+from types import SimpleNamespace
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
@@ -265,9 +266,9 @@ class _Units:
 
 
 class _Unit:
-    def __init__(self, name, general=False, ownership=None):
+    def __init__(self, name, general=False, ownership=None, category="infantry"):
         self.type = name
-        self.category = "infantry"
+        self.category = category
         self.class_type = "heavy"
         self.attributes = ["general_unit"] if general else []
         self.ownership = ownership or []
@@ -367,6 +368,68 @@ check("and then no roster rule runs at all: a rule with no evidence reports "
           traits=[("Nosuch", 9)], ancillaries=["nosuch"],
           army=[stratchar.Army("Space Marines", 0, 0, 0)]))
       and not stratchar.check_pool(blind, "england", "Boromir"))
+
+
+# ---- 3b) filling rebel-held settlements --------------------------------------
+print("\n3b) rebel settlement characters are planned together")
+
+rebel_tmp = Path(_tmp.mkdtemp(prefix="ut_rebels_"))
+rebel_mod = _Fake(rebel_tmp, edu=_Units([
+    _Unit("Cornwall Spear", ownership=["cornwall"]),
+    _Unit("Cornwall Bow", ownership=["cornwall"]),
+    _Unit("Cornwall Horse", ownership=["cornwall"]),
+    _Unit("Cornwall Guard", ownership=["cornwall"]),
+    _Unit("Cornwall Galley", ownership=["cornwall"], category="ship"),
+]), names=("faction: cornwall\n\tcharacters\n\t\tEozen\n\t\tBran\n"))
+rebel_campaign = "rebel_fill"
+rebel_path = (rebel_tmp / campstrat.CAMPAIGN_DIR_REL / rebel_campaign
+              / campstrat.STRAT_NAME)
+rebel_path.parent.mkdir(parents=True)
+rebel_path.write_text(joined(
+    "campaign rebel_fill", "playable", "end", "unlockable", "end",
+    "nonplayable", "\tslave", "\tcornwall", "end", "",
+    "faction slave, balanced smith", "settlement", "{", "\tregion Rebel_Two", "}", "",
+    "character Old, general, male, age 25, x 6, y 5", "",
+    "faction cornwall, balanced smith", "",
+), encoding="latin-1")
+
+class _RebelMap:
+    terrain = SimpleNamespace(width=10, height=10,
+                              in_bounds=lambda x, y: 0 <= x < 10 and 0 <= y < 10)
+    sea = bytes(100)
+    index = SimpleNamespace(by_key={
+        1: SimpleNamespace(settlement=(3, 4)),
+        2: SimpleNamespace(settlement=(6, 4)),
+    })
+
+    def game_xy(self, x, y):
+        return x, self.terrain.height - 1 - y
+
+    def image_xy(self, x, y):
+        return x, self.terrain.height - 1 - y
+
+
+rebel_facts = _Facts(rebel_mod)
+rebel_facts.campaign = rebel_campaign
+rebel_facts.cm = _RebelMap()
+rebel_facts.regions = [
+    SimpleNamespace(name="Rebel_One", owner="slave", creator="cornwall", rgb_key=1),
+    SimpleNamespace(name="Rebel_Two", owner="slave", creator="cornwall", rgb_key=2),
+]
+rebel_plan = stratchar.plan_rebel_fill(rebel_mod, rebel_facts)
+rebel_done = campstrat.parse_strat(rebel_plan.text) if rebel_plan.text else None
+rebel_people = (stratchar.characters_of(rebel_done, rebel_done.faction("slave"))
+                if rebel_done else [])
+new_rebel = next((p for p in rebel_people if p.name != "Old"), None)
+check("one unoccupied rebel settlement gets a creator-sub-faction general with four to eight owned units",
+      not rebel_plan.errors and len(rebel_plan.created) == 1 and new_rebel is not None
+      and new_rebel.get("sub_faction") == "cornwall" and new_rebel.get("age") == 25
+      and (new_rebel.get("x"), new_rebel.get("y")) == (3, 5)
+      and 4 <= len(stratchar.read_spec(rebel_done, new_rebel).army) <= 8
+      and {a.unit for a in stratchar.read_spec(rebel_done, new_rebel).army}
+      <= {"Cornwall Spear", "Cornwall Bow", "Cornwall Horse", "Cornwall Guard"}
+      and any(x["region"] == "Rebel_Two" for x in rebel_plan.skipped))
+shutil.rmtree(rebel_tmp, ignore_errors=True)
 
 fac = stratchar.check_faction(sf, eng, voc)
 check("a faction with one leader and a clean family says nothing", not fac)

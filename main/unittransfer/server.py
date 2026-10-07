@@ -490,6 +490,10 @@ Characters, armies and the family tree (16i, see :mod:`unittransfer.stratchar`)
                                     last one; a move is the block's own span
                                     lifted into another faction (one backup +
                                     undo)
+  POST /api/map/rebel_fill_plan|_apply
+                                 -> one generated general on every unoccupied
+                                    rebel-held settlement tile, with its region
+                                    creator as sub_faction (one backup + undo)
 
 A horde start for a faction that holds nothing (72, D13, see
 :mod:`unittransfer.hordestart`)
@@ -3368,6 +3372,9 @@ class Handler(BaseHTTPRequestHandler):
             if u.path in ("/api/map/character_plan", "/api/map/character_apply"):
                 return self._json(self._character(
                     u.path.rsplit("_", 1)[-1], body))
+            if u.path in ("/api/map/rebel_fill_plan", "/api/map/rebel_fill_apply"):
+                return self._json(self._rebel_fill(
+                    u.path.rsplit("_", 1)[-1], body))
             if u.path in ("/api/map/horde_plan", "/api/map/horde_apply"):
                 return self._json(self._horde(
                     u.path.rsplit("_", 1)[-1], body))
@@ -5164,6 +5171,28 @@ class Handler(BaseHTTPRequestHandler):
         except (OSError, ValueError) as e:
             return {"error": str(e), "plan": plan.payload()}
         self.registry.invalidate(name)              # the file changed on disk
+        return out
+
+    # ---- fill unoccupied rebel settlement tiles (campaign map) ----
+    def _rebel_fill(self, action, body):
+        """Preview or write all missing rebel settlement generals at once."""
+        try:
+            name = body["mod"]
+            mod = self.registry.describe(name)
+            facts = self.registry.map_facts(name, body.get("campaign") or "")
+            plan = stratchar.plan_rebel_fill(mod, facts, body)
+        except (KeyError, campmap.MapError, ModDataError, OSError) as e:
+            return {"error": str(e)}
+        out = {"plan": plan.payload()}
+        if action == "plan" or plan.errors:
+            if plan.errors:
+                out["error"] = "; ".join(plan.errors)
+            return out
+        try:
+            out.update(stratchar.apply_rebel_fill(plan))
+        except (OSError, ValueError) as e:
+            return {"error": str(e), "plan": plan.payload()}
+        self.registry.invalidate(name)
         return out
 
     # ---- a horde start for a faction that holds nothing (72, D13) ----
