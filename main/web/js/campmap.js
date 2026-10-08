@@ -3702,24 +3702,11 @@ async function cmapMercSave(){
   if(!d || c.busy || d.mercPick === undefined) return;
   const body = {mod:c.mod, what:'mercenaries', campaign:d.campaign,
                 name:d.name, edits:{pool:d.mercPick}};
-  c.busy = true;
-  let plan;
-  try{ plan = await api.post('/api/campfiles/plan', body); }
-  finally{ c.busy = false; }
-  if(plan.error){ toast('✗ ' + plan.error, 7000); return; }
-  const p = plan.plan || {};
-  if(!confirm(tt('campmap.write_merc_confirm',{changes:(p.changes || []).join('\n') || tt('common.no_visible_change'),
-      warnings:(p.warnings || []).length ? (p.warnings || []).slice(0, 3).join('\n') + '\n\n' : '',
-      file:d.mercenaries.file}))) return;
-  c.busy = true;
-  let res;
-  try{ res = await api.post('/api/campfiles/apply', body); }
-  finally{ c.busy = false; }
-  if(res.error){ toast('✗ ' + res.error, 7000); return; }
+  if(!await cmapCampfilesSave(d, body, 'campmap.write_merc_confirm',
+      d.mercenaries.file)) return;
   toast(tt('campmap.mercenary_pool_saved_log_can_undo'));
-  const name = d.name;
   c.det = null;
-  await cmapOpenRegion(name);
+  await cmapOpenRegion(d.name);
 }
 
 /* ---- 33, G2: which music this province plays ----
@@ -3783,24 +3770,44 @@ async function cmapMusicSave(){
   if(!d || c.busy || d.musicPick === undefined) return;
   const body = {mod: c.mod, what: 'music', name: d.name,
                 edits: {music_type: d.musicPick}};
-  c.busy = true;
-  let plan;
-  try{ plan = await api.post('/api/campfiles/plan', body); }
-  finally{ c.busy = false; }
-  if(plan.error){ toast('✗ ' + plan.error, 7000); return; }
-  const p = plan.plan || {};
-  if(!confirm(tt('campmap.write_music_confirm',{changes:(p.changes || []).join('\n') || tt('common.no_visible_change'),
-      warnings:(p.warnings || []).length ? (p.warnings || []).slice(0, 3).join('\n') + '\n\n' : '',
-      file:d.music.file}))) return;
-  c.busy = true;
-  let res;
-  try{ res = await api.post('/api/campfiles/apply', body); }
-  finally{ c.busy = false; }
-  if(res.error){ toast('✗ ' + res.error, 7000); return; }
+  if(!await cmapCampfilesSave(d, body, 'campmap.write_music_confirm',
+      d.music.file)) return;
   toast(tt('campmap.music_type_saved_log_can_undo'));
-  const name = d.name;
   c.det = null;
-  await cmapOpenRegion(name);
+  await cmapOpenRegion(d.name);
+}
+
+/* The pool and music pickers write records outside descr_regions.txt, but they
+   still follow the Region tab's multi-selection. Each apply request is sent
+   separately so the server re-plans it against the file written by the prior
+   request instead of overwriting that earlier selection with a stale preview. */
+async function cmapCampfilesSave(d, body, confirmKey, file){
+  const c = state.cmap;
+  const regions = d.multi && d.multi.names.length > 1 ? d.multi.names : [d.name];
+  c.busy = true;
+  let plans;
+  try{ plans = await Promise.all(regions.map(name => api.post('/api/campfiles/plan',
+    Object.assign({}, body, {name})))); }
+  finally{ c.busy = false; }
+  const failedPlan = plans.find(plan => plan.error && plan.error !== 'nothing to change');
+  if(failedPlan){ toast('✗ ' + failedPlan.error, 7000); return false; }
+  const ready = plans.filter(plan => !plan.error);
+  if(!ready.length){ toast(tt('common.no_visible_change')); return false; }
+  const p = ready[0].plan || {};
+  if(!confirm(tt(confirmKey,{changes:(p.changes || []).join('\n') || tt('common.no_visible_change'),
+      warnings:(p.warnings || []).length ? (p.warnings || []).slice(0, 3).join('\n') + '\n\n' : '',
+      file}))) return false;
+  c.busy = true;
+  let results;
+  try{ results = [];
+    for(let i = 0; i < regions.length; i++) if(!plans[i].error)
+      results.push(await api.post('/api/campfiles/apply',
+        Object.assign({}, body, {name:regions[i]})));
+  }
+  finally{ c.busy = false; }
+  const failedApply = results.find(res => res.error);
+  if(failedApply){ toast('✗ ' + failedApply.error, 7000); return false; }
+  return true;
 }
 
 function cmapFindingsHtml2(){

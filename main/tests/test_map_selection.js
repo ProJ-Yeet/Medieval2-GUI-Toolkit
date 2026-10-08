@@ -109,3 +109,38 @@ handlers.pointermove({...event,clientX:20});
 handlers.pointerup({...event,clientX:20});
 assert.equal(p.region,'Before','right drag pans without sampling a region');
 console.log('PASS: right-click paint sampling and right-drag pan');
+
+(async () => {
+  const calls = [];
+  context.api = {post: async (path, body) => {
+    calls.push({path, body});
+    return path.endsWith('/plan') ? {plan:{changes:[body.name]}} : {};
+  }};
+  context.confirm = () => true;
+  context.toast = () => {};
+  context.cmapOpenRegion = async () => {};
+
+  context.state.cmap = {mod:'TestMod', busy:false, det:{
+    name:'Alpha', campaign:'imperial_campaign', mercPick:'North',
+    mercenaries:{file:'descr_mercenaries.txt'}, multi:{names:['Alpha','Beta']},
+  }};
+  await context.cmapMercSave();
+  let applies = calls.filter(x => x.path.endsWith('/apply'));
+  assert.deepEqual(JSON.parse(JSON.stringify(applies.map(x => x.body.name))), ['Alpha','Beta'],
+    'a mercenary-pool selection applies to every selected region');
+  assert(applies.every(x => x.body.what === 'mercenaries' && x.body.edits.pool === 'North'),
+    'each mercenary-pool request keeps the selected pool');
+
+  calls.length = 0;
+  context.state.cmap = {mod:'TestMod', busy:false, det:{
+    name:'Alpha', musicPick:'eastern_european',
+    music:{file:'descr_sounds_music_types.txt'}, multi:{names:['Alpha','Beta']},
+  }};
+  await context.cmapMusicSave();
+  applies = calls.filter(x => x.path.endsWith('/apply'));
+  assert.deepEqual(JSON.parse(JSON.stringify(applies.map(x => x.body.name))), ['Alpha','Beta'],
+    'a music-type selection applies to every selected region');
+  assert(applies.every(x => x.body.what === 'music' && x.body.edits.music_type === 'eastern_european'),
+    'each music-type request keeps the selected music type');
+  console.log('PASS: multi-region mercenary and music picker saves');
+})().catch(error => { console.error(error); process.exitCode = 1; });
