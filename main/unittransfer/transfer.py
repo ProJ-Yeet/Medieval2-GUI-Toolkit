@@ -3451,9 +3451,9 @@ def apply_transfer(plan: TransferPlan) -> Dict:
             db.entries.extend(appended)
             text = db.to_text()
             del db.entries[base:]          # keep cached db pristine
+            write_text("unit_models/battle_models.modeldb", text, modeldb.ENCODING)
         for i, raw in olds.items():
             db.entries[i].raw = raw
-            write_text("unit_models/battle_models.modeldb", text, modeldb.ENCODING)
 
     # ---- 3b) mount definition (descr_mount.txt) ----
     if plan.mount_raw:
