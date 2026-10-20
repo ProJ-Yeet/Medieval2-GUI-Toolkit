@@ -708,7 +708,7 @@ from typing import Dict, List, Optional
 
 from . import (bmdb, buildings, cards, cleaner, codeview, config, dupes, edit,
                modflags, modfiles, sounds, stratmap)
-from . import mapgen, mapnew, mapresize, modfork, vanilla, gamelog, modreport, rehearse, voices, emblem, bannermaker, artrecolour
+from . import mapgen, mapnew, mapresize, modfork, vanilla, gamelog, modreport, rehearse, voices, emblem, bannermaker, artrecolour, stratfamily
 from . import armory, armbake, armlib, armunit, loosemesh, meshfolder, modeldb, modeltext
 from . import ancillaries, areaeffects, campimport, edbimport, mapbundle, osmmap, osmsites, settlemodel, heroabilities, hordestart, walls, characters, projectzip, campaint, campdb, campevents, campfiles, campmap, campnew, campstrat, cas, casanim, animedit, animpack, animslot, animview, modelexport, launchcheck, packhouse, settlemech, fileswap, factionsites, sidefiles, banners, changesets, health, climatenew, guilds, mapcheck, mapfe, mapquery, mapterrain, mercpools, regiondel, edusort, factionaudit, factionclone, factions, images, mesh, minorfiles, namekeys, portrecords, rawtext, rebelpools, renames, soundbanks, soundscripts, spawns, sprites, stratcamp, stratchar, stratedit, stratobj, strings, traits, triggers, winconds
 from . import eop as _eop
@@ -2153,6 +2153,20 @@ class Handler(BaseHTTPRequestHandler):
                 return self._json(health.run(
                     mod, (lambda c: self.registry.map_for(name, c)) if use_map else None,
                     (q.get("campaign") or [""])[0]))
+            if u.path in ("/api/family", "/api/portraits"):
+                # 96e3: a faction's family tree; a culture's portrait pool
+                name = (q.get("mod") or [None])[0]
+                if not name or name not in self.registry.names():
+                    return self._err(404, "unknown mod")
+                mod = self.registry.get(name)
+                try:
+                    if u.path == "/api/family":
+                        return self._json(stratfamily.read(mod, (q.get("campaign") or ["imperial_campaign"])[0],
+                                                           (q.get("faction") or [""])[0]))
+                    culture = (q.get("culture") or [""])[0] or stratfamily.culture_of(mod, (q.get("faction") or [""])[0])
+                    return self._json(stratfamily.library(mod, culture))
+                except stratfamily.FamilyError as e:
+                    return self._json({"error": e.message})
             if u.path in ("/api/voices", "/api/voices/play"):
                 # 96e5: what a unit says, by accent, and one sound to hear
                 name = (q.get("mod") or [None])[0]
@@ -2814,6 +2828,30 @@ class Handler(BaseHTTPRequestHandler):
                     return self._json({"ok": True, "id": rec["id"], "changed": rec["changed"],
                                        "own": rec["own"], "skipped": rec["skipped"]})
                 except (artrecolour.RecolourError, OSError) as e:
+                    return self._json({"error": getattr(e, "message", None) or str(e)})
+            if u.path in ("/api/family/plan", "/api/family/apply", "/api/family/portrait", "/api/portraits/add"):
+                # 96e3: family edits, a portrait of one's own, new portraits for a pool
+                name = body.get("mod") or ""
+                if name not in self.registry.names():
+                    return self._err(404, "unknown mod")
+                mod = self.registry.get(name)
+                camp, fac = str(body.get("campaign") or "imperial_campaign"), str(body.get("faction") or "")
+                try:
+                    if u.path == "/api/family/plan":
+                        p = stratfamily.plan(mod, camp, fac, body.get("ops") or [])
+                        p.pop("text", None)
+                        return self._json(p)
+                    if u.path == "/api/family/apply":
+                        rec = stratfamily.apply(mod, camp, fac, body.get("ops") or [])
+                    elif u.path == "/api/family/portrait":
+                        rec = stratfamily.set_portrait(mod, camp, fac, str(body.get("name") or ""),
+                                                       _b64decode(body.get("b64") or ""))
+                    else:
+                        rec = stratfamily.add_to_library(mod, str(body.get("culture") or ""), str(body.get("group") or ""),
+                                                         [_b64decode(x) for x in (body.get("files") or [])])
+                    self.registry.invalidate(name)
+                    return self._json({"ok": True, "id": rec["id"]})
+                except (stratfamily.FamilyError, ValueError) as e:
                     return self._json({"error": getattr(e, "message", None) or str(e)})
             if u.path == "/api/rehearse":
                 # 96e2: a change set's port rehearsed on a copy, every check run

@@ -671,6 +671,10 @@ async function cxPoolAdd(part){
    family actually reads. Editing a relative line is 16j's neighbour and is not
    claimed here. */
 function cxFamilyHtml(){
+  // 96e3: the tree, drawn and edited (family.js); the lines and records below it
+  return fmHtml() + `<details class="fmraw"><summary class="count">${tt('family.raw_lines')}</summary>${cxFamilyListHtml()}</details>`;
+}
+function cxFamilyListHtml(){
   const d = state.cx.d;
   const rel = (d.relatives || []).map(r => `<div class="cxfam">
     ${tt('stratchar.line',{line:r.line,names:esc(r.names[0] || ''),names2:esc(r.names[1] || tt('stratchar.nobody')),x:r.names.length > 2 ? '&rarr; ' + r.names.slice(2).map(esc).join(', ') : ''})}
