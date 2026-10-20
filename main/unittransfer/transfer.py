@@ -3782,6 +3782,19 @@ def undo(transfer_id: str) -> Dict:
     # the mod), so they carry their own backup location rather than being resolved
     # against `data` like everything above.
     eop.restore_split(manifest)
+    # 96e1: files outside the mod's data/ (a script add-on in the game's
+    # script/modules), each with its own backup path: put back, or taken away
+    for target, bpath in manifest.get("outside_backed_up", []):
+        if Path(bpath).exists():
+            Path(target).parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(bpath, target)
+            file_op("RESTORE", Path(target), f"<- {bpath}")
+    for target in manifest.get("outside_created", []):
+        try:
+            Path(target).unlink()
+            file_op("DELETE", Path(target), "created by the job undone")
+        except OSError:
+            pass
     # the files just put back went round the write helpers, so the mod's
     # change set is told directly (Phase 52)
     from . import changesets

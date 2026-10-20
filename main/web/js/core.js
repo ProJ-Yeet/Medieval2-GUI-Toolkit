@@ -767,6 +767,7 @@ const MODES=[
   {id:'ancillaries',icon:'🏅', name:tt('common.ancillaries'),  sub:true, hint:tt('core.the_items_and_followers_a_character')},
   {id:'guilds',   icon:'⚖', name:tt('core.guilds'),       sub:true, hint:tt('core.what_each_guild_grants_and_the')},
   {id:'campdb',   icon:'⚙', name:tt('core.campaign_constants'), sub:true, hint:tt('core.descr_campaign_db_xml_the_campaign')},
+  {id:'scripts',  icon:'📜', name:tt('core.scripts'), sub:true, hint:tt('core.scripts_hint')},
   {id:'banners', icon:'🚩', name:tt('core.battle_banners'), sub:true, hint:tt('core.descr_banners_new_xml_the_banner')},
   {id:'walls', icon:'🧱', name:tt('core.walls_gates_and_towers'), sub:true, hint:tt('core.descr_walls_txt_each_wall_levels')},
   {id:'characters', icon:'🧙', name:tt('core.agents_and_generals'), sub:true, hint:tt('core.descr_character_txt_what_each_agent')},
@@ -807,6 +808,7 @@ const MINOR_TABS=[
   {mode:'ancillaries', label:tt('common.ancillaries')},
   {mode:'guilds',      label:tt('core.guilds')},
   {mode:'campdb',      label:tt('core.campaign_constants')},
+  {mode:'scripts',     label:tt('core.scripts')},
   {mode:'settlemech',  label:tt('core.settlement_mechanics')},
   {mode:'factionsites', label:tt('core.populace_and_off_map')},
   {mode:'sidefiles',   label:tt('core.animals_standards_advice')},
@@ -1713,7 +1715,7 @@ function applyMode(persist){
         snd=state.mode==='sounds', sbk=state.mode==='soundbanks'||state.mode==='soundscripts', spr=state.mode==='sprites', bld=state.mode==='buildings',
         str=state.mode==='strings', trt=state.mode==='traits',
         anc=state.mode==='ancillaries', mnr=state.mode==='minor'||state.mode==='cultures',
-        gld=state.mode==='guilds', cdb=state.mode==='campdb'||state.mode==='settlemech'||state.mode==='factionsites'||state.mode==='sidefiles'||state.mode==='banners'||state.mode==='heroabilities'||state.mode==='areaeffects'||state.mode==='walls'||state.mode==='characters',
+        gld=state.mode==='guilds', cdb=state.mode==='campdb'||state.mode==='scripts'||state.mode==='settlemech'||state.mode==='factionsites'||state.mode==='sidefiles'||state.mode==='banners'||state.mode==='heroabilities'||state.mode==='areaeffects'||state.mode==='walls'||state.mode==='characters',
         fac=state.mode==='factions',
         raw=state.mode==='rawtext',
         // whole-mod screens with no unit list: My changes (52) and Health (54)
@@ -1859,6 +1861,7 @@ function render(){
   if(state.mode==='ancillaries')return state.an?renderAncillaries():loadAncillaries();
   if(state.mode==='guilds')return state.gu?renderGuilds():loadGuilds();
   if(state.mode==='campdb')return state.cdb?renderCampDb():loadCampDb();
+  if(state.mode==='scripts')return state.sx?renderScripts():loadScripts();
   if(state.mode==='settlemech')return state.smx?renderSettleMech():loadSettleMech();
   if(state.mode==='factionsites')return state.fsx?renderFactionSites():loadFactionSites();
   if(state.mode==='sidefiles')return state.sdx?renderSideFiles():loadSideFiles();

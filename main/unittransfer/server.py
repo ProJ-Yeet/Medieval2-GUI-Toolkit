@@ -708,7 +708,7 @@ from typing import Dict, List, Optional
 
 from . import (bmdb, buildings, cards, cleaner, codeview, config, dupes, edit,
                modflags, modfiles, sounds, stratmap)
-from . import mapgen, mapnew, mapresize, modfork, vanilla, gamelog, modreport, rehearse, voices, emblem, bannermaker, artrecolour, stratfamily
+from . import mapgen, mapnew, mapresize, modfork, vanilla, gamelog, modreport, rehearse, voices, emblem, bannermaker, artrecolour, stratfamily, scripts
 from . import armory, armbake, armlib, armunit, loosemesh, meshfolder, modeldb, modeltext
 from . import ancillaries, areaeffects, campimport, edbimport, mapbundle, osmmap, osmsites, settlemodel, heroabilities, hordestart, walls, characters, projectzip, campaint, campdb, campevents, campfiles, campmap, campnew, campstrat, cas, casanim, animedit, animpack, animslot, animview, modelexport, launchcheck, packhouse, settlemech, fileswap, factionsites, sidefiles, banners, changesets, health, climatenew, guilds, mapcheck, mapfe, mapquery, mapterrain, mercpools, regiondel, edusort, factionaudit, factionclone, factions, images, mesh, minorfiles, namekeys, portrecords, rawtext, rebelpools, renames, soundbanks, soundscripts, spawns, sprites, stratcamp, stratchar, stratedit, stratobj, strings, traits, triggers, winconds
 from . import eop as _eop
@@ -2153,6 +2153,12 @@ class Handler(BaseHTTPRequestHandler):
                 return self._json(health.run(
                     mod, (lambda c: self.registry.map_for(name, c)) if use_map else None,
                     (q.get("campaign") or [""])[0]))
+            if u.path == "/api/scripts":
+                # 96e1: the add-ons and the Module builder
+                name = (q.get("mod") or [None])[0]
+                if not name or name not in self.registry.names():
+                    return self._err(404, "unknown mod")
+                return self._json(scripts.overview(self.registry.get(name)))
             if u.path in ("/api/family", "/api/portraits"):
                 # 96e3: a faction's family tree; a culture's portrait pool
                 name = (q.get("mod") or [None])[0]
@@ -2852,6 +2858,30 @@ class Handler(BaseHTTPRequestHandler):
                     self.registry.invalidate(name)
                     return self._json({"ok": True, "id": rec["id"]})
                 except (stratfamily.FamilyError, ValueError) as e:
+                    return self._json({"error": getattr(e, "message", None) or str(e)})
+            if u.path.startswith("/api/scripts/"):
+                # 96e1: put in / take out an add-on; read back, save or start from an example
+                name = body.get("mod") or ""
+                if name not in self.registry.names():
+                    return self._err(404, "unknown mod")
+                mod = self.registry.get(name)
+                try:
+                    if u.path in ("/api/scripts/addon/plan", "/api/scripts/addon/apply"):
+                        plan = scripts.plan_addon(mod, str(body.get("key") or ""), str(body.get("action") or "install"),
+                                                  body.get("values") or {})
+                        if u.path.endswith("/plan"):
+                            return self._json({"words": plan.words()})
+                        rec = plan.run("addon", str(body.get("key") or ""), "\n".join(plan.words()))
+                        self.registry.invalidate(name)
+                        return self._json({"ok": True, "id": rec["id"]})
+                    if u.path == "/api/scripts/preview":
+                        return self._json(scripts.preview(mod, body.get("recipe") or {}))
+                    if u.path == "/api/scripts/save":
+                        return self._json(scripts.save_module(body.get("recipe") or {}))
+                    if u.path == "/api/scripts/example":
+                        return self._json({"recipe": scripts.example(mod, str(body.get("title") or ""))})
+                    return self._err(404, "unknown route")
+                except (ValueError, OSError, KeyError, StopIteration) as e:
                     return self._json({"error": getattr(e, "message", None) or str(e)})
             if u.path == "/api/rehearse":
                 # 96e2: a change set's port rehearsed on a copy, every check run
