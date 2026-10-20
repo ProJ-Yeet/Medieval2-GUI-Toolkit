@@ -17,6 +17,7 @@ report.
 from __future__ import annotations
 
 from collections import Counter
+from pathlib import Path
 from typing import Callable, Dict, List
 
 from . import i18n as _i18n
@@ -164,3 +165,28 @@ def text(rep: Dict) -> str:
     for k, why in (rep.get("failed") or {}).items():
         L.append("> " + _i18n.msg("eng.modreport.failed", "{part} could not be read: {why}", part=k, why=why))
     return "\n".join(L).rstrip() + "\n"
+
+
+def files_list(mod) -> str:
+    """``mod_files.txt``: every file under the mod's ``data/`` with its size and
+    date, never its contents - what a bug report needs to tell one copy of a mod
+    from another (the Pfadfinder-Adam campaign editor's report carries it)."""
+    import os
+    import time as _time
+    data = Path(mod.data)
+    rows = []
+    total = 0
+    for dirpath, _dirs, files in os.walk(data):
+        for f in files:
+            p = Path(dirpath) / f
+            try:
+                st = p.stat()
+            except OSError:
+                continue
+            total += st.st_size
+            rows.append("\t".join((p.relative_to(data).as_posix(), str(st.st_size),
+                                   _time.strftime("%Y-%m-%d %H:%M", _time.localtime(st.st_mtime)))))
+    rows.sort(key=str.lower)
+    head = _i18n.msg("eng.modreport.files_head", "{mod}: {n} files, {mb} MB, under data/ (path, bytes, date)",
+                     mod=getattr(mod, "name", ""), n=len(rows), mb=f"{total / 1e6:.1f}")
+    return "\n".join([head] + rows) + "\n"

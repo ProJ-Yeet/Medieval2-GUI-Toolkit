@@ -107,7 +107,9 @@ function hxReportHtml(r){
   const kv = o => Object.entries(o || {}).map(([k, v]) => `${esc(k)} <b>${v}</b>`).join(' · ');
   const fails = Object.entries(r.failed || {});
   return `<div class="bsec"><h4>${tt('healthx.report_head',{mod:esc(r.mod), campaign:esc(r.campaign || '')})}
-      <button style="margin-left:auto" onclick="hxCopyReport()">${tt('healthx.copy_markdown')}</button></h4>
+      <button style="margin-left:auto" onclick="hxCopyReport()">${tt('healthx.copy_markdown')}</button>
+      <a class="btn" href="/api/modreport/files?mod=${enc(state.hl.mod)}" download="mod_files.txt"
+        title="${ttA('healthx.files_title')}">${tt('healthx.files')}</a></h4>
     <div class="trnote">${tt('healthx.report_note')}</div>
     ${fails.map(([k, why]) => `<div class="w-bad">${tt('healthx.part_failed',{part:esc(k), why:esc(why)})}</div>`).join('')}
     <div class="hxcounts">

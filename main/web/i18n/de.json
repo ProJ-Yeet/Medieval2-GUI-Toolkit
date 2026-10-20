@@ -11173,5 +11173,8 @@
  "factions.emblem_pick": "Neues Emblem aus einem Bild…",
  "factions.emblem_hint": "Ein Bild ergibt jede Menüschaltfläche (normal, unter der Maus, ausgewählt, ausgegraut), das Symbol im Fraktionsbildschirm, das Symbol der Leisten und das Ladelogo, jeweils in der eigenen Größe dieser Mod.",
  "factions.emblem_new_file": "neue Datei",
- "factions.emblem_apply": "{n} Bilder schreiben"
+ "factions.emblem_apply": "{n} Bilder schreiben",
+ "healthx.files": "mod_files.txt speichern",
+ "healthx.files_title": "Jede Datei unter data/ mit Größe und Datum, nie ihr Inhalt: was ein Fehlerbericht braucht, um eine Kopie der Mod von einer anderen zu unterscheiden",
+ "eng.modreport.files_head": "{mod}: {n} Dateien, {mb} MB, unter data/ (Pfad, Bytes, Datum)"
 }

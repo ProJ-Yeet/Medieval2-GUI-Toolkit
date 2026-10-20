@@ -100,6 +100,10 @@ rep = modreport.build(Mod(mod_root))
 check("a mod with no EDU still gets its factions", [f["slot"] for f in rep.get("factions", [])] == ["england"])
 check("with the parts it could not read named", "units" in rep["failed"])
 check("and the Markdown says so too", "units" in modreport.text(rep) and "# T" in modreport.text(rep))
+listing = modreport.files_list(Mod(mod_root)).splitlines()
+check("mod_files.txt names each file with its size and date, never its contents",
+      any(r.startswith("descr_sm_factions.txt\t") and r.split("\t")[1].isdigit() for r in listing)
+      and not any("northern_european" in r for r in listing))
 
 print("\nthe deep check")
 data = mod_root / "data"

@@ -10266,5 +10266,8 @@
 "factions.emblem_pick": "New emblem from a picture…",
 "factions.emblem_hint": "One picture makes every menu button (normal, mouse over, selected, greyed out), the faction-screen symbol, the panels' symbol and the loading logo, each at this mod's own size.",
 "factions.emblem_new_file": "new file",
-"factions.emblem_apply": "Write {n} pictures"
+"factions.emblem_apply": "Write {n} pictures",
+"eng.modreport.files_head": "{mod}: {n} files, {mb} MB, under data/ (path, bytes, date)",
+"healthx.files": "Save mod_files.txt",
+"healthx.files_title": "Every file under data/ with its size and date, never its contents: what a bug report needs to tell one copy of the mod from another"
 }

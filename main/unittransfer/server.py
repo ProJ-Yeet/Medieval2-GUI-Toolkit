@@ -2169,7 +2169,7 @@ class Handler(BaseHTTPRequestHandler):
                                                        (q.get("accent") or [""])[0]))
                 except voices.VoiceError as e:
                     return self._json({"error": e.message})
-            if u.path in ("/api/gamelog", "/api/modreport", "/api/rehearse/sets"):
+            if u.path in ("/api/gamelog", "/api/modreport", "/api/modreport/files", "/api/rehearse/sets"):
                 # 96e2: the game's own log explained; the mod's contents in one
                 # report; the change sets a deep check can rehearse
                 name = (q.get("mod") or [None])[0]
@@ -2178,6 +2178,10 @@ class Handler(BaseHTTPRequestHandler):
                 mod = self.registry.describe(name)
                 if u.path == "/api/gamelog":
                     return self._json(gamelog.read(mod))
+                if u.path == "/api/modreport/files":
+                    return self._send(200, modreport.files_list(mod).encode("utf-8"),
+                                      "text/plain; charset=utf-8",
+                                      {"Content-Disposition": 'attachment; filename="mod_files.txt"'})
                 if u.path == "/api/modreport":
                     rep = modreport.build(mod, (q.get("campaign") or [""])[0])
                     rep["text"] = modreport.text(rep)

@@ -11662,5 +11662,8 @@
  "factions.emblem_pick": "Emblema nuevo a partir de una imagen…",
  "factions.emblem_hint": "Una imagen crea cada botón de los menús (normal, con el ratón encima, seleccionado, atenuado), el símbolo de la pantalla de facciones, el de los paneles y el logotipo de carga, cada uno al tamaño propio de este mod.",
  "factions.emblem_new_file": "archivo nuevo",
- "factions.emblem_apply": "Escribir {n} imágenes"
+ "factions.emblem_apply": "Escribir {n} imágenes",
+ "healthx.files": "Guardar mod_files.txt",
+ "healthx.files_title": "Cada archivo bajo data/ con su tamaño y fecha, nunca su contenido: lo que un informe de error necesita para distinguir una copia del mod de otra",
+ "eng.modreport.files_head": "{mod}: {n} archivos, {mb} MB, bajo data/ (ruta, bytes, fecha)"
 }
