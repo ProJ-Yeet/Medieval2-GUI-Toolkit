@@ -146,7 +146,7 @@ function cdbRowHtml(it){
   return `<div class="cdbrow${ch ? ' on' : ''}" id="${id}">
     <code class="cdbname" title="${ttA('campdb.line',{line:it.line})}">${esc(it.name)}</code>
     <span class="cdbtype">${esc(it.type)}</span>
-    <span class="cdbbox">${box}${ch ? `<span class="count" title="${ttA('campdb.the_value_in_the_file')}">${tt('campdb.was',{value:esc(it.value)})}</span>` : ''}</span>
+    <span class="cdbbox">${box}${ch ? `<span class="count" title="${ttA('campdb.the_value_in_the_file')}">${tt('campdb.was',{value:esc(it.value)})}</span>` : ''}${vanHtml((state.cdb.vanilla||{})[it.key], v, `cdbReset('${q1(esc(it.key))}')`, !!Object.keys(state.cdb.vanilla||{}).length)}</span>
     <span class="cdbwhy">${it.note ? esc(it.note) : ''}${doc}</span>
   </div>`;
 }
@@ -184,6 +184,14 @@ function cdbOpen(key){
   const el = document.getElementById('cdb_' + String(key).replace(/\W/g, '_'));
   if(el){ el.scrollIntoView({block:'center'}); el.classList.add('flash');
     setTimeout(() => el.classList.remove('flash'), 1200); }
+}
+
+/* 96e7: the box takes the game's own value; Save writes it like any edit */
+function cdbReset(key){
+  const c = state.cdb, it = cdbTags().find(t => t.key === key), van = (c.vanilla||{})[key];
+  if(!it || van === undefined) return;
+  if(van === it.value) delete c.w[key]; else c.w[key] = van;
+  renderCampDb();
 }
 
 function cdbAdd(name){

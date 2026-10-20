@@ -114,10 +114,15 @@ function smxMainHtml(q){
 function smxBox(key, fileVal){
   const v = smxVal(key), had = fileVal !== undefined, ch = Object.prototype.hasOwnProperty.call(state.smx.w, key);
   const pip = key.endsWith('/pip_modifier');
-  return `<td class="${ch ? 'on' : ''}"><input type="text" value="${esc(v)}" spellcheck="false"
+  const vans = state.smx.vanilla || {}, van = vans[key];
+  const reset = van !== undefined && String(v).trim() !== van
+    ? `<button class="vanreset" title="${ttA('core.vanilla_reset_title',{value:van})}"
+        onclick="smxReset('${q1(esc(key))}', ${had ? 1 : 0}, '${q1(esc(fileVal || ''))}')">↺</button>` : '';
+  return `<td class="${ch ? 'on' : ''}" title="${Object.keys(vans).length ? (van !== undefined
+      ? ttA('core.vanilla_is',{value:van}) : ttA('core.vanilla_not_in')) : ''}"><input type="text" value="${esc(v)}" spellcheck="false"
       class="${smxBad(key, v) ? 'bad' : ''}" placeholder="${had ? '' : '·'}"
       title="${had ? (pip ? tt('settlemech.the_factors_own_weight') : tt('settlemech.clear_it_to_take_the_line')) : tt('settlemech.type_a_value_to_add_this')}"
-      oninput="smxSet('${q1(esc(key))}', this.value, this, ${had ? 1 : 0}, '${q1(esc(fileVal || ''))}')"></td>`;
+      oninput="smxSet('${q1(esc(key))}', this.value, this, ${had ? 1 : 0}, '${q1(esc(fileVal || ''))}')">${reset}</td>`;
 }
 
 /* repaint in place, as campdb does: a redraw would take the caret away */
@@ -149,6 +154,14 @@ function smxOpen(key){
     setTimeout(() => el.classList.remove('flash'), 1200); }
 }
 
+/* 96e7: the box takes the game's own value; Save writes it like any edit */
+function smxReset(key, had, fileVal){
+  const c = state.smx, van = (c.vanilla || {})[key];
+  if(van === undefined) return;
+  const same = had ? van === fileVal : van === '';
+  if(same) delete c.w[key]; else c.w[key] = van;
+  renderSettleMech();
+}
 function smxRevert(){ state.smx.w = {}; renderSettleMech(); }
 
 async function smxSave(){

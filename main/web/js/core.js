@@ -887,6 +887,17 @@ function minorFactions(){
    `open` is remembered per screen in `state.findOpen`, so opening it does not
    close again on the next repaint. */
 state.findOpen={};
+/* 96e7: beside a rule's box, what the base game itself ships for it, with a
+   Reset that types that value in (the screen's Save writes it). `known` is
+   false when the game's packs were not found, and then nothing is said. */
+function vanHtml(van, cur, onreset, known){
+  if(!known) return '';
+  if(van === undefined) return `<span class="vanval count" title="${ttA('core.vanilla_not_in_title')}">${tt('core.vanilla_none')}</span>`;
+  if(String(cur).trim() === van) return `<span class="vanval count same">${tt('core.vanilla_same')}</span>`;
+  return `<span class="vanval count">${tt('core.vanilla_is',{value:esc(van)})}</span>
+    <button class="vanreset" title="${ttA('core.vanilla_reset_title',{value:van})}" onclick="${onreset}">${tt('core.vanilla_reset')}</button>`;
+}
+
 function findingsHtml(key,list,onopen){
   const n=(list||[]).length;
   if(!n)return '';

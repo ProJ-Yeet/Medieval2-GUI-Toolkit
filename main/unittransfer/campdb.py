@@ -44,6 +44,7 @@ from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
 from . import keyblock as kb
+from . import vanilla
 from . import i18n as _i18n
 
 REL = "descr_campaign_db.xml"
@@ -395,7 +396,15 @@ def overview(mod) -> Dict:
         "findings": check_file(db),
         "types": list(TYPES),
         "count": len(db.tags()),
+        # 96e7: what the game itself ships for each tag, out of its packs
+        "vanilla": vanilla_values(mod),
     }
+
+
+def vanilla_values(mod) -> Dict[str, str]:
+    """``{section/tag: value}`` in the base game's own copy (96e7)."""
+    return vanilla.values(REL, mod, parse_text,
+                          lambda db: ((t.key, t.value) for t in db.tags()))
 
 
 # ---------------------------------------------------------------------------

@@ -40,6 +40,7 @@ from typing import Dict, List, Optional, Tuple
 
 from . import keyblock as kb
 from . import i18n as _i18n
+from . import vanilla
 
 REL = "descr_settlement_mechanics.xml"
 ENCODING = "latin-1"
@@ -238,7 +239,16 @@ def overview(mod) -> Dict:
             for ladder_name, ladder in (("city", CITY), ("castle", CASTLE))],
         "children": list(CHILDREN),
         "findings": check_file(mf),
+        # 96e7: the base game's own value for each box, out of its packs
+        "vanilla": vanilla_values(mod),
     }
+
+
+def vanilla_values(mod) -> Dict[str, str]:
+    """``{factor/NAME/attr or level/NAME/attr: value}`` in the game's own copy."""
+    return vanilla.values(REL, mod, parse_text, lambda mf: (
+        (v.key, v.value) for x in list(mf.factors) + list(mf.levels)
+        for v in x.values.values()))
 
 
 # ---------------------------------------------------------------------------

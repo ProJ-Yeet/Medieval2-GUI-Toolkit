@@ -181,7 +181,8 @@ function homeCardHtml(m){
       </div>
       ${m.pack?`<span class="badge">${tt('home.mounted_pack')}</span>`:''}
     </div>
-    ${homeM2exHtml(m)}
+    ${homeM2exHtml(m)}${m.pack ? '' : `<div class="hcfork"><button onclick="homeFork('${q1(esc(m.name))}')"
+      title="${ttA('home.fork_title')}">${tt('home.fork')}</button></div>`}
     <div class="hcmods">${homeModulesHtml(m, r)}</div>
     <div class="hcfiles">${homeLaunchHtml(m, r)}${homePacksHtml(m)}${homeFilesHtml(m, r)}</div>
   </section>`;
@@ -221,6 +222,27 @@ async function homeSetM2ex(name, on){
   }
   toast(on ? tt('home.is_marked_as_m2ex_its_engine',{name})
            : tt('home.is_no_longer_marked_as_m2ex',{name}), 4500);
+  renderHome();
+}
+
+/* 96e7: a new mod folder from this one, its unchanged files hard links (the
+   Pfadfinder-Adam campaign editor's New mod folder). The plan comes first so
+   the confirm can say how much is linked and how much copied. */
+async function homeFork(base){
+  const name = (prompt(tt('home.fork_name_prompt',{base}), base + '_new') || '').trim();
+  if(!name) return;
+  const r = await api.post('/api/modfork/plan', {mod:base, name});
+  if(r.error){ toast('✗ ' + r.error, 6000); return; }
+  const p = r.plan || {};
+  if((p.errors || []).length){ toast('✗ ' + p.errors.join('; '), 7000); return; }
+  if(!confirm(tt('home.fork_confirm',{target:p.target, nl:p.linked_files, lsize:MB(p.linked_bytes),
+      nc:p.copied_files, csize:MB(p.copied_bytes)}))) return;
+  toast(tt('home.fork_working'), 60000);
+  const out = await api.post('/api/modfork', {mod:base, name});
+  if(out.error){ toast('✗ ' + out.error, 8000); return; }
+  toast(tt(out.hard_links ? 'home.fork_done' : 'home.fork_done_copied',{name:out.name,
+    nl:out.linked, nc:out.copied, skipped:(out.skipped||[]).length}), 9000);
+  await refreshMods(state.src, state.dst);
   renderHome();
 }
 

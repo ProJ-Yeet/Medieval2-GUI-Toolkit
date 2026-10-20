@@ -705,7 +705,7 @@ from typing import Dict, List, Optional
 
 from . import (bmdb, buildings, cards, cleaner, codeview, config, dupes, edit,
                modflags, modfiles, sounds, stratmap)
-from . import mapgen, mapnew, mapresize
+from . import mapgen, mapnew, mapresize, modfork, vanilla
 from . import armory, armbake, armlib, armunit, loosemesh, meshfolder, modeldb, modeltext
 from . import ancillaries, areaeffects, campimport, edbimport, mapbundle, osmmap, osmsites, settlemodel, heroabilities, hordestart, walls, characters, projectzip, campaint, campdb, campevents, campfiles, campmap, campnew, campstrat, cas, casanim, animedit, animpack, animslot, animview, modelexport, launchcheck, packhouse, settlemech, fileswap, factionsites, sidefiles, banners, changesets, health, climatenew, guilds, mapcheck, mapfe, mapquery, mapterrain, mercpools, regiondel, edusort, factionaudit, factionclone, factions, images, mesh, minorfiles, namekeys, portrecords, rawtext, rebelpools, renames, soundbanks, soundscripts, spawns, sprites, stratcamp, stratchar, stratedit, stratobj, strings, traits, triggers, winconds
 from . import eop as _eop
@@ -2716,6 +2716,9 @@ class Handler(BaseHTTPRequestHandler):
                 return self._json(self._eop_dirs(body))
             if u.path == "/api/m2ex":
                 return self._json(self._m2ex(body))
+            if u.path in ("/api/modfork/plan", "/api/modfork"):
+                # 96e7: a new mod folder, its unchanged files hard links
+                return self._json(self._modfork(body, u.path.endswith("/plan")))
             if u.path == "/api/armory/project":
                 armory.save_project(body.get("project") or {})
                 return self._json({"ok": True})
@@ -5317,6 +5320,24 @@ class Handler(BaseHTTPRequestHandler):
         return {"mod": mod.name, "root": str(mod.root),
                 "m2ex": modflags.is_m2ex(mod)}
 
+    def _modfork(self, body, dry: bool):
+        name = body.get("mod") or ""
+        if name not in self.registry.names() or self.registry.is_pack(name):
+            return {"error": _i18n.msg("eng.server.unknown_mod_2", "unknown mod {name}", name=repr(name))}
+        mod = self.registry.describe(name)
+        if dry:
+            return {"plan": modfork.plan(mod.root, body.get("name") or "")}
+        try:
+            out = modfork.create(mod.root, body.get("name") or "",
+                                 copy_all=bool(body.get("copy_all")))
+        except (modfork.ForkError, OSError) as e:
+            return {"error": getattr(e, "message", None) or str(e)}
+        log.info("FORK   %s -> %s: %d linked, %d copied", name, out["name"],
+                 out["linked"], out["copied"])
+        if modflags.is_m2ex(mod):
+            modflags.set_m2ex(self.registry.describe(out["name"]), True)
+        return out
+
     def _eop_dirs(self, body):
         """Read or set one mod's M2TWEOP unit folders.
 
@@ -6254,6 +6275,8 @@ def serve(cache_dir: Path, host="127.0.0.1", port=8756, on_ready=None, verbose=F
     setup_logging(verbose)
     logutil.banner(port)
     Handler.registry = Registry(cache_dir)
+    # 96e7: a save into a hard-linked mod file stays in that mod
+    modfork.install_write_guard()
     httpd = _Server((host, port), Handler)     # socket is bound + listening here
     log.info("Unit Transfer UI  ->  http://%s:%d/", host, port)
     log.info("MED2 root: %s", config.get_med2_root() or "(not set - choose it in the UI)")
