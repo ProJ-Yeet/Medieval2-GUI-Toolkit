@@ -46,7 +46,8 @@ async function loadHealth(){
   const mod = state.src;
   const keep = state.hl && state.hl.mod === mod ? state.hl : null;
   const h = state.hl = hlNew(mod);
-  if(keep){ h.notes = keep.notes; h.base = keep.base; h.src = keep.src; }
+  if(keep){ h.notes = keep.notes; h.base = keep.base; h.src = keep.src;
+    h.tab = keep.tab; h.log = keep.log; h.report = keep.report; h.sets = keep.sets; h.deep = keep.deep; }
   h.busy = true;
   main.innerHTML = hlBusyHtml(mod);
   let r;
@@ -76,6 +77,11 @@ function hlPaint(){
      going out and coming back. Say what is happening rather than read a report
      that is null - which is what this screen did until a link could land on it
      before it had one. */
+  // 96e2: the log, the contents report and the deep check need no checks run
+  if(h.tab && h.tab !== 'checks'){
+    main.innerHTML = `<div class="hlwrap">${hxTabsHtml()}${hxPanelHtml()}</div>`;
+    return;
+  }
   if(!h.rep && !h.err){ main.innerHTML = hlBusyHtml(h.mod); return; }
   if(h.err){
     main.innerHTML = `<div class="empty">${tt('health.couldnt_run_the_checks')}<br>
@@ -86,6 +92,7 @@ function hlPaint(){
   const r = h.rep, rows = r.findings.filter(hlVisible);
   const labelOf = Object.fromEntries(r.sources.map(s => [s.id, s.label]));
   main.innerHTML = `<div class="hlwrap">
+    ${hxTabsHtml()}
     ${hlHeadHtml(r)}
     ${hlSourcesHtml(r)}
     ${r.when.map(w => hlGroupHtml(w, rows.filter(f => f.when === w.id), labelOf)).join('')}

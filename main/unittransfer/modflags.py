@@ -75,7 +75,8 @@ def _root_of(mod) -> "Path | str":
     """
     if isinstance(mod, (str, Path)):
         return mod
-    return getattr(mod, "root", None) or mod
+    # 96e2: a rehearsal copy of a mod answers for the mod it was made from
+    return getattr(mod, "flag_root", None) or getattr(mod, "root", None) or mod
 
 
 def _key(root) -> str:

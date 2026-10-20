@@ -705,7 +705,7 @@ from typing import Dict, List, Optional
 
 from . import (bmdb, buildings, cards, cleaner, codeview, config, dupes, edit,
                modflags, modfiles, sounds, stratmap)
-from . import mapgen, mapnew, mapresize, modfork, vanilla
+from . import mapgen, mapnew, mapresize, modfork, vanilla, gamelog, modreport, rehearse
 from . import armory, armbake, armlib, armunit, loosemesh, meshfolder, modeldb, modeltext
 from . import ancillaries, areaeffects, campimport, edbimport, mapbundle, osmmap, osmsites, settlemodel, heroabilities, hordestart, walls, characters, projectzip, campaint, campdb, campevents, campfiles, campmap, campnew, campstrat, cas, casanim, animedit, animpack, animslot, animview, modelexport, launchcheck, packhouse, settlemech, fileswap, factionsites, sidefiles, banners, changesets, health, climatenew, guilds, mapcheck, mapfe, mapquery, mapterrain, mercpools, regiondel, edusort, factionaudit, factionclone, factions, images, mesh, minorfiles, namekeys, portrecords, rawtext, rebelpools, renames, soundbanks, soundscripts, spawns, sprites, stratcamp, stratchar, stratedit, stratobj, strings, traits, triggers, winconds
 from . import eop as _eop
@@ -2150,6 +2150,21 @@ class Handler(BaseHTTPRequestHandler):
                 return self._json(health.run(
                     mod, (lambda c: self.registry.map_for(name, c)) if use_map else None,
                     (q.get("campaign") or [""])[0]))
+            if u.path in ("/api/gamelog", "/api/modreport", "/api/rehearse/sets"):
+                # 96e2: the game's own log explained; the mod's contents in one
+                # report; the change sets a deep check can rehearse
+                name = (q.get("mod") or [None])[0]
+                if not name or name not in self.registry.names():
+                    return self._err(404, "unknown mod")
+                mod = self.registry.describe(name)
+                if u.path == "/api/gamelog":
+                    return self._json(gamelog.read(mod))
+                if u.path == "/api/modreport":
+                    rep = modreport.build(mod, (q.get("campaign") or [""])[0])
+                    rep["text"] = modreport.text(rep)
+                    return self._json(rep)
+                return self._json({"sets": [{"name": x.get("name"), "mod": x.get("mod")}
+                                            for x in changesets.sets()]})
             if u.path == "/api/changes":
                 name = (q.get("mod") or [None])[0]
                 if not name or name not in self.registry.names():
@@ -2716,6 +2731,16 @@ class Handler(BaseHTTPRequestHandler):
                 return self._json(self._eop_dirs(body))
             if u.path == "/api/m2ex":
                 return self._json(self._m2ex(body))
+            if u.path == "/api/rehearse":
+                # 96e2: a change set's port rehearsed on a copy, every check run
+                name = body.get("mod") or ""
+                if name not in self.registry.names():
+                    return self._err(404, "unknown mod")
+                try:
+                    return self._json(rehearse.run(self.registry.describe(name),
+                                                   str(body.get("set") or ""), body.get("picks")))
+                except rehearse.RehearseError as e:
+                    return self._json({"error": e.message})
             if u.path in ("/api/modfork/plan", "/api/modfork"):
                 # 96e7: a new mod folder, its unchanged files hard links
                 return self._json(self._modfork(body, u.path.endswith("/plan")))
