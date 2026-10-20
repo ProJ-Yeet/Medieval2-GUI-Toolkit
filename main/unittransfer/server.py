@@ -691,6 +691,9 @@ from __future__ import annotations
 
 import base64
 import io
+# the POST handler imports base64 locally further down, which makes the bare
+# name local to all of it; routes above those lines use this
+from base64 import b64decode as _b64decode
 import json
 import os
 import re
@@ -705,7 +708,7 @@ from typing import Dict, List, Optional
 
 from . import (bmdb, buildings, cards, cleaner, codeview, config, dupes, edit,
                modflags, modfiles, sounds, stratmap)
-from . import mapgen, mapnew, mapresize, modfork, vanilla, gamelog, modreport, rehearse, voices
+from . import mapgen, mapnew, mapresize, modfork, vanilla, gamelog, modreport, rehearse, voices, emblem
 from . import armory, armbake, armlib, armunit, loosemesh, meshfolder, modeldb, modeltext
 from . import ancillaries, areaeffects, campimport, edbimport, mapbundle, osmmap, osmsites, settlemodel, heroabilities, hordestart, walls, characters, projectzip, campaint, campdb, campevents, campfiles, campmap, campnew, campstrat, cas, casanim, animedit, animpack, animslot, animview, modelexport, launchcheck, packhouse, settlemech, fileswap, factionsites, sidefiles, banners, changesets, health, climatenew, guilds, mapcheck, mapfe, mapquery, mapterrain, mercpools, regiondel, edusort, factionaudit, factionclone, factions, images, mesh, minorfiles, namekeys, portrecords, rawtext, rebelpools, renames, soundbanks, soundscripts, spawns, sprites, stratcamp, stratchar, stratedit, stratobj, strings, traits, triggers, winconds
 from . import eop as _eop
@@ -2754,7 +2757,7 @@ class Handler(BaseHTTPRequestHandler):
                     return self._err(404, "unknown mod")
                 mod = self.registry.get(name)
                 try:
-                    wavs = [(str(f.get("name") or "sound.wav"), base64.b64decode(f.get("b64") or ""))
+                    wavs = [(str(f.get("name") or "sound.wav"), _b64decode(f.get("b64") or ""))
                             for f in (body.get("files") or [])]
                     p = voices.plan_name_call(mod, str(body.get("unit") or ""), str(body.get("accent") or ""),
                                               str(body.get("class") or ""), wavs)
@@ -2766,6 +2769,20 @@ class Handler(BaseHTTPRequestHandler):
                 rec = voices.apply_name_call(mod, p)
                 self.registry.invalidate(name)
                 return self._json({"ok": True, "id": rec["id"], "changes": p["changes"]})
+            if u.path in ("/api/emblem/plan", "/api/emblem/apply"):
+                # 96e6: a faction's whole emblem set from one picture
+                name = body.get("mod") or ""
+                if name not in self.registry.names():
+                    return self._err(404, "unknown mod")
+                mod = self.registry.get(name)
+                try:
+                    raw = _b64decode(body.get("b64") or "")
+                    if u.path.endswith("/plan"):
+                        return self._json(emblem.plan(mod, str(body.get("faction") or ""), raw))
+                    rec = emblem.apply(mod, str(body.get("faction") or ""), raw, body.get("only"))
+                    return self._json({"ok": True, "id": rec["id"]})
+                except (emblem.EmblemError, ValueError) as e:
+                    return self._json({"error": getattr(e, "message", None) or str(e)})
             if u.path == "/api/rehearse":
                 # 96e2: a change set's port rehearsed on a copy, every check run
                 name = body.get("mod") or ""

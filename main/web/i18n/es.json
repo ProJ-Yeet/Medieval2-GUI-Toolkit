@@ -11653,5 +11653,14 @@
  "voices.own_confirm": "¿Escribir esta llamada?\n\n{changes}{warnings}{compiled}\n\nDeshacer en el Registro la retira.",
  "voices.own_note": "Elige el acento y la clase para los que es y uno o más archivos .wav (los del juego son de 22050 Hz, 16 bits, mono). Entran como archivos sueltos con nombres nuevos, la unidad recibe su propia línea para ese acento y esa clase, y se eliminan events.dat y events.idx compilados para que el juego los vuelva a crear.",
  "voices.own_compiled": "Se eliminan data/sounds/events.dat y events.idx compilados del mod (con copia de seguridad); el juego los vuelve a crear en su próximo inicio.",
- "eng.voices.not_a_pack": "{name} no es un paquete de sonido"
+ "eng.voices.not_a_pack": "{name} no es un paquete de sonido",
+ "eng.emblem.summary": "un emblema nuevo para {faction}: {n} imágenes",
+ "eng.emblem.empty": "la imagen es del todo transparente, así que no contiene ningún emblema",
+ "eng.emblem.no_faction": "elige una facción",
+ "eng.emblem.nothing": "no se eligió nada para escribir",
+ "eng.emblem.not_a_picture": "ese archivo no es una imagen que se pueda leer (PNG, JPG, TGA, BMP)",
+ "factions.emblem_pick": "Emblema nuevo a partir de una imagen…",
+ "factions.emblem_hint": "Una imagen crea cada botón de los menús (normal, con el ratón encima, seleccionado, atenuado), el símbolo de la pantalla de facciones, el de los paneles y el logotipo de carga, cada uno al tamaño propio de este mod.",
+ "factions.emblem_new_file": "archivo nuevo",
+ "factions.emblem_apply": "Escribir {n} imágenes"
 }

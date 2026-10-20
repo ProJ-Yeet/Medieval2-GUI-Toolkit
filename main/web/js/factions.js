@@ -269,6 +269,7 @@ function facArtSection(d){
   return `<section class="trsec">
     <div class="trsechead">${tt('factions.art_and_banners_symbol_lines_name')}</div>
     ${facPictures(d)}
+    ${facEmblemHtml(d)}
     <div class="trgrid">
       ${(v.art_keys||[]).map(k => facArt(d, k)).join('')}
       ${facBox(d, 'standard_index', tt('factions.banner_index'))}
@@ -405,6 +406,58 @@ function facPictures(d){
       <figcaption>${esc(p.label)}<span class="count">${esc(p.rel)}</span>
         ${imgRow(url,'facPaint')}</figcaption>
     </figure>`;}).join('')}</div>`;
+}
+
+/* 96e6: the whole emblem set from one picture - every menu button and its
+   mouse-over, selected and greyed states, the faction-screen symbol, the panels'
+   symbol and the loading logo, each at the mod's own size. The server plans it
+   (old beside new, nothing written) and Apply writes the ticked ones, undoably. */
+function facEmblemHtml(d){
+  const e = d.emblem;
+  const pick = `<label class="btn">${tt('factions.emblem_pick')}
+    <input type="file" accept="image/*,.tga" style="display:none" onchange="facEmblemPick(this.files[0])"></label>`;
+  if(!e) return `<div class="facemblem">${pick} <span class="count">${tt('factions.emblem_hint')}</span></div>`;
+  if(e.busy) return `<div class="facemblem"><span class="count">${tt('common.reading')}</span></div>`;
+  if(e.error) return `<div class="facemblem">${pick} <span class="w-bad">✗ ${esc(e.error)}</span></div>`;
+  return `<div class="facemblem">${pick}
+    <div class="facemrows">${e.rows.map(r => `<label class="facemrow">
+      <input type="checkbox" ${e.skip.has(r.rel) ? '' : 'checked'} onchange="facEmblemTick('${q1(esc(r.rel))}',this.checked)">
+      <span class="facemimg">${r.old ? `<img src="${r.old}" alt="">` : '<span class="count">-</span>'}</span> →
+      <span class="facemimg"><img src="${r['new']}" alt=""></span>
+      <span class="count">${esc(r.rel)} · ${r.size[0]}×${r.size[1]}${r.where === 'new' ? ` · ${tt('factions.emblem_new_file')}` : ''}</span>
+    </label>`).join('')}</div>
+    <button class="primary" onclick="facEmblemApply()">${tt('factions.emblem_apply',{n:e.rows.length - e.skip.size})}</button>
+    <button onclick="state.fac.d.emblem=null;facPaint()">${tt('common.cancel')}</button></div>`;
+}
+async function facEmblemPick(file){
+  const d = state.fac.d;
+  if(!file || !d) return;
+  const buf = new Uint8Array(await file.arrayBuffer());
+  let bin = '';
+  for(let i = 0; i < buf.length; i += 0x8000) bin += String.fromCharCode.apply(null, buf.subarray(i, i + 0x8000));
+  d.emblem = {busy: true, b64: btoa(bin), skip: new Set()};
+  facPaint();
+  let r;
+  try{ r = await api.post('/api/emblem/plan', {mod: state.fac.mod, faction: d.slot, b64: d.emblem.b64}); }
+  catch(e){ r = {error: errText(e)}; }
+  if(state.fac.d !== d) return;
+  d.emblem = Object.assign(d.emblem, {busy: false}, r);
+  facPaint();
+}
+function facEmblemTick(rel, on){
+  const s = state.fac.d.emblem.skip;
+  if(on) s.delete(rel); else s.add(rel);
+}
+async function facEmblemApply(){
+  const d = state.fac.d, e = d.emblem;
+  const only = e.rows.map(r => r.rel).filter(r => !e.skip.has(r));
+  let r;
+  try{ r = await api.post('/api/emblem/apply', {mod: state.fac.mod, faction: d.slot, b64: e.b64, only}); }
+  catch(err){ toast('✗ ' + errText(err), 6000); return; }
+  if(r.error){ toast('✗ ' + r.error, 8000); return; }
+  d.emblem = null;
+  toast(tt('common.saved_log_can_undo_it'));
+  facPaint();
 }
 
 function facArt(d, key){

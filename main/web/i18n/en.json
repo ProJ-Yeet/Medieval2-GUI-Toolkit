@@ -10257,5 +10257,14 @@
 "voices.wavs_picked": {"one": "{count} .wav picked", "other": "{count} .wav files picked"},
 "voices.own_confirm": "Write this name call?\n\n{changes}{warnings}{compiled}\n\nThe Log's Undo takes it back.",
 "voices.own_compiled": "The mod's compiled data/sounds/events.dat and events.idx are removed (backed up); the game builds them again on its next start.",
-"eng.voices.not_a_pack": "{name} is not a sound pack"
+"eng.voices.not_a_pack": "{name} is not a sound pack",
+"eng.emblem.summary": "a new emblem for {faction}: {n} pictures",
+"eng.emblem.empty": "the picture is fully transparent, so there is no emblem in it",
+"eng.emblem.no_faction": "pick a faction",
+"eng.emblem.nothing": "nothing picked to write",
+"eng.emblem.not_a_picture": "that file is not a picture this can read (PNG, JPG, TGA, BMP)",
+"factions.emblem_pick": "New emblem from a picture…",
+"factions.emblem_hint": "One picture makes every menu button (normal, mouse over, selected, greyed out), the faction-screen symbol, the panels' symbol and the loading logo, each at this mod's own size.",
+"factions.emblem_new_file": "new file",
+"factions.emblem_apply": "Write {n} pictures"
 }

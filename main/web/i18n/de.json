@@ -11164,5 +11164,14 @@
  "voices.no_name_call": "Kein eigener Namensruf in der Sprachausgabe-Datei; sie sagt die allgemeine Zeile ihrer Klasse.",
  "voices.own_note": "Wählen Sie Akzent und Klasse, für die er gilt, und eine oder mehrere .wav-Dateien (die des Spiels haben 22050 Hz, 16 Bit, mono). Sie kommen als lose Dateien unter neuen Namen hinein, die Einheit bekommt ihre eigene Zeile für diesen Akzent und diese Klasse, und die kompilierten events.dat und events.idx werden entfernt, damit das Spiel sie neu erstellt.",
  "voices.own_compiled": "Die kompilierten data/sounds/events.dat und events.idx der Mod werden entfernt (mit Sicherung); das Spiel erstellt sie beim nächsten Start neu.",
- "eng.voices.not_a_pack": "{name} ist kein Sound-Paket"
+ "eng.voices.not_a_pack": "{name} ist kein Sound-Paket",
+ "eng.emblem.summary": "ein neues Emblem für {faction}: {n} Bilder",
+ "eng.emblem.empty": "das Bild ist ganz durchsichtig, es enthält also kein Emblem",
+ "eng.emblem.no_faction": "wählen Sie eine Fraktion",
+ "eng.emblem.nothing": "nichts zum Schreiben gewählt",
+ "eng.emblem.not_a_picture": "diese Datei ist kein Bild, das sich lesen lässt (PNG, JPG, TGA, BMP)",
+ "factions.emblem_pick": "Neues Emblem aus einem Bild…",
+ "factions.emblem_hint": "Ein Bild ergibt jede Menüschaltfläche (normal, unter der Maus, ausgewählt, ausgegraut), das Symbol im Fraktionsbildschirm, das Symbol der Leisten und das Ladelogo, jeweils in der eigenen Größe dieser Mod.",
+ "factions.emblem_new_file": "neue Datei",
+ "factions.emblem_apply": "{n} Bilder schreiben"
 }
