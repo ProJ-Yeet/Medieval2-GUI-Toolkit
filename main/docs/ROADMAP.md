@@ -991,6 +991,23 @@ split by area, each built from the behaviour described in the checklist:
   `rehearse.py`). The deep check rehearses a change set's port, since this toolkit writes on Save and a change
   set is what it has pending; the copy is junctions and hard links in the temp folder, never written through.
 
+* **96e5** units: a speaker button on each Sounds row hears a unit's name call in every accent and any
+  accent's orders, straight from the game's SND.PACK archives (`voices.py`, from the editor's `sounds.py`); a
+  `.wav` of your own becomes its name call (own line, split off a shared one, events.dat removed, undoable).
+  Model swap is transfer's replace mode, which now warns when the mounts differ (`mount_kind`), works inside
+  one mod, and skins reused entries for every owner.
+* **96e6, first piece**: the whole emblem set from one picture on a faction's Art and banners tab
+  (`emblem.py`, from the editor's): menu buttons 24/48 with their states measured from the mod's own, the
+  faction-screen and panel symbols, the loading logos. **Left in 96e6**: the banner maker and recolouring a
+  faction's pictures (both large; the editor's `banners_m2.py` and `recolour.py`), with round two's own logos
+  and area recolour.
+* **96f, first piece**: `mod_files.txt` from Health's Contents tab.
+
+**Left in major III, in order**: 96e6's banner maker and recolouring; 96e3 characters (family tree,
+portraits, portrait library, with surnames); 96e1 scripting (builder, add-ons, with round two's blocks,
+WHENs, pieces and add-ons); then 96f's other pieces. The thin mod needs every editor to copy a game file in
+on its first write (the editor's `ModData.under`), so it is a piece of its own, not a flag on 96e7.
+
 **Round two, 2026-10-20** (the user: "check the oogway editor ... for new commits since our old roadmap"): 513
 commits, 0.31.0 to 0.35.1, read; 42 new features went to the user as a second checklist,
 <https://claude.ai/artifact/GHEHzKgpRbEQyWyegJ44g6>, answers in its `answers` collection. **Answered the same day: Port on all 43**, and "just port everything and decide whats best to be
