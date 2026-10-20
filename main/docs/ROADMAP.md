@@ -931,7 +931,7 @@ user's word: "analyze this github and see what sort of features does he
 have that we could port over. And once again give me a checklist."
 [MasterOogwayHomebrew/RTW-M2TW-Campaign-Editor](https://github.com/MasterOogwayHomebrew/RTW-M2TW-Campaign-Editor),
 cloned 2026-10-06 into `Reference/oogway-campaign-editor/` (untracked).
-**Licence GPLv3**: port behaviour only, never code, as with Mylae's editor.
+**Licence GPLv3**: port behaviour only, never code, as with Mylae's editor. **Lifted 2026-10-20** by the user ("we have permission to take the code directly too if needed so no need to make everything from scratch", then "same for mylaes tool"): code from either editor may be taken where it helps, credited in the module that takes it. The editor has since moved to [Pfadfinder-Adam/RTW-M2TW-Campaign-Editor](https://github.com/Pfadfinder-Adam/RTW-M2TW-Campaign-Editor).
 Most of its core is already here (cloning, unit and building editors,
 painting, moving towns and ports, placing armies, terrain, events, victory
 conditions, diplomacy, imports, 3x scaling). The eighteen things it has that
@@ -978,6 +978,23 @@ split by area, each built from the behaviour described in the checklist:
   95).
 - **96e7 rules and mods**: the vanilla value and a Reset beside every rule;
   a new mod folder whose unchanged files are hard links.
+
+**Done so far, 2026-10-20** (major III, on the user's word "finish all of Factions, units and mod data phase"):
+* **96a** `can_homeless` in the faction form: offered on an M2EX mod only, never to `papal_states` or `slave`
+  (by slot or by `special_faction_type`), placed before `can_sap`; a line already there is reported and kept.
+* **96e7** the vanilla value and a Reset beside every box of `descr_campaign_db.xml` and
+  `descr_settlement_mechanics.xml` (`vanilla.py`, read out of the game's packs); "New mod from this one" on a
+  Home card (`modfork.py`, from the editor's `newmod.py`): text files copied, the rest hard links, and a guard on
+  `open()` that breaks a link under `mods/` before any in-place write the toolkit makes. There is no
+  `descr_diplomacy.xml` editor yet, so diplomacy's vanilla values wait for one.
+* **96e2** Health's Game log, Contents and Deep check tabs (`gamelog.py` from the editor's, `modreport.py`,
+  `rehearse.py`). The deep check rehearses a change set's port, since this toolkit writes on Save and a change
+  set is what it has pending; the copy is junctions and hard links in the temp folder, never written through.
+
+**Round two, 2026-10-20** (the user: "check the oogway editor ... for new commits since our old roadmap"): 513
+commits, 0.31.0 to 0.35.1, read; 42 new features went to the user as a second checklist,
+<https://claude.ai/artifact/GHEHzKgpRbEQyWyegJ44g6>, answers in its `answers` collection. Nothing from it is
+scheduled until it is answered.
 
 **Later**: settlement names by the owner's culture (under *Deferred to a
 later version*; check first whether M2TW reads such a table at all).
