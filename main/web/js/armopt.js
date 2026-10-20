@@ -105,13 +105,20 @@ async function armOptRun(){
   armRepaint();
   armOptPaint();
 }
+// the run is one Undo step; the dialog stays open on its report, so it offers it
+function armOptUndo(){
+  armUndo(false);
+  ARM.optReport = null;
+  armOptPaint();
+}
 function armOptReportHtml(r){
   const c = r.counts || {};
   const chk = r.checks;
   const issues = chk && chk.issues ? chk.issues : [];
   return `<div class="armoptreport">
     <div><b>${tt('armory.opt_done')}</b> ${tt('armory.opt_counts', {merged: c.merged || 0, degenerate: c.degenerate || 0,
-      loose: Math.max(0, c.loose || 0), flipped: c.flipped || 0, normals: c.normals || 0})}</div>
+      loose: Math.max(0, c.loose || 0), flipped: c.flipped || 0, normals: c.normals || 0})}
+      <button class="mini" onclick="armOptUndo()" title="${esc(tt('armory.undo_title'))}">${tt('armory.opt_undo')}</button></div>
     ${chk ? (chk.error ? `<div class="w-bad">${esc(chk.error)}</div>` : issues.length
       ? issues.map(i => `<div class="armissue ${i.level}"><b>${i.level === 'error' ? tt('armory.exp_error') : tt('armory.exp_warning')}</b>
           ${esc(typeof armChkText === 'function' ? armChkText(i) : i.code)}</div>`).join('')

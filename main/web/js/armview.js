@@ -74,9 +74,17 @@ function armWireKeys(){
     if(document.activeElement === ARM.view) return;          // the canvas's own listener has it
     const t = e.target, tag = t && t.tagName;
     if(tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || (t && t.isContentEditable)) return;
-    if(overlay.classList.contains('open')) return;
     // undo, redo and full view work anywhere in the workbench, the rest over the view
     const keys = armKeys(), name = armKeyName(e);
+    // a dialog takes the keys, but Optimize's stays open on what it did: undo and redo reach past it
+    if(overlay.classList.contains('open')){
+      if(!document.querySelector('#modal .armopt') || !name || !['undo', 'redo', 'redoAlt'].some(k => keys[k] === name)) return;
+      e.preventDefault();
+      armUndo(keys.undo !== name);
+      ARM.optReport = null;
+      armOptPaint();
+      return;
+    }
     const anywhere = name && ['undo', 'redo', 'redoAlt', 'fullView'].some(k => keys[k] === name);
     if(!ARM.overView && !anywhere) return;
     armKey(e);

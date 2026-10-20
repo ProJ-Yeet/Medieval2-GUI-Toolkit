@@ -10491,6 +10491,7 @@
  },
  "armory.opt_run": "Ausführen",
  "armory.opt_done": "Fertig:",
+ "armory.opt_undo": "Rückgängig",
  "armory.opt_counts": "{merged} verschmolzen, {degenerate} entartete Dreiecke und {loose} lose Ecken entfernt, {flipped} Flächen gedreht, {normals} Normalen zurückgesetzt.",
  "eng.meshwrite.position_stream_three": "der Positionsstrom muss drei Werte je Vertex enthalten",
  "eng.meshwrite.stream_values_per_vertex": "der Strom {name} muss {stride} Werte je Vertex enthalten",

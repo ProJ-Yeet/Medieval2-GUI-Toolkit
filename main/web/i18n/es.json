@@ -10965,6 +10965,7 @@
  },
  "armory.opt_run": "Ejecutar",
  "armory.opt_done": "Hecho:",
+ "armory.opt_undo": "Deshacer",
  "armory.opt_counts": "{merged} fusionados, {degenerate} triángulos degenerados y {loose} esquinas sueltas eliminados, {flipped} caras giradas, {normals} normales restablecidas.",
  "eng.meshwrite.position_stream_three": "el flujo de posiciones debe tener tres valores por vértice",
  "eng.meshwrite.stream_values_per_vertex": "el flujo {name} debe tener {stride} valores por vértice",

@@ -652,6 +652,7 @@
 },
 "armory.opt_run": "Run",
 "armory.opt_done": "Done:",
+"armory.opt_undo": "Undo",
 "armory.opt_counts": "{merged} merged, {degenerate} degenerate triangles and {loose} loose corners gone, {flipped} faces turned, {normals} normals reset.",
 "eng.meshwrite.position_stream_three": "position stream must contain three values per vertex",
 "eng.meshwrite.stream_values_per_vertex": "{name} stream must contain {stride} values per vertex",
