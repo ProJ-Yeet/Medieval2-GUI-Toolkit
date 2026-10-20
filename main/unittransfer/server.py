@@ -708,7 +708,7 @@ from typing import Dict, List, Optional
 
 from . import (bmdb, buildings, cards, cleaner, codeview, config, dupes, edit,
                modflags, modfiles, sounds, stratmap)
-from . import mapgen, mapnew, mapresize, modfork, vanilla, gamelog, modreport, rehearse, voices, emblem, bannermaker
+from . import mapgen, mapnew, mapresize, modfork, vanilla, gamelog, modreport, rehearse, voices, emblem, bannermaker, artrecolour
 from . import armory, armbake, armlib, armunit, loosemesh, meshfolder, modeldb, modeltext
 from . import ancillaries, areaeffects, campimport, edbimport, mapbundle, osmmap, osmsites, settlemodel, heroabilities, hordestart, walls, characters, projectzip, campaint, campdb, campevents, campfiles, campmap, campnew, campstrat, cas, casanim, animedit, animpack, animslot, animview, modelexport, launchcheck, packhouse, settlemech, fileswap, factionsites, sidefiles, banners, changesets, health, climatenew, guilds, mapcheck, mapfe, mapquery, mapterrain, mercpools, regiondel, edusort, factionaudit, factionclone, factions, images, mesh, minorfiles, namekeys, portrecords, rawtext, rebelpools, renames, soundbanks, soundscripts, spawns, sprites, stratcamp, stratchar, stratedit, stratobj, strings, traits, triggers, winconds
 from . import eop as _eop
@@ -2799,6 +2799,21 @@ class Handler(BaseHTTPRequestHandler):
                     rec = bannermaker.apply(mod, body)
                     return self._json({"ok": True, "id": rec["id"]})
                 except (bannermaker.BannerError, OSError) as e:
+                    return self._json({"error": getattr(e, "message", None) or str(e)})
+            if u.path in ("/api/artrecolour/plan", "/api/artrecolour/apply"):
+                # 96e6: a faction's pictures moved from one pair of colours to another
+                name = body.get("mod") or ""
+                if name not in self.registry.names():
+                    return self._err(404, "unknown mod")
+                mod = self.registry.get(name)
+                try:
+                    if u.path.endswith("/plan"):
+                        return self._json(artrecolour.plan(mod, body))
+                    rec = artrecolour.apply(mod, body)
+                    self.registry.invalidate(name)
+                    return self._json({"ok": True, "id": rec["id"], "changed": rec["changed"],
+                                       "own": rec["own"], "skipped": rec["skipped"]})
+                except (artrecolour.RecolourError, OSError) as e:
                     return self._json({"error": getattr(e, "message", None) or str(e)})
             if u.path == "/api/rehearse":
                 # 96e2: a change set's port rehearsed on a copy, every check run

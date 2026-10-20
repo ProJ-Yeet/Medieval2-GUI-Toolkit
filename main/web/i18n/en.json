@@ -10299,5 +10299,18 @@
 "factions.banner_pattern_10": "A slanting cross",
 "factions.banner_pattern_11": "A border",
 "factions.banner_pattern_12": "A stripe in the middle, upright",
-"factions.banner_pattern_13": "A stripe in the middle, across"
+"factions.banner_pattern_13": "A stripe in the middle, across",
+"eng.artrecolour.no_colours": "say which colours the pictures are in now and which they should take",
+"eng.artrecolour.summary": "{faction}'s pictures recoloured: {n} changed, {own} made its own",
+"eng.artrecolour.nothing": "{faction} has no pictures of its own in this mod to recolour",
+"eng.artrecolour.no_space": "the faction's own copies of the textures it shares need about {need} MB and the drive has {free} MB free; free some space first",
+"eng.artrecolour.bad_colour": "{c} is not a colour like #c81e1e",
+"factions.recol_head": "Recolour this faction's pictures",
+"factions.recol_hint": "The unit cards, info pictures, battle textures and symbols are moved from the colours they are painted in to new ones, light and shade kept. Where the same picture exists in other factions' colours, only what differs is painted, so faces, metal and leather stay. A texture other factions also wear becomes this faction's own copy.",
+"factions.recol_from": "Painted now in the colours of",
+"factions.recol_to": "to",
+"factions.recol_busy": "Recolouring (every picture is compared with the same picture of other factions)…",
+"factions.recol_counts": "{cards} unit pictures, {textures} battle textures and {symbols} symbols. {shared} textures are shared with other factions and get this faction's own copy, about {mb} MB.",
+"factions.recol_write": "Recolour them all",
+"factions.recol_done": "Recoloured {n} pictures; {own} textures are now the faction's own copies."
 }

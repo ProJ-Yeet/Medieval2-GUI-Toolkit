@@ -271,6 +271,7 @@ function facArtSection(d){
     ${facPictures(d)}
     ${facEmblemHtml(d)}
     ${facBannerHtml(d)}
+    ${facRecolourHtml(d)}
     <div class="trgrid">
       ${(v.art_keys||[]).map(k => facArt(d, k)).join('')}
       ${facBox(d, 'standard_index', tt('factions.banner_index'))}
@@ -523,6 +524,62 @@ async function facBannerApply(){
   if(r.error){ toast('✗ ' + r.error, 8000); return; }
   d.banner.plan = null;
   toast(tt('common.saved_log_can_undo_it'));
+  facPaint();
+}
+
+/* 96e6: the faction's pictures - unit cards, info pictures, battle textures,
+   symbols - moved from the colours they are painted in (another faction's, for
+   a clone) to this faction's own, the light and shade kept. A few samples are
+   shown before and after; a texture other factions share becomes the
+   faction's own copy. */
+function facRecolourHtml(d){
+  const r = d.recol || (d.recol = {source: d.slot, target: [d.colours && d.colours.primary_colour || '#c81e1e',
+    d.colours && d.colours.secondary_colour || '#f0f0f0']});
+  const slots = (state.fac.factions || []).map(f => f.slot);
+  const p = r.plan;
+  return `<div class="facbanner"><div class="trsechead">${tt('factions.recol_head')}</div>
+    <div class="count">${tt('factions.recol_hint')}</div>
+    <div class="facbanrow">
+      <span class="count">${tt('factions.recol_from')}</span>
+      <select onchange="state.fac.d.recol.source=this.value;state.fac.d.recol.plan=null">
+        ${slots.map(s => `<option value="${esc(s)}" ${s === r.source ? 'selected' : ''}>${esc(s)}</option>`).join('')}</select>
+      <span class="count">${tt('factions.recol_to')}</span>
+      ${r.target.map((c, i) => `<input type="color" value="${esc(c)}" onchange="state.fac.d.recol.target[${i}]=this.value;state.fac.d.recol.plan=null">`).join('')}
+      <button onclick="facRecolPlan()" ${r.busy ? 'disabled' : ''}>${tt('factions.banner_preview')}</button>
+    </div>
+    ${r.busy ? `<div class="count">${tt('factions.recol_busy')}</div>` : ''}
+    ${r.error ? `<div class="w-bad">✗ ${esc(r.error)}</div>` : ''}
+    ${p ? `<div class="facemrows">${p.samples.map(x => x.error ? `<div class="count w-warn">${esc(x.rel)}: ${esc(x.error)}</div>`
+        : `<div class="facemrow"><span class="facemimg"><img src="${x.old}" alt=""></span> →
+           <span class="facemimg"><img src="${x['new']}" alt=""></span><span class="count">${esc(x.rel)}</span></div>`).join('')}</div>
+      <div class="count">${tt('factions.recol_counts',{cards:(p.counts.card || 0) + (p.counts.info || 0),
+        textures:p.counts.texture || 0, symbols:p.counts.symbol || 0, shared:p.shared, mb:(p.new_bytes / 1e6).toFixed(0)})}</div>
+      <button class="primary" onclick="facRecolApply()" ${r.busy ? 'disabled' : ''}>${tt('factions.recol_write')}</button>` : ''}
+  </div>`;
+}
+function facRecolBody(){
+  const d = state.fac.d, r = d.recol;
+  return {mod: state.fac.mod, faction: d.slot, source: r.source, target: r.target};
+}
+async function facRecolPlan(){
+  const d = state.fac.d, r = d.recol;
+  r.busy = true; r.error = ''; facPaint();
+  let x;
+  try{ x = await api.post('/api/artrecolour/plan', facRecolBody()); }catch(e){ x = {error: errText(e)}; }
+  if(state.fac.d !== d) return;
+  r.busy = false;
+  if(x.error){ r.error = x.error; r.plan = null; } else r.plan = x;
+  facPaint();
+}
+async function facRecolApply(){
+  const d = state.fac.d, r = d.recol;
+  r.busy = true; facPaint();
+  let x;
+  try{ x = await api.post('/api/artrecolour/apply', facRecolBody()); }catch(e){ x = {error: errText(e)}; }
+  r.busy = false;
+  if(x.error){ r.error = x.error; facPaint(); return; }
+  r.plan = null;
+  toast(tt('factions.recol_done',{n:x.changed, own:x.own}), 7000);
   facPaint();
 }
 

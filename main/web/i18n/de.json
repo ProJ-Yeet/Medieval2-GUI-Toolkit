@@ -11206,5 +11206,18 @@
  "factions.banner_pattern_10": "Ein Schrägkreuz",
  "factions.banner_pattern_11": "Ein Rand",
  "factions.banner_pattern_12": "Ein Streifen in der Mitte, senkrecht",
- "factions.banner_pattern_13": "Ein Streifen in der Mitte, waagerecht"
+ "factions.banner_pattern_13": "Ein Streifen in der Mitte, waagerecht",
+ "eng.artrecolour.no_colours": "geben Sie an, in welchen Farben die Bilder jetzt sind und welche sie bekommen sollen",
+ "eng.artrecolour.summary": "Bilder von {faction} umgefärbt: {n} geändert, {own} als eigene Kopie angelegt",
+ "eng.artrecolour.nothing": "{faction} hat in dieser Mod keine eigenen Bilder zum Umfärben",
+ "eng.artrecolour.no_space": "die eigenen Kopien der Texturen, die die Fraktion teilt, brauchen etwa {need} MB, und das Laufwerk hat {free} MB frei; schaffen Sie zuerst Platz",
+ "eng.artrecolour.bad_colour": "{c} ist keine Farbe wie #c81e1e",
+ "factions.recol_head": "Die Bilder dieser Fraktion umfärben",
+ "factions.recol_hint": "Die Einheitenkarten, Infobilder, Schlachttexturen und Symbole werden von den Farben, in denen sie gemalt sind, in neue umgesetzt, Licht und Schatten bleiben. Wo es dasselbe Bild in den Farben anderer Fraktionen gibt, wird nur bemalt, was sich unterscheidet, also bleiben Gesichter, Metall und Leder. Eine Textur, die auch andere Fraktionen tragen, wird zur eigenen Kopie dieser Fraktion.",
+ "factions.recol_from": "Jetzt gemalt in den Farben von",
+ "factions.recol_to": "nach",
+ "factions.recol_busy": "Wird umgefärbt (jedes Bild wird mit demselben Bild anderer Fraktionen verglichen)…",
+ "factions.recol_counts": "{cards} Einheitenbilder, {textures} Schlachttexturen und {symbols} Symbole. {shared} Texturen teilt sie mit anderen Fraktionen; diese bekommen eine eigene Kopie dieser Fraktion, etwa {mb} MB.",
+ "factions.recol_write": "Alle umfärben",
+ "factions.recol_done": "{n} Bilder umgefärbt; {own} Texturen sind jetzt eigene Kopien der Fraktion."
 }
