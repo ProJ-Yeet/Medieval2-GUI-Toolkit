@@ -1001,6 +1001,12 @@
   ],
   "eng.gamelog.known_5": [
    "turn"
+  ],
+  "voices.own_note": [
+   "event"
+  ],
+  "voices.own_compiled": [
+   "event"
   ]
  },
  "ancillaries.a_character_holds_one_ancillary_per": "Un personaje solo puede tener un séquito de cada tipo, así que este es el que sustituiría uno nuevo",
@@ -11614,5 +11620,38 @@
  "healthx.deep_note": "Se ensaya portar el conjunto a este mod en una copia cuyos archivos son enlaces a los de este mod; cada comprobación se ejecuta en la copia y en el mod, y se comparan. No se escribe nada en el mod; la copia se elimina después. Se ensayan los registros que entrarían por defecto; en Cambios eliges qué portar.",
  "healthx.deep_busy": "Ensayando {set}: se planifica portar el conjunto, se coloca en una copia y cada comprobación se ejecuta dos veces…",
  "healthx.deep_none_added": "Nada nuevo: cada comprobación dice lo mismo o algo mejor tras portar el conjunto.",
- "eng.gamelog.known_5": "Cuando un {b} de {a} pasa a ser un {c} (una ciudad hecha castillo o al revés), sus edificios cambian según las líneas convert_to de sus cadenas, aquí a un nivel que {a} no puede construir. Revisa las líneas requires de esos niveles en Edificios, o las líneas convert_to."
+ "eng.gamelog.known_5": "Cuando un {b} de {a} pasa a ser un {c} (una ciudad hecha castillo o al revés), sus edificios cambian según las líneas convert_to de sus cadenas, aquí a un nivel que {a} no puede construir. Revisa las líneas requires de esos niveles en Edificios, o las líneas convert_to.",
+ "eng.transfer.skins_on_reused": "{n} modelo(s) que ya tenía recibieron skins para {factions}, así que cada propietario de '{type}' lo ve",
+ "eng.transfer.mount_differs": "MONTURA DISTINTA: '{unit}' monta {rides} y '{type}' monta {was}. Las animaciones de sus jinetes y el lugar de la montura bajo ellos están hechos para {rides}; compruébalo en batalla.",
+ "eng.voices.no_unit": "no hay ninguna unidad {unit} en este mod",
+ "eng.voices.no_bank": "este mod no tiene {rel}",
+ "eng.voices.no_wav": "elige al menos un archivo .wav",
+ "eng.voices.no_block": "el archivo de voces no tiene nombres Unit_Select para {accent}, clase {vclass}; elige otro acento u otra clase",
+ "eng.voices.no_template": "ninguna unidad de {accent}, clase {vclass} tiene un nombre de llamada cuya forma copiar",
+ "eng.voices.replaced": "{accent}, clase {vclass}: la llamada de {unit} ahora reproduce {files}",
+ "eng.voices.added": "{accent}, clase {vclass}: {unit} recibe su propia llamada, {files}",
+ "eng.voices.not_wav": "{label} no es un archivo .wav; las voces del juego son wav, así que guárdalo antes como wav",
+ "eng.voices.odd_format": "{label} es de {rate} Hz, {bits} bits, {ch} canal(es); las voces propias del juego son de 22050 Hz, 16 bits, mono, así que puede sonar mal en el juego",
+ "eng.voices.split": "{accent}, clase {vclass}: {unit} sacada de la línea que compartía con {others}",
+ "voices.hear_title": "Escuchar la llamada de esta unidad por acento y las órdenes de su acento, y darle una llamada propia",
+ "voices.head": "Lo que dice {unit}",
+ "voices.no_packs": "No se encontraron los paquetes de sonido del juego (data/sounds/Voice1.idx y los demás), así que solo se pueden reproducir archivos sueltos.",
+ "voices.edu_says": "Su EDU dice acento {accent}, voice_type {vclass}.",
+ "voices.name_calls": "Llamada, por acento",
+ "voices.shared": "(una línea que comparte con otras unidades)",
+ "voices.no_name_call": "Sin llamada propia en el archivo de voces; dice la línea general de su clase.",
+ "voices.orders": "Órdenes en",
+ "voices.no_orders": "No hay órdenes para {accent} en esta clase.",
+ "voices.not_found_title": "Nombrado en el archivo de voces pero en ningún paquete ni archivo suelto: el juego no reproduce nada aquí",
+ "voices.own_head": "Una llamada propia",
+ "voices.own_go": "Usar como llamada",
+ "voices.wavs_picked": {
+  "one": "{count} .wav elegido",
+  "many": "{count} archivos .wav elegidos",
+  "other": "{count} archivos .wav elegidos"
+ },
+ "voices.own_confirm": "¿Escribir esta llamada?\n\n{changes}{warnings}{compiled}\n\nDeshacer en el Registro la retira.",
+ "voices.own_note": "Elige el acento y la clase para los que es y uno o más archivos .wav (los del juego son de 22050 Hz, 16 bits, mono). Entran como archivos sueltos con nombres nuevos, la unidad recibe su propia línea para ese acento y esa clase, y se eliminan events.dat y events.idx compilados para que el juego los vuelva a crear.",
+ "voices.own_compiled": "Se eliminan data/sounds/events.dat y events.idx compilados del mod (con copia de seguridad); el juego los vuelve a crear en su próximo inicio.",
+ "eng.voices.not_a_pack": "{name} no es un paquete de sonido"
 }

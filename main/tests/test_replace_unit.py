@@ -217,6 +217,38 @@ plan = plan_transfer(src, UNIT, dest,
 check("an unknown target is refused", "not found" in plan.base_error)
 shutil.rmtree(dest_root, ignore_errors=True)
 
+# ---- 7) 96e5: a swap inside one mod, onto another mount ---------------------
+print("\n96e5: one mod's model onto another of its units")
+from unittransfer import modeldb as _mdb, transfer as _tr
+dest_root = fresh_dest()
+shutil.copy2(DST_MOD / "data" / "descr_mount.txt", dest_root / "data" / "descr_mount.txt")
+dest = Mod(dest_root)
+riders = [u for u in dest.edu.units if u.mount and not u.is_eop and u.soldier_model]
+pair = next(((a, b) for a in riders for b in riders
+             if a.kind() == b.kind() and _tr.mount_kind(dest, a) != _tr.mount_kind(dest, b)
+             and set(b.ownership) - {"slave", "all"} - {t.faction for t in
+                 (dest.modeldb.get(a.soldier_model.lower()) or _mdb.ModelEntry(name="")).main_textures}),
+            None)
+if pair is None:
+    print("  (no two riders on different mounts with different owners here - skipped)")
+else:
+    a, b = pair
+    before_db = (dest_root / "data/unit_models/battle_models.modeldb").read_bytes()
+    plan = plan_transfer(dest, a.type, dest, TransferOptions(mode="replace", replace_type=b.type))
+    check(f"{a.type} ({_tr.mount_kind(dest, a)}) onto {b.type} ({_tr.mount_kind(dest, b)}) plans",
+          not plan.base_error)
+    check("the different mount is warned about", any("MOUNT DIFFERS" in w for w in plan.warnings))
+    rec = apply_transfer(plan)
+    fresh = Mod(dest_root)
+    owners = set(b.ownership) - {"all"}
+    entry = fresh.modeldb.get(a.soldier_model.lower())
+    check("every owner of the replaced unit has a skin on the reused model",
+          entry is not None and owners <= {t.faction for t in entry.main_textures})
+    undo(rec["id"])
+    check("and undo puts the modeldb back byte for byte",
+          (dest_root / "data/unit_models/battle_models.modeldb").read_bytes() == before_db)
+shutil.rmtree(dest_root, ignore_errors=True)
+
 shutil.rmtree(cfg, ignore_errors=True)
 print("\n" + ("ALL PASSED" if all(ok) else "SOME FAILED"))
 sys.exit(0 if all(ok) else 1)

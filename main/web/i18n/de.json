@@ -881,6 +881,15 @@
   ],
   "eng.gamelog.known_5": [
    "turn"
+  ],
+  "voices.no_name_call": [
+   "general"
+  ],
+  "voices.own_note": [
+   "event"
+  ],
+  "voices.own_compiled": [
+   "event"
   ]
  },
  "ancillaries.a_character_holds_one_ancillary_per": "Ein Charakter hat pro Typ ein Gefolgsmitglied; das ist also das, was ein neues ersetzt",
@@ -11123,5 +11132,37 @@
  "healthx.deep_none_added": "Nichts Neues: Jede Prüfung sagt nach dem Portieren dasselbe oder Besseres.",
  "healthx.deep_same": "{n} Befunde bestehen so oder so.",
  "eng.gamelog.howto": "Das Spiel schreibt system.log.txt nur, solange sein Protokoll eingeschaltet ist; M2EX lässt es eingeschaltet. Beim Originalspiel setzen Sie diese Zeilen unter [log] in die .cfg, mit der die Mod startet, starten das Spiel neu und wiederholen, was schiefging:\n[log]\nto = logs/system.log.txt\nlevel = * error",
- "eng.gamelog.known_5": "Wenn ein {b} von {a} zu einem {c} wird (eine Stadt zur Burg oder zurück), wechseln seine Gebäude nach den convert_to-Zeilen ihrer Ketten, hier in eine Stufe, die {a} nicht bauen darf. Prüfen Sie die requires-Zeilen dieser Stufen unter Gebäude oder die convert_to-Zeilen."
+ "eng.gamelog.known_5": "Wenn ein {b} von {a} zu einem {c} wird (eine Stadt zur Burg oder zurück), wechseln seine Gebäude nach den convert_to-Zeilen ihrer Ketten, hier in eine Stufe, die {a} nicht bauen darf. Prüfen Sie die requires-Zeilen dieser Stufen unter Gebäude oder die convert_to-Zeilen.",
+ "eng.transfer.skins_on_reused": "{n} vorhandene(s) Modell(e) bekamen Skins für {factions}, damit jeder Besitzer von '{type}' es sieht",
+ "eng.transfer.mount_differs": "REITTIER ANDERS: '{unit}' reitet {rides} und '{type}' reitet {was}. Die Animationen der Reiter und der Platz des Reittiers unter ihnen sind für {rides} gemacht; prüfen Sie es in der Schlacht.",
+ "eng.voices.no_unit": "keine Einheit {unit} in dieser Mod",
+ "eng.voices.no_bank": "diese Mod hat kein {rel}",
+ "eng.voices.no_wav": "wählen Sie mindestens eine .wav-Datei",
+ "eng.voices.no_block": "die Sprachausgabe-Datei hat keine Unit_Select-Namen für {accent}, Klasse {vclass}; wählen Sie einen anderen Akzent oder eine andere Klasse",
+ "eng.voices.no_template": "keine Einheit in {accent}, Klasse {vclass} hat einen Namensruf, dessen Aufbau sich kopieren ließe",
+ "eng.voices.replaced": "{accent}, Klasse {vclass}: der Namensruf von {unit} spielt jetzt {files}",
+ "eng.voices.added": "{accent}, Klasse {vclass}: {unit} bekommt einen eigenen Namensruf, {files}",
+ "eng.voices.not_wav": "{label} ist keine .wav-Datei; die Sprachausgabe des Spiels ist wav, speichern Sie sie also zuerst als wav",
+ "eng.voices.odd_format": "{label} hat {rate} Hz, {bits} Bit, {ch} Kanal/Kanäle; die eigene Sprachausgabe des Spiels hat 22050 Hz, 16 Bit, mono, daher klingt sie im Spiel vielleicht falsch",
+ "eng.voices.split": "{accent}, Klasse {vclass}: {unit} aus der Zeile genommen, die es mit {others} teilte",
+ "voices.hear_title": "Den Namensruf dieser Einheit nach Akzent und die Befehle ihres Akzents anhören und ihr einen eigenen Namensruf geben",
+ "voices.head": "Was {unit} sagt",
+ "voices.no_packs": "Die Sound-Pakete des Spiels (data/sounds/Voice1.idx und die übrigen) wurden nicht gefunden, daher lassen sich nur lose Dateien abspielen.",
+ "voices.edu_says": "Ihre EDU nennt Akzent {accent}, voice_type {vclass}.",
+ "voices.name_calls": "Namensruf, nach Akzent",
+ "voices.shared": "(eine Zeile, die sie mit anderen Einheiten teilt)",
+ "voices.orders": "Befehle in",
+ "voices.no_orders": "Keine Befehle für {accent} in dieser Klasse.",
+ "voices.not_found_title": "In der Sprachausgabe-Datei genannt, aber in keinem Paket und keiner losen Datei: Das Spiel spielt hier nichts",
+ "voices.own_head": "Ein eigener Namensruf",
+ "voices.own_go": "Als Namensruf verwenden",
+ "voices.wavs_picked": {
+  "one": "{count} .wav gewählt",
+  "other": "{count} .wav-Dateien gewählt"
+ },
+ "voices.own_confirm": "Diesen Namensruf schreiben?\n\n{changes}{warnings}{compiled}\n\nRückgängig im Protokoll nimmt ihn zurück.",
+ "voices.no_name_call": "Kein eigener Namensruf in der Sprachausgabe-Datei; sie sagt die allgemeine Zeile ihrer Klasse.",
+ "voices.own_note": "Wählen Sie Akzent und Klasse, für die er gilt, und eine oder mehrere .wav-Dateien (die des Spiels haben 22050 Hz, 16 Bit, mono). Sie kommen als lose Dateien unter neuen Namen hinein, die Einheit bekommt ihre eigene Zeile für diesen Akzent und diese Klasse, und die kompilierten events.dat und events.idx werden entfernt, damit das Spiel sie neu erstellt.",
+ "voices.own_compiled": "Die kompilierten data/sounds/events.dat und events.idx der Mod werden entfernt (mit Sicherung); das Spiel erstellt sie beim nächsten Start neu.",
+ "eng.voices.not_a_pack": "{name} ist kein Sound-Paket"
 }

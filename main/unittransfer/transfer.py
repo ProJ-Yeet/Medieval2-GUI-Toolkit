@@ -853,6 +853,20 @@ class TransferPlan:
 SLOT_ORDER = ("soldier", "mount", "officer", "armour")
 
 
+def mount_kind(mod: Mod, unit) -> str:
+    """What a unit rides: ``foot``, or its mount's ``class`` in descr_mount.txt
+    (horse, camel, elephant...), or ``chariot`` for a mounted engine (96e5)."""
+    if getattr(unit, "mounted_engine", None):
+        return "chariot"
+    if not getattr(unit, "mount", None):
+        return "foot"
+    try:
+        m = mod.mount_def(unit.mount)
+    except (OSError, AttributeError, ValueError):
+        m = None
+    return (m.mount_class if m and m.mount_class else unit.mount).strip().lower()
+
+
 def model_slots_for(source: Mod, unit, base_groups=()) -> Dict[str, str]:
     """``model name (lower) -> slot``, first slot in :data:`SLOT_ORDER` wins."""
     slots: Dict[str, str] = {}
@@ -2207,6 +2221,15 @@ def plan_transfer(source: Mod, unit_type: str, dest: Mod,
             plan.base_unit = base_unit
             if replacing:
                 plan.replace_type = base_unit.type
+                # 96e5: the same kind can still ride something else - a horse's
+                # rider on a camel or an elephant sits wrong and plays the wrong
+                # animations, so say so (the Oogway editor's warning)
+                rides, was = mount_kind(source, unit), mount_kind(dest, base_unit)
+                if rides != was:
+                    plan.warnings.append(_i18n.msg(
+                        "eng.transfer.mount_differs",
+                        "MOUNT DIFFERS: '{unit}' rides {rides} and '{type}' rides {was}. Its riders' animations and the mount's place under them are made for {rides}; check it in battle.",
+                        unit=unit_type, type=base_unit.type, rides=rides, was=was))
                 plan.warnings.append(
                     _i18n.msg("eng.transfer.replacing_its_edu_block_is_rewritten", "replacing '{type}': its EDU block is rewritten in place, so no unit type and no dictionary entry are added. It keeps its name, description, stats, ownership and era - only the models change.", type=base_unit.type))
                 plan.warnings.append(
@@ -3358,9 +3381,42 @@ def apply_transfer(plan: TransferPlan) -> Dict:
         plan.warnings.append(_i18n.msg("eng.transfer.source_localisation_missing_none_written", "source localisation missing; none written"))
 
     # ---- 3) modeldb ----
+    # 96e5: a replace that reuses entries the destination already has (a swap
+    # inside one mod, or an identical model) still owes the replaced unit's
+    # owners a skin each, on those entries rather than on copies
+    patched: Dict[int, str] = {}
+    if plan.replace_type and plan.texture_factions and not getattr(dest, "text_models", False):
+        db = dest.modeldb
+        reused = {a.final_name.lower() for a in plan.model_actions if a.action == "reuse_identical"}
+        for i, e in enumerate(db.entries):
+            if e.name.lower() in reused:
+                raw = modeldb.add_texture_factions(e.raw, plan.texture_factions,
+                                                   prefer=plan.texture_donor or None,
+                                                   pad=e.first_entry_pad)
+                if raw != e.raw:
+                    patched[i] = raw
+        if patched:
+            plan.warnings.append(_i18n.msg(
+                "eng.transfer.skins_on_reused",
+                "{n} model(s) it already had were given skins for {factions}, so every owner of '{type}' sees it",
+                n=len(patched), factions=", ".join(plan.texture_factions), type=plan.replace_type))
+    if patched and not plan.add_entries:
+        db = dest.modeldb
+        olds = {i: db.entries[i].raw for i in patched}
+        try:
+            for i, raw in patched.items():
+                db.entries[i].raw = raw
+            text = db.to_text()
+        finally:
+            for i, raw in olds.items():
+                db.entries[i].raw = raw      # keep the cached db pristine
+        write_text("unit_models/battle_models.modeldb", text, modeldb.ENCODING)
     if plan.add_entries:
         db = dest.modeldb
         base = len(db.entries)
+        olds = {i: db.entries[i].raw for i in patched}
+        for i, raw in patched.items():
+            db.entries[i].raw = raw
         appended = []
         for final_name, entry in plan.add_entries:
             raw = (modeldb.rename_entry_raw(entry.raw, final_name)
@@ -3395,6 +3451,8 @@ def apply_transfer(plan: TransferPlan) -> Dict:
             db.entries.extend(appended)
             text = db.to_text()
             del db.entries[base:]          # keep cached db pristine
+        for i, raw in olds.items():
+            db.entries[i].raw = raw
             write_text("unit_models/battle_models.modeldb", text, modeldb.ENCODING)
 
     # ---- 3b) mount definition (descr_mount.txt) ----

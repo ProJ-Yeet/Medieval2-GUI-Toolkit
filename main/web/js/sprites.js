@@ -345,6 +345,7 @@ function renderSounds(){
       <button class="${s.cv?'on':''}" title="${ttA('sprites.show_a_units_block_exactly_as')}"
         onclick="sndCvToggle()">${tt('common.code_view')}</button>
     </div>
+    ${vxPanelHtml()}
     <div class="cvsplit${s.cv?'':' off'}">
     <div id="sndGui">
     ${all.length?`<div class="sndlist">
@@ -391,7 +392,9 @@ function sndRowHtml(u,i){
       <img class="uc" loading="lazy" onerror="iconRetry(this)"
         src="${iconUrl(state.src,u.type)}" alt="">
       <span class="un2"><span class="nm">${esc(u.name||u.type)}</span>
-        <span class="ty">${esc(u.type)}</span></span></div>
+        <span class="ty">${esc(u.type)}</span></span>
+      <button class="mini vxbtn" title="${ttA('voices.hear_title')}"
+        onclick="event.stopPropagation();vxOpen('${q1(esc(u.type))}')">🔊</button></div>
     <span class="now">${now}</span>
     ${sel(a,s.accents,'accent',tt('sprites.pick_an_accent'))}
     ${sel(c,s.classes,'class',tt('sprites.pick_a_class'))}
