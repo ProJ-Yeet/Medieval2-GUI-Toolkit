@@ -285,6 +285,7 @@ function facAbilitySection(d){
     <div class="trgrid">
       ${(v.yes_no||[]).map(k => facYesNo(d, k)).join('')}
       ${facPick(d, 'has_family_tree', 'has_family_tree', v.family_tree)}
+      ${facHomeless(d)}
     </div>
     <div class="trhint count">${tt('factions.has_family_tree_is_not_a')}</div>
   </section>`;
@@ -331,6 +332,23 @@ function facYesNo(d, key){
       ${cur && cur!=='yes' && cur!=='no'
         ? `<option value="${esc(cur)}" selected>${tt('factions.not_yes_or_no',{cur:esc(cur)})}</option>` : ''}
     </select></div>`;
+}
+
+/* 96a: M2EX's `can_homeless`. Offered only on a mod marked as running on
+   M2EX, and never to the papacy or the rebels; a line the record already has
+   is shown either way (and kept - the server never removes it unasked), with
+   the reason it does nothing beside it. Empty means "no line". */
+function facHomeless(d){
+  const h = (d.vocab || {}).homeless || {};
+  const key = 'can_homeless', cur = d.w[key] || '';
+  if(!h.offered && !facHas(d, key) && !d.had.has(key)) return '';
+  const why = h.barred ? tt('factions.homeless_barred')
+    : !h.m2ex ? tt('factions.homeless_not_m2ex') : tt('factions.homeless_hint');
+  const opts = (h.offered ? ['', 'yes', 'no'] : [cur]).map(o =>
+    `<option value="${esc(o)}"${o===cur?' selected':''}>${o ? esc(o) : tt('factions.homeless_none')}</option>`).join('');
+  return `<label class="lbl" data-label="${key}" title="${esc(tt('factions.homeless_title'))}">${esc(key)}</label>
+    <div><select data-label="${key}" ${h.offered ? '' : 'disabled'} onchange="facSet('${key}',this.value)">${opts}</select>
+    <div class="trhint count">${why}</div></div>`;
 }
 
 /* The two colours, as a swatch and a hex code.

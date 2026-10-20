@@ -342,6 +342,56 @@ check("and the log puts the whole job back",
       [u.value for u in fa.parse_file(work / "data" / fa.REL)
        .get("egypt, spawned_on_event").repeats] == ["Miners", "Peasants"])
 
+print("\n96a: can_homeless, M2EX only, never for the papacy or the rebels")
+from unittransfer import modflags
+modflags.set_m2ex(mod, False)
+d = fa.detail(mod, "sicily")
+check("not offered on a mod not marked M2EX",
+      d["vocab"]["homeless"]["offered"] is False
+      and "can_homeless" not in d["vocab"]["yes_no"])
+p = fa.plan(mod, {"faction": "sicily", "action": "edit",
+                  "edits": {"can_homeless": "yes"}})
+check("and refused there, with the Home card named",
+      p.errors and "M2EX" in p.errors[0] and not p.text)
+modflags.set_m2ex(mod, True)
+check("offered once the mod is marked M2EX",
+      fa.detail(mod, "sicily")["vocab"]["homeless"]["offered"] is True)
+p = fa.plan(mod, {"faction": "sicily", "action": "edit",
+                  "edits": {"can_homeless": "yes"}})
+blk = p.block.replace("\r\n", "\n")
+check("the line goes in just before can_sap",
+      not p.errors and "can_homeless" in blk
+      and blk.index("can_homeless") < blk.index("can_sap")
+      and blk.index("custom_battle_availability") < blk.index("can_homeless"))
+fa.apply(p)
+check("and reaches disk", fa.parse_file(work / "data" / fa.REL)
+      .get("sicily").get("can_homeless") == "yes")
+from unittransfer import transfer as _tr
+_tr.undo(config.load_log()[-1]["id"])
+check("and the log takes it back off", not fa.parse_file(work / "data" / fa.REL)
+      .get("sicily").get("can_homeless"))
+papal = FILE.replace("faction\t\t\t\tsicily", "faction\t\t\t\tpapal_states")
+check("the papacy is barred by its slot",
+      fa.homeless_barred(fa.parse_text(papal).get("papal_states")))
+slave = FILE.replace("has_family_tree\t\tteutonic",
+                     "has_family_tree\t\tteutonic\r\nspecial_faction_type\tslave_faction")
+check("and the rebels by their special type",
+      fa.homeless_barred(fa.parse_text(slave).records[0]))
+with_line = FILE.replace("can_sap\t\t\t\tno\r\nprefers_naval_invasions\tyes",
+                         "can_homeless\tyes\r\ncan_sap\t\t\t\tno\r\nprefers_naval_invasions\tyes")
+check("a line already there is clean on an M2EX mod",
+      "homeless-not-m2ex" not in kinds(with_line, mod))
+modflags.set_m2ex(mod, False)
+wl = fa.parse_text(with_line)
+check("and on a mod not marked M2EX it is reported, not removed",
+      "homeless-not-m2ex" in kinds(with_line, mod)
+      and "can_homeless" in fa.render_block(wl.block_text(wl.records[0]), {}))
+check("on the papacy it is reported either way",
+      "homeless-barred" in kinds(with_line.replace("faction\t\t\t\tsicily",
+                                                   "faction\t\t\t\tpapal_states")))
+check("a value that is not yes or no is reported",
+      "bad-yes-no" in kinds(with_line.replace("can_homeless\tyes", "can_homeless\tmaybe")))
+
 print("\nthe buildings module reads this file through here now")
 from unittransfer import buildings
 check("faction_cultures comes from the faction module",

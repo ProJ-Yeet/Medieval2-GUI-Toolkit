@@ -10395,8 +10395,8 @@
  "armory.multi_mixed": "gemischt",
  "armory.multi_mesh_title": "Jedes ausgewählte Objekt erhält diesen Mesh-Namen, nummeriert _01, _02 und so weiter, damit keine zwei gleich heißen",
  "armory.multi_weights_done": {
-   "one": "Knochengewichte für {count} Objekt übertragen",
-   "other": "Knochengewichte für {count} Objekte übertragen"
+  "one": "Knochengewichte für {count} Objekt übertragen",
+  "other": "Knochengewichte für {count} Objekte übertragen"
  },
  "armory.only_used": "Nur Teile im Modell",
  "armory.only_used_title": "Jedes Teil eines geladenen Modells ausblenden, das nicht im entstehenden Modell ist",
@@ -10426,15 +10426,15 @@
  "armory.tex_working_copy": "Arbeitskopie",
  "armory.tex_file": "Datei",
  "armory.tex_worn_by": {
-   "one": "getragen von {count} Objekt: {names}",
-   "other": "getragen von {count} Objekten: {names}"
+  "one": "getragen von {count} Objekt: {names}",
+  "other": "getragen von {count} Objekten: {names}"
  },
  "armory.tex_unused": "noch von nichts getragen",
  "armory.tex_edit": "Bearbeiten",
  "armory.tex_edit_title": "Eine PNG-Kopie in deinem Bildprogramm geöffnet; jedes Speichern dort erscheint im Ansichtsfenster",
  "armory.tex_put": {
-   "one": "Auf {count} ausgewähltes legen",
-   "other": "Auf {count} ausgewählte legen"
+  "one": "Auf {count} ausgewähltes legen",
+  "other": "Auf {count} ausgewählte legen"
  },
  "armory.tex_put_title": "Die ausgewählten Objekte tragen diese Textur statt ihrer eigenen",
  "armory.tex_export": "Exportieren",
@@ -10486,8 +10486,8 @@
  "armory.opt_checks_title": "Die Exportprüfungen des Blender-Kits, auf das angewendet, was die Bereinigung übrig lässt",
  "armory.opt_left_out": "Blender überlassen: Dreiecke zu Vierecken und Triangulieren (ein Schlachtmodell besteht schon aus Dreiecken), Löcher füllen und Nicht-Mannigfaltiges reparieren (sie verändern das Modell).",
  "armory.opt_scope": {
-   "one": "Für {count} Objekt",
-   "other": "Für {count} Objekte"
+  "one": "Für {count} Objekt",
+  "other": "Für {count} Objekte"
  },
  "armory.opt_run": "Ausführen",
  "armory.opt_done": "Fertig:",
@@ -10505,8 +10505,8 @@
  "armory.rig_share": "Erster Knochen",
  "armory.rig_share_title": "Wie viel vom Gewicht jedes Vertex der erste Knochen nimmt, 50 % bis 100 %",
  "armory.rig_done": {
-   "one": "{count} Objekt an {bones} gebunden",
-   "other": "{count} Objekte an {bones} gebunden"
+  "one": "{count} Objekt an {bones} gebunden",
+  "other": "{count} Objekte an {bones} gebunden"
  },
  "armory.weights_rigged": "Eigene, an {bones} gebunden",
  "eng.armory.pick_a_bone": "einen Knochen zum Binden wählen",
@@ -10975,5 +10975,15 @@
  "core.armory_studio_3d_by_mreedmm": "<a href=\"https://github.com/muhamadridhomm/armorystudio3d\" target=\"_blank\" style=\"color:var(--accent2)\">Armory Studio 3D</a> von <b>Mreedmm</b>",
  "core.campaign_map_2": "(Kampagnenkarte)",
  "core.lupinemaverick": "Lupinemaverick",
- "core.mreedmm_armory_studio": "<b>Mreedmm</b> <span class=\"count\">(Armory Studio)</span>"
+ "core.mreedmm_armory_studio": "<b>Mreedmm</b> <span class=\"count\">(Armory Studio)</span>",
+ "eng.factions.homeless_barred": "`can_homeless` bewirkt nichts für das Papsttum oder die Rebellen - M2EX lässt sie aus",
+ "eng.factions.homeless_not_m2ex": "`can_homeless` ist eine M2EX-Zeile, und diese Mod ist nicht als M2EX markiert (die Markierung steht auf ihrer Startkarte), daher ignoriert das Spiel sie - sie bleibt, wie sie ist",
+ "eng.factions.homeless_refused_barred": "`can_homeless` gilt nicht für das Papsttum oder die Rebellen",
+ "eng.factions.homeless_refused_m2ex": "`can_homeless` braucht M2EX - setzen Sie zuerst „Läuft auf M2EX“ auf der Startkarte dieser Mod",
+ "eng.factions.homeless_yes_no": "`can_homeless` ist yes oder no",
+ "factions.homeless_none": "(keine Zeile)",
+ "factions.homeless_title": "Nur M2EX: Eine Fraktion, die noch einen Anführer und eine Armee, aber keine Siedlung hat, zieht wie eine Horde zur nächsten, statt unterzugehen",
+ "factions.homeless_hint": "M2EX: Ohne Siedlung zieht die Armee ihres Anführers zur nächsten",
+ "factions.homeless_barred": "Nicht für das Papsttum oder die Rebellen; M2EX lässt sie aus",
+ "factions.homeless_not_m2ex": "Nur M2EX liest dies, und diese Mod ist nicht als M2EX markiert (Startkarte); die Zeile bleibt"
 }

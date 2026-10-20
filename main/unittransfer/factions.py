@@ -82,6 +82,7 @@ ORDER: Tuple[str, ...] = (
     "horde_min_units", "horde_max_units", "horde_max_units_reduction_every_horde",
     "horde_unit_per_settlement_population", "horde_min_named_characters",
     "horde_max_percent_army_stack", "horde_disband_percent_on_settlement_capture",
+    "can_homeless",
     "can_sap", "prefers_naval_invasions", "can_have_princess", "has_family_tree",
     "disband_to_pools", "can_build_siege_towers", "can_transmit_plague")
 
@@ -103,7 +104,16 @@ HORDE_KEYS: Tuple[str, ...] = tuple(k for k in ORDER if k.startswith("horde_"))
 YES_NO: Tuple[str, ...] = ("custom_battle_availability", "can_sap",
                            "prefers_naval_invasions", "can_have_princess",
                            "disband_to_pools", "can_build_siege_towers",
-                           "can_transmit_plague")
+                           "can_transmit_plague", "can_homeless")
+
+#: 96a: M2EX's ``can_homeless`` - a faction left with a leader and an army but
+#: no settlement goes for the nearest one, horde-like, instead of dying. The
+#: unmodified engine does not read it, so the form offers it only on a mod
+#: marked as running on M2EX (the Home card's flag), and never to the papacy or
+#: the rebels, which M2EX leaves out. It goes before ``can_sap``.
+HOMELESS = "can_homeless"
+HOMELESS_BARRED_TYPES: Tuple[str, ...] = ("slave_faction", "papal_faction")
+HOMELESS_BARRED_SLOTS: Tuple[str, ...] = ("slave", "papal_states")
 
 #: ``has_family_tree`` has three values, and 24 of 90 real factions say the third
 FAMILY_TREE: Tuple[str, ...] = ("yes", "no", "teutonic")
@@ -157,6 +167,19 @@ def modifier_of(name: str) -> str:
 
 # ---------------------------------------------------------------------------
 # colours, the one thing in this file that is genuinely visual
+
+
+def homeless_barred(rec) -> bool:
+    """Is this the papacy or the rebels, which ``can_homeless`` never applies to?"""
+    return (slot_of(rec.name) in HOMELESS_BARRED_SLOTS
+            or rec.get("special_faction_type") in HOMELESS_BARRED_TYPES)
+
+
+def _m2ex(mod) -> bool:
+    try:
+        return modflags.is_m2ex(mod)
+    except (OSError, AttributeError, TypeError, ValueError):
+        return bool(getattr(mod, "m2ex", False))
 
 
 def parse_colour(value: str) -> Optional[Tuple[int, int, int]]:
@@ -530,6 +553,13 @@ def check_file(rf: fr.RecordFile, mod=None) -> List[Dict]:
             add("bad-family-tree", rec.name, rec.lines["has_family_tree"],
                 f"`{rec.get('has_family_tree')}` - has_family_tree is "
                 + kb.and_list(FAMILY_TREE))
+        if HOMELESS in rec.lines:
+            if homeless_barred(rec):
+                add("homeless-barred", rec.name, rec.lines[HOMELESS],
+                    _i18n.msg("eng.factions.homeless_barred", "`can_homeless` does nothing for the papacy or the rebels - M2EX leaves them out"))
+            elif mod is not None and not _m2ex(mod):
+                add("homeless-not-m2ex", rec.name, rec.lines[HOMELESS],
+                    _i18n.msg("eng.factions.homeless_not_m2ex", "`can_homeless` is an M2EX line and this mod is not marked as running on M2EX (the flag is on its Home card), so the game ignores it - it is kept as it is"))
         special = rec.get("special_faction_type")
         if special and special not in SPECIAL_TYPES:
             add("unknown-special-type", rec.name, rec.lines["special_faction_type"],
@@ -678,7 +708,12 @@ def detail(mod, name: str) -> Dict:
         "vocab": {
             "cultures": minorfiles.culture_names(mod),
             "religions": minorfiles.religion_names(mod),
-            "yes_no": list(YES_NO), "family_tree": list(FAMILY_TREE),
+            "yes_no": [k for k in YES_NO if k != HOMELESS],
+            "family_tree": list(FAMILY_TREE),
+            # 96a: offered on an M2EX mod, never to the papacy or the rebels;
+            # a line already there is shown either way and never removed
+            "homeless": {"offered": _m2ex(mod) and not homeless_barred(rec),
+                         "m2ex": _m2ex(mod), "barred": homeless_barred(rec)},
             "special_types": list(SPECIAL_TYPES), "horde_keys": list(HORDE_KEYS),
             "order": list(ORDER), "required": list(REQUIRED),
             "int_keys": list(INT_KEYS), "art_keys": list(ART_KEYS),
@@ -767,6 +802,14 @@ def plan(mod, body: dict) -> FactionPlan:
         else:
             edits = dict(body.get("edits") or {})
             edits.pop("name", None)      # the slot is not editable - see above
+            wanted = str(edits.get(HOMELESS, rec.get(HOMELESS)) or "").strip()
+            if wanted and wanted != rec.get(HOMELESS):
+                if homeless_barred(rec):
+                    raise FactionError(_i18n.msg("eng.factions.homeless_refused_barred", "`can_homeless` is not for the papacy or the rebels"))
+                if not _m2ex(mod):
+                    raise FactionError(_i18n.msg("eng.factions.homeless_refused_m2ex", "`can_homeless` needs M2EX - tick \"Runs on M2EX\" on this mod's Home card first"))
+                if wanted not in ("yes", "no"):
+                    raise FactionError(_i18n.msg("eng.factions.homeless_yes_no", "`can_homeless` is yes or no"))
             block = render_block(base, edits)
     except fr.RecordError as e:
         p.errors.append(e.message)

@@ -10101,5 +10101,15 @@
 "walls.wall_level": "Wall level {level}",
 "walls.wall_level_line": "Wall level {level} <span class=\"count\">line {line}</span>",
 "walls.with_tower_level_its_tower_needs": ", with <code>tower_level {tower_levels}</code>: its tower needs that many firing levels",
-"walls.write_changes_confirm": "Write {n} change(s)?\n\n{changes}{warnings}\n\nBacked up first, and 🕑 Log can undo it."
+"walls.write_changes_confirm": "Write {n} change(s)?\n\n{changes}{warnings}\n\nBacked up first, and 🕑 Log can undo it.",
+"eng.factions.homeless_barred": "`can_homeless` does nothing for the papacy or the rebels - M2EX leaves them out",
+"eng.factions.homeless_not_m2ex": "`can_homeless` is an M2EX line and this mod is not marked as running on M2EX (the flag is on its Home card), so the game ignores it - it is kept as it is",
+"eng.factions.homeless_refused_barred": "`can_homeless` is not for the papacy or the rebels",
+"eng.factions.homeless_refused_m2ex": "`can_homeless` needs M2EX - tick \"Runs on M2EX\" on this mod's Home card first",
+"eng.factions.homeless_yes_no": "`can_homeless` is yes or no",
+"factions.homeless_none": "(no line)",
+"factions.homeless_title": "M2EX only: a faction left with a leader and an army but no settlement goes for the nearest one, horde-like, instead of dying out",
+"factions.homeless_hint": "M2EX: with no settlement left, its leader's army goes for the nearest one",
+"factions.homeless_barred": "Not for the papacy or the rebels; M2EX leaves them out",
+"factions.homeless_not_m2ex": "Only read by M2EX, and this mod is not marked as running on it (Home card); the line is kept"
 }

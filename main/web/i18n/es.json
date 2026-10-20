@@ -10869,8 +10869,8 @@
  "armory.multi_mixed": "mixto",
  "armory.multi_mesh_title": "Cada objeto seleccionado toma este nombre de malla, numerado _01, _02 y así sucesivamente para que no coincidan dos",
  "armory.multi_weights_done": {
-   "one": "Pesos transferidos para {count} objeto",
-   "other": "Pesos transferidos para {count} objetos"
+  "one": "Pesos transferidos para {count} objeto",
+  "other": "Pesos transferidos para {count} objetos"
  },
  "armory.only_used": "Solo piezas del modelo",
  "armory.only_used_title": "Ocultar cada pieza de un modelo cargado que no esté en el modelo que se construye",
@@ -10900,15 +10900,15 @@
  "armory.tex_working_copy": "copia de trabajo",
  "armory.tex_file": "archivo",
  "armory.tex_worn_by": {
-   "one": "la lleva {count} objeto: {names}",
-   "other": "la llevan {count} objetos: {names}"
+  "one": "la lleva {count} objeto: {names}",
+  "other": "la llevan {count} objetos: {names}"
  },
  "armory.tex_unused": "todavía no la lleva nada",
  "armory.tex_edit": "Editar",
  "armory.tex_edit_title": "Una copia PNG abierta en tu programa de imagen; cada guardado allí se ve en la vista 3D",
  "armory.tex_put": {
-   "one": "Poner en {count} seleccionado",
-   "other": "Poner en {count} seleccionados"
+  "one": "Poner en {count} seleccionado",
+  "other": "Poner en {count} seleccionados"
  },
  "armory.tex_put_title": "Los objetos seleccionados llevan esta textura en lugar de la suya",
  "armory.tex_export": "Exportar",
@@ -10960,8 +10960,8 @@
  "armory.opt_checks_title": "Las comprobaciones de exportación del kit de Blender, sobre lo que deja la limpieza",
  "armory.opt_left_out": "Se dejan a Blender: triángulos a cuadriláteros y triangular (un modelo de batalla ya es de triángulos), rellenar agujeros y reparar no-variedades (cambian el modelo).",
  "armory.opt_scope": {
-   "one": "En {count} objeto",
-   "other": "En {count} objetos"
+  "one": "En {count} objeto",
+  "other": "En {count} objetos"
  },
  "armory.opt_run": "Ejecutar",
  "armory.opt_done": "Hecho:",
@@ -10979,8 +10979,8 @@
  "armory.rig_share": "Primer hueso",
  "armory.rig_share_title": "Cuánto del peso de cada vértice toma el primer hueso, del 50 % al 100 %",
  "armory.rig_done": {
-   "one": "{count} objeto enlazado a {bones}",
-   "other": "{count} objetos enlazados a {bones}"
+  "one": "{count} objeto enlazado a {bones}",
+  "other": "{count} objetos enlazados a {bones}"
  },
  "armory.weights_rigged": "Propios, enlazados a {bones}",
  "eng.armory.pick_a_bone": "elige un hueso al que enlazar",
@@ -11461,5 +11461,15 @@
  "core.armory_studio_3d_by_mreedmm": "<a href=\"https://github.com/muhamadridhomm/armorystudio3d\" target=\"_blank\" style=\"color:var(--accent2)\">Armory Studio 3D</a> de <b>Mreedmm</b>",
  "core.campaign_map_2": "(Mapa de campaña)",
  "core.lupinemaverick": "Lupinemaverick",
- "core.mreedmm_armory_studio": "<b>Mreedmm</b> <span class=\"count\">(Armory Studio)</span>"
+ "core.mreedmm_armory_studio": "<b>Mreedmm</b> <span class=\"count\">(Armory Studio)</span>",
+ "eng.factions.homeless_barred": "`can_homeless` no hace nada para el papado ni para los rebeldes - M2EX los deja fuera",
+ "eng.factions.homeless_not_m2ex": "`can_homeless` es una línea de M2EX y este mod no está marcado como que funciona con M2EX (el indicador está en su tarjeta Inicio), así que el juego la ignora - se conserva tal cual",
+ "eng.factions.homeless_refused_barred": "`can_homeless` no es para el papado ni para los rebeldes",
+ "eng.factions.homeless_refused_m2ex": "`can_homeless` necesita M2EX - marca primero «Funciona con M2EX» en la tarjeta Inicio de este mod",
+ "eng.factions.homeless_yes_no": "`can_homeless` es yes o no",
+ "factions.homeless_none": "(sin línea)",
+ "factions.homeless_barred": "No es para el papado ni para los rebeldes; M2EX los deja fuera",
+ "factions.homeless_not_m2ex": "Solo lo lee M2EX, y este mod no está marcado como que funciona con él (tarjeta Inicio); la línea se conserva",
+ "factions.homeless_title": "Solo M2EX: una facción que conserva un líder y un ejército pero ningún asentamiento marcha hacia el más cercano, como una horda, en vez de desaparecer",
+ "factions.homeless_hint": "M2EX: sin asentamientos, el ejército de su líder marcha hacia el más cercano"
 }
