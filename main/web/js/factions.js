@@ -270,6 +270,7 @@ function facArtSection(d){
     <div class="trsechead">${tt('factions.art_and_banners_symbol_lines_name')}</div>
     ${facPictures(d)}
     ${facEmblemHtml(d)}
+    ${facBannerHtml(d)}
     <div class="trgrid">
       ${(v.art_keys||[]).map(k => facArt(d, k)).join('')}
       ${facBox(d, 'standard_index', tt('factions.banner_index'))}
@@ -456,6 +457,71 @@ async function facEmblemApply(){
   catch(err){ toast('✗ ' + errText(err), 6000); return; }
   if(r.error){ toast('✗ ' + r.error, 8000); return; }
   d.emblem = null;
+  toast(tt('common.saved_log_can_undo_it'));
+  facPaint();
+}
+
+/* 96e6: the faction's battle banners painted new - one to three colours in a
+   pattern and a symbol on each banner, on a white template the server takes
+   from the median of all the mod's banner sheets. Preview first; Write puts
+   the sheet in (a shared sheet becomes the faction's own copy). A pattern
+   goes as its number in bannermaker.PATTERNS; the names below are in its order. */
+function facBannerHtml(d){
+  const b = d.banner || (d.banner = {colours: [d.colours && d.colours.primary_colour || '#c81e1e',
+    d.colours && d.colours.secondary_colour || '#f0f0f0', '#202020'], pattern: 0, symbol: ''});
+  const names = [tt('factions.banner_pattern_0'), tt('factions.banner_pattern_1'), tt('factions.banner_pattern_2'),
+    tt('factions.banner_pattern_3'), tt('factions.banner_pattern_4'), tt('factions.banner_pattern_5'),
+    tt('factions.banner_pattern_6'), tt('factions.banner_pattern_7'), tt('factions.banner_pattern_8'),
+    tt('factions.banner_pattern_9'), tt('factions.banner_pattern_10'), tt('factions.banner_pattern_11'),
+    tt('factions.banner_pattern_12'), tt('factions.banner_pattern_13')];
+  const pat = names.map((n, i) => `<option value="${i}" ${i === b.pattern ? 'selected' : ''}>${n}</option>`).join('');
+  return `<div class="facbanner"><div class="trsechead">${tt('factions.banner_head')}</div>
+    <div class="count">${tt('factions.banner_hint')}</div>
+    <div class="facbanrow">
+      ${b.colours.map((c, i) => `<input type="color" value="${esc(c)}" onchange="state.fac.d.banner.colours[${i}]=this.value">`).join('')}
+      <select onchange="state.fac.d.banner.pattern=+this.value">${pat}</select>
+      <label class="btn">${b.symbol ? tt('factions.banner_symbol_set') : tt('factions.banner_symbol')}
+        <input type="file" accept="image/*,.tga" style="display:none" onchange="facBannerSymbol(this.files[0])"></label>
+      ${b.symbol ? `<button onclick="state.fac.d.banner.symbol='';facPaint()">${tt('factions.banner_no_symbol')}</button>` : ''}
+      <button onclick="facBannerPlan()" ${b.busy ? 'disabled' : ''}>${tt('factions.banner_preview')}</button>
+    </div>
+    ${b.busy ? `<div class="count">${tt('factions.banner_busy')}</div>` : ''}
+    ${b.error ? `<div class="w-bad">✗ ${esc(b.error)}</div>` : ''}
+    ${b.plan ? `<img class="facbanimg" src="${b.plan.preview}" alt="">
+      <div class="count">${tt('factions.banner_where',{target:esc(b.plan.target), n:b.plan.sheets})}${
+        b.plan.shared ? ` ${tt('factions.banner_shared',{was:esc(b.plan.was)})}` : ''}</div>
+      <button class="primary" onclick="facBannerApply()">${tt('factions.banner_write')}</button>` : ''}
+  </div>`;
+}
+async function facBannerSymbol(file){
+  const b = state.fac.d.banner;
+  if(!file) return;
+  const buf = new Uint8Array(await file.arrayBuffer());
+  let bin = '';
+  for(let i = 0; i < buf.length; i += 0x8000) bin += String.fromCharCode.apply(null, buf.subarray(i, i + 0x8000));
+  b.symbol = btoa(bin); b.plan = null;
+  facPaint();
+}
+function facBannerBody(){
+  const d = state.fac.d, b = d.banner;
+  return {mod: state.fac.mod, faction: d.slot, colours: b.colours, pattern: b.pattern, symbol: b.symbol};
+}
+async function facBannerPlan(){
+  const d = state.fac.d, b = d.banner;
+  b.busy = true; b.error = ''; facPaint();
+  let r;
+  try{ r = await api.post('/api/bannermaker/plan', facBannerBody()); }catch(e){ r = {error: errText(e)}; }
+  if(state.fac.d !== d) return;
+  b.busy = false;
+  if(r.error){ b.error = r.error; b.plan = null; } else b.plan = r;
+  facPaint();
+}
+async function facBannerApply(){
+  const d = state.fac.d;
+  let r;
+  try{ r = await api.post('/api/bannermaker/apply', facBannerBody()); }catch(e){ toast('✗ ' + errText(e), 6000); return; }
+  if(r.error){ toast('✗ ' + r.error, 8000); return; }
+  d.banner.plan = null;
   toast(tt('common.saved_log_can_undo_it'));
   facPaint();
 }
