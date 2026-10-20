@@ -1001,10 +1001,17 @@ split by area, each built from the behaviour described in the checklist:
   faction-screen and panel symbols, the loading logos. **Left in 96e6**: the banner maker and recolouring a
   faction's pictures (both large; the editor's `banners_m2.py` and `recolour.py`), with round two's own logos
   and area recolour.
+* **96e6 finished the same day**: battle banners painted new (`bannermaker.py`, from the editor's
+  `banners_m2.py`: a white template from the median of the mod's banner sheets, the banner meshes' cloth, the
+  pennants' other looks, fourteen patterns and a symbol; a shared sheet becomes the faction's own) and
+  recolouring a faction's pictures (`artrecolour.py`, the editor's `recolour.py` core verbatim: cards, info
+  pictures, battle textures by the modeldb, symbols; a shared texture becomes the faction's own copy, the
+  space said first).
+* **96e3 done the same day**: the Family tab draws and edits the tree (`stratfamily.py`, `family.js`), a
+  portrait of one's own per character, and the culture's portrait library. Surnames (round two) stay in 96f.
 * **96f, first piece**: `mod_files.txt` from Health's Contents tab.
 
-**Left in major III, in order**: 96e6's banner maker and recolouring; 96e3 characters (family tree,
-portraits, portrait library, with surnames); 96e1 scripting (builder, add-ons, with round two's blocks,
+**Left in major III, in order**: 96e1 scripting (builder, add-ons, with round two's blocks,
 WHENs, pieces and add-ons); then 96f's other pieces. The thin mod needs every editor to copy a game file in
 on its first write (the editor's `ModData.under`), so it is a piece of its own, not a flag on 96e7.
 
