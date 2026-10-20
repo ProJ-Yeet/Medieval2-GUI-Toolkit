@@ -993,8 +993,25 @@ split by area, each built from the behaviour described in the checklist:
 
 **Round two, 2026-10-20** (the user: "check the oogway editor ... for new commits since our old roadmap"): 513
 commits, 0.31.0 to 0.35.1, read; 42 new features went to the user as a second checklist,
-<https://claude.ai/artifact/GHEHzKgpRbEQyWyegJ44g6>, answers in its `answers` collection. Nothing from it is
-scheduled until it is answered.
+<https://claude.ai/artifact/GHEHzKgpRbEQyWyegJ44g6>, answers in its `answers` collection. **Answered the same day: Port on all 43**, and "just port everything and decide whats best to be
+incorporated in the list you made". Two notes ask what would differ from ours (the 3D viewer's animations,
+the new-unit wizard). Where the toolkit already has a version, only what it lacks is taken. Placed by area:
+
+* **Into major II** (the campaign map, with 97, 96b-d and 96e4): the 3D map with the game's look, carrying
+  things on it, its heights brush, the scripts layer, the minimap, merging regions and deleting many towns,
+  dragging the map's edges, wasteland regions (M2EX), the coast tools, names under the mouse, a garrison for a
+  town given to an empty faction, right click on a garrison's unit, Suggest for garrisons and armies.
+* **Into major III as 96f** (after 96e1-7): a whole faction from another mod; a culture change with its
+  preview; renaming a faction's slot everywhere; leader and heir titles; surnames from the faction's own list
+  (with 96e3); the viewer's animations, riders, crews and armour button where Armory Studio lacks them; a card
+  from the 3D model where the card maker lacks it; Transfer carrying voices, name call and a missing building;
+  the new-unit wizard's steps the clone flow lacks; the editor's own look (the toolkit's pages); the game's
+  menu screens page by page (this moves the out-of-scope line for `.sd` skinning); the art browser where
+  Images lacks it; drawing pictures from the map; own logos and the area recolour (with 96e6); the script
+  builder's control blocks, more WHENs, the campaign script by pieces and more add-ons (with 96e1);
+  mod_files.txt and the new Health checks (with 96e2); the thin mod (with 96e7); keep-for-Apply where change
+  sets lack it; hover cards; a religion and a building from nothing; more campaign rules; community
+  translation files.
 
 **Later**: settlement names by the owner's culture (under *Deferred to a
 later version*; check first whether M2TW reads such a table at all).
