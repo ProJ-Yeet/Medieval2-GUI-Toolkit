@@ -161,6 +161,13 @@ Factions mode (descr_sm_factions.txt, see :mod:`unittransfer.factions`)
                                     works into all thirteen files that name a slot
                                     plus its art (backups + undo, one id for the
                                     lot). See :mod:`unittransfer.factionclone`.
+                                    With ``from_mod`` and ``faction``, 96f: that
+                                    faction of another mod, laid over a clone of
+                                    one of this mod's, its units brought by
+                                    transfer (:mod:`unittransfer.factionbring`)
+  GET  /api/factions/bring_list?mod=&from=
+                                 -> the other mod's factions, each with the
+                                    faction of this mod it would be made on
   POST /api/factions/plan|/apply -> edit one faction and its shown name together
                                     (backups + undo). Editing only: a faction
                                     slot lives in thirteen files at once
@@ -710,7 +717,7 @@ from . import (bmdb, buildings, cards, cleaner, codeview, config, dupes, edit,
                modflags, modfiles, sounds, stratmap)
 from . import mapgen, mapnew, mapresize, modfork, vanilla, gamelog, modreport, rehearse, voices, emblem, bannermaker, artrecolour, stratfamily, scripts
 from . import armory, armbake, armlib, armunit, loosemesh, meshfolder, modeldb, modeltext
-from . import ancillaries, areaeffects, campimport, edbimport, mapbundle, osmmap, osmsites, settlemodel, heroabilities, hordestart, walls, characters, projectzip, campaint, campdb, campevents, campfiles, campmap, campnew, campstrat, cas, casanim, animedit, animpack, animslot, animview, modelexport, launchcheck, packhouse, settlemech, fileswap, factionsites, sidefiles, banners, changesets, health, climatenew, guilds, mapcheck, mapfe, mapquery, mapterrain, mercpools, regiondel, edusort, factionaudit, factionclone, factions, images, mesh, minorfiles, namekeys, portrecords, rawtext, rebelpools, renames, soundbanks, soundscripts, spawns, sprites, stratcamp, stratchar, stratedit, stratobj, strings, traits, triggers, winconds
+from . import ancillaries, areaeffects, campimport, edbimport, mapbundle, osmmap, osmsites, settlemodel, heroabilities, hordestart, walls, characters, projectzip, campaint, campdb, campevents, campfiles, campmap, campnew, campstrat, cas, casanim, animedit, animpack, animslot, animview, modelexport, launchcheck, packhouse, settlemech, fileswap, factionsites, sidefiles, banners, changesets, health, climatenew, guilds, mapcheck, mapfe, mapquery, mapterrain, mercpools, regiondel, edusort, factionaudit, factionbring, factionclone, factions, images, mesh, minorfiles, namekeys, portrecords, rawtext, rebelpools, renames, soundbanks, soundscripts, spawns, sprites, stratcamp, stratchar, stratedit, stratobj, strings, traits, triggers, winconds
 from . import eop as _eop
 from . import logutil
 from . import i18n
@@ -2286,6 +2293,18 @@ class Handler(BaseHTTPRequestHandler):
                 fname = f"{name}_factions.zip"
                 return self._send(200, blob, "application/zip",
                                   {"Content-Disposition": f'attachment; filename="{fname}"'})
+            if u.path == "/api/factions/bring_list":
+                # 96f: what another mod has to bring, and what each is made on here
+                name = (q.get("mod") or [None])[0]
+                other = (q.get("from") or [None])[0]
+                names = self.registry.names()
+                if not name or name not in names or not other or other not in names:
+                    return self._err(404, "unknown mod")
+                mod, src = self.registry.get(name), self.registry.get(other)
+                rows = factionbring.factions_of(src)
+                for r in rows:
+                    r["frame"] = factionbring.frame_for(mod, r["culture"])
+                return self._json({"factions": rows})
             if u.path == "/api/factions/audit":
                 name = (q.get("mod") or [None])[0]
                 if not name or name not in self.registry.names():
@@ -3952,6 +3971,8 @@ class Handler(BaseHTTPRequestHandler):
                 out.update(factionclone.apply_many(bp))
                 self.registry.invalidate(body["mod"])
                 return out
+            if body.get("from_mod"):
+                return self._faction_bring(action, mod, body)
             plan = factionclone.plan(mod, body)
         except (KeyError, OSError) as e:
             return {"error": str(e)}
@@ -3967,6 +3988,26 @@ class Handler(BaseHTTPRequestHandler):
         # thirteen files and a folder of art changed: everything cached about this
         # mod is now stale, the faction roster most of all
         self.registry.invalidate(body["mod"])
+        return out
+
+    def _faction_bring(self, action, mod, body):
+        """96f: a faction of another mod, made on a faction of this one and
+        its own laid over it; its units come by transfer once the slot exists,
+        each planned against the mod as the one before it left it."""
+        src = self.registry.get(body["from_mod"])
+        bp = factionbring.plan(mod, src, body)
+        out = {"plan": bp.payload()}
+        if action == "clone_plan" or not out["plan"]["ok"]:
+            if out["plan"]["errors"]:
+                out["error"] = "; ".join(out["plan"]["errors"])
+            return out
+        name = body["mod"]
+
+        def reload():
+            self.registry.invalidate(name)
+            return self.registry.get(name)
+        out.update(factionbring.apply(bp, reload))
+        self.registry.invalidate(name)
         return out
 
     # ---- editing an animation (57a) ----

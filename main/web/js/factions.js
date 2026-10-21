@@ -816,7 +816,9 @@ function facCloneOpen(source){
   // 56 (M12): one row is the dialog as it always was; more rows are a batch,
   // planned one on top of the other and written as one job with one Undo
   f.clone = {source: fcSlotOf(donor), rows: [fcRowNew()], art: true, rename: true,
-             plan: null, batch: null, busy: false, err: ''};
+             plan: null, batch: null, busy: false, err: '',
+             // 96f: `from` is another mod to bring a faction from, '' for a clone here
+             from: '', bring: null, faction: '', units: true, frameUnits: false};
   facCloneRender();
   overlay.classList.add('open');
 }
@@ -869,19 +871,32 @@ function facCloneRender(){
   document.getElementById('modal').innerHTML = `
     <h2>${tt('factions.add_a_faction_2')} <span class="pill">${esc(f.mod || state.src)}</span></h2>
     <div class="mbody" style="padding:14px 16px">
-      <div class="count fcintro">
+      ${c.from ? '' : `<div class="count fcintro">
         ${tt('factions.a_faction_is_added_by_copying')}
-      </div>
+      </div>`}
       ${full ? `<div class="w-warn fcmsg">${tt('factions.this_mod_already_uses_all_of',{limit:f.limit})}</div>` : ''}
       <div class="fcgrid">
-        <label class="v3f"><span>${tt('factions.copy_from')}</span>
+        <label class="v3f"><span>${tt('factions.bring_from')}</span>
+          <select onchange="facBringFrom(this.value)">
+            <option value=""${c.from ? '' : ' selected'}>${tt('factions.bring_this_mod')}</option>
+            ${realMods().filter(m => m.name !== (f.mod || state.src)).map(m => `<option value="${q1(esc(m.name))}"${
+              m.name === c.from ? ' selected' : ''}>${esc(m.name)}</option>`).join('')}
+          </select></label>
+        ${c.from ? `<label class="v3f"><span>${tt('factions.bring_which',{mod:esc(c.from)})}</span>
+          <select onchange="facBringPick(this.value)"${c.bring ? '' : ' disabled'}>
+            ${c.bring ? `<option value="">${tt('factions.bring_pick')}</option>` + c.bring.map(r => `<option value="${q1(esc(r.slot))}"${
+              r.slot === c.faction ? ' selected' : ''}>${esc(r.label)} (${esc(r.slot)}, ${esc(r.culture)})</option>`).join('')
+              : `<option>${tt('common.working_out_what_would_change')}</option>`}
+          </select></label>` : ''}
+        <label class="v3f"><span>${c.from ? tt('factions.bring_made_on') : tt('factions.copy_from')}</span>
           <select onchange="facCloneSet('source', this.value)">
             ${rows.map(r => `<option value="${q1(esc(r.slot))}"${
               r.slot === c.source ? ' selected' : ''
             }>${esc(r.label)}</option>`).join('')}
           </select></label>
-        <span></span><span></span>
+        ${c.from ? '' : '<span></span>'}
       </div>
+      ${c.from ? `<div class="count fcintro">${tt('factions.bring_intro',{mod:esc(c.from)})}</div>` : ''}
       ${c.rows.map((r, i) => `<div class="fcgrid fcrowin">
         <label class="v3f"><span>${c.rows.length > 1 ? tt('factions.new_faction',{x:i + 1}) : tt('factions.new_faction_slot')}</span>
           <input type="text" id="fcName${i}" value="${q1(esc(r.name))}"
@@ -902,16 +917,21 @@ function facCloneRender(){
               placeholder="${ttA('factions.blank_keeps_the_donors')}" oninput="facCloneTitle(${i}, '${k}', this.value)"></label>`
         ).join('')}</div>` : ''}
       </div>`).join('')}
-      <button class="fcmore" onclick="facCloneRow()" title="${ttA('factions.add_several_factions_from_the_same')}">${tt('factions.another_faction')}</button>
+      ${c.from ? '' : `<button class="fcmore" onclick="facCloneRow()" title="${ttA('factions.add_several_factions_from_the_same')}">${tt('factions.another_faction')}</button>`}
       <div class="count fcintro">
         ${tt('factions.the_slot_is_what_every_other')}
       </div>
       <label class="fcart"><input type="checkbox"${c.art ? ' checked' : ''}
         onchange="facCloneSet('art', this.checked)">
-        <span>${tt('factions.copy_the_art_too_symbols_banners')}</span></label>
-      <label class="fcart"><input type="checkbox"${c.rename ? ' checked' : ''}
+        <span>${c.from ? tt('factions.bring_art') : tt('factions.copy_the_art_too_symbols_banners')}</span></label>
+      ${c.from ? `<label class="fcart"><input type="checkbox"${c.units ? ' checked' : ''}
+        onchange="facCloneSet('units', this.checked)">
+        <span>${tt('factions.bring_units')}</span></label>
+      <label class="fcart"><input type="checkbox"${c.frameUnits ? ' checked' : ''}
+        onchange="facCloneSet('frameUnits', this.checked)">
+        <span>${tt('factions.bring_frame_units')}</span></label>` : `<label class="fcart"><input type="checkbox"${c.rename ? ' checked' : ''}
         onchange="facCloneSet('rename', this.checked)">
-        <span>${tt('factions.where_the_donors_shown_name_stands')}</span></label>
+        <span>${tt('factions.where_the_donors_shown_name_stands')}</span></label>`}
       <div id="fcPlan">${facClonePlanHtml()}</div>
     </div>
     <div class="foot">
@@ -994,7 +1014,13 @@ function facClonePlanBody(p){
   if((p.errors || []).length)
     return `<div class="w-warn fcmsg">${p.errors.map(esc).join('<br>')}</div>`;
   const files = p.files || [];
-  return `<div class="fcplan">
+  const brought = p.bring ? `
+    ${(p.laid || []).map(x => `<div class="fcrow"><span class="fcc">✓</span><span class="fcn">${esc(x)}</span></div>`).join('')}
+    ${(p.units || []).length ? `<div class="fcrow"><span class="fcc">+${p.units.length}</span><span class="fcn">${tt('factions.bring_units_row',{n:p.units.length})}
+      <span class="fcf">${esc(p.units.join(', '))}</span></span></div>` : ''}
+    ${(p.shared || []).length ? `<div class="fcrow"><span class="fcc">=${p.shared.length}</span><span class="fcn">${tt('factions.bring_shared_row',{n:p.shared.length})}
+      <span class="fcf">${esc(p.shared.join(', '))}</span></span></div>` : ''}` : '';
+  return `<div class="fcplan">${brought}
     <div class="k">${tt('factions.what_would_be_written_file_s',{n:files.filter(x => x.written).length,x:p.asset_files ? tt('factions.art_file_s_mb',{asset_files:p.asset_files,asset_bytes:(p.asset_bytes / 1048576).toFixed(1)}) : '',art_gaps:(p.art_gaps || []).length
           ? tt('factions.art_place_s_empty',{art_gaps_n:p.art_gaps.length}) : ''})}</div>
     ${files.map(x => `<div class="fcrow${x.written ? '' : ' off'}">
@@ -1028,13 +1054,13 @@ function facCloneSet(key, value, i){
   if(key === 'name' || key === 'label') c.rows[i || 0][key] = value;
   else c[key] = value;
   facCloneRender();
-  facCloneSoon((key === 'art' || key === 'rename' || key === 'source') ? 0 : 280);
+  facCloneSoon(['art', 'rename', 'source', 'units', 'frameUnits'].includes(key) ? 0 : 280);
 }
 
 async function facClonePreview(){
   const c = state.fac && state.fac.clone;
   if(!c) return;
-  if(!c.rows.some(r => r.name)){ c.plan = null; c.batch = null; c.err = ''; facClonePaint(); return; }
+  if(!c.rows.some(r => r.name) || (c.from && !c.faction)){ c.plan = null; c.batch = null; c.err = ''; facClonePaint(); return; }
   c.busy = true; c.err = '';
   const note = document.getElementById('fcNote');
   if(note) note.textContent = tt('common.working_out_what_would_change');
@@ -1054,6 +1080,12 @@ async function facClonePreview(){
 function facCloneBody(){
   const c = state.fac.clone;
   const titles = r => Object.fromEntries(Object.entries(r.titles).filter(([, v]) => v && v.trim()));
+  if(c.from){
+    const r = c.rows[0];
+    return {mod: state.src, from_mod: c.from, faction: c.faction, source: c.source,
+            new: r.name, label: r.label, titles: titles(r), art: !!c.art,
+            units: !!c.units, frame_units: !!c.frameUnits};
+  }
   if(c.rows.length > 1)
     return {mod: state.src, source: c.source, art: !!c.art, rename: !!c.rename,
             rows: c.rows.map(r => ({new: r.name, label: r.label, titles: titles(r)}))};
@@ -1066,6 +1098,7 @@ async function facCloneApply(){
   const f = state.fac, c = f.clone;
   if(!c || c.busy || !facCloneReady()) return;
   if(c.rows.length > 1) return facCloneApplyMany();
+  if(c.from) return facBringApply();
   const p = c.plan, name = c.rows[0].name;
   const files = (p.files || []).filter(x => x.written);
   if(!confirm(tt('factions.confirm_add_one',{name,source:c.source,
@@ -1120,5 +1153,66 @@ async function facCloneApplyMany(){
   toast(tt('factions.added_many_toast',{names_n:names.length,files_n:res.files.length,asset_files:res.asset_files}), 6000);
   if(typeof fauStale === 'function') fauStale();
   if(state.mode === 'factions'){ await loadFactions(); facOpen(names[0]); return; }
+  try{ await facFetch(f.mod); }catch(e){}
+}
+
+/* 96f: a whole faction from another mod (factionbring.py). The dialog is the
+   clone's: the faction picked there is made on a faction of this mod, and its
+   own record, texts, names, map figures, art and units are laid over it. */
+async function facBringFrom(mod){
+  const c = state.fac && state.fac.clone;
+  if(!c) return;
+  c.from = mod; c.bring = null; c.faction = ''; c.plan = null; c.err = '';
+  if(c.rows.length > 1) c.rows = c.rows.slice(0, 1);
+  facCloneRender();
+  if(!mod) return facCloneSoon(0);
+  let r;
+  try{ r = await api.get(`/api/factions/bring_list?mod=${enc(state.src)}&from=${enc(mod)}`); }
+  catch(e){ r = {error: String((e && e.message) || e)}; }
+  if(!state.fac || state.fac.clone !== c || c.from !== mod) return;
+  c.bring = r.factions || [];
+  c.err = r.error || '';
+  facCloneRender();
+}
+
+function facBringPick(slot){
+  const c = state.fac && state.fac.clone;
+  if(!c) return;
+  const row = (c.bring || []).find(r => r.slot === slot);
+  c.faction = slot;
+  if(row){
+    const here = new Set((state.fac.factions || []).map(x => fcSlotOf(x.name)));
+    const r0 = c.rows[0];
+    if(!r0.name) r0.name = here.has(slot) ? slot + '_2' : slot;
+    if(!r0.label && row.label !== slot) r0.label = row.label;
+    if(row.frame) c.source = row.frame;
+  }
+  facCloneRender();
+  facCloneSoon(0);
+}
+
+async function facBringApply(){
+  const f = state.fac, c = f.clone, p = c.plan, name = c.rows[0].name;
+  if(!confirm(tt('factions.bring_confirm',{name, faction:c.faction, mod:c.from, frame:c.source,
+    files:(p.files || []).filter(x => x.written).length, units:(p.units || []).length,
+    notes:(p.notes || []).join('\n\n')}))) return;
+  c.busy = true;
+  facCloneRender();
+  toast(tt('factions.bring_working',{n:(p.units || []).length}), 4000);
+  let res;
+  try{ res = await api.post('/api/factions/clone_apply', facCloneBody()); }
+  finally{ c.busy = false; }
+  if(res.error){ c.err = res.error; facCloneRender(); toast('✗ ' + res.error, 6000); return; }
+  const failed = res.units_failed || [];
+  activity(tt('factions.added_faction'), tt('factions.bring_activity',{name, faction:c.faction, mod:c.from,
+    units:(res.units || []).length}));
+  f.clone = null;
+  closeModal();
+  toast(tt('factions.bring_toast',{name, units:(res.units || []).length, shared:(res.shared || []).length}), 6000);
+  // a unit that did not come is its own message, long enough to read the reasons
+  if(failed.length) setTimeout(() => toast(tt('factions.bring_failed',{n:failed.length,
+    list:failed.map(x => `${x.unit}: ${x.error}`).join('; ')}), 12000), 6200);
+  if(typeof fauStale === 'function') fauStale();
+  if(state.mode === 'factions'){ await loadFactions(); facOpen(name); return; }
   try{ await facFetch(f.mod); }catch(e){}
 }

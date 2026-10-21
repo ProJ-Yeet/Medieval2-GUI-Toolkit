@@ -736,6 +736,9 @@ class AssetCopy:
     is_dir: bool = False
     files: int = 0
     bytes: int = 0
+    #: 96f: the data/ folder ``src`` is under when it is not this mod's own - a
+    #: picture of the faction being brought from another mod
+    root: str = ""
 
 
 @dataclass
@@ -1274,7 +1277,7 @@ def apply(p: ClonePlan) -> Dict:
     # (The now-empty folders stay, which undo does everywhere else too.)
     copied_files = 0
     for a in p.assets:
-        src_path, dst_path = data / a.src, data / a.dst
+        src_path, dst_path = Path(a.root or data) / a.src, data / a.dst
         if not src_path.exists() or dst_path.exists():
             continue
         pairs = ([(f, dst_path / f.relative_to(src_path)) for f in sorted(src_path.rglob("*"))

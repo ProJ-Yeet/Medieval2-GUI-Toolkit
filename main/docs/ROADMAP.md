@@ -1022,6 +1022,18 @@ split by area, each built from the behaviour described in the checklist:
   are composed by the ported code in English; they stay English in German and Spanish until that code is
   moved to catalogue templates. Round two's campaign script by pieces and the blocks view are still 96f.
 * **96f, first piece**: `mod_files.txt` from Health's Contents tab.
+* **96f, a whole faction from another mod, 2026-10-21**: *Add a faction* has a **From** picker; another mod
+  there brings one of its factions (`factionbring.py`, after the editor's own `factionbring.py`). It is made on a
+  faction of this mod of the same culture (the frame, changeable), so the clone writes the new slot into every
+  file the way this mod writes it; then the brought faction's own is laid over before anything is written: its
+  colours, culture and religion where this mod has them, its symbol, loading logo and movies (the files brought),
+  every text of its slot, its name lists and their `names.txt` texts, its campaign-map figures' textures, its art
+  in place of the frame's, and its units. A unit this mod has line for line is shared; any other comes by Unit
+  Transfer, owned by the new faction, once the slot is written (one Log entry each), and the frame's units leave
+  the new faction's ownership unless asked for. Not brought, and said: its towns, armies and family, scripts and
+  events naming it, traits only it has, its shields on the logo sheets. `tests/test_factionbring` (33). Both
+  installed mods are at 31 of 31 slots, so the real-mod check is a plan (Divide and Conquer's Gondor into Heirs
+  of Elendil: 63 texts, 588 names, 4 figures, 22 art items laid over, 31 units to transfer), not a write.
 
 **Left in major III**: 96f, round two's major III items. Porting the editor's current files already brought its control blocks (ELSE, all / any / none, for each), its newer WHENs and the Recruitment Order, One Recruitment Grid and Upkeep x N add-ons; the Scratch-style blocks view and the campaign script by pieces are still to do. The thin mod needs every editor to copy a game file in
 on its first write (the editor's `ModData.under`), so it is a piece of its own, not a flag on 96e7.
