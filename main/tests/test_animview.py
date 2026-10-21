@@ -8,6 +8,8 @@
 2. A mod with no pack of its own plays vanilla's, and says so.
 3. A packed action and the same action written out loose read the same keys,
    and the loose one is the one offered.
+   3b. A path the pack holds at two scales plays the copy at its skeleton's
+   scale, not the first; with no such copy, the one there is rescaled.
 4. Every filled slot of a soldier, a horse, a rider and a weapon skeleton
    reads out of the pack on vanilla, ROCSS and DaC.
 5. The page's arithmetic under node: a three-step sequence with and without
@@ -16,6 +18,7 @@
 import json
 import math
 import shutil
+import struct
 import subprocess
 import sys
 from pathlib import Path
@@ -151,6 +154,41 @@ unpacked = mod_data / "animations" / "unpacked_copy.cas"
 unpacked.write_bytes(an_bytes)
 check("an unpacked pack entry under a .cas name is not taken for a loose file",
       not animview._truly_loose(unpacked) and animview._truly_loose(loose_at))
+
+# ---- 3b) one path at several scales ------------------------------------------------
+print("\n3b) one path held at several scales plays the skeleton's own")
+
+
+def baked(data, k):
+    """A pack entry's bytes with every position times ``k``: the copy the
+    game bakes for a skeleton at another scale."""
+    nf, nq, npb = casanim.packed_counts(data)
+    out = bytearray(data)
+    o = 5 + nf * nq * 16
+    spans = [(o, nf * npb * 3), (o + nf * npb * 12 + nf * 12, nf * 3)]   # positions, root motion
+    for at, n in spans:
+        vals = struct.unpack_from(f"<{n}f", out, at)
+        struct.pack_into(f"<{n}f", out, at, *(v * k for v in vals))
+    return bytes(out)
+
+
+tmpl = van.anims.first(walk_path)
+small = animpack.PackEntry(tmpl.name, 0, 0, 0.8, tmpl.frames, tmpl.rot_bones, tmpl.pos_bones)
+for stem, items in (("both", [(small, baked(an_bytes, 0.8)), (tmpl, an_bytes)]),
+                    ("small", [(small, baked(an_bytes, 0.8))])):
+    g = Path(_tmp.mkdtemp(prefix="ut_animview_scale_"))
+    (g / "data" / "animations").mkdir(parents=True)
+    write_pack(g / "data" / "animations", "skeletons", animpack.SKEL_MAGIC,
+               [(van.skels.first(names[0]), sk_bytes)], 14, 24)
+    write_pack(g / "data" / "animations", "pack", animpack.ANIM_MAGIC, items, 9, 0)
+    got = animview.read(g / "data", names[0], path=walk_path)
+    if stem == "both":
+        check("TESW's case: the first copy is the 0.8 one, and the 1.0 skeleton plays the 1.0 copy",
+              abs(animpack.for_data(g / "data").anims.first(walk_path).scale - small.scale) < 1e-6
+              and same_keys(got, packed))
+    else:
+        check("with only the 0.8 copy, its positions are rescaled to the skeleton's 1.0",
+              same_keys(got, packed, tol=1e-4))
 
 # ---- 4) the installs --------------------------------------------------------------
 print("\n4) every filled slot reads, on the three installs")

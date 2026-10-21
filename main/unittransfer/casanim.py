@@ -292,8 +292,13 @@ _SKEL_PATHS: Dict[tuple, Path] = {}
 
 
 def read_packed_bytes(data: bytes, source: str, bones: List[Tuple[str, int, tuple]],
-                      skeleton: str = "") -> Animation:
-    """A pack entry as an :class:`Animation`, with ``bones`` from its skeleton."""
+                      skeleton: str = "", rescale: float = 1.0) -> Animation:
+    """A pack entry as an :class:`Animation`, with ``bones`` from its skeleton.
+
+    ``rescale`` multiplies every stored position: the skeleton's scale over the
+    entry's own, which is what the game does when a skeleton plays a copy
+    baked at another scale (:func:`animpack.resolve_slot`). Rotations are
+    scale-free."""
     counts = packed_counts(data)
     name = Path(source).name
     if counts is None:
@@ -324,7 +329,7 @@ def read_packed_bytes(data: bytes, source: str, bones: List[Tuple[str, int, tupl
             px, py, pz = t.pivot
             for f in range(nf):
                 x, y, z = src[f * stride + at:f * stride + at + 3]
-                t.pos.extend((x - px, y - py, z - pz))
+                t.pos.extend((x * rescale - px, y * rescale - py, z * rescale - pz))
         out.tracks.append(t)
     out.notes.append(_i18n.msg("eng.casanim.from_the_packs_own_format_with", "from the pack's own format, with {x}'s bones", x=skeleton or 'its skeleton'))
     return out

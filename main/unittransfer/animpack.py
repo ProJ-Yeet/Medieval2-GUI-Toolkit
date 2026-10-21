@@ -527,6 +527,17 @@ class Packs:
         e = self.anims.first(path) if self.anims else None
         return self.anims.read_entry(e) if e else None
 
+    def animation_for(self, path: str, scale: float) -> Optional[Tuple[bytes, float]]:
+        """The copy of ``path`` a skeleton at ``scale`` plays
+        (:func:`resolve_slot`), and the factor its positions take to be at
+        that scale: 1 for an exact copy. Not :meth:`animation_bytes`, which
+        takes the first copy whatever its scale - TESW holds a soldier's idle
+        nine times, the first at 0.8."""
+        e = resolve_slot(self.anims, path, scale) if self.anims else None
+        if e is None:
+            return None
+        return self.anims.read_entry(e), (scale or 1.0) / (e.scale or 1.0)
+
     def animation(self, path: str) -> Optional[PackedAnimation]:
         data = self.animation_bytes(path)
         return PackedAnimation(data, path) if data is not None else None

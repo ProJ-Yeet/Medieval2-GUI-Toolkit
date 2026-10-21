@@ -59,13 +59,15 @@ DEFAULT_SLOT = animpack.SKELETON_SLOTS - 1
 packs_for = animpack.packs_for
 
 
-def _summary(packs: animpack.Packs, fid, entry: animpack.PackEntry) -> dict:
+def _summary(packs: animpack.Packs, fid, entry: animpack.PackEntry, scale: float = 0.0) -> dict:
     """The index record's counts and the entry's eight summary floats, which
-    are its last 40 bytes but the mask."""
+    are its last 40 bytes but the mask. ``scale``, the playing skeleton's,
+    rescales the distance and speed of a copy baked at another scale."""
     fid.seek(entry.offset + entry.size - 40)
     s = struct.unpack("<8f", fid.read(32))
-    return {"frames": entry.frames, "duration": round(s[0], 3), "distance": round(s[1], 3),
-            "speed": round(s[5], 3)}
+    k = (scale / entry.scale) if scale and entry.scale else 1.0
+    return {"frames": entry.frames, "duration": round(s[0], 3), "distance": round(s[1] * k, 3),
+            "speed": round(s[5] * k, 3)}
 
 
 def _truly_loose(p: Path) -> bool:
@@ -107,9 +109,10 @@ def skeleton_view(data_dir, name: str, packs: Optional[animpack.Packs],
                    "impact_frame": s.impact_frame, "turn": [_deg(s.min_turn), _deg(s.max_turn)],
                    "events": [{"type": EVENT_TYPES.get(e.type, str(e.type)), "name": e.name,
                                "start": e.start, "end": e.end} for e in s.events]}
-            entry = packs.anims.first(s.path) if packs.anims is not None else None
+            # the copy this skeleton plays: its path at its scale
+            entry = animpack.resolve_slot(packs.anims, s.path, sk.scale) if packs.anims is not None else None
             if entry is not None:
-                row.update(_summary(packs, fid, entry))
+                row.update(_summary(packs, fid, entry, sk.scale))
             hit, _how = casanim.find(root, s.path, loose)
             if hit is not None and _truly_loose(hit):
                 row["rel"] = hit.relative_to(root).as_posix()
@@ -172,10 +175,10 @@ def read(data_dir, skeleton: str, path: str = "", rel: str = "",
         sk = packs.skeleton(skeleton)
         if sk is None:
             raise casanim.AnimError(_i18n.msg("eng.animview.the_skeleton_pack_has_no", "the skeleton pack has no {skeleton}", skeleton=repr(skeleton)))
-        data = packs.animation_bytes(path)
-        if data is None:
+        got = packs.animation_for(path, sk.scale)
+        if got is None:
             raise casanim.AnimError(_i18n.msg("eng.animview.pack_idx_has_no", "pack.idx has no {path}", path=repr(path)))
-        anim = casanim.read_packed_bytes(data, path, sk.bone_table(), skeleton)
+        anim = casanim.read_packed_bytes(got[0], path, sk.bone_table(), skeleton, rescale=got[1])
     anim.weapons = add_weapons(root, anim, weapons, slot) if weapons else []
     return anim
 
@@ -226,12 +229,12 @@ def add_weapons(data_dir, anim: casanim.Animation, weapons: Sequence[str],
             report.append({"skeleton": w, "error": _i18n.msg("eng.animview.fills_no_slot", "fills no slot")})
             continue
         path = ws.slots[at].path
-        data = packs.animation_bytes(path)
-        if data is None:
+        got = packs.animation_for(path, ws.scale)
+        if got is None:
             report.append({"skeleton": w, "error": _i18n.msg("eng.animview.pack_idx_has_no", "pack.idx has no {path}", path=repr(path))})
             continue
         try:
-            wa = casanim.read_packed_bytes(data, path, ws.bone_table(), w)
+            wa = casanim.read_packed_bytes(got[0], path, ws.bone_table(), w, rescale=got[1])
         except casanim.AnimError as exc:
             report.append({"skeleton": w, "error": str(exc)})
             continue
@@ -375,12 +378,12 @@ def compare(here_dir, there_dir, skeleton: str, slot: int) -> dict:
         return out
     out["path"] = sb.path
     out["same_path"] = sa is not None and sa.path.lower() == sb.path.lower()
-    da = pa.animation_bytes(sa.path) if sa is not None and pa.anims is not None else None
-    db = pb.animation_bytes(sb.path) if pb.anims is not None else None
+    da = pa.animation_for(sa.path, a.scale) if sa is not None and pa.anims is not None else None
+    db = pb.animation_for(sb.path, b.scale) if pb.anims is not None else None
     out["playable"] = db is not None
-    out["same_bytes"] = da is not None and da == db
-    entry = pb.anims.first(sb.path) if pb.anims is not None else None
+    out["same_bytes"] = da is not None and db is not None and da == db
+    entry = animpack.resolve_slot(pb.anims, sb.path, b.scale) if pb.anims is not None else None
     if entry is not None:
         with open(pb.anims.dat_path, "rb") as fid:
-            out.update(_summary(pb, fid, entry))
+            out.update(_summary(pb, fid, entry, b.scale))
     return out
