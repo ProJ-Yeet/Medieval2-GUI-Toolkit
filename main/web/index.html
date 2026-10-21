@@ -3027,9 +3027,10 @@
   .homefoot{display:flex;justify-content:flex-end;margin:12px 0 18px}
   a.kofi{color:var(--accent2);text-decoration:none;font-size:12.5px}
   a.kofi:hover{text-decoration:underline}
-  .homekofi{display:flex;justify-content:flex-end;margin:0 0 10px}
+  .topkofi{margin-left:auto;display:flex}
+  .topkofi+.topfold{margin-left:0}
   a.kofibadge{display:inline-block;line-height:0;border-radius:8px;transition:transform .12s,filter .12s}
-  a.kofibadge img{height:44px;width:auto;display:block}
+  a.kofibadge img{height:30px;width:auto;display:block}
   a.kofibadge:hover{transform:translateY(-1px);filter:brightness(1.08)}
   .homeprefs .chk{align-items:baseline;margin:0}
   .homeprefs .count{font-size:11px;margin-left:auto;text-align:right}
@@ -3646,6 +3647,7 @@
   <button data-i18n="app.log" data-i18n-title="app.log_undo" id="logBtn" title="Log + undo">🕑 Log</button>
   <button class="buildtag" id="buildTag" hidden></button>
   <span class="count" id="count"></span>
+  <span class="topkofi" id="topKofi"></span>
   <button data-i18n-title="app.top_fold" id="topFoldBtn" class="topfold" title="Fold the top bar and the tabs under it away">▴</button>
 </header>
 <button data-i18n-title="app.top_open" id="topOpenBtn" class="topopen" title="Bring the top bar back">▾</button>

@@ -1675,6 +1675,7 @@ function wire(){
   document.querySelectorAll('.era').forEach(cb=>cb.onchange=()=>{cb.checked?state.sel.era.add(cb.value):state.sel.era.delete(cb.value);filtersChanged();});
   settingsBtn.onclick=openSettings;
   topFoldBtn.onclick=()=>topFold(true); topOpenBtn.onclick=()=>topFold(false);
+  topKofi.innerHTML=kofiBadge();
   // …but not `logBtn.onclick=openLog`: a handler is called WITH the click,
   // and openLog's first argument is the mode to filter by. That filter
   // matched nothing, so the header's own button opened an empty log.
@@ -2013,7 +2014,7 @@ async function paintBuildTag(){
 const KOFI_URL='https://ko-fi.com/projyeet';
 const kofiLink=()=>`<a class="kofi" href="${KOFI_URL}" target="_blank" rel="noopener">${tt('core.support_on_kofi')}</a>`;
 // Ko-fi's own "Support me on Ko-fi" button, the one the README carries, at the
-// top right of Home. It is Ko-fi's image off Ko-fi's server, so offline it
+// right end of the top bar, beside the fold button. It is Ko-fi's image off Ko-fi's server, so offline it
 // falls back to the plain link rather than leaving a broken picture.
 const KOFI_ART='https://ko-fi.com/img/githubbutton_sm.svg';
 const kofiBadge=()=>`<a class="kofibadge" href="${KOFI_URL}" target="_blank" rel="noopener" title="${ttA('core.support_on_kofi')}"><img src="${KOFI_ART}" alt="${ttA('core.support_on_kofi')}" onerror="this.parentNode.outerHTML=kofiLink()"></a>`;

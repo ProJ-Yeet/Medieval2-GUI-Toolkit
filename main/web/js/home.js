@@ -35,7 +35,6 @@ function renderHome(){
     return;
   }
   main.innerHTML = `<div class="homewrap">
-    <div class="homekofi">${kofiBadge()}</div>
     ${homeRootHtml()}
     <div class="homestep">
       <span class="n">2</span>
