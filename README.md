@@ -8,7 +8,7 @@
 </p>
 <p>
   <a href="https://www.youtube.com/@proj-yeet"><img alt="YouTube" src="https://img.shields.io/badge/youtube-ProJ--Yeet-ff0000?style=for-the-badge&logo=youtube&logoColor=white"></a>
-  <a href="https://discord.gg/epic-unity-rework"><img alt="Discord" src="https://img.shields.io/badge/discord-join%20us-5865f2?style=for-the-badge&logo=discord&logoColor=white"></a>
+  <a href="https://discord.gg/htkpNjk5yq"><img alt="Discord" src="https://img.shields.io/badge/discord-join%20us-5865f2?style=for-the-badge&logo=discord&logoColor=white"></a>
 </p>
 
 Edit Medieval II: Total War mods without hand-editing text files. Move units
@@ -31,7 +31,7 @@ Third Age Reforged) before it goes out. If it has saved you an evening of
 hand-editing text files, a coffee on [Ko-fi](https://ko-fi.com/projyeet) pays
 for the hours behind the next feature, the bug reports that get answered and the
 mods that get tested. Never required, always appreciated. Ideas and bug reports
-are just as welcome on [Discord](https://discord.gg/epic-unity-rework).
+are just as welcome on [Discord](https://discord.gg/htkpNjk5yq).
 
 ![The Unit Editor: every unit in a mod, grouped by the faction that fields it](main/docs/images/unit-editor.png)
 
