@@ -7,10 +7,14 @@ to send it directly to you, with a box to write notes in". The page keeps the
 log (``armlog.js``: every Armory request, error and message); this writes it
 out with what the server knows.
 
-Sending is a Discord webhook (the project's server is where its reports are
-read): the zip as an attachment, the first lines of the notes as the message.
-The address is ``report_webhook`` in the settings, or :data:`WEBHOOK` below;
-with neither the report is only saved, and the page says where.
+Sending is a Discord webhook on the project server's forum channel: each
+report a new post, titled with the first line of the notes, the notes as its
+message and the zip attached.
+The address is ``report_webhook`` in the settings, else the first line of
+``report_webhook.txt`` beside this file (git ignores it: the repository is
+public, the zip is not where a secret should live either, but a tester's copy
+needs it to send), else :data:`WEBHOOK`; with none the report is only saved,
+and the page says where.
 """
 from __future__ import annotations
 
@@ -28,7 +32,8 @@ from typing import Optional, Tuple
 from . import __version__, config, logutil
 from . import i18n as _i18n
 
-#: the developer's own address for reports; empty sends nothing
+#: the developer's own address for reports, a webhook on the project Discord's
+#: forum channel (each report a new post); empty sends nothing
 WEBHOOK = ""
 #: how much of the end of server.log rides along
 SERVER_LOG_TAIL = 400_000
@@ -41,8 +46,18 @@ class ReportError(Exception):
     pass
 
 
+#: the address kept beside this file, out of git (the repository is public)
+#: but copied into a release zip with the rest of the folder
+WEBHOOK_FILE = Path(__file__).with_name("report_webhook.txt")
+
+
 def webhook() -> str:
-    return str(config.load_settings().get("report_webhook") or WEBHOOK).strip()
+    """The settings' ``report_webhook``, else :data:`WEBHOOK_FILE`, else
+    :data:`WEBHOOK`."""
+    s = str(config.load_settings().get("report_webhook") or "").strip()
+    if not s and WEBHOOK_FILE.is_file():
+        s = WEBHOOK_FILE.read_text(encoding="utf-8").strip()
+    return s or WEBHOOK.strip()
 
 
 def _server_log_tail() -> str:
@@ -86,7 +101,10 @@ def send(name: str, data: bytes, notes: str, url: Optional[str] = None) -> None:
         raise ReportError(_i18n.msg("eng.report.too_big", "the report is {mb} MB, more than can be sent; it is saved",
                                     mb=round(len(data) / 1e6, 1)))
     head = (notes or "").strip().splitlines()
-    text = f"Problem report, {__version__}" + (f": {head[0][:300]}" if head else "")
+    # a forum channel makes each post a thread, and a thread needs a name
+    title = (head[0].strip() if head else "") or "no notes"
+    thread = f"{__version__}: {title}"[:100]
+    text = f"Problem report, {__version__}\n\n" + (notes or "").strip()[:1800]
     boundary = uuid.uuid4().hex
     body = io.BytesIO()
 
@@ -95,7 +113,7 @@ def send(name: str, data: bytes, notes: str, url: Optional[str] = None) -> None:
         body.write(payload)
         body.write(b"\r\n")
     part('Content-Disposition: form-data; name="payload_json"\r\nContent-Type: application/json',
-         json.dumps({"content": text}).encode("utf-8"))
+         json.dumps({"content": text, "thread_name": thread}).encode("utf-8"))
     part(f'Content-Disposition: form-data; name="files[0]"; filename="{name}"\r\nContent-Type: application/zip', data)
     body.write(f"--{boundary}--\r\n".encode("utf-8"))
     req = urllib.request.Request(url, data=body.getvalue(), method="POST",
