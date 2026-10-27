@@ -95,7 +95,7 @@ function portRender(){
   const rows = portRows();
   const body = !ov ? `<div class="empty">${tt('portui.reading_s_s',{source:esc(p.source),nouns:esc(nouns)})}</div>`
     : ov.error ? `<div class="w-bad">${esc(ov.error)}</div>`
-    : `<div class="count" style="margin:8px 0">${ttN('portui.n_nouns_in_source_already_exist_in_dest',ov.count,{noun:esc(noun),nouns:esc(nouns),source:esc(ov.source),already:ov.already,dest:esc(ov.dest),error:ov.dest_error?`<br><span class="w-bad">${esc(ov.dest_error)}</span>`:''})}</div>
+    : `<div class="count" style="margin:8px 0">${ttN('portui.n_nouns_in_source_already_exist_in_dest',ov.count,{noun:esc(portNoun(p.kind,ov.count)),source:esc(ov.source),already:ov.already,dest:esc(ov.dest),error:ov.dest_error?`<br><span class="w-bad">${esc(ov.dest_error)}</span>`:''})}</div>
       <div class="barrow">
         <input placeholder="${ttA('portui.filter')}" value="${esc(p.q)}" style="flex:1"
           oninput="portState.q=this.value;portRowsPaint()">

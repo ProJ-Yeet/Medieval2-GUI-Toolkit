@@ -930,6 +930,15 @@
   ],
   "eng.scriptwords.addon_one_recruit_grid_21e4": [
    "recruit"
+  ],
+  "armory.exp_free_turn_title": [
+   "turn"
+  ],
+  "armory.look_closer_title": [
+   "turn"
+  ],
+  "armory.uv_hint": [
+   "turn"
   ]
  },
  "ancillaries.a_character_holds_one_ancillary_per": "Ein Charakter hat pro Typ ein Gefolgsmitglied; das ist also das, was ein neues ersetzt",
@@ -4458,13 +4467,13 @@
  "eng.campstrat.a_faction_standings_line_names_no": "eine faction_standings-Zeile nennt keine Fraktion, von der eine Meinung gehalten wird",
  "eng.campstrat.a_relative_line_names_fewer_than": "eine relative-Zeile nennt weniger als zwei Personen",
  "eng.campstrat.character_has_no": "der Charakter hat kein {key}",
- "eng.campstrat.character_has_no_type_named_character": "der Charakter hat keinen Typ (named character, general, spy, �)",
+ "eng.campstrat.character_has_no_type_named_character": "der Charakter hat keinen Typ (named character, general, spy, …)",
  "eng.campstrat.character_is_only_the_first_counts": "der Charakter ist {types}; nur der erste zählt",
  "eng.campstrat.character_line_has_no_name": "die Charakterzeile hat keinen Namen: {s}",
  "eng.campstrat.character_record_has_no_name": "character_record hat keinen Namen: {s}",
  "eng.campstrat.faction_line_has_no_name": "die Fraktionszeile hat keinen Namen",
- "eng.campstrat.faction_relationships_does_not_read_as": "faction_relationships lässt sich nicht lesen als `faction_relationships <faction>, <how> <faction�>`: {s}",
- "eng.campstrat.faction_standings_does_not_read_as": "faction_standings lässt sich nicht lesen als `faction_standings <faction>, <value> <faction�>`: {s}",
+ "eng.campstrat.faction_relationships_does_not_read_as": "faction_relationships lässt sich nicht lesen als `faction_relationships <faction>, <how> <faction…>`: {s}",
+ "eng.campstrat.faction_standings_does_not_read_as": "faction_standings lässt sich nicht lesen als `faction_standings <faction>, <value> <faction…>`: {s}",
  "eng.campstrat.fort_line_does_not_read_as": "die {word}-Zeile lässt sich nicht lesen als `{word} <x> <y> [<type> culture <culture>]`: {line}",
  "eng.campstrat.has_no_value": "{bits} hat keinen Wert",
  "eng.campstrat.is_not_a_campaign_inside": "{campaign} ist keine Kampagne in {CAMPAIGN_DIR_REL}",
@@ -8002,7 +8011,7 @@
  "portui.its_text_keys_without_them_the_character_screen_crashes": "seine Textschlüssel - ohne sie stürzt der Charakterbildschirm ab, sobald jemand {noun} hat",
  "portui.n_nouns_in_source_already_exist_in_dest": {
   "one": "{noun}: {count} in <b>{source}</b> · {already} davon bereits in <b>{dest}</b> vorhanden {error}",
-  "other": "{nouns}: {count} in <b>{source}</b> · {already} davon bereits in <b>{dest}</b> vorhanden {error}"
+  "other": "{noun}: {count} in <b>{source}</b> · {already} davon bereits in <b>{dest}</b> vorhanden {error}"
  },
  "portui.n_text_keys": {
   "one": "{count} Textschlüssel",
@@ -10468,9 +10477,9 @@
  "armory.filter_culture": "Kultur",
  "armory.filter_any": "alle",
  "armory.filter_clear": "Filter zurücksetzen",
- "armory.sheets_all_title": "Die Texturen für alle Objekte dieser Datei auf einmal wählen: eine Haupttextur, dann eine Anhangtextur für die Objekte, die auf einer gezeichnet werden",
+ "armory.sheets_all_title": "Die Texturen für alle Objekte dieser Datei auf einmal wählen: eine Haupttextur, dann eine Attachment-Textur für die Objekte, die auf einer gezeichnet werden",
  "armory.sheets_all_main": "Die Haupttextur für jedes Objekt",
- "armory.sheets_all_attach": "Die Anhangtextur (abbrechen, um die Haupttextur zu nehmen)",
+ "armory.sheets_all_attach": "Die Attachment-Textur (abbrechen, um die Haupttextur zu nehmen)",
  "armory.textures": "Texturen",
  "armory.textures_title": "Jede Textur, die das Modell trägt: ansehen, im eigenen Bildprogramm bearbeiten, eine hereinholen, eine hinausschreiben oder eine auf die ausgewählten Objekte legen",
  "armory.textures_intro": "Bearbeiten öffnet eine PNG-Kopie der Textur in deinem Bildprogramm und liest sie bei jedem Speichern dort zurück ins Ansichtsfenster. Die Texturen einer Mod werden nie geschrieben: das Modell trägt die Kopie, und der Export backt aus ihr.",
@@ -10511,9 +10520,9 @@
  "armory.uv_vertex": "Vertex",
  "armory.uv_island": "Insel",
  "armory.uv_sheet": "Seine Textur",
- "armory.uv_sheet_title": "Die eine Textur, auf der das Objekt liegt, Haupt- oder Anhangtextur",
+ "armory.uv_sheet_title": "Die eine Textur, auf der das Objekt liegt, Haupt- oder Attachment-Textur",
  "armory.uv_m2": "M2-Ansicht",
- "armory.uv_m2_title": "Haupt- und Anhangtextur nebeneinander, wie das Spiel sie anordnet",
+ "armory.uv_m2_title": "Haupt- und Attachment-Textur nebeneinander, wie das Spiel sie anordnet",
  "armory.uv_snap": "An Texel einrasten",
  "armory.uv_own_sheet": "Die Textur, die es trägt",
  "armory.uv_show_title": "Eine andere geladene Textur hinter den UVs zeigen",
@@ -10524,7 +10533,7 @@
  "armory.uv_hint": "Klick wählt, Umschalt fügt hinzu, Ziehen ins Leere zieht ein Rechteck, Ziehen an der Auswahl verschiebt sie. G, R, S verschieben, drehen und skalieren (X oder Y hält eine Achse; Klick oder Enter behält, Esc oder die rechte Taste setzt zurück). A wählt alles. Das Mausrad zoomt, die mittlere Taste oder Alt verschiebt die Ansicht.",
  "armory.optimize": "Optimieren",
  "armory.optimize_title": "Die Schritte des Quick-Cleanup-Addons, die ein Spielmesh verträgt, danach die Exportprüfungen des Kits, für die ausgewählten Objekte (alle sichtbaren, wenn keines ausgewählt ist)",
- "armory.opt_intro": "Die Bereinigung des Quick-Cleanup-Addons, so weit ein Schlachtmodell sie verträgt. Texturen, UVs und Knochengewichte bleiben, wie sie sind; ein Rückgängig stellt alles wieder her.",
+ "armory.opt_intro": "Die Bereinigung des Quick-Cleanup-Addons, so weit ein Schlachtmodell sie verträgt. Nur das Modell im Armory Studio ändert sich: Die Datei auf der Festplatte und die Mod werden nie beschrieben. Texturen, UVs und Knochengewichte bleiben, wie sie sind; ein Rückgängig stellt alles wieder her, und jedes Objekt behält für später <b>Originales Mesh wiederherstellen</b>.",
  "armory.opt_presets": "Vorgaben:",
  "armory.opt_light": "Leicht",
  "armory.opt_game": "Spielfertig",
@@ -10593,7 +10602,7 @@
  "armory.strength": "Stärke",
  "armory.keep_white": "Weiß behalten",
  "armory.keep_white_title": "Reines Weiß bleibt weiß",
- "armory.channels_title": "Innerhalb eines Objekts erhalten Stoff, Leder und der goldene Besatz je eine eigene Farbe. Metall wird nie getönt, außer durch eine Metallvorlage.",
+ "armory.channels_title": "Innerhalb eines Objekts erhalten Stoff, Leder, der goldene Besatz und das Metall (Kettenhemd, Platte) je eine eigene Farbe. Metall wird nur durch seinen eigenen Kanal, eine Metallvorlage oder ein als Metall markiertes Objekt getönt.",
  "armory.chan_cloth": "Stoff",
  "armory.chan_leather": "Leder",
  "armory.chan_trim": "Besatz",
@@ -11677,5 +11686,36 @@
  "factions.bring_units": "Ihre Einheiten übernehmen - eine Einheit, die diese Mod Zeile für Zeile hat, wird gemeinsam genutzt, jede andere kommt per Einheitenübertragung mit ihren Modellen, Karten und ihrer Rekrutierung",
  "factions.bring_units_row": "{n} Einheit(en) per Einheitenübertragung, nachdem die Fraktion geschrieben ist",
  "factions.bring_which": "Fraktion aus {mod}",
- "factions.bring_working": "Die Fraktion wird geschrieben, dann {n} Einheit(en) - das kann eine Weile dauern"
+ "factions.bring_working": "Die Fraktion wird geschrieben, dann {n} Einheit(en) - das kann eine Weile dauern",
+ "armory.chan_metal": "Metall",
+ "armory.eyedrop_title": "Die Farbe von einer beliebigen Stelle des Bildschirms aufnehmen, auch vom Modell",
+ "armory.eyedrop_none": "Dieser Browser hat keine Pipette. Chrome und Edge haben eine; oder gib die Farbe im Farbfeld ein.",
+ "armory.opt_is_on": "Hier optimiert (die Datei auf der Festplatte ist unverändert)",
+ "armory.opt_restore": "Originales Mesh wiederherstellen",
+ "armory.opt_restore_title": "Die Teile dieses Objekts zurücksetzen, wie sie vor dem Optimieren waren, egal was seitdem geschah",
+ "armory.opt_restored": "Das originale Mesh ist wieder da",
+ "report.title": "Ein Problem melden",
+ "report.intro": "Schreibe, was du getan hast und was schiefging. Der Bericht enthält deine Notizen, was diese Seite zuletzt getan hat (jede Anfrage, Meldung und jeden Fehler), das Armory-Studio-Modell, wenn du es ankreuzt, und das Ende des Server-Protokolls. Es werden keine Mod-Dateien mitgeschickt.",
+ "report.notes_placeholder": "Was du getan hast, was du erwartet hast, was stattdessen geschah",
+ "report.with_model": "Das Armory-Studio-Modell einschließen (Teile und Einstellungen, keine Grafik)",
+ "report.log_rows": {
+  "one": "{count} Zeile des Seitenprotokolls wird mitgeschickt",
+  "other": "{count} Zeilen des Seitenprotokolls werden mitgeschickt"
+ },
+ "report.save_only": "Es ist keine Adresse zum Senden von Berichten eingestellt, daher wird er in {folder} gespeichert, damit du ihn von Hand schicken kannst.",
+ "report.save": "Bericht speichern",
+ "report.send": "An den Entwickler senden",
+ "report.sent": "Bericht gesendet, danke",
+ "report.not_sent": "Nicht gesendet ({why}). Der Bericht ist gespeichert unter {path}",
+ "report.saved": "Bericht gespeichert unter {path}",
+ "armory.report": "Ein Problem melden",
+ "armory.report_title": "Schreibe auf, was schiefging, und sende es mit dem Protokoll dessen, was diese Seite getan hat",
+ "eng.report.no_address": "es ist keine Adresse zum Senden von Berichten eingestellt",
+ "eng.report.too_big": "der Bericht ist {mb} MB groß, mehr als gesendet werden kann; er ist gespeichert",
+ "eng.report.send_failed": "der Bericht ist nicht abgegangen: {why}; er ist gespeichert",
+ "settings.beta": "Beta-Funktionen",
+ "settings.beta_opt_in": "Beta-Funktionen aktivieren",
+ "settings.beta_hint": "Zeigt, was noch getestet wird: den Kampagnenkarten-Editor und das Armory Studio (mit dem Einheitenkarten-Macher, der dessen Modell zeichnet). Sie schreiben wie alles andere in deine Mod, gesichert und rückgängig zu machen, wurden aber weniger genutzt. Standardmäßig aus.",
+ "settings.beta_on": "Beta-Funktionen sind an: Die Kampagnenkarte und das Armory Studio stehen im Menü",
+ "settings.beta_off": "Beta-Funktionen sind aus"
 }

@@ -1423,10 +1423,10 @@
     },
     "fr": {
      "t": "général",
-     "stem": "général",
+     "stem": "général|généraux",
      "src": "game",
      "conf": "high",
-     "note": "plural généraux; stem is the shared prefix"
+     "note": "plural généraux; both singular and plural accepted"
     },
     "es": {
      "t": "general",
@@ -1473,7 +1473,7 @@
     },
     "ru": {
      "t": "полководец",
-     "stem": "полководец",
+     "stem": "полковод",
      "src": "game",
      "conf": "medium",
      "note": "alternative: генерал"
@@ -4259,10 +4259,10 @@
     },
     "fr": {
      "t": "tour de guet",
-     "stem": "tour de guet",
+     "stem": "tour de guet|tours de guet",
      "src": "game",
      "conf": "medium",
-     "note": "plural tours de guet; stem is for the singular"
+     "note": "singular tour de guet and plural tours de guet accepted"
     },
     "es": {
      "t": "atalaya",
@@ -13409,7 +13409,7 @@
     },
     "ru": {
      "t": "портировать",
-     "stem": "портиров",
+     "stem": "портир",
      "src": "community",
      "conf": "medium",
      "note": "modding slang; alternative: переносить из другого мода"
@@ -13587,7 +13587,7 @@
     },
     "fr": {
      "t": "transférer",
-     "stem": "transfér",
+     "stem": "transfér|transfert",
      "src": "community",
      "conf": "high",
      "note": "noun: transfert"
@@ -15147,10 +15147,10 @@
     },
     "fr": {
      "t": "ouvrir",
-     "stem": "ouvr",
+     "stem": "ouvr|ouvert",
      "src": "ms",
      "conf": "high",
-     "note": "past participle: ouvert, stem is not shared"
+     "note": "past participle ouvert and noun ouverture use a different stem"
     },
     "es": {
      "t": "Abrir",
@@ -15368,7 +15368,7 @@
     },
     "fr": {
      "t": "supprimer",
-     "stem": "supprim",
+     "stem": "supprim|suppression",
      "src": "ms",
      "conf": "high"
     },
@@ -20485,7 +20485,7 @@
     },
     "ru": {
      "t": "обновление",
-     "stem": "обновл",
+     "stem": "обнов",
      "src": "ms",
      "conf": "high"
     },

@@ -1026,6 +1026,15 @@
   ],
   "factions.bring_frame_units": [
    "frame"
+  ],
+  "armory.exp_free_turn_title": [
+   "turn"
+  ],
+  "armory.look_closer_title": [
+   "turn"
+  ],
+  "armory.uv_hint": [
+   "turn"
   ]
  },
  "ancillaries.a_character_holds_one_ancillary_per": "Un personaje solo puede tener un séquito de cada tipo, así que este es el que sustituiría uno nuevo",
@@ -8350,8 +8359,8 @@
  "portui.its_text_keys_without_them_the_character_screen_crashes": "sus claves de texto: sin ellas, la pantalla de personajes sufre un cierre inesperado la primera vez que alguien tiene el elemento ({noun})",
  "portui.n_nouns_in_source_already_exist_in_dest": {
   "one": "{count} × {noun} en <b>{source}</b> · {already} ya existen en <b>{dest}</b> {error}",
-  "many": "{count} × {nouns} en <b>{source}</b> · {already} ya existen en <b>{dest}</b> {error}",
-  "other": "{count} × {nouns} en <b>{source}</b> · {already} ya existen en <b>{dest}</b> {error}"
+  "many": "{count} × {noun} en <b>{source}</b> · {already} ya existen en <b>{dest}</b> {error}",
+  "other": "{count} × {noun} en <b>{source}</b> · {already} ya existen en <b>{dest}</b> {error}"
  },
  "portui.n_text_keys": {
   "one": "{count} clave de texto",
@@ -10893,7 +10902,7 @@
  },
  "armory.working": "Trabajando…",
  "app.shared_cards": "cartas prestadas",
- "app.shared_cards_title": "Agrupado por facción: solo las fichas cuya facción no tiene carta propia para la unidad y toma prestada la de otra",
+ "app.shared_cards_title": "Agrupado por facción: solo las casillas cuya facción no tiene carta propia para la unidad y toma prestada la de otra",
  "core.card_borrowed": "prestada",
  "core.card_borrowed_title": "{fac} no tiene una tarjeta propia para esta unidad en su carpeta; esta es la tarjeta a la que recurre",
  "core.no_borrowed_cards": "Todas las facciones tienen su propia tarjeta para cada unidad que se muestra.",
@@ -10901,6 +10910,7 @@
  "armory.multi_mesh_title": "Cada objeto seleccionado toma este nombre de malla, numerado _01, _02 y así sucesivamente para que no coincidan dos",
  "armory.multi_weights_done": {
   "one": "Pesos transferidos para {count} objeto",
+  "many": "Pesos transferidos para {count} de objetos",
   "other": "Pesos transferidos para {count} objetos"
  },
  "armory.only_used": "Solo piezas del modelo",
@@ -10918,9 +10928,9 @@
  "armory.filter_culture": "Cultura",
  "armory.filter_any": "todas",
  "armory.filter_clear": "Quitar filtros",
- "armory.sheets_all_title": "Elegir las texturas de todos los objetos de este archivo a la vez: una textura principal y luego una de accesorios para los objetos que se dibujan sobre ella",
+ "armory.sheets_all_title": "Elegir las texturas de todos los objetos de este archivo a la vez: una textura principal y luego una del elemento acoplado para los objetos que se dibujan sobre ella",
  "armory.sheets_all_main": "La textura principal para cada objeto",
- "armory.sheets_all_attach": "La textura de accesorios (cancelar para usar la principal)",
+ "armory.sheets_all_attach": "La textura del elemento acoplado (cancelar para usar la principal)",
  "armory.textures": "Texturas",
  "armory.textures_title": "Cada textura que lleva el modelo: verla, editarla en tu propio programa de imagen, traer una, exportar una o ponerla en los objetos seleccionados",
  "armory.textures_intro": "Editar abre una copia PNG de la textura en tu programa de imagen y la vuelve a leer en la vista 3D cada vez que la guardas allí. Las texturas de un mod nunca se escriben: el modelo lleva la copia y la exportación hornea a partir de ella.",
@@ -10932,6 +10942,7 @@
  "armory.tex_file": "archivo",
  "armory.tex_worn_by": {
   "one": "la lleva {count} objeto: {names}",
+  "many": "la llevan {count} de objetos: {names}",
   "other": "la llevan {count} objetos: {names}"
  },
  "armory.tex_unused": "todavía no la lleva nada",
@@ -10939,6 +10950,7 @@
  "armory.tex_edit_title": "Una copia PNG abierta en tu programa de imagen; cada guardado allí se ve en la vista 3D",
  "armory.tex_put": {
   "one": "Poner en {count} seleccionado",
+  "many": "Poner en {count} de seleccionados",
   "other": "Poner en {count} seleccionados"
  },
  "armory.tex_put_title": "Los objetos seleccionados llevan esta textura en lugar de la suya",
@@ -10954,16 +10966,16 @@
  "eng.armory.sheet_unreadable": "{name} no se puede decodificar",
  "eng.armory.no_such_program": "{path} no es un programa",
  "eng.armory.no_dds_writer": "este Python no puede escribir DDS: {e}",
- "eng.armory.sheet_format": "{name}: escribe .png, .tga, .jpg, .bmp, .dds o .texture",
+ "eng.armory.sheet_format": "{name}: escribe la textura como .png, .tga, .jpg, .bmp, .dds o .texture",
  "armory.uv_edit": "Editar UV",
  "armory.uv_edit_title": "Editar las UV del objeto seleccionado sobre su textura, como el editor UV de Blender",
  "armory.uv_pick_one": "Selecciona un objeto para editar sus UV",
  "armory.uv_vertex": "Vértice",
  "armory.uv_island": "Isla",
  "armory.uv_sheet": "Su textura",
- "armory.uv_sheet_title": "La textura en la que está el objeto, principal o de accesorios",
+ "armory.uv_sheet_title": "La textura en la que está el objeto, principal o del elemento acoplado",
  "armory.uv_m2": "Vista M2",
- "armory.uv_m2_title": "Las texturas principal y de accesorios una al lado de otra, como las coloca el juego",
+ "armory.uv_m2_title": "Las texturas principal y del elemento acoplado una al lado de otra, como las coloca el juego",
  "armory.uv_snap": "Ajustar a téxeles",
  "armory.uv_own_sheet": "La textura que lleva",
  "armory.uv_show_title": "Mostrar otra textura cargada detrás de las UV",
@@ -10974,7 +10986,7 @@
  "armory.uv_hint": "Un clic elige, Mayús añade, arrastrar en el vacío dibuja un recuadro, arrastrar la selección la mueve. G, R, S mueven, giran y escalan (X o Y fija un eje; clic o Intro mantiene, Esc o el botón derecho deshace). A selecciona todo. La rueda amplía, el botón central o Alt desplaza.",
  "armory.optimize": "Optimizar",
  "armory.optimize_title": "Los pasos del complemento Quick Cleanup que admite una malla de juego y luego las comprobaciones de exportación del kit, en los objetos seleccionados (todos los visibles si no hay ninguno seleccionado)",
- "armory.opt_intro": "La limpieza del complemento Quick Cleanup, hasta donde la admite un modelo de batalla. Las texturas, las UV y los pesos quedan como están; un Deshacer lo restaura todo.",
+ "armory.opt_intro": "La limpieza del complemento Quick Cleanup, hasta donde la admite un modelo de batalla. Solo cambia el modelo en Armory Studio: el archivo del disco y el mod nunca se escriben. Las texturas, las UV y los pesos quedan como están; un Deshacer lo restaura todo, y cada objeto conserva <b>Restaurar la malla original</b> para más adelante.",
  "armory.opt_presets": "Preajustes:",
  "armory.opt_light": "Ligero",
  "armory.opt_game": "Listo para juego",
@@ -10992,6 +11004,7 @@
  "armory.opt_left_out": "Se dejan a Blender: triángulos a cuadriláteros y triangular (un modelo de batalla ya es de triángulos), rellenar agujeros y reparar no-variedades (cambian el modelo).",
  "armory.opt_scope": {
   "one": "En {count} objeto",
+  "many": "En {count} de objetos",
   "other": "En {count} objetos"
  },
  "armory.opt_run": "Ejecutar",
@@ -11011,6 +11024,7 @@
  "armory.rig_share_title": "Cuánto del peso de cada vértice toma el primer hueso, del 50 % al 100 %",
  "armory.rig_done": {
   "one": "{count} objeto enlazado a {bones}",
+  "many": "{count} de objetos enlazados a {bones}",
   "other": "{count} objetos enlazados a {bones}"
  },
  "armory.weights_rigged": "Propios, enlazados a {bones}",
@@ -11044,7 +11058,7 @@
  "armory.strength": "Intensidad",
  "armory.keep_white": "Conservar blanco",
  "armory.keep_white_title": "El blanco puro sigue blanco",
- "armory.channels_title": "Dentro de un objeto, la tela, el cuero y el ribete dorado toman cada uno un color propio. El metal nunca se tiñe, salvo con un ajuste de metal.",
+ "armory.channels_title": "Dentro de un objeto, la tela, el cuero, el ribete dorado y el metal (malla, placa) toman cada uno un color propio. El metal solo se tiñe con su propio canal, un ajuste de metal o un objeto marcado como metal.",
  "armory.chan_cloth": "tela",
  "armory.chan_leather": "cuero",
  "armory.chan_trim": "ribete",
@@ -12146,5 +12160,37 @@
  "factions.bring_units": "Traer sus unidades: una unidad que este mod tiene línea por línea se comparte; cualquier otra llega por la transferencia de unidades con sus modelos, tarjetas y reclutamiento",
  "factions.bring_units_row": "{n} unidad(es) traídas por la transferencia de unidades después de escribir la facción",
  "factions.bring_which": "Facción de {mod}",
- "factions.bring_working": "Escribiendo la facción y después {n} unidad(es); puede tardar un rato"
+ "factions.bring_working": "Escribiendo la facción y después {n} unidad(es); puede tardar un rato",
+ "armory.chan_metal": "metal",
+ "armory.eyedrop_title": "Toma el color de cualquier punto de la pantalla, modelo incluido",
+ "armory.eyedrop_none": "Este navegador no tiene cuentagotas. Chrome y Edge sí lo tienen; o escribe el color en el cuadro de color.",
+ "armory.opt_is_on": "Optimizado aquí (el archivo del disco sigue como estaba)",
+ "armory.opt_restore": "Restaurar la malla original",
+ "armory.opt_restore_title": "Devuelve las piezas de este objeto a como estaban antes de Optimizar, sea lo que sea que se haya hecho después",
+ "armory.opt_restored": "La malla original ha vuelto",
+ "report.title": "Informar de un problema",
+ "report.intro": "Cuenta qué hiciste y qué salió mal. El informe lleva tus notas, lo que hizo esta página últimamente (cada solicitud, mensaje y error), el modelo de Armory Studio si lo marcas, y el final del registro del servidor. No se incluye ningún archivo del mod.",
+ "report.notes_placeholder": "Qué hiciste, qué esperabas, qué pasó en su lugar",
+ "report.with_model": "Incluir el modelo de Armory Studio (sus piezas y ajustes, sin arte)",
+ "report.log_rows": {
+  "one": "Se incluye {count} línea del registro de la página",
+  "many": "Se incluyen {count} de líneas del registro de la página",
+  "other": "Se incluyen {count} líneas del registro de la página"
+ },
+ "report.save_only": "No hay dirección configurada para enviar informes, así que se guarda en {folder} para que lo envíes a mano.",
+ "report.save": "Guardar el informe",
+ "report.send": "Enviar al desarrollador",
+ "report.sent": "Informe enviado, gracias",
+ "report.not_sent": "No enviado ({why}). El informe está guardado en {path}",
+ "report.saved": "Informe guardado en {path}",
+ "armory.report": "Informar de un problema",
+ "armory.report_title": "Escribe qué salió mal y envíalo con el registro de lo que hizo esta página",
+ "eng.report.no_address": "no hay dirección configurada para enviar informes",
+ "eng.report.too_big": "el informe pesa {mb} MB, más de lo que se puede enviar; queda guardado",
+ "eng.report.send_failed": "el informe no se envió: {why}; queda guardado",
+ "settings.beta": "Funciones beta",
+ "settings.beta_opt_in": "Activar las funciones beta",
+ "settings.beta_hint": "Muestra lo que aún se está probando: el editor del Mapa de campaña y Armory Studio (con el creador de tarjetas de unidad que dibuja su modelo). Escriben en tu mod como todo lo demás, con copia de seguridad y se pueden deshacer, pero se han usado menos. Desactivado por defecto.",
+ "settings.beta_on": "Las funciones beta están activadas: el Mapa de campaña y Armory Studio están en el menú",
+ "settings.beta_off": "Las funciones beta están desactivadas"
 }

@@ -392,8 +392,12 @@ def dye_pixels(arr: np.ndarray, d: dict, material: str = "") -> np.ndarray:
         m = rest & (ch == i)
         if name == "white" and keep_white:
             continue
-        if name in ("metal", "white"):
-            if not d.get("metal"):
+        if name == "metal" and (chans.get("metal") or {}).get("on"):
+            target[m] = np.array(chans["metal"].get("color") or d.get("color"), dtype=np.float64) / 255.0
+        elif name in ("metal", "white"):
+            # grey is mail and plate: a metal preset, the metal channel or an
+            # object marked metal reaches it, and nothing else does
+            if not d.get("metal") and not (name == "metal" and material == "metal"):
                 continue
             target[m] = main
         elif (chans.get(name) or {}).get("on"):

@@ -823,6 +823,17 @@ four plural forms each, and the checker holds every `ttN` string to them.
 Done when, for each: the checker passes, the report is empty, and Home,
 Settings, Transfer and the map are walked in it at desktop width.
 
+*88e done 2026-10-26.* **French**: 9,605 strings, including 378 plural
+objects with one/many/other, zero missing, stale or extra IDs and zero checker
+problems. Offered in Settings as *Français (French) - brouillon*. Polite
+vous, infinitive buttons and the French termbase. Home, Settings, Transfer
+and the campaign map walked at desktop and 375 px; the wider module review
+also found narrow-layout fixes for Home, Armory Studio and My Changes.
+`tests.test_i18n` 37/37 and `tests.test_web_modules` 120/120 passed.
+Source-hash stale detection checked without changing English on disk.
+Native review is pending; terminology, exact exceptions and remaining
+source-side localization gaps are in `dev/i18n/fr-review.md`. No release cut.
+
 *88f done 2026-10-02, ahead of 88e on the user's word ("start spanish
 next").* **Spanish**: 8,120 strings, 0 problems, offered in Settings as
 *Español (Spanish) - borrador*. Spain Spanish as the Spanish release of the

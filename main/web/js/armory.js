@@ -170,7 +170,9 @@ function armUndoApply(next){
   for(const a of next.assets || []) armLoadAsset(a);
   ARM.sel = new Set([...ARM.sel].filter(id => next.objects.some(o => o.id === id)));
   if(ARM.detail && !next.objects.some(o => o.id === ARM.detail.id)) ARM.detail = null;
+  const quiet = ARM.dyeQuiet;
   for(const o of next.objects) if(typeof armDyeChanged === 'function') armDyeChanged(o);
+  ARM.dyeQuiet = quiet;
   const u = ARM.undo;
   u.restoring = true; armSave(); u.restoring = false;
   armPaintAssets(); armPaintObjects(); armPaintBar(); armPaintFoot();
@@ -259,6 +261,7 @@ function armPaintBar(){
     <button class="mini" onclick="armSessOpen()" title="${esc(tt('armory.sess_button_title'))}">${tt('armory.sess_button')}</button>
     <button class="mini" onclick="armLibOpen()" title="${esc(tt('armory.lib_open_title'))}">${tt('armory.lib_open')}</button>
     <button class="mini" onclick="armNew()">${tt('armory.new_project')}</button>
+    <button class="mini" onclick="reportOpen('armory')" title="${esc(tt('armory.report_title'))}">🐞 ${tt('armory.report')}</button>
     <button class="mini primary" onclick="armExportOpen()"${p.objects.length ? '' : ' disabled'} title="${esc(tt('armory.export_title'))}">${tt('armory.export_button')}</button>`;
 }
 function armPaintFoot(){
@@ -346,7 +349,8 @@ function armAssetHtml(a){
   const v = live.view;
   const used = v ? v.objects.filter(ob => armProj().objects.some(o => armUses(o, key, ob.index))).length : 0;
   const open = !!a.open;
-  const mode = a.show || 'list';
+  // 100j's gallery default reaches Loaded assets too (the tester's notes)
+  const mode = a.show || 'gallery';
   let body = '';
   if(open){
     if(live.err) body = `<div class="w-bad armnote">${esc(live.err)}</div>`;
@@ -355,10 +359,10 @@ function armAssetHtml(a){
       const objs = v.objects.filter(ob => !armOnlyUsed() || armProj().objects.some(o => armUses(o, key, ob.index)))
         .map(o => armAssetObjHtml(a, key, o, mode)).join('');
       body = `<div class="armobjtools">
-          <button class="mini${mode === 'list' ? ' on' : ''}" onclick="armAssetShow('${esc(key)}','list')">${tt('armory.as_list')}</button>
-          <button class="mini${mode === 'gallery' ? ' on' : ''}" onclick="armAssetShow('${esc(key)}','gallery')">${tt('armory.as_gallery')}</button>
+          <button class="mini${mode === 'list' ? ' on' : ''}" onclick="armAssetShow('${esc(q1(key))}','list')">${tt('armory.as_list')}</button>
+          <button class="mini${mode === 'gallery' ? ' on' : ''}" onclick="armAssetShow('${esc(q1(key))}','gallery')">${tt('armory.as_gallery')}</button>
           <span style="flex:1"></span>
-          <button class="mini" onclick="armPullAll('${esc(key)}')" title="${esc(tt('armory.pull_all_title'))}">${tt('armory.pull_all')}</button>
+          <button class="mini" onclick="armPullAll('${esc(q1(key))}')" title="${esc(tt('armory.pull_all_title'))}">${tt('armory.pull_all')}</button>
         </div>
         ${armSkinPickHtml(a, key, v)}
         <div class="${mode === 'gallery' ? 'armtiles' : 'armrows'}">${objs}</div>`;
@@ -367,22 +371,22 @@ function armAssetHtml(a){
   const sub = a.kind === 'external' ? tt('armory.external_file') : esc(a.mod);
   const isBase = armProj().base === key;
   return `<div class="armasset${open ? ' open' : ''}">
-    <div class="armassethead" onclick="armAssetToggle('${esc(key)}')">
+    <div class="armassethead" onclick="armAssetToggle('${esc(q1(key))}')">
       <span class="armcaret">${open ? '▾' : '▸'}</span>
       <span class="armname" title="${esc(a.kind === 'external' ? a.path : a.mesh || '')}">${esc(armAssetLabel(a))}</span>
       ${isBase ? `<span class="pill">${tt('armory.base')}</span>` : ''}
       <span class="count">${v ? ttN('armory.asset_sub', v.objects.length, {where: sub}) : sub}</span>
       ${v ? `<span class="pill${used ? '' : ' warn'}" title="${esc(tt('armory.asset_used_title'))}">${tt('armory.asset_used', {used, n: v.objects.length})}</span>` : ''}
-      ${a.kind === 'external' ? `<button class="mini" onclick="event.stopPropagation();armPickSheetsAll('${esc(key)}')" title="${esc(tt('armory.sheets_all_title'))}">🎨</button>` : ''}
-      <button class="mini" onclick="event.stopPropagation();armLibAddAsset('${esc(key)}')" title="${esc(tt('armory.lib_add_title'))}">${tt('armory.lib_add')}</button>
-      <button class="mini armx" onclick="event.stopPropagation();armRemoveAsset('${esc(key)}')" title="${esc(tt('armory.remove_asset'))}">✕</button>
+      ${a.kind === 'external' ? `<button class="mini" onclick="event.stopPropagation();armPickSheetsAll('${esc(q1(key))}')" title="${esc(tt('armory.sheets_all_title'))}">🎨</button>` : ''}
+      <button class="mini" onclick="event.stopPropagation();armLibAddAsset('${esc(q1(key))}')" title="${esc(tt('armory.lib_add_title'))}">${tt('armory.lib_add')}</button>
+      <button class="mini armx" onclick="event.stopPropagation();armRemoveAsset('${esc(q1(key))}')" title="${esc(tt('armory.remove_asset'))}">✕</button>
     </div>${body}</div>`;
 }
 
 function armSkinPickHtml(a, key, v){
   if(a.kind === 'external' || !v.skins || v.skins.length < 2) return '';
   return `<label class="count armskin">${tt('armory.skin')}
-    <select onchange="armSetSkin('${esc(key)}', +this.value)">${v.skins.map((s, i) =>
+    <select onchange="armSetSkin('${esc(q1(key))}', +this.value)">${v.skins.map((s, i) =>
       `<option value="${i}"${(a.skin || 0) === i ? ' selected' : ''}>${esc(v3SkinLabel(s))}</option>`).join('')}</select></label>`;
 }
 
@@ -412,22 +416,22 @@ function armAssetObjHtml(a, key, ob, mode){
   const dups = armDupOf(key, ob);
   const sheet = ob.sheets === 'attach' ? tt('armory.sheet_attach') : ob.sheets === 'both' ? tt('armory.sheet_both') : tt('armory.sheet_main');
   const tex = a.kind === 'external'
-    ? (armObjTexture(a, ob.index) ? '' : `<button class="mini" onclick="event.stopPropagation();armPickTexture('${esc(key)}',${ob.index})" title="${esc(tt('armory.no_texture_found'))}">🎨 ${tt('armory.pick_sheet')}</button>`)
+    ? (armObjTexture(a, ob.index) ? '' : `<button class="mini" onclick="event.stopPropagation();armPickTexture('${esc(q1(key))}',${ob.index})" title="${esc(tt('armory.no_texture_found'))}">🎨 ${tt('armory.pick_sheet')}</button>`)
     : '';
   const badge = dups.length ? `<span class="pill warn" title="${esc(tt('armory.duplicate_title', {where: dups.join(', ')}))}">${tt('armory.duplicate')}</span>` : '';
   const title = `${ob.name} / ${ob.mesh}${ob.flag ? ' (opt)' : ''}`;
   const tk = `${key}|${ob.index}`;
   if(mode === 'gallery')
-    return `<div class="armtile${inModel ? ' in' : ''}" ondblclick="armPull('${esc(key)}',${ob.index})" title="${esc(title)}">
+    return `<div class="armtile${inModel ? ' in' : ''}" ondblclick="armPull('${esc(q1(key))}',${ob.index})" title="${esc(title)}">
       <img class="armthumb" data-thumb="${esc(tk)}" alt="">
       <div class="armtilename">${esc(ob.mesh)}</div>
       <div class="armtilefoot">${badge}${tex}
-        <button class="mini" onclick="armPull('${esc(key)}',${ob.index})">${inModel ? '✓' : tt('armory.pull')}</button></div>
+        <button class="mini" onclick="armPull('${esc(q1(key))}',${ob.index})">${inModel ? '✓' : tt('armory.pull')}</button></div>
     </div>`;
-  return `<div class="armrow${inModel ? ' in' : ''}" ondblclick="armPull('${esc(key)}',${ob.index})">
+  return `<div class="armrow${inModel ? ' in' : ''}" ondblclick="armPull('${esc(q1(key))}',${ob.index})">
     <span class="armrowname" title="${esc(title)}"><b>${esc(ob.name)}</b> ${esc(ob.mesh)}${ob.flag ? ` <i class="count">${tt('armory.opt')}</i>` : ''}</span>
     <span class="count">${ob.triangles.toLocaleString()} · ${sheet}</span>${badge}${tex}
-    <button class="mini" onclick="armPull('${esc(key)}',${ob.index})">${inModel ? '✓' : tt('armory.pull')}</button>
+    <button class="mini" onclick="armPull('${esc(q1(key))}',${ob.index})">${inModel ? '✓' : tt('armory.pull')}</button>
   </div>`;
 }
 
@@ -921,7 +925,8 @@ function armRender(objs, w, h, cam, opts){
     const own = !dyed && ob.sheet && typeof armSheetTex === 'function' ? armSheetTex(ob.sheet) : null;
     const tex = dyed ? dyed.tex : own ? own : live.objTex ? live.objTex[pc.group] : live.tex;
     gl.uniform1f(L.uHasTex, tex ? 1 : 0);
-    gl.uniform1f(L.uUScale, own || live.objTex ? 1.0 : (live.uScale || 0.5));
+    // a dyed crop of a worn sheet is laid out as that sheet, one copy wide
+    gl.uniform1f(L.uUScale, own || live.objTex || (dyed && ob.sheet) ? 1.0 : (live.uScale || 0.5));
     gl.uniform4fv(L.uCrop, dyed ? dyed.crop : [0, 0, 1, 1]);
     if(tex){ gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, tex); gl.uniform1i(L.uTex, 0); }
     const nTex = dyed && dyed.nTex && (!o.plain || o.card) ? dyed.nTex : null;
@@ -939,7 +944,7 @@ function armRender(objs, w, h, cam, opts){
     if(posed){
       gl.uniformMatrix4fv(L.uModel, false, new Float32Array(top));
       gl.uniform1f(L.uHi, !o.plain && ARM.hover === ob.id ? 1 : 0);
-      gl.uniform1f(L.uSel, !o.plain && ARM.sel.has(ob.id) ? 1 : 0);
+      gl.uniform1f(L.uSel, !o.plain && !ARM.dyeQuiet && ARM.sel.has(ob.id) ? 1 : 0);
       gl.uniform1f(L.uXray, !o.plain && ARM.xray ? 1 : 0);
       gl.bindBuffer(gl.ARRAY_BUFFER, posed.glPos);
       gl.enableVertexAttribArray(L.aPos); gl.vertexAttribPointer(L.aPos, 3, gl.FLOAT, false, 0, 0);
@@ -965,7 +970,7 @@ function armRender(objs, w, h, cam, opts){
       gl.uniformMatrix4fv(L.uModel, false, new Float32Array(pc.xf ? armMul(om, pc.xf) : om));
       bindTex(live, pc, ob);
       gl.uniform1f(L.uHi, !o.plain && ARM.hover === ob.id ? 1 : 0);
-      gl.uniform1f(L.uSel, !o.plain && ARM.sel.has(ob.id) ? 1 : 0);
+      gl.uniform1f(L.uSel, !o.plain && !ARM.dyeQuiet && ARM.sel.has(ob.id) ? 1 : 0);
       gl.uniform1f(L.uXray, !o.plain && ARM.xray ? 1 : 0);
       gl.bindBuffer(gl.ARRAY_BUFFER, live.buf.pos);
       gl.enableVertexAttribArray(L.aPos); gl.vertexAttribPointer(L.aPos, 3, gl.FLOAT, false, 0, 0);
@@ -1162,8 +1167,15 @@ function armImpTileHtml(k, mod, name, label, on, missing){
    the dialog (orbit, zoom, skins, variations, animations), the dialog back
    live when it closes */
 async function armImpLook(mod, name){
+  // the list comes back where it was, not at its top (the tester's notes)
+  const rows = document.getElementById('armImpRows'), top = rows ? rows.scrollTop : 0;
   const go = v3Open(mod, name);
-  if(v3Back) v3Back.after = () => { armImportPaint(); if(state.armImp.tab === 'mod') armImportRows(); };
+  if(v3Back) v3Back.after = () => {
+    armImportPaint();
+    if(state.armImp.tab === 'mod') armImportRows();
+    const el = document.getElementById('armImpRows');
+    if(el) el.scrollTop = top;
+  };
   await go;
 }
 function armImpTilePick(t, set, after){

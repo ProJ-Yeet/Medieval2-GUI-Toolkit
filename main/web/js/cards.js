@@ -95,7 +95,7 @@ const cdShownNote=(shown,all)=>shown.length===all.length?''
 /* 95m: the tab in two, Generate (cardgen.js) and Clean up (this file). */
 /* The card generator draws Armory Studio's model, so it is on offer exactly
    when Armory Studio is (core.js, `off`): a 2.x build has Clean up alone. */
-const cardGenOn=()=>!modeDef('armory').off;
+const cardGenOn=()=>!modeOff(modeDef('armory'));
 const cardsSubNow=()=>cardGenOn()?(state.cardsSub||'generate'):'clean';
 function cardsSubTabsHtml(){
   const sub=cardsSubNow();

@@ -320,8 +320,7 @@ if "%RC%"=="3" (
     rem message box and the lines above name both builds and their folders; this
     rem window must not suggest the port is merely "taken", because the thing
     rem holding it is the tool itself and reopening it would have handed over the
-    rem wrong build - a 2.x release has the Campaign Map off the menu, a beta has
-    rem it on, and both look perfectly healthy.
+    rem wrong build - two releases look perfectly healthy side by side.
     echo ============================================================
     echo  Another BUILD of the Medieval 2 GUI Toolkit is already running.
     echo ============================================================

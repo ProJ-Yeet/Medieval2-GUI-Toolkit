@@ -487,7 +487,7 @@ async function init(){
     // the point of having one. The remembered mode is not forgotten: Home offers
     // it as "last time you were in …", so it is a click rather than an ambush.
     // a `?go=` naming a mode this build does not offer is not a mode: land Home
-    const go=qGo&&MODES.some(m=>m.id===qGo&&!m.off)?qGo:'';
+    const go=qGo&&MODES.some(m=>m.id===qGo&&!modeOff(m))?qGo:'';
     state.mode=qEdit?'edit':qBld?'buildings':go||'home';
     await refreshMods(qMod||s.last_source,qMod||s.last_dest);
     wire(); applyMode(false);
@@ -737,21 +737,18 @@ function buildFilter(id,values,key,useLabel){
 // host rather than from this menu (Sprites lives in the BMDB editor; Traits,
 // Ancillaries, Factions and Strings live in Minor Files).
 // `off:true` = in the build, but on offer nowhere - not this menu, not a Home
-// card, not the resume button, not a tab strip. Two modes carry it, the
-// Campaign Map editor and Armory Studio (the card generator in Unit cards
-// follows Armory Studio, whose model it draws), and on `master` neither is
-// set: both are on here, because this is where they get worked on and used.
-// The flag goes on ONLY while a public 2.x release is being built - a 2.x zip
-// carries the Unit Editor fixes to everyone without also putting a half-tested
-// editor that WRITES to a campaign in front of them - and comes straight back
-// off in the commit after the upload. The beta line ships with it clear, like
-// master. The rest of the menu is unchanged either way.
+// card, not the resume button, not a tab strip. No mode carries it now.
+// `beta:true` = offered only with *Opt into beta features* ticked in Settings
+// (see modeOff below): the Campaign Map editor and Armory Studio, the card
+// generator in Unit cards following Armory Studio, whose model it draws. Until
+// 2026-10-27 they were hidden by an `off:true` set only while a 2.x zip was
+// built, a second "beta" release carrying them; there is one release now.
 const MODES=[
   {id:'home',     icon:'⌂', name:tt('core.home'),          hint:tt('core.your_mods_and_what_each_one')},
   {id:'edit',     icon:'✎', name:tt('core.unit_editor'),   hint:tt('core.change_clone_or_delete_one_mods')},
   {id:'transfer', icon:'⚔', name:tt('core.unit_transfer'), hint:tt('core.copy_a_unit_from_one_mod')},
   {id:'buildings',icon:'🏰', name:tt('common.buildings'),     hint:tt('core.browse_and_edit_export_descr_buildings')},
-  {id:'campmap',  icon:'🌍', name:tt('core.campaign_map'),  hint:tt('core.the_ten_map_layers_the_regions')},
+  {id:'campmap',  icon:'🌍', name:tt('core.campaign_map'), beta:true, hint:tt('core.the_ten_map_layers_the_regions')},
   {id:'bmdb',     icon:'🗄', name:tt('core.models_editor'),  hint:tt('core.every_model_a_mod_ships_the')},
   {id:'sounds',   icon:'🔊', name:tt('core.unit_sounds'),   hint:tt('core.pick_which_voice_entry_each_unit')},
   {id:'minor',    icon:'🗺', name:tt('core.minor_files'),   hint:tt('core.rebels_religions_cultures_traits_factions_and')},
@@ -761,7 +758,7 @@ const MODES=[
   {id:'sprites',  icon:'🖼', name:tt('core.sprites'),       sub:true, hint:tt('core.generate_and_wire_the_far_lod')},
   {id:'stratmap', icon:'🗺', name:tt('core.strat_map_models'), sub:true, hint:tt('core.what_descr_model_strat_txt_names')},
   {id:'casmodels', icon:'🏰', name:tt('core.cas_models'), sub:true, hint:tt('core.cas_models_hint')},
-  {id:'armory', icon:'⚒', name:tt('core.armory_studio'), sub:true, hint:tt('core.armory_studio_hint')},
+  {id:'armory', icon:'⚒', name:tt('core.armory_studio'), sub:true, beta:true, hint:tt('core.armory_studio_hint')},
   {id:'cards',    icon:'🖼', name:tt('core.unit_info_cards'), sub:true, hint:tt('core.the_two_pictures_per_unit_deduplicated')},
   {id:'traits',   icon:'🎖', name:tt('common.traits'),        sub:true, hint:tt('core.character_traits_their_levels_and_the')},
   {id:'ancillaries',icon:'🏅', name:tt('common.ancillaries'),  sub:true, hint:tt('core.the_items_and_followers_a_character')},
@@ -783,10 +780,17 @@ const MODES=[
   {id:'soundscripts',icon:'🔊', name:tt('core.sound_scripts'), sub:true, hint:tt('core.descr_sounds_txt_how_every_sound')},
 ];
 const modeDef=id=>MODES.find(m=>m.id===id)||MODES[0];
+//: 2026-10-27: one release line. `beta:true` marks what is still being tested
+//: (the Campaign Map editor and Armory Studio, the card generator following
+//: Armory Studio); it is offered only to someone who ticks *Opt into beta
+//: features* at the top of Settings, off by default. `off:true` still means
+//: offered nowhere at all.
+const betaOn=()=>!!(state.settings||{}).beta_features;
+const modeOff=m=>!!m.off||(!!m.beta&&!betaOn());
 //: The modes anything OFFERS: the burger menu, the Home readiness cards and the
 //: resume button all read this, so a mode is hidden in one place rather than in
 //: three that can drift apart.
-const menuModes=()=>MODES.filter(m=>!m.sub&&!m.off);
+const menuModes=()=>MODES.filter(m=>!m.sub&&!modeOff(m));
 //: Whether a mode is in this build's menu at all - `minorFactions` asks before
 //: it routes the Factions tab into the map.
 const modeOffered=id=>menuModes().some(m=>m.id===id);
@@ -1335,7 +1339,7 @@ const BMDB_TABS=[{mode:'bmdb',label:tt('core.model_entries')},{mode:'sprites',la
   {mode:'stratmap',label:tt('core.strat_models')},{mode:'casmodels',label:tt('core.cas_models')},
   {mode:'armory',label:tt('core.armory_studio')},
   {mode:'cards',label:tt('core.unit_cards')}];
-const bmdbTabsHtml=note=>`<div class="mftabs">${BMDB_TABS.filter(t=>!modeDef(t.mode).off).map(t=>
+const bmdbTabsHtml=note=>`<div class="mftabs">${BMDB_TABS.filter(t=>!modeOff(modeDef(t.mode))).map(t=>
   `<button class="mftab${state.mode===t.mode?' on':''}" onclick="setAppMode('${t.mode}')"
     >${esc(t.label)}</button>`).join('')}${
   note?`<span class="count" style="margin-left:auto">${esc(note)}</span>`:''}</div>`;
@@ -1608,9 +1612,8 @@ function navCrumbs(){
   if(l)l.scrollLeft=l.scrollWidth;       // where you ARE is the end of the trail
 }
 
-function wire(){
-  wireFilterFolds();
-  navLinkWire();
+// the menu's modules, again whenever the beta features are switched
+function navModesPaint(){
   navModes.innerHTML=menuModes().map(m=>`<a class="navitem" role="button" data-mode="${m.id}"
       href="${esc(navUrl({mode:m.id}))}">
       <span class="ic">${m.icon}</span>
@@ -1619,6 +1622,11 @@ function wire(){
   navModes.querySelectorAll('.navitem').forEach(b=>{
     b.onclick=e=>{if(!navPlain(e))return; e.preventDefault(); setAppMode(b.dataset.mode);};
     b.onkeydown=navLinkKey;});
+}
+function wire(){
+  wireFilterFolds();
+  navLinkWire();
+  navModesPaint();
   navBtn.onclick=()=>navOpen(!navMenu.classList.contains('open'));
   navBack.onclick=()=>navOpen(false);
   creditsBtn.onclick=()=>{navOpen(false);openCredits();};

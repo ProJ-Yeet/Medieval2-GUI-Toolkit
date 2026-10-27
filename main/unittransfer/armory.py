@@ -1436,16 +1436,35 @@ def transfer_weights(target: mesh.MeshFile, sources: Sequence[mesh.MeshFile],
                 for k in range(min(ka[2], kb[2], kc[2]), max(ka[2], kb[2], kc[2]) + 1):
                     grid.setdefault((i, j, k), []).append(ti)
     span = int(math.ceil(size / cell)) + 2
+    top = [max(c[k] for c in grid) for k in range(3)]
 
-    def near(p):
-        c0 = key(p)
+    def shell(c0, ring):
+        """The cells ``ring`` steps out from ``c0``, only its shell and only
+        inside the grid: a part far from the rest searched the whole cube of
+        empty cells round it, ring after ring, a minute for 160 vertices."""
+        i0, i1 = max(0, c0[0] - ring), min(top[0], c0[0] + ring)
+        j0, j1 = max(0, c0[1] - ring), min(top[1], c0[1] + ring)
+        for i in range(i0, i1 + 1):
+            ei = abs(i - c0[0]) == ring
+            for j in range(j0, j1 + 1):
+                if ei or abs(j - c0[1]) == ring:
+                    for k in range(max(0, c0[2] - ring), min(top[2], c0[2] + ring) + 1):
+                        yield i, j, k
+                else:
+                    for k in (c0[2] - ring, c0[2] + ring):
+                        if 0 <= k <= top[2]:
+                            yield i, j, k
+
+    def near(p, limit=None):
+        # the cell of the grid nearest the point: every cell past the grid
+        # is empty, and a ring counts from there as it did from the point
+        c0 = tuple(min(max(x, 0), top[n]) for n, x in enumerate(key(p)))
+        # and how far the point is from the grid's box: nothing in a ring is
+        # nearer than that and the ring's own reach together
+        out2 = sum(max(lo[n] - p[n], 0.0, p[n] - (lo[n] + (top[n] + 1) * cell)) ** 2 for n in range(3))
         best, best_d = None, float("inf")
         for ring in range(span):
-            for i in range(c0[0] - ring, c0[0] + ring + 1):
-                for j in range(c0[1] - ring, c0[1] + ring + 1):
-                    for k in range(c0[2] - ring, c0[2] + ring + 1):
-                        if max(abs(i - c0[0]), abs(j - c0[1]), abs(k - c0[2])) != ring:
-                            continue
+            for i, j, k in shell(c0, ring):
                         for ti in grid.get((i, j, k), ()):
                             a, b, c = tris[ti]
                             if mode == "vertex":
@@ -1466,7 +1485,10 @@ def transfer_weights(target: mesh.MeshFile, sources: Sequence[mesh.MeshFile],
                                 bary = tuple(x / tot for x in rest)
                             if d < best_d:
                                 best, best_d = (ti, bary), d
-            if best is not None and math.sqrt(best_d) < ring * cell:
+            if best is not None and best_d < out2 + (ring * cell) ** 2:
+                break
+            # nothing left within ``limit``: what was found stands, or nothing
+            if limit is not None and out2 + (ring * cell) ** 2 > limit * limit:
                 break
         return best and (best[0], best[1], math.sqrt(best_d))
 
@@ -1478,7 +1500,10 @@ def transfer_weights(target: mesh.MeshFile, sources: Sequence[mesh.MeshFile],
         mine.append({bone_named(k): w for k, w in d0.items() if w > 0})
     per: List[Dict[int, float]] = []
     for v in range(n):
-        hit = near((target.positions[v * 3], target.positions[v * 3 + 1], target.positions[v * 3 + 2]))
+        # a vertex of its own with nothing within reach keeps its own, so
+        # its search ends at the reach
+        hit = near((target.positions[v * 3], target.positions[v * 3 + 1], target.positions[v * 3 + 2]),
+                   reach if mine[v] else None)
         d: Dict[int, float] = {}
         if hit is not None:
             (a, b, c), bary = tris[hit[0]], hit[1]

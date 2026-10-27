@@ -4,10 +4,9 @@
 > out of `HANDOFF.md` on 2026-09-13, verbatim; that file is now
 > `HANDOFF_ARCHIVE.md` and holds the stage-by-stage history only.
 >
-> **The live numbers are not here.** Which version is current, which beta is
-> current, and which line a phase goes out on live in `STATE.md` under
-> *THE TWO RELEASE LINES*. This file is the procedure and the reasoning; that
-> one is the state.
+> **The live numbers are not here.** Which version is current lives in
+> `STATE.md`. This file is the procedure and the reasoning; that one is the
+> state.
 
 ## STRICT RULES — read these before cutting a release
 
@@ -31,11 +30,15 @@ end of the roadmap) was spent by the end-of-roadmap cut on 2026-09-12; the
 and beta 2026-09-12c, and it was suspended again the same day. **Do not read
 2026-09-09 as live again unless the user revives it in as many words.**
 
-**Everything below still applies the moment they do say it.** The change picks
-the lines: work that touches nothing outside the campaign map is **the beta
-alone** - do not cut a 2.x that carries no visible difference - and anything
-touching the rest of the toolkit is a subrelease, which is both lines.
-`STATE.md`'s two-release-lines section is where the current numbers live.
+**Everything below still applies the moment they do say it.**
+
+**One release line since 2026-10-27**, on the user's word ("merge the beta
+into the main and make it a toggle in settings. Opt into beta features at the
+top"). Every cut is a `v2.x.y` carrying all of master. The Campaign Map editor
+and Armory Studio (with the card generator) ship in it as `beta:true` modes in
+`web/js/core.js`, offered only to someone who ticks *Opt into beta features*
+at the top of Settings, off by default. There is no `off:true` edit at build
+time and no date-named beta any more; the last one was `beta-2026-10-20`.
 
 Carry out every step, in order, and report at the end:
 
@@ -53,15 +56,15 @@ Carry out every step, in order, and report at the end:
 
 Do not stop after the build and wait to be told to publish.
 
-### 2. A release zip is about 22 MB, and carries no `vanilla_ui/`
+### 2. A release zip is about 33 MB, and carries no `vanilla_ui/`
 
 Until Phase 98f the vanilla building art shipped as `vanilla_ui/` (35 MB), and
 a release without it was broken: v2.1.1 to 2.1.4 all went out at ~19 MB instead
 of ~51 MB. **Since 98f the art is read out of the player's own game**, from its
 `data/ui` or straight out of its `packs/`, and nothing ships beside the app.
 
-So **a portable release zip is about 22 MB** (21.8 MB measured 2026-10-14),
-and that is right. A zip of about 55 MB means a stale `vanilla_ui/` got into the build: `build_release.py` has it
+So **a portable release zip is about 33 MB** (21.8 MB measured 2026-10-14;
+numpy bundled since v2.4.6 brought it to about 33 MB), and that is right. A zip of about 55 MB means a stale `vanilla_ui/` got into the build: `build_release.py` has it
 on its forbidden list and refuses to finish, and the size is the check by eye.
 
 ### 3. Don't hoard builds in `dist/`
@@ -69,7 +72,7 @@ on its forbidden list and refuses to finish, and the size is the check by eye.
 `dist/` is gitignored and every build is reproducible with
 `python dev/release/build_release.py --version v<x.y.z>`. Delete the previous version's
 folder and zip as each new one lands, rather than letting four of them sit there
-at about 22 MB each.
+at about 33 MB each.
 
 ## Three traps the steps above do not spell out
 
@@ -112,8 +115,7 @@ it was got wrong on v2.2.0.
 
 ## Where the rest of it lives
 
-- `STATE.md`, *THE TWO RELEASE LINES* - the current 2.x, the current beta, and
-  which of the two a given phase goes out on.
+- `STATE.md` - the current version.
 - `.claude/agents/release-check.md` - the agent that verifies a cut against
   these rules, before the build, after the build and after the upload. It cites
   this file rather than restating it.

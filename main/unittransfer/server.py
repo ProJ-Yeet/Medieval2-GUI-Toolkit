@@ -717,6 +717,7 @@ from . import (bmdb, buildings, cards, cleaner, codeview, config, dupes, edit,
                modflags, modfiles, sounds, stratmap)
 from . import mapgen, mapnew, mapresize, modfork, vanilla, gamelog, modreport, rehearse, voices, emblem, bannermaker, artrecolour, stratfamily, scripts
 from . import armory, armbake, armlib, armunit, loosemesh, meshfolder, modeldb, modeltext
+from . import report
 from . import ancillaries, areaeffects, campimport, edbimport, mapbundle, osmmap, osmsites, settlemodel, heroabilities, hordestart, walls, characters, projectzip, campaint, campdb, campevents, campfiles, campmap, campnew, campstrat, cas, casanim, animedit, animpack, animslot, animview, modelexport, launchcheck, packhouse, settlemech, fileswap, factionsites, sidefiles, banners, changesets, health, climatenew, guilds, mapcheck, mapfe, mapquery, mapterrain, mercpools, regiondel, edusort, factionaudit, factionbring, factionclone, factions, images, mesh, minorfiles, namekeys, portrecords, rawtext, rebelpools, renames, soundbanks, soundscripts, spawns, sprites, stratcamp, stratchar, stratedit, stratobj, strings, traits, triggers, winconds
 from . import eop as _eop
 from . import logutil
@@ -2641,6 +2642,8 @@ class Handler(BaseHTTPRequestHandler):
                 return self._json(mapnew.view(self.registry.describe(name)))
             if u.path.startswith("/api/map"):
                 return self._map_route(u.path, q)
+            if u.path == "/api/report":
+                return self._json({"can_send": bool(report.webhook()), "folder": str(report.REPORTS)})
             if u.path == "/api/log":
                 return self._json(log_page(
                     mode=(q.get("mode") or [""])[0],
@@ -2974,6 +2977,21 @@ class Handler(BaseHTTPRequestHandler):
             if u.path == "/api/armory/presets":
                 armory.save_presets(body.get("presets") or [])
                 return self._json({"ok": True})
+            if u.path == "/api/report":
+                # the tester's notes: a problem report, saved, and sent where
+                # an address is set (report.py)
+                name, data = report.build(str(body.get("notes") or ""), body.get("log") or [],
+                                          body.get("project"), str(body.get("where") or ""))
+                out = report.save(name, data)
+                sent, why = False, ""
+                if body.get("send"):
+                    try:
+                        report.send(name, data, str(body.get("notes") or ""))
+                        sent = True
+                    except report.ReportError as e:
+                        why = str(e)
+                return self._json({"path": str(out), "sent": sent, "error": why,
+                                   "bytes": len(data)})
             if u.path == "/api/armory/keys":
                 armory.save_keys(body.get("keys") or {})
                 return self._json({"ok": True})

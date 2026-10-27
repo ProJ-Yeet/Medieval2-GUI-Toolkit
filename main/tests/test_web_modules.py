@@ -130,11 +130,14 @@ menu = re.findall(r"\{id:'([a-z]+)',(.*?)\}", block.group(1) if block else "")
 top = [mid for mid, rest in menu
        if mid != "home" and "sub:true" not in rest and "off:true" not in rest]
 subs = [mid for mid, rest in menu if "sub:true" in rest]
-# `off:true` is a mode that is in the build and offered nowhere. It is how the
-# 2.x line ships without the Campaign Map editor and Armory Studio (the card
-# generator follows Armory Studio), and the map must still have its
-# MODULES entry so that clearing the flag needs no second edit.
+# `off:true` is a mode that is in the build and offered nowhere; `beta:true`
+# one offered only with Settings' *Opt into beta features* ticked (one release
+# line since 2026-10-27). The map must keep its MODULES entry either way.
 off = [mid for mid, rest in menu if "off:true" in rest]
+beta = sorted(mid for mid, rest in menu if "beta:true" in rest)
+check(f"the Campaign Map and Armory Studio are the beta features ({beta})",
+      beta == ["armory", "campmap"])
+check("and nothing is switched off outright", not off)
 check(f"MODES parsed: {len(top)} menu modules, {len(subs)} sub modes, "
       f"{len(off)} off", len(top) > 5)
 # a sub mode switched off (Armory Studio on the 2.x line) has no card to need one
@@ -148,7 +151,11 @@ check("every menu module has a MODULES entry"
 # `menuModes()`/`modeOffered()` so that hiding a mode is one edit, not three.
 core_js = core
 check("core.js declares menuModes() dropping both sub and off",
-      "const menuModes=()=>MODES.filter(m=>!m.sub&&!m.off);" in core_js)
+      "const menuModes=()=>MODES.filter(m=>!m.sub&&!modeOff(m));" in core_js)
+check("modeOff() hides a beta mode unless the user opted in",
+      "const modeOff=m=>!!m.off||(!!m.beta&&!betaOn());" in core_js)
+check("Settings offers the opt-in at its top",
+      'onchange="betaSet(this.checked)"' in _webtext.read((JS / "settings.js")))
 check("the burger menu is built from menuModes()",
       "navModes.innerHTML=menuModes().map(" in core_js)
 home = _webtext.read((JS / "home.js"))

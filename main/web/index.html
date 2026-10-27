@@ -15,7 +15,7 @@
        meshes, textures, sprites and attachments all start at the same column */
     --plw:190px;}
   *{box-sizing:border-box}
-  body{margin:0;font:14px/1.45 "Segoe UI",system-ui,sans-serif;background:var(--bg);color:var(--ink)}
+  body{margin:0;font:14px/1.45 var(--ui-font,"Segoe UI",system-ui,sans-serif);background:var(--bg);color:var(--ink)}
   /* 90b: every breakpoint below is a container query on the body, not a media
      query. Settings' interface size is CSS zoom on the root, and a media query
      measures the WINDOW: at 125% on a 1280 px window the page lays out in 1024
@@ -2999,7 +2999,7 @@
   .homehead h2{margin:0 0 4px;font-size:20px;color:var(--accent)}
   .homeresume{display:flex;gap:10px;align-items:center;margin:16px 0 4px}
   .homegrid{display:grid;gap:14px;margin-top:16px;
-    grid-template-columns:repeat(auto-fill,minmax(340px,1fr))}
+    grid-template-columns:repeat(auto-fill,minmax(min(100%,340px),1fr))}
   .homecard{background:var(--panel);border:1px solid var(--edge);border-radius:10px;padding:14px}
   .hchead{display:flex;justify-content:space-between;gap:8px;align-items:flex-start}
   /* min-width:0 or the path below refuses to shrink and runs past the card */
@@ -3034,6 +3034,17 @@
   a.kofibadge:hover{transform:translateY(-1px);filter:brightness(1.08)}
   .homeprefs .chk{align-items:baseline;margin:0}
   .homeprefs .count{font-size:11px;margin-left:auto;text-align:right}
+  @container page (max-width:600px){
+    .homestep{display:grid;grid-template-columns:22px minmax(0,1fr);align-items:start}
+    .homestep>.t{grid-column:2}
+    .homestep>button{grid-column:2;justify-self:start;max-width:100%;white-space:normal}
+    .homeresume{flex-wrap:wrap}
+    .homeresume>button{max-width:100%;white-space:normal;overflow-wrap:anywhere}
+    .chgwrap .brow{flex-direction:column;align-items:stretch}
+    .chgwrap .brow>.k{width:auto;flex:none;text-align:left}
+    .chgwrap .brow>select{width:100%;flex:none}
+    .chgwrap .brow>button{align-self:flex-start}
+  }
   /* The M2EX mark: its own line under the card's head, quiet until it is on -
      it is a fact about the mod, not an action, and most mods are not M2EX. */
   .hcm2ex{display:flex;gap:6px;align-items:baseline;margin-top:8px;font-size:12px;
@@ -3486,7 +3497,7 @@
   .armanimlist{width:100%}
   .armanimwin input[type=range]{flex:1}
   .armsliders{display:flex;flex-direction:column;gap:3px;font-size:12px}
-  .armslwrap{display:flex;gap:14px;align-items:flex-start}
+  .armslwrap{display:flex;flex-wrap:wrap;gap:14px;align-items:flex-start}
   /* 100n: Optimize */
   .armoptrow{display:flex;gap:6px;align-items:center;margin:3px 0}
   .armoptreport{margin-top:10px;padding:8px;border:1px solid var(--edge);border-radius:6px;display:flex;flex-direction:column;gap:4px}
@@ -3616,6 +3627,21 @@
   .armpathrow{display:flex;gap:6px}
   .armpathrow input{flex:1}
   @container page (max-width:1100px){.armgrid{grid-template-columns:1fr;height:auto}.armview{min-height:380px}}
+  /* 88o: script-specific Windows fonts, also shared by the later CJK locales.
+     Keep monospace declarations on paths and source editors intact. */
+  html:lang(zh){--ui-font:"Microsoft YaHei UI","Microsoft YaHei","PingFang SC","Noto Sans CJK SC",system-ui,sans-serif}
+  html:lang(zh-Hant),html:lang(zh-TW),html:lang(zh-HK){--ui-font:"Microsoft JhengHei UI","Microsoft JhengHei","PingFang TC","Noto Sans CJK TC",system-ui,sans-serif}
+  html:lang(ja){--ui-font:"Yu Gothic UI","Yu Gothic","Hiragino Kaku Gothic ProN","Noto Sans CJK JP",system-ui,sans-serif}
+  html:lang(ko){--ui-font:"Malgun Gothic","Apple SD Gothic Neo","Noto Sans CJK KR",system-ui,sans-serif}
+  html:is(:lang(zh),:lang(ja),:lang(ko)) body{line-break:strict;word-break:normal}
+  /* CJK faces have no italic: preserve emphasis through weight/colour rather
+     than slanting the glyphs. Latin heading tracking also spreads Han text. */
+  html:is(:lang(zh),:lang(ja),:lang(ko)) body,
+  html:is(:lang(zh),:lang(ja),:lang(ko)) body *,
+  html:is(:lang(zh),:lang(ja),:lang(ko)) body *::before,
+  html:is(:lang(zh),:lang(ja),:lang(ko)) body *::after{
+    font-synthesis:none; font-style:normal!important; letter-spacing:0!important}
+  html:is(:lang(zh),:lang(ja),:lang(ko)) :is(i,em){font-weight:600}
 </style>
 </head>
 <body>
@@ -3743,6 +3769,7 @@
 <script src="i18n/catalogue.js"></script>
 <script src="js/i18n.js"></script>
 <script src="js/core.js"></script>
+<script src="js/applog.js"></script>
 <script src="js/codeview.js"></script>
 <script src="js/triggerui.js"></script>
 <script src="js/renameui.js"></script>

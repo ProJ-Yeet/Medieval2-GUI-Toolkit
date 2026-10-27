@@ -83,6 +83,11 @@ async function openSettings(){
     : `<div class="count">${tt('settings.none_the_500_unit_limit_warning')}</div>`;
   document.getElementById('modal').innerHTML=`<h2>${tt('settings.settings')}</h2>
     <div class="mbody">
+      <fieldset><legend>${tt('settings.beta')}</legend>
+        <label class="chk"><input type="checkbox" id="betaChk" ${betaOn()?'checked':''} onchange="betaSet(this.checked)">
+          <b>${tt('settings.beta_opt_in')}</b></label>
+        <div class="count" style="margin-top:6px">${tt('settings.beta_hint')}</div>
+      </fieldset>
       <fieldset><legend>${tt('settings.display')}</legend>
         <label>${tt('settings.interface_size')}
           <select onchange="uiScaleSet(this.value)" style="margin-left:6px">${UI_SCALES.map(p=>
@@ -194,6 +199,17 @@ async function openSettings(){
    settings dialog is where somebody goes to set a machine up, and ticking four
    mods there beats visiting four cards. Both call one endpoint, and Home is
    repainted after so the two never disagree. */
+/* One release since 2026-10-27: what is still being tested is in it for
+   whoever opts in, rather than in a second "beta" download. */
+function betaSet(on){
+  state.settings.beta_features=!!on;
+  api.post('/api/settings',{beta_features:!!on}).catch(()=>{});
+  navModesPaint();
+  // a screen just switched off is not left open behind the dialog
+  if(modeOff(modeDef(state.mode))) setAppMode('home');
+  else if(state.mode==='home'&&typeof renderHome==='function') renderHome();
+  toast(on?tt('settings.beta_on'):tt('settings.beta_off'));
+}
 async function setM2exFromSettings(name, on){
   const r = await api.post('/api/m2ex', {mod:name, on:!!on});
   if(r.error){ toast('✗ ' + r.error, 5000); return; }

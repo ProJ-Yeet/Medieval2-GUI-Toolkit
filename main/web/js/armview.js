@@ -140,7 +140,10 @@ function armKey(e){
 function armFullView(on){
   const b = document.body.classList;
   on = on == null ? !b.contains('armfull') : on;
+  // a hidden panel loses its scroll: it comes back where it was
+  if(on) ARM.fullScroll = [...document.querySelectorAll('.armgrid *')].filter(el => el.scrollTop).map(el => [el, el.scrollTop]);
   b.toggle('armfull', on);
+  if(!on && ARM.fullScroll){ for(const [el, top] of ARM.fullScroll) el.scrollTop = top; ARM.fullScroll = null; }
   if(on && !ARM.fullEsc){
     ARM.fullEsc = e => {
       if(e.key === 'Escape' && !ARM.xform && document.body.classList.contains('armfull')){ e.stopPropagation(); armFullView(false); }

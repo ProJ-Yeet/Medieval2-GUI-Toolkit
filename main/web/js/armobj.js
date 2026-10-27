@@ -27,8 +27,8 @@ const ARM_PREFIXES = ['weapon0', 'weapon1', 'primaryactive0', 'primaryactive1', 
   // two the game spells with a space in them
   ['cannon', 'ball0'].join(' '), ['ballista', 'arrow0'].join(' ')];
 const ARM_BLENDS = ['multiply', 'overlay', 'softlight', 'screen', 'hardlight', 'keepshade'];
-/* Generic looks, never a named faction's. `metal` presets are the only dyes
-   that reach the grey pixels every other dye leaves alone. */
+/* Generic looks, never a named faction's. `metal` presets, the metal channel
+   and an object marked metal are the only dyes that reach the grey pixels. */
 const ARM_PRESETS = [
   {id: 'metal', color: [178, 182, 188], blend: 'keepshade', metal: true, desat: 1},
   {id: 'rusted_metal', color: [140, 70, 32], blend: 'overlay', metal: true, desat: 0.5},
@@ -43,7 +43,7 @@ const ARM_PRESETS = [
   {id: 'purple_cloth', color: [92, 32, 112], blend: 'keepshade'},
   {id: 'brown_wool', color: [102, 72, 46], blend: 'keepshade'},
 ];
-const ARM_CHANNELS = ['cloth', 'leather', 'trim'];
+const ARM_CHANNELS = ['cloth', 'leather', 'trim', 'metal'];
 
 /* Every label by its literal ID, so the catalogue check sees each one. */
 const armMatLabel = m => ({metal: tt('armory.mat_metal'), fabric: tt('armory.mat_fabric'),
@@ -53,7 +53,7 @@ const armBlendLabel = b => ({multiply: tt('armory.blend_multiply'), overlay: tt(
   softlight: tt('armory.blend_softlight'), screen: tt('armory.blend_screen'),
   hardlight: tt('armory.blend_hardlight'), keepshade: tt('armory.blend_keepshade')})[b] || b;
 const armChanLabel = c => ({cloth: tt('armory.chan_cloth'), leather: tt('armory.chan_leather'),
-  trim: tt('armory.chan_trim')})[c] || c;
+  trim: tt('armory.chan_trim'), metal: tt('armory.chan_metal')})[c] || c;
 const armWModeLabel = m => ({face: tt('armory.wmode_face'), vertex: tt('armory.wmode_vertex'),
   edge: tt('armory.wmode_edge')})[m] || m;
 const armPresetLabel = id => ({metal: tt('armory.preset_metal'), rusted_metal: tt('armory.preset_rusted_metal'),
@@ -143,6 +143,7 @@ function armSelect(id, ev){
   // element it was: a double click on it is a rename (99h)
   if(!add && id != null && ARM.sel.size === 1 && ARM.sel.has(id)) return;
   if(!add) ARM.sel.clear();
+  ARM.dyeQuiet = false;
   if(add && ARM.sel.has(id)) ARM.sel.delete(id); else if(id != null) ARM.sel.add(id);
   armPaintObjects(); armFrame();
   if(typeof armPaintSliders === 'function') armPaintSliders();
@@ -480,6 +481,7 @@ function armPropsHtml(o){
     <div class="armsect">${tt('armory.recolour')}</div>
     <div class="armpropsrow"><select onchange="armDyePreset(${o.id}, this.value)"><option value="">${tt('armory.preset')}</option>${presets}</select>
       <input type="color" value="${hex(d.color)}" onchange="armDyeSet(${o.id},'color',this.value)" title="${esc(tt('armory.dye_colour'))}">
+      <button class="mini" onclick="armEyedrop(v => armDyeSet(${o.id},'color',v))" title="${esc(tt('armory.eyedrop_title'))}">💧</button>
       <select onchange="armDyeSet(${o.id},'blend',this.value)">${ARM_BLENDS.map(b => `<option value="${b}"${(d.blend || 'keepshade') === b ? ' selected' : ''}>${esc(armBlendLabel(b))}</option>`).join('')}</select></div>
     <div class="armpropsrow"><label class="armrange">${tt('armory.strength')}<input type="range" min="0" max="100" value="${Math.round((d.strength == null ? 1 : d.strength) * 100)}"
         oninput="armDyeSet(${o.id},'strength',this.value/100,true)"></label>
@@ -500,6 +502,8 @@ function armPropsHtml(o){
       <button class="mini" id="armWGo" onclick="armTransferWeights(${o.id})" title="${esc(tt('armory.transfer_weights_title'))}">${tt('armory.transfer_weights')}</button>
       ${o.weights ? `<button class="mini" onclick="armClearWeights(${o.id})">${tt('armory.clear_weights')}</button>` : ''}</div>
     ${armRigRowsHtml(o.id)}
+    ${typeof armOptimized === 'function' && armOptimized(o) ? `<div class="armpropsrow"><span class="count">${tt('armory.opt_is_on')}</span>
+      <button class="mini" onclick="armOptRestore(${o.id})" title="${esc(tt('armory.opt_restore_title'))}">${tt('armory.opt_restore')}</button></div>` : ''}
     <div class="count armnote">${tt('armory.object_facts', {tris: armObjTris(o).toLocaleString(), pieces: (o.src || []).length})}</div>
   </div>`;
 }
@@ -517,6 +521,7 @@ function armMultiHtml(sel){
     <div class="armsect">${tt('armory.recolour')}</div>
     <div class="armpropsrow"><select onchange="armMultiDye('preset', this.value)"><option value="">${tt('armory.preset')}</option>${presets}</select>
       <input type="color" value="#962020" onchange="armMultiDye('color', this.value)" title="${esc(tt('armory.dye_colour'))}">
+      <button class="mini" onclick="armEyedrop(v => armMultiDye('color', v))" title="${esc(tt('armory.eyedrop_title'))}">💧</button>
       <button class="mini" onclick="armMultiDye('clear')">${tt('armory.clear_dye')}</button></div>
     <div class="armsect">${tt('armory.weights')}</div>
     <div class="armpropsrow"><select id="armWMode">${['face', 'vertex', 'edge'].map(m => `<option value="${m}">${esc(armWModeLabel(m))}</option>`).join('')}</select>
@@ -580,8 +585,17 @@ async function armMultiTransfer(){
 /* --- recolour ------------------------------------------------------------------ */
 
 const armHexRgb = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16));
+// a colour picked anywhere on the screen, the model included (the browser's
+// own eyedropper: Chrome and Edge have it, Firefox does not yet)
+async function armEyedrop(then){
+  if(typeof EyeDropper !== 'function'){ toast(tt('armory.eyedrop_none'), 6000); return; }
+  try{ const r = await new EyeDropper().open(); if(r && r.sRGBHex) then(r.sRGBHex); }
+  catch(e){ /* Esc: nothing picked */ }
+}
 function armDye(o){ return o.dye = o.dye || {color: [150, 24, 24], blend: 'keepshade', strength: 1, keepWhite: true}; }
-function armDyeChanged(o){ ARM_DYE.forEach((v, k) => { if(k.startsWith(o.id + ':')) v.stale = true; }); armFrame(); }
+// while the colours are being chosen the selection's tint stays off the
+// model, so the colour seen is the colour baked; the next pick brings it back
+function armDyeChanged(o){ ARM.dyeQuiet = true; ARM_DYE.forEach((v, k) => { if(k.startsWith(o.id + ':')) v.stale = true; }); armFrame(); }
 function armDyeSet(id, key, v, live){
   const o = armObj(id); if(!o) return;
   const d = armDye(o);
@@ -686,7 +700,10 @@ function armDyePixels(data, d, material, centers){
     }
     if(!target){
       if(ch === 'white' && d.keepWhite !== false) continue;
-      if(ch === 'metal' || ch === 'white'){ if(!d.metal) continue; target = main; }
+      // grey is mail and plate: a metal preset, the metal channel, or an
+      // object marked metal reaches it, and nothing else does
+      if(ch === 'metal' && chans.metal && chans.metal.on) target = chans.metal.color.map(v => v / 255);
+      else if(ch === 'metal' || ch === 'white'){ if(!d.metal && !(ch === 'metal' && material === 'metal')) continue; target = main; }
       else if(chans[ch] && chans[ch].on) target = chans[ch].color.map(v => v / 255);
       else if(mainOn[ch]) target = main;
       else continue;
@@ -711,14 +728,24 @@ function armDyePixels(data, d, material, centers){
 /* --- a dyed object's own crop of the sheet ------------------------------------- */
 
 const ARM_DYE = new Map();     // "<object>:<piece>" -> {sig, tex, crop, stale}
+// an image's own number, so a sheet read again (edited on disk) dyes again
+const ARM_IMG_ID = new WeakMap();
+let armImgSeq = 0;
+function armImgId(img){ if(!ARM_IMG_ID.has(img)) ARM_IMG_ID.set(img, ++armImgSeq); return ARM_IMG_ID.get(img); }
 
-function armPieceUvBox(live, pc){
+// a vertex's UV as the object draws it: moved in the UV editor (100m) or the
+// asset's own; ``us`` 1 on a sheet of the object's own or an object's texture
+function armPieceU(live, pc, v){
+  const m = pc.uv && pc.uv[v];
+  return m ? m : [live.geo.uvs[v*2], live.geo.uvs[v*2+1]];
+}
+function armPieceUs(live, o){ return o && o.sheet || live.objTex ? 1 : (live.uScale || 0.5); }
+function armPieceUvBox(live, pc, us){
   const U = live.geo.uvs;
   if(!U) return null;
-  const us = live.objTex ? 1 : (live.uScale || 0.5);
   let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
   armPieceEach(live, pc, v => {
-    const x = U[v*2] * us, y = U[v*2+1];
+    const uv = armPieceU(live, pc, v), x = uv[0] * us, y = uv[1];
     if(x < x0) x0 = x; if(x > x1) x1 = x; if(y < y0) y0 = y; if(y > y1) y1 = y;
   });
   return x0 === Infinity ? null : [x0, y0, x1, y1, us];
@@ -726,10 +753,8 @@ function armPieceUvBox(live, pc){
 
 /* A piece's UV triangles drawn into a crop of its sheet, grown by two
    texels: RGBA, the alpha set where the piece is. */
-function armPieceMask(live, pc, crop, W, H, w, h){
-  const U = live.geo.uvs;
-  if(!U) return null;
-  const us = live.objTex ? 1 : (live.uScale || 0.5);
+function armPieceMask(live, pc, crop, W, H, w, h, us){
+  if(!live.geo.uvs) return null;
   const c = document.createElement('canvas'); c.width = w; c.height = h;
   const x = c.getContext('2d', {willReadFrequently: true});
   x.fillStyle = x.strokeStyle = '#fff'; x.lineWidth = 4; x.lineJoin = 'round';
@@ -738,8 +763,8 @@ function armPieceMask(live, pc, crop, W, H, w, h){
   for(const t of tris){
     x.beginPath();
     for(let k = 0; k < 3; k++){
-      const v = I[g.start + t*3 + k];
-      const px = (U[v*2] * us - crop[0]) * W, py = (U[v*2+1] - crop[1]) * H;
+      const uv = armPieceU(live, pc, I[g.start + t*3 + k]);
+      const px = (uv[0] * us - crop[0]) * W, py = (uv[1] - crop[1]) * H;
       if(k) x.lineTo(px, py); else x.moveTo(px, py);
     }
     x.closePath(); x.fill(); x.stroke();
@@ -755,14 +780,20 @@ function armDyedTexture(o, pc){
   const pi = (o.src || []).indexOf(pc);
   const key = `${o.id}:${pi}`;
   const live = ARM.assets.get(pc.asset);
-  const img = live && (live.objImg ? live.objImg[pc.group] : live.img);
+  if(!live) return null;
+  // a sheet worn from the Textures tab or the UV editor (100l, 100m) is the
+  // art the object shows, so it is the art that is dyed
+  let img;
+  if(o.sheet){ const h = ARM.sheetCache.get(o.sheet); img = h && h.img; if(!h) armSheetTex(o.sheet); }
+  else img = live.objImg ? live.objImg[pc.group] : live.img;
   if(!img) return null;
-  const sig = JSON.stringify([o.dye, o.material, pc.asset, pc.group, pc.tris ? pc.tris.length : -1, live.uScale, img.width,
-                             stamps, stamps.map(st => armStampImage(st.path) ? 1 : 0), ns]);
+  const us = armPieceUs(live, o);
+  const sig = JSON.stringify([o.dye, o.material, pc.asset, pc.group, pc.tris ? pc.tris.length : -1, us, o.sheet || '',
+                             armImgId(img), pc.uv || null, stamps, stamps.map(st => armStampImage(st.path) ? 1 : 0), ns]);
   let hit = ARM_DYE.get(key);
   if(hit && hit.sig === sig && !hit.stale) return hit;
   const W = img.width, H = img.height;
-  const box = armPieceUvBox(live, pc);
+  const box = armPieceUvBox(live, pc, us);
   let crop = [0, 0, 1, 1], px = [0, 0, W, H], cropped = false;
   if(box){
     // an edge vertex a texel past a boundary (mesh.TILE_EPS) does not make
@@ -786,7 +817,7 @@ function armDyedTexture(o, pc){
   const im = ctx.getImageData(0, 0, px[2], px[3]);
   // 99l: as the bake, only the texels under the piece's UV triangles (and
   // the two beside them that filtering reads) are dyed and stamped
-  const keep = cropped ? armPieceMask(live, pc, crop, W, H, px[2], px[3]) : null;
+  const keep = cropped ? armPieceMask(live, pc, crop, W, H, px[2], px[3], us) : null;
   const was = keep ? im.data.slice() : null;
   if(o.dye){
     const centers = o.dye.pattern && Object.keys(o.dye.pattern.colors || {}).length ? o.dye.pattern.centers : null;
@@ -918,8 +949,10 @@ function armDetectPattern(id){
   const samples = [];
   for(const pc of o.src || []){
     const live = ARM.assets.get(pc.asset);
-    const img = live && (live.objImg ? live.objImg[pc.group] : live.img);
-    if(!img || !live.geo.uvs) continue;
+    if(!live || !live.geo.uvs) continue;
+    const sh = o.sheet && ARM.sheetCache.get(o.sheet);
+    const img = o.sheet ? sh && sh.img : live.objImg ? live.objImg[pc.group] : live.img;
+    if(!img) continue;
     const W = Math.min(img.width, 1024), H = Math.round(img.height * W / img.width);
     const c = document.createElement('canvas'); c.width = W; c.height = H;
     const ctx = c.getContext('2d', {willReadFrequently: true});
@@ -928,14 +961,14 @@ function armDetectPattern(id){
     const m = document.createElement('canvas'); m.width = W; m.height = H;
     const mx = m.getContext('2d', {willReadFrequently: true});
     mx.fillStyle = '#fff';
-    const us = live.objTex ? 1 : (live.uScale || 0.5), U = live.geo.uvs;
+    const us = armPieceUs(live, o);
     const g = live.geo.groups[pc.group], I = live.geo.indices;
     const tris = pc.tris || [...Array(g.count / 3).keys()];
     for(const t of tris){
       mx.beginPath();
       for(let k = 0; k < 3; k++){
-        const v = I[g.start + t*3 + k];
-        let x = U[v*2] * us, y = U[v*2+1];
+        const uv = armPieceU(live, pc, I[g.start + t*3 + k]);
+        let x = uv[0] * us, y = uv[1];
         x = (x - Math.floor(x)) * W; y = (y - Math.floor(y)) * H;
         if(k) mx.lineTo(x, y); else mx.moveTo(x, y);
       }

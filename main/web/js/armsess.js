@@ -74,7 +74,7 @@ async function armSessOpen(){
       <button class="mini armx" onclick="armSessDelete('${esc(s.id)}','${esc(s.name).replace(/'/g, '&#39;')}')" title="${esc(tt('armory.sess_delete'))}">✕</button></div>`).join('');
   const backs = v.backups.map(b => `<div class="armsessrow"><span>${esc(when(b.time))}</span>
       <span class="count">${ttN('armory.sess_backup_facts', b.objects)}</span><span style="flex:1"></span>
-      <button class="mini" onclick="armSessRevert('${esc(b.file)}')">${tt('armory.sess_revert')}</button></div>`).join('');
+      <button class="mini" onclick="armSessRevert('${esc(q1(b.file))}')">${tt('armory.sess_revert')}</button></div>`).join('');
   modal.innerHTML = `<div class="armimp">
     <h3>${tt('armory.sess_title')}</h3>
     <div class="count">${v.name ? tt('armory.sess_current', {name: esc(v.name)}) : tt('armory.sess_unsaved')}</div>

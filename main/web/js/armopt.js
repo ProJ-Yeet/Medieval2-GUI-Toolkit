@@ -96,7 +96,10 @@ async function armOptRun(){
     (got.pieces || []).forEach((ch, i) => {
       const pc = o.src[i];
       if(!pc || !ch) return;
-      for(const k of ['tris', 'weld', 'flip', 'nrm']){
+      // the piece as it was before its first run, so Restore puts it back
+      // whenever the user likes; nothing here ever touches the file on disk
+      if(!pc.opt0) pc.opt0 = JSON.parse(JSON.stringify(Object.fromEntries(ARM_OPT_KEYS.map(k => [k, pc[k] == null ? null : pc[k]]))));
+      for(const k of ARM_OPT_KEYS){
         if(ch[k] == null) delete pc[k]; else pc[k] = ch[k];
       }
     });
@@ -104,6 +107,19 @@ async function armOptRun(){
   ARM.optReport = r;
   armRepaint();
   armOptPaint();
+}
+const ARM_OPT_KEYS = ['tris', 'weld', 'flip', 'nrm'];
+const armOptimized = o => (o.src || []).some(pc => pc.opt0);
+// every optimized piece of the object back as it was before Optimize
+function armOptRestore(id){
+  const o = armObj(id); if(!o) return;
+  for(const pc of o.src || []){
+    if(!pc.opt0) continue;
+    for(const k of ARM_OPT_KEYS){ if(pc.opt0[k] == null) delete pc[k]; else pc[k] = pc.opt0[k]; }
+    delete pc.opt0;
+  }
+  armRepaint();
+  toast(tt('armory.opt_restored'));
 }
 // the run is one Undo step; the dialog stays open on its report, so it offers it
 function armOptUndo(){
