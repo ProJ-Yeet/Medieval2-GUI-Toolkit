@@ -219,6 +219,11 @@ def check_catalogue(en: dict, cat: dict, tb: Optional[dict], tag: str, pseudo: b
     cterms = compile_terms(tb) if (tb and not pseudo) else []
     keep = tb.get("keep", []) if tb else []
     cats = CLDR.get(tag)
+    # Turkish has distinct dotted and dotless I. Unicode's default lower
+    # maps İ to i + combining dot, which rejects valid labels like İsyancı.
+    def term_lower(text):
+        return text.replace("İ", "i").replace("I", "ı").lower() if tag == "tr" else text.lower()
+
     for k, src in en.items():
         if k not in cat:
             out.append(f"{k}: missing")
@@ -263,7 +268,7 @@ def check_catalogue(en: dict, cat: dict, tb: Optional[dict], tag: str, pseudo: b
         if pseudo or not tb:
             continue
         joined = " ".join(x for x in tf.values() if isinstance(x, str))
-        joined_l = joined.lower()
+        joined_l = term_lower(joined)
         # rule 1 tokens are read unescaped (&lt;key&gt; is <key>); so is the translation
         joined_u = ENTITY.sub(lambda e: {"&lt;": "<", "&gt;": ">", "&amp;": "&", "&quot;": '"'}.get(
             e.group(0).lower(), e.group(0)), joined)
@@ -277,7 +282,7 @@ def check_catalogue(en: dict, cat: dict, tb: Optional[dict], tag: str, pseudo: b
             r = (t.get("tr") or {}).get(tag)
             if not r:
                 out.append(f"{k}: term {t['id']} has no rendering in {tag}")
-            elif not any(s in joined_l for s in r["stem"].lower().split("|")):
+            elif not any(s in joined_l for s in term_lower(r["stem"]).split("|")):
                 out.append(f"{k}: term {t['id']} ({t['en']}) should read {r['t']!r}")
     return out
 

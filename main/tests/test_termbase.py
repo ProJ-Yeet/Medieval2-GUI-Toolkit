@@ -82,6 +82,15 @@ good = {
     "t.tag": "Dieses <b>eine</b> öffnen",
 }
 check("a faithful German catalogue passes", tb.check_catalogue(en, good, mini, "de") == [])
+turkish_en = {"t.rebel": "Rebels", "t.import": "Import", "t.armour": "Armour",
+              "t.header": "Header", "t.block": "Block", "t.bone": "Bone", "t.resource": "Resource"}
+turkish_cat = {"t.rebel": "İsyancılar", "t.import": "İçe aktar", "t.armour": "ZIRH",
+               "t.header": "Başlığı", "t.block": "Bloğu", "t.bone": "Kemiği", "t.resource": "Kaynağı"}
+check("Turkish casing and inflection match real glossary terms",
+      tb.check_catalogue(turkish_en, turkish_cat, tb.load(), "tr") == [])
+check("Turkish case handling still rejects a missing term",
+      any("term rebel" in p for p in tb.check_catalogue(
+          {"t.rebel": "Rebels"}, {"t.rebel": "Diğerleri"}, tb.load(), "tr")))
 
 
 def with_(**kw):

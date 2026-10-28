@@ -1,5 +1,7 @@
 # Turkish (tr)
 
+**Complete machine-assisted draft, promoted 2026-10-28. Native review pending.**
+
 Phase 88l started 2026-10-28 after Simplified Chinese, on the user's request.
 
 ## Workflow
@@ -50,3 +52,17 @@ Next: export settings (174), then core, transfer, editor and edrecruit.
 The partial catalogue remains outside Settings. No Turkish UI review,
 promotion, native review or release is claimed. Five-hour usage at checkpoint:
 90% remaining; the user explicitly authorized going past the guard this run.
+
+
+## Completion, 2026-10-28
+
+9,633/9,633 done, zero missing/stale/extra; zero full-checker problems.
+Promoted to web/i18n/tr.json as a draft. Source hashes remain in
+dev/i18n/tr.source.json. The user requested continuing through completion
+and had explicitly overridden the five-hour usage guard for this run.
+
+Machine-assisted bulk drafting and manual corrections are documented in
+tr-review.md, with exact glossary exceptions and the native-review limits.
+Home, Settings, Transfer and Campaign Map walked at desktop and 375 px.
+Termbase tests 29/29, i18n 37/37, web modules 124/124. Placeholder counts and
+source-hash stale detection pass. No mod writes or release cut.

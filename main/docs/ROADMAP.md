@@ -436,7 +436,7 @@ and their lettered pieces are commits. Build the majors in this order.
 | | 96e4 | A new region wizard; many towns at once with auto-garrison | one | beta |
 | **III. Factions, units and mod data** | 96a | `can_homeless` on M2EX mods | one | both |
 | | 96e1-3, 96e5-7 | From the Oogway editor: the script builder and add-ons, checking (log, deep check, report), characters (family tree, portraits), units (model swap, voices), art (emblem, banners, recolouring), rules and mods (vanilla values, hard-link mod folders) | six areas | both |
-| **V. Translations** | 88 | The remaining catalogues through 88d's workflow: 88e French, 88h Portuguese (Brazil), 88i Polish, 88l Turkish, 88m Russian, 88o Simplified Chinese with the CJK fonts and line breaking, 88p Traditional Chinese, 88q Japanese, 88r Korean | nine catalogues | both |
+| **V. Translations** | 88 | The remaining catalogues through 88d's workflow: 88h Portuguese (Brazil), 88i Polish, 88m Russian, 88p Traditional Chinese, 88q Japanese, 88r Korean. French (88e), Simplified Chinese (88o) and Turkish (88l) are complete drafts | six catalogues | both |
 
 **Finished phases archived on 2026-10-20** (the user: "archive the completed phases"): 77-86, 89-95, 98, 99 (but 99p) and 100 moved to `ROADMAP_ARCHIVE.md` verbatim, their rows up into the phase index. The rows this table still held for 89-94 were left over from the 2026-10-06 regroup: all six were finished on 2026-09-30, so major IV, which was 90 and 93, is gone with them.
 
@@ -861,6 +861,15 @@ messages, Home's module rows (`_module_rows` in `modfiles.py`), the
 terrain names in the ground messages; My Changes no longer throws when it is reopened before its first
 load lands. German's 8 strings from the 2026-10-01 transfer fixes were
 filled.
+
+*88l done 2026-10-28.* **Turkish**: 9,633 strings, 379 plural objects,
+zero missing/stale/extra and zero checker problems. Offered as
+Türkçe (Turkish) - taslak. Machine-assisted bulk draft with direct corrections;
+native review is pending. Home, Settings, Transfer and Campaign Map walked at
+desktop width and 375 px. Termbase tests 29/29, i18n 37/37, web modules 124/124.
+The checker handles Turkish dotted/dotless I and glossary stems accept normal
+consonant softening. Review scope and exact exceptions: `dev/i18n/tr-review.md`.
+No release cut.
 
 **88o - Simplified Chinese, and the CJK groundwork.** The `zh-Hans`
 catalogue, plus what all four CJK languages share: a font fallback stack of

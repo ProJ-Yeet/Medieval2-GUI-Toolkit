@@ -2273,7 +2273,7 @@
     },
     "tr": {
      "t": "özellik",
-     "stem": "özellik",
+     "stem": "özellik|özelliğ",
      "src": "game",
      "conf": "low",
      "note": "nitelik is the alternative"
@@ -3055,7 +3055,7 @@
     },
     "tr": {
      "t": "kaynak",
-     "stem": "kaynak",
+     "stem": "kaynak|kaynağ",
      "src": "game",
      "conf": "medium"
     },
@@ -3621,7 +3621,7 @@
     },
     "tr": {
      "t": "sancak",
-     "stem": "sancak",
+     "stem": "sancak|sancağ",
      "src": "game",
      "conf": "low",
      "note": "bayrak is the alternative"
@@ -5216,7 +5216,7 @@
     },
     "tr": {
      "t": "binek",
-     "stem": "binek",
+     "stem": "binek|bineğ",
      "src": "game",
      "conf": "low"
     },
@@ -9306,7 +9306,7 @@
     },
     "tr": {
      "t": "kemik",
-     "stem": "kemik",
+     "stem": "kemik|kemiğ",
      "src": "community",
      "conf": "medium"
     },
@@ -12375,7 +12375,7 @@
     },
     "tr": {
      "t": "blok",
-     "stem": "blok",
+     "stem": "blok|bloğ",
      "src": "community",
      "conf": "medium"
     },
@@ -12714,7 +12714,7 @@
     },
     "tr": {
      "t": "başlık",
-     "stem": "başlık",
+     "stem": "başlık|başlığ",
      "src": "community",
      "conf": "medium"
     },
@@ -12937,7 +12937,7 @@
     },
     "tr": {
      "t": "sözlük",
-     "stem": "sözlük",
+     "stem": "sözlük|sözlüğ",
      "src": "community",
      "conf": "medium"
     },
@@ -21250,7 +21250,7 @@
     },
     "tr": {
      "t": "renk",
-     "stem": "renk",
+     "stem": "renk|reng",
      "src": "ms",
      "conf": "high"
     },
