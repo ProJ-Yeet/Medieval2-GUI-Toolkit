@@ -78,3 +78,14 @@ Complete namespaces: ancillaries, app, areaeffects, armory, battleflags, bmdb, b
 User explicitly authorized continuing past the 50% usage guard for this run.
 No promotion or release. Source/answer batches are in .cache/zh-Hans-*.json.
 Authoritative next work comes from i18n_todo.py zh-Hans.
+
+
+## Completion, 2026-10-28
+
+9,633/9,633 IDs complete, zero missing/stale/extra, zero full-checker problems.
+Promoted through i18n_todo.py --promote to web/i18n/zh-Hans.json as a draft;
+the work catalogue moved there, source hashes remain here. CJK groundwork
+and desktop/375 px review completed. tests.test_i18n 37/37 and
+tests.test_web_modules 124/124 pass; termbase zero problems.
+Review scope and exact exceptions: zh-Hans-review.md. Native review pending.
+The user authorized going past the usage guard. No release cut.

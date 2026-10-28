@@ -870,6 +870,15 @@ italics or letter spacing on CJK text. Done when: the checker passes, and
 every screen renders with no missing-glyph boxes and no line broken inside a
 word.
 
+*88o done 2026-10-28.* **Simplified Chinese**: 9,633 strings, including
+379 plural objects with `other`, zero missing/stale/extra and zero checker
+problems. Promoted as 简体中文 (Chinese (Simplified)) - 草稿. Shared CJK
+font stacks, strict line breaking and suppression of synthetic italics and
+tracking are in place. Home, Settings, Transfer and Campaign Map reviewed
+at desktop width and 375 px. i18n tests 37/37 and web-module checks 124/124.
+Native review pending; review scope and exact exemptions are recorded in
+`dev/i18n/zh-Hans-review.md`. No release cut.
+
 **88p to 88r - the other CJK languages, one each** (88q and 88r were
 postponed on 2026-10-01 and brought back on 2026-10-06): 88p Chinese
 (Traditional) `zh-Hant`, 88q Japanese `ja` (with `line-break: strict`), 88r
