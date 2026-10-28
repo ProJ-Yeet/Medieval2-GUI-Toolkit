@@ -12601,7 +12601,7 @@
     },
     "tr": {
      "t": "kayıt",
-     "stem": "kayıt",
+     "stem": "kayıt|kayd",
      "src": "community",
      "conf": "medium"
     },
@@ -14091,7 +14091,7 @@
     },
     "tr": {
      "t": "Kaydet",
-     "stem": "kaydet",
+     "stem": "kaydet|kayded",
      "src": "ms",
      "conf": "high"
     },

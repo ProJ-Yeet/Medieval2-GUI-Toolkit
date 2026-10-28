@@ -6,7 +6,9 @@ _Updated: 2026-10-27 - **Cut v2.4.9, the first of one release line**, on the use
 9,633/9,633 strings, zero catalogue problems. Desktop/narrow screen review and
 CJK groundwork verified; i18n 37/37, web modules 124/124. Native review pending;
 see `dev/i18n/zh-Hans-review.md`. No release cut. The user requested Turkish
-next (88l); it is now the active translation task.
+next (88l); it is now the active translation task. Turkish started with
+243 checked entries (app, boot, common, home, i18n); 9,390 remain. The draft
+stays out of Settings. Next: settings, then core; see `dev/i18n/tr.md`.
 
 **Cut v2.4.9, 2026-10-27**, one release line from here (see the header). **Next: the rest of 96f, from a culture change with its preview**, then read the tester's Google Doc again after the major phase.
 
