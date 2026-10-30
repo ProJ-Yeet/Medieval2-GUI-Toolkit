@@ -115,6 +115,23 @@ function tt(id,params){
   const v=i18nRaw(id);
   return i18nFill(typeof v==='string'?v:(v&&v.other)||id,params);
 }
+// These callers build HTML attributes, edit keys or cache keys, never prose.
+// A catalogue (including a pseudo-locale) must not change their syntax.
+function ttCode(id,params){
+  return i18nFill(I18N.en[id]||id,params);
+}
+// Legacy catalogue entries containing a whole title attribute. Only the
+// human-readable value may be translated; the attribute and disabled flag
+// always come from English. Invalid translations fall back to that value.
+function ttTitle(id,params){
+  const read=s=>typeof s==='string'&&/^(disabled |on(?:click|change|input)="[^"]*" )?title="([\s\S]*)"$/.exec(s);
+  const source=read(I18N.en[id]);
+  if(!source)return '';
+  const translated=read(I18N.cat[id]);
+  let value=translated?translated[2]:source[2];
+  if(I18N.pseudo)value=i18nPseudo(source[2]);
+  return i18nFill(source[1]||'',params)+'title="'+i18nFill(value,params).replace(/"/g,'&quot;')+'"';
+}
 // English is the page's own text, already safe where it stands; a
 // translation may carry either quote, so both are escaped for it
 function ttA(id,params){

@@ -1005,7 +1005,7 @@ function gfParts(host,label,spec,parsed){
     const v=parsed.parts[i]==null?'':parsed.parts[i];
     const ch=partChanged(i);
     const cls='gfpart'+(p.grow?' grow':p.w===3?' w3':p.w===2?' w2':'')+(ch?' changed':'');
-    const attr=tt('guided.data_gfp_data_i',{label:esc(label),x:i});
+    const attr=ttCode('guided.data_gfp_data_i',{label:esc(label),x:i});
     const chc=ch?' changed':'';                  // the amber "you changed this"
     // the explanation hangs off the ? beside the part's name; the control keeps
     // an accessible name of its own, since the label is not a <label for=…>

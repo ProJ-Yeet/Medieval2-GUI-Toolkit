@@ -129,7 +129,7 @@ function hlSourcesHtml(r){
       : s.state === 'off' ? tt('health.the_campaign_map_screen_is_off')
       : tt('health.ms',{file:s.file,ms:s.ms});
     return `<button class="hlsrc${cls}${h.src === s.id ? ' on' : ''}" title="${esc(tip)}"
-      ${s.state === 'ok' ? tt('health.onclick_hlsource',{id:s.id}) : 'disabled'}>
+      ${s.state === 'ok' ? ttCode('health.onclick_hlsource',{id:s.id}) : 'disabled'}>
       ${esc(s.label)}
       <span class="n">${s.state === 'failed' ? 'failed' : s.state === 'off' ? 'off'
         : s.counts.fatal ? `<b class="w-bad">${s.counts.fatal}</b>${n > s.counts.fatal ? ' +' + (n - s.counts.fatal) : ''}`

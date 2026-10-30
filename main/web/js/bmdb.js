@@ -735,7 +735,7 @@ function edEntryUsers(m){
       const other=/^(mount|file):/.test(w);
       const u=index[w.toLowerCase()];
       return `<div class="ucell ${other?'plain':''}"
-        ${other?'':tt('bmdb.onclick_openunittab_title_open_in_a',{x:q1(esc(w)),x2:esc(w)})}>
+        ${other?'':ttTitle('bmdb.onclick_openunittab_title_open_in_a',{x:q1(esc(w)),x2:esc(w)})}>
         ${other?`<div class="ic none">${tt('common.none')}</div>`
                :`<img loading="lazy" onerror="iconRetry(this)" src="${iconUrl(state.ed.mod,w)}" alt="">`}
         <div class="un">${esc(u?u.name:short(w))}</div>

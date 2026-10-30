@@ -179,7 +179,7 @@ function gfListWidget(host,label,cur,vocabName){
     ${gfChips(host,label,items)}
     <div class="barrow">
       <input id="${gfAddId(label)}" placeholder="${ttA('modelpicker.add')}" style="width:190px;font-size:12px;padding:3px 7px"
-        ${vocabName?tt('modelpicker.list_gfdl',{vocabName:esc(vocabName)}):''}>
+        ${vocabName?ttCode('modelpicker.list_gfdl',{vocabName:esc(vocabName)}):''}>
       <button onclick="gfListAdd('${q1(esc(label))}')">${tt('common.add_2')}</button>
     </div></div></div>`;
 }
@@ -352,13 +352,13 @@ function gfMountEffectWidget(host,label,cur){
       <span class="idx">${i+1}</span>
       <input data-gfme="${esc(label)}" data-i="${i}" data-part="n" list="gfdl-mount_class"
         value="${esc(p.n)}" style="width:180px;font-size:12.5px;padding:4px 7px">
-      ${gfSpin(tt('modelpicker.data_gfme_data_i_data_part',{label:esc(label),x:i}),p.v)}
+      ${gfSpin(ttCode('modelpicker.data_gfme_data_i_data_part',{label:esc(label),x:i}),p.v)}
       <button class="rm" title="${ttA('common.remove')}" onclick="gfMeRemove('${q1(esc(label))}',${i})"
         style="background:none;border:1px solid transparent;color:var(--dim);padding:2px 6px">✕</button>
     </div>`).join('');
   return `<div class="gfgrid" style="flex-direction:column;align-items:flex-start">${rows}
     <div class="barrow">
-      <button ${pairs.length>=3?tt('modelpicker.disabled_title_the_engine_reads_at'):''}
+      <button ${pairs.length>=3?ttTitle('modelpicker.disabled_title_the_engine_reads_at'):''}
         onclick="gfMeAdd('${q1(esc(label))}')">${tt('modelpicker.add_a_mount_effect')}</button>
       <span class="count">${tt('modelpicker.3_a_class_horse_camel_elephant',{pairs_n:pairs.length})}</span>
     </div></div>`;

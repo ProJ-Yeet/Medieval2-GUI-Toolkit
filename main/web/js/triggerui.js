@@ -205,7 +205,7 @@ function trgArgsHtml(tr, cond, i, shape){
         ${tr.readOnly?'disabled':''} oninput="${set}">`;
     }else{
       const dl = list.length?`trgdl-${tr.uid}-${src}`:'';
-      html += `<input class="trgname" value="${esc(v)}" ${dl?tt('triggerui.list',{dl}):''}
+      html += `<input class="trgname" value="${esc(v)}" ${dl?ttCode('triggerui.list',{dl}):''}
         placeholder="${esc(src||'value')}" ${tr.readOnly?'disabled':''} oninput="${set}">`;
       if(dl && html.indexOf('<datalist id="'+dl)<0)
         html += `<datalist id="${dl}">${list.map(x=>`<option value="${esc(x)}">`).join('')}</datalist>`;

@@ -5993,9 +5993,11 @@ class Handler(BaseHTTPRequestHandler):
             return self._err(404, f"{entry.name} has no LOD {lod}")
         src = factions.read_path(mod, rels[lod])
         if src is None or not src.is_file():
-            return self._err(404, f"{rels[lod]} is not in {name} - the mod "
-                                  f"references it, ships no file of that name "
-                                  f"and its base game has none either")
+            return self._err(404, _i18n.msg(
+                "eng.server.model_file_missing",
+                "{path} is not in {mod} - the mod references it, ships no file "
+                "of that name and its base game has none either",
+                path=rels[lod], mod=name))
         try:
             decoded = mesh.read_mesh(src)
         except mesh.MeshError as e:

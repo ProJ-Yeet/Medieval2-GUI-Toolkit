@@ -300,7 +300,7 @@ function facBox(d, key, label, list){
   const id = 'facdl-' + key;
   return `<label class="lbl" data-label="${key}">${esc(label)}</label>
     <div><input data-label="${key}" value="${esc(d.w[key]||'')}"
-      ${list&&list.length?tt('factions.list',{id}):''}
+      ${list&&list.length?ttCode('factions.list',{id}):''}
       oninput="facSet('${key}',this.value.trim())">
     ${list&&list.length?`<datalist id="${id}">${list.map(x =>
       `<option value="${esc(x)}">`).join('')}</datalist>`:''}</div>`;

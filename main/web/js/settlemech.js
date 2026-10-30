@@ -96,7 +96,7 @@ function smxMainHtml(q){
     return `<div class="cdbsec"><h3>${esc(f.label)} <span class="count">${esc(f.id)}_</span></h3>
       <table class="smxtab"><tr><th></th>${SMX_KIDS.map(([, l]) => `<th>${esc(l)}</th>`).join('')}</tr>
       ${rows.map(x => `<tr id="smx_${esc(x.name)}"><td><code title="${ttA('settlemech.line',{line:x.line})}">${esc(x.name)}</code></td>${
-        SMX_KIDS.map(([k]) => smxBox(tt('settlemech.factor',{name:x.name,x:k}), x.values[k])).join('')}</tr>`).join('')}
+        SMX_KIDS.map(([k]) => smxBox(ttCode('settlemech.factor',{name:x.name,x:k}), x.values[k])).join('')}</tr>`).join('')}
       </table></div>`;
   }).join('');
   if(!q && c.sel === 'levels'){
@@ -104,7 +104,7 @@ function smxMainHtml(q){
       <table class="smxtab"><tr><th></th>${SMX_LEVEL.map(k => `<th>${k}</th>`).join('')}</tr>
       ${l.levels.map(x => `<tr id="smx_${esc(x.name)}"><td><code title="${ttA('settlemech.line',{line:x.line})}">${esc(x.name)}</code></td>${
         SMX_LEVEL.map(k => x.values[k] === undefined ? '<td class="count">-</td>'
-          : smxBox(tt('settlemech.level',{name:x.name,x:k}), x.values[k])).join('')}</tr>`).join('')}
+          : smxBox(ttCode('settlemech.level',{name:x.name,x:k}), x.values[k])).join('')}</tr>`).join('')}
       </table>
       <div class="count">${tt('settlemech.a_levels_upgrade_is_the_population')}</div></div>`).join('');
   }

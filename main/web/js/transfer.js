@@ -440,11 +440,11 @@ async function renderComposer(){
      </div>
      ${sameMod?'':`${projOn&&!mo?`<div class="warnbox">${tt('transfer.projectile_effects_arent_imported_the_definition',{dst:esc(state.dst)})}</div>`:''}
      ${mo?'':`<fieldset><legend>${tt('transfer.include_secondary_models')}</legend>
-       <label class="chk${offOn?'':' off'}"><input type="checkbox" id="optOff" ${offOn&&c.include_officers?'checked':''} ${offOn?'':'disabled'}> ${tt('transfer.officers',{x:!hasOff?'(none)':offBase?kw:`(${u.officers.length})`})}</label>
-       <label class="chk${mntOn?'':' off'}" style="margin-left:12px"><input type="checkbox" id="optMount" ${mntOn&&c.include_mount?'checked':''} ${mntOn?'':'disabled'}> ${tt('transfer.mount',{x:!hasMount?' (none)':mntBase?' '+kw:` (${esc(u.mount)})`})}</label>
-       <label class="chk${crwOn?'':' off'}" style="margin-left:12px"><input type="checkbox" id="optCrew" ${crwOn&&c.include_crew?'checked':''} ${crwOn?'':'disabled'}> ${tt('transfer.crew',{x:!hasCrew?' (none)':crwBase?' '+kw:` (${u.crew.length})`})}</label>
-       <label class="chk${projOn?'':' off'}" style="margin-left:12px"><input type="checkbox" id="optProj" ${projOn&&c.include_projectile?'checked':''} ${projOn?'':'disabled'}> ${tt('transfer.projectile_2',{x:!hasProj?' (none)':projBase?' '+kw:` (${proj.map(esc).join(', ')})`})}</label>
-       <label class="chk${engOn?'':' off'}" style="margin-left:12px"><input type="checkbox" id="optEngine" ${engOn&&c.include_engine!==false?'checked':''} ${engOn?'':'disabled'}> ${tt('transfer.siege_engine_2',{x:!hasEng?' (none)':engBase?' '+kw:` (${esc(eng)})`})}</label>
+       <label class="chk${offOn?'':' off'}"><input type="checkbox" id="optOff" ${offOn&&c.include_officers?'checked':''} ${offOn?'':'disabled'}> ${tt('transfer.officers',{x:!hasOff?`(${tt('common.none')})`:offBase?kw:`(${u.officers.length})`})}</label>
+       <label class="chk${mntOn?'':' off'}" style="margin-left:12px"><input type="checkbox" id="optMount" ${mntOn&&c.include_mount?'checked':''} ${mntOn?'':'disabled'}> ${tt('transfer.mount',{x:!hasMount?` (${tt('common.none')})`:mntBase?' '+kw:` (${esc(u.mount)})`})}</label>
+       <label class="chk${crwOn?'':' off'}" style="margin-left:12px"><input type="checkbox" id="optCrew" ${crwOn&&c.include_crew?'checked':''} ${crwOn?'':'disabled'}> ${tt('transfer.crew',{x:!hasCrew?` (${tt('common.none')})`:crwBase?' '+kw:` (${u.crew.length})`})}</label>
+       <label class="chk${projOn?'':' off'}" style="margin-left:12px"><input type="checkbox" id="optProj" ${projOn&&c.include_projectile?'checked':''} ${projOn?'':'disabled'}> ${tt('transfer.projectile_2',{x:!hasProj?` (${tt('common.none')})`:projBase?' '+kw:` (${proj.map(esc).join(', ')})`})}</label>
+       <label class="chk${engOn?'':' off'}" style="margin-left:12px"><input type="checkbox" id="optEngine" ${engOn&&c.include_engine!==false?'checked':''} ${engOn?'':'disabled'}> ${tt('transfer.siege_engine_2',{x:!hasEng?` (${tt('common.none')})`:engBase?' '+kw:` (${esc(eng)})`})}</label>
        ${hasOff?`<div class="optnames">${tt('transfer.officers_2',{x:offBase?`<span class="frombase">${insteadMsg(c.base_type)}</span>`:modelChecks(u.officers,offOn,c),x2:offImport?`<span class="frombase">${tt('transfer.brought_across_animated_like_where_lacks',{x:esc(bU.officers[0]),dst:esc(state.dst)})}</span>`:''})}</div>`:''}
        ${hasMount?`<div class="optnames">${tt('transfer.mount_2',{mount:esc(u.mount),x:mntBase?`<span class="frombase">${insteadMsg(c.base_type)}</span>`
          :mntImport?`<span class="frombase">${tt('transfer.brought_across_animated_like_where_lacks_2',{mount:esc(bU.mount),dst:esc(state.dst)})}</span>`:''})}</div>`:''}
@@ -724,8 +724,8 @@ function soundFieldset(c,u){
   const donors=(ds.donors||[]).filter(x=>(!c.snd_accent||x.accent===c.snd_accent)
                                        &&(!c.snd_class||x['class']===c.snd_class));
   const acc=locked?d.accent:c.snd_accent, cls=locked?d.cls:c.snd_class;
-  const pick=(key,cur,vals,blank)=>`<select ${locked?tt('transfer.disabled_title',{why:esc(why)})
-      :tt('transfer.onchange_cmpsndpick_this_value',{key})}>
+  const pick=(key,cur,vals,blank)=>`<select ${locked?ttCode('transfer.disabled_title',{why:esc(why)})
+      :ttCode('transfer.onchange_cmpsndpick_this_value',{key})}>
     <option value="">${blank}</option>
     ${vals.map(v=>`<option value="${esc(v)}" ${v===cur?'selected':''}>${esc(v)}</option>`).join('')}
     ${locked&&!vals.includes(cur)?`<option value="${esc(cur)}" selected>${esc(cur)}</option>`:''}</select>`;
@@ -1001,9 +1001,10 @@ const clearBinOn=()=>(state.settings||{}).clear_strings_bin!==false;
 // for anything unit-shaped, export_buildings.txt for a building rename.
 function cleanerBoxHtml(what){
   const kind=what||'unit';
-  return `<label class="chk cleanerbox" style="margin-right:auto" title="${ttA('transfer.deletes_data_text_export_s_txt',{kind,kind2:kind,kind3:kind})}">
+  const label=kind==='building'?tt('transfer.cache_building_text'):tt('transfer.cache_unit_text');
+  return `<label class="chk cleanerbox" style="margin-right:auto" title="${ttA('transfer.deletes_data_text_export_s_txt',{kind,kind2:kind,kind3:label})}">
     <input type="checkbox" ${clearBinOn()?'checked':''} onchange="setClearBin(this.checked)">
-    <span>${tt('transfer.clear_the_text_cache_afterwards_a',{kind})}</span></label>`;
+    <span>${tt('transfer.clear_the_text_cache_afterwards_a',{kind:label})}</span></label>`;
 }
 async function setClearBin(on){
   state.settings=await api.post('/api/settings',{clear_strings_bin:on});

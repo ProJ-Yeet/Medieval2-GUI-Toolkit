@@ -290,7 +290,7 @@ const edRecTurns=(k,v)=>k==='per_turn'?`<span class="turns">= ${esc(poolTurns(v)
 function edRecRowHtml(row,KEYS,common){
   const gone=edRecDeleted(row), key=edRecKey(row), req=edRecReq(row);
   return edRecPoolHtml({
-    cls:gone?'gone':'', attr:tt('edrecruit.data_erline',{key}),
+    cls:gone?'gone':'', attr:ttCode('edrecruit.data_erline',{key}),
     line:row.line, lineLabel:row.line_label||row.line,
     level:row.level, levelLabel:row.level_label||row.level,
     levelIndex:row.level_index, levelCount:row.level_count,
@@ -304,7 +304,7 @@ function edRecRowHtml(row,KEYS,common){
       const odd=String(v).trim()!==common[j];
       return `<span class="ern ${odd?'odd':''}" title="${odd
         ?ttA('edrecruit.differs_from_what_most_pools_use_value',{value:esc(common[j])}):''}">${
-        numBox(tt('edrecruit.data_er_data_erline',{x:k,key}),v,
+        numBox(ttCode('edrecruit.data_er_data_erline',{x:k,key}),v,
                k==='per_turn'?'turns':(k==='experience'?'1':'pool'),edRecTurns(k,v))}</span>`;
     }).join(''),
     act:`<button class="reqbtn ${gone?'':'danger'}"
@@ -317,14 +317,14 @@ function edRecRowHtml(row,KEYS,common){
 // no value yet to disagree with anything) and a drop rather than a delete.
 function edRecAddRowHtml(a,i,KEYS){
   return edRecPoolHtml({
-    cls:'fresh', attr:tt('edrecruit.data_eradd',{x:i}),
+    cls:'fresh', attr:ttCode('edrecruit.data_eradd',{x:i}),
     line:a.line, lineLabel:a.line_label||a.line,
     level:a.level, levelLabel:a.level_label||a.level,
     levelIndex:a.level_index, levelCount:a.level_count,
     culture:edRecCulture(a.conds),
     badges:`<span class="badge good">${tt('edrecruit.new')}</span>`,
     nums:KEYS.map(([k])=>`<span class="ern">${
-      numBox(tt('edrecruit.data_eradd_data_eraddi',{x:k,x2:i}),a[k],
+      numBox(ttCode('edrecruit.data_eradd_data_eraddi',{x:k,x2:i}),a[k],
              k==='per_turn'?'turns':(k==='experience'?'1':'pool'),edRecTurns(k,a[k]))}</span>`).join(''),
     act:`<button class="reqbtn danger" title="${ttA('edrecruit.drop_this_new_pool')}"
       onclick="edRecDropAdd(${i})">🗑</button>`,

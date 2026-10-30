@@ -157,6 +157,14 @@ check("a literal { } in a message is left alone", i18n.msg("eng.test.z", "requir
 marks = i18n.annotate({"error": str(m), "rows": [{"why": str(m)}], "name": "not a message"})
 check("annotate() marks a message by its text, anywhere in the reply, and nothing else",
       marks == {str(m): ["eng.test.y", m.params]})
+from unittransfer import modfiles  # noqa: E402
+readiness = {"files": [{"label": k.label} for k in modfiles.KNOWN],
+             "modules": {"edit": {"partial": ["Faction names", "Unit info cards"]}}}
+readiness_marks = i18n.annotate(readiness)
+check("Home readiness labels and nested missing-file lists carry translation IDs",
+      all(k.label in readiness_marks for k in modfiles.KNOWN)
+      and readiness_marks["Faction names"][0] == "eng.modfiles.faction_names"
+      and readiness_marks["Unit info cards"][0] == "eng.modfiles.unit_info_cards")
 check("the pick: saved first", i18n.pick("en-XA", "de") == "en-XA")
 check("then Accept-Language, never a pseudo-locale, then English",
       i18n.pick("", "ar-XB,en-XA;q=0.9") == "en" and i18n.pick("", "") == "en")
@@ -172,14 +180,43 @@ const fs=require('fs'),vm=require('vm');
 const [,,src,lang,base,catJson]=process.argv;
 const en={'a.plain':'Save','a.p':'{n} tiles in <b>{region}</b> &amp; more','a.code':'<code>descr_strat.txt</code> read',
   'a.pl':{one:'{count} file',few:'{count} files (few)',many:'{count} files (many)',other:'{count} files'},
-  'a.lit':'requires factions { }','eng.t.m':'{n} units'};
+  'a.lit':'requires factions { }','eng.t.m':'{n} units',
+  'a.title':'disabled title="No UVs"'};
 global.window={I18N_BOOT:{lang,dir:lang==='ar-XB'?'rtl':'ltr',status:'',base,en,cat:JSON.parse(catJson),offered:[]}};
 global.document={documentElement:{},querySelectorAll:()=>[]};
 global.console={warn(){},log:console.log};
 global.esc=s=>String(s);
 vm.runInThisContext(fs.readFileSync(src,'utf8'));
 const r={};
+const real=JSON.parse(fs.readFileSync(require('path').join(require('path').dirname(src),'../i18n/en.json'),'utf8'));
+for(const id of ['settlemech.factor','settlemech.level','guided.data_gfp_data_i']){
+  I18N.en[id]=real[id]; I18N.cat[id]='translated-broken/{name}/{x}';
+}
+r.codeAttr=ttCode('guided.data_gfp_data_i',{label:'stat_cost',x:2});
+vm.runInThisContext(fs.readFileSync(require('path').join(require('path').dirname(src),'settlemech.js'),'utf8'));
+global.state={smx:{sel:'SPF',w:{},families:[{id:'SPF',label:'SPF',factors:[
+  {name:'SPF_tax',line:1,values:{pip_modifier:'1'}}]}],levels:[{ladder:'city',levels:[
+  {name:'large_city',line:2,values:{base:'1200'}}]}]}};
+global.q1=s=>String(s);
+const factorHtml=smxMainHtml(''); state.smx.sel='levels';
+const levelHtml=smxMainHtml('');
+r.editKeys=factorHtml.includes("smxSet('factor/SPF_tax/pip_modifier'")
+  &&levelHtml.includes("smxSet('level/large_city/base'");
+document.getElementById=()=>null;
+smxSet('level/large_city/base','2000',{closest:()=>null,classList:{toggle(){}}},1,'1200');
+r.editValue=state.smx.w['level/large_city/base'];
 r.plain=tt('a.plain'); r.p=tt('a.p',{n:5,region:'Anjou'}); r.code=tt('a.code'); r.lit=tt('a.lit');
+r.title=ttTitle('a.title');
+I18N.en['a.action']='onclick="pick(\'{x}\')" title="Open {x}"';
+I18N.cat['a.action']='onclick="broken()" title="Otwórz {x}"';
+r.action=ttTitle('a.action',{x:'entry'});
+for(const id of ['transfer.cache_unit_text','transfer.cache_building_text',
+  'transfer.deletes_data_text_export_s_txt','transfer.clear_the_text_cache_afterwards_a'])I18N.en[id]=real[id];
+I18N.cat['transfer.cache_building_text']='budynków';
+const transferSource=fs.readFileSync(require('path').join(require('path').dirname(src),'transfer.js'),'utf8');
+global.clearBinOn=()=>true;
+vm.runInThisContext(transferSource.slice(transferSource.indexOf('function cleanerBoxHtml('),transferSource.indexOf('async function setClearBin(')));
+r.cache=cleanerBoxHtml('building');
 r.missing=tt('a.nope'); r.attr=ttA('a.plain');
 r.pl=[1,2,5,22,1.5].map(n=>ttN('a.pl',n));
 const reply={error:'4 units',_i18n:{'4 units':['eng.t.m',{n:4}]}};
@@ -199,10 +236,15 @@ console.log(JSON.stringify(r));
           r.get("plain") == "Save" and r["p"] == "5 tiles in <b>Anjou</b> &amp; more" and r["lit"] == "requires factions { }")
     check("an ID with no string shows the ID (and warns once)", r["missing"] == "a.nope")
     check("a reply's English is left as it came in English", r["srv"] == "4 units" and r["lang"] == "en")
+    check("internal attributes keep their exact syntax despite a broken catalogue",
+          r.get("codeAttr") == 'data-gfp="stat_cost" data-i="2"')
+    check("translated action tooltips retain the original handler",
+          r.get("action") == 'onclick="pick(\'entry\')" title="Otwórz entry"')
     r = node("en-XA", "en")
     check("en-XA: accented, longer, bracketed", r.get("plain", "").startswith("[Šá") and "·" in r["plain"])
     check("en-XA: tags, entities and {placeholders} untouched",
           "<b>Anjou</b>" in r["p"] and "&amp;" in r["p"] and "<code>" in r["code"])
+    check("pseudo-localisation never changes internal edit keys", r.get("editKeys") and r.get("editValue") == "2000")
     check("en-XA: an engine message with an English template is shown pseudo-localised",
           r["srv"].startswith("[4 ûñîţš"))
     r = node("ar-XB", "en")
@@ -212,9 +254,18 @@ console.log(JSON.stringify(r));
                                                         "many": "{count} plików", "other": "{count} pliku"}})
     check("a real locale: its string, the English for what it lacks",
           r.get("plain") == "Zapisz" and r["code"] == "<code>descr_strat.txt</code> read")
+    check("translated settlement controls read and write the engine's actual keys",
+          r.get("editKeys") and r.get("editValue") == "2000")
+    check("translated cache labels cannot change the file being cleared",
+          'export_buildings.txt.strings.bin' in r.get("cache", "")
+          and 'export_budynków' not in r["cache"] and 'budynków-text cache' in r["cache"])
     check("Polish plurals by CLDR: 1 plik, 2 pliki, 5 plików, 22 pliki, 1,5 pliku",
           r["pl"] == ["1 plik", "2 pliki", "5 plików", "22 pliki", "1,5 pliku"])
     check("ttA escapes a translation's quotes", node("pl", "", {"a.plain": 'l\'"x"'})["attr"] == "l&#39;&quot;x&quot;")
+    check("a translated title keeps disabled and quotes cannot create attributes",
+          node("pl", "", {"a.title": 'title="Brak "UV""'})["title"] == 'disabled title="Brak &quot;UV&quot;"')
+    check("a broken title prefix falls back to valid source syntax",
+          node("pl", "", {"a.title": 'tytuł="Brak UV"'})["title"] == 'disabled title="No UVs"')
     check("an engine message with no translation stays English", r["srv"] == "4 units")
     r = node("pl", "", {"eng.t.m": "{n} jednostki"})
     check("and with one, it is swapped in", r.get("srv") == "4 jednostki")

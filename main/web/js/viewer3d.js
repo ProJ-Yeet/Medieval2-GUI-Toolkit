@@ -502,7 +502,7 @@ function v3Render(){
   const i = v3.info;
   const lods = i.lods.map(l =>
     `<option value="${l.index}" ${l.index===v3.lod?'selected':''} ${l.exists?'':'disabled'}>
-       ${tt('viewer3d.lod',{index:l.index,distance:l.distance?tt('viewer3d.from_m',{distance:l.distance}):'',exists:l.exists?v3FromGame(l.from_game):' - not in this mod'})}
+       ${tt('viewer3d.lod',{index:l.index,distance:l.distance?tt('viewer3d.from_m',{distance:l.distance}):'',exists:l.exists?v3FromGame(l.from_game):` - ${tt('viewer3d.not_in_this_mod')}`})}
      </option>`).join('');
   // one option per PAIR of files: an entry that lists 29 factions against the
   // same main and attachment textures has one skin, and saying so is more use
@@ -553,9 +553,9 @@ function v3Render(){
           <button id="v3spin" class="${v3.spin?'on':''}" onclick="v3Toggle('spin')">${tt('viewer3d.rotate')}</button>
           <button id="v3wire" class="${v3.wire?'on':''}" onclick="v3Toggle('wire')">${tt('viewer3d.wireframe')}</button>
           <button id="v3uv" class="${v3.uv?'on':''}" onclick="v3Toggle('uv')"
-            ${(v3.geo && !v3.geo.has_uvs) ? tt('viewer3d.disabled_title_this_model_carries_no') : tt('viewer3d.title_paint_the_uv_coordinate_instead')}>${tt('viewer3d.show_uvs')}</button>
+            ${(v3.geo && !v3.geo.has_uvs) ? ttTitle('viewer3d.disabled_title_this_model_carries_no') : ttTitle('viewer3d.title_paint_the_uv_coordinate_instead')}>${tt('viewer3d.show_uvs')}</button>
           <button id="v3uved" class="${v3.uved?'on':''}" onclick="v3Toggle('uved')"
-            ${(v3.geo && !v3.geo.has_uvs) ? tt('viewer3d.disabled_title_this_model_carries_no') : tt('viewer3d.title_open_the_uv_layout_beside')}>${tt('viewer3d.uv_layout')}</button>
+            ${(v3.geo && !v3.geo.has_uvs) ? ttTitle('viewer3d.disabled_title_this_model_carries_no') : ttTitle('viewer3d.title_open_the_uv_layout_beside')}>${tt('viewer3d.uv_layout')}</button>
           <button id="v3hd" class="${v3HdOn()?'on':''}" onclick="v3ToggleHd()"
             title="${ttA('viewer3d.draw_the_texture_at_the_size')}">${tt('viewer3d.hd_textures')}</button>
           <button onclick="v3Frame()">${tt('viewer3d.recentre')}</button>
@@ -879,9 +879,9 @@ async function v3Load(){
       : v3.loose ? `/api/model/geometry?mod=${enc(v3.mod)}&loose=${enc(v3.loose)}`
       : `/api/model/geometry?mod=${enc(v3.mod)}&entry=${enc(v3.entry)}&lod=${v3.lod}`);
     if(!r.ok){
-      // the decoder's own sentence is the useful part, so it is shown as-is
+      // Keep the decoder's sentence, translating any annotated server message.
       let msg = tt('viewer3d.the_server_answered',{status:r.status});
-      try{ msg = (await r.json()).error || msg; }catch(e){}
+      try{ msg = i18nFromServer(await r.json()).error || msg; }catch(e){}
       throw new Error(msg);
     }
     buf = await r.arrayBuffer();
@@ -1090,7 +1090,7 @@ function v3SkinOptions(){
   const i = v3.info;
   return i.skins.length
     ? i.skins.map((s, n) => `<option value="${n}" ${n===v3.skin?'selected':''}
-        ${s.exists?'':'disabled'}>${esc(v3SkinLabel(s))}${s.exists?v3FromGame(s.from_game):' - not in this mod'}</option>`).join('')
+        ${s.exists?'':'disabled'}>${esc(v3SkinLabel(s))}${s.exists?v3FromGame(s.from_game):` - ${tt('viewer3d.not_in_this_mod')}`}</option>`).join('')
     : `<option>${tt(v3.loose ? 'viewer3d.no_texture_suggested' : 'viewer3d.no_skins_on_this_entry')}</option>`;
 }
 

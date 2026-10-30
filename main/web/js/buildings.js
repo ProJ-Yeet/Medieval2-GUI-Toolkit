@@ -603,7 +603,7 @@ function bldCvLabel(el){
   const b=state.bld;
   if(!b||!b.work||!el||!el.closest)return '';
   const lv=b.work.levels[b.lvl]; if(!lv)return '';
-  const key=tt('buildings.level_key',{name:lv.name});
+  const key=ttCode('buildings.level_key',{name:lv.name});
   const cap=el.closest('[data-cap]');
   if(cap){
     const row=bldCapList()[+cap.dataset.cap];
@@ -632,7 +632,7 @@ function bldCvLabel(el){
 function bldCapPosLabel(lv,row){
   if(!row||row.del)return '';
   const n=(row.faction?lv.fcaps:lv.caps).filter(c=>!c.del).indexOf(row)+1;
-  return n?tt('buildings.level_3',{name:lv.name,x:row.faction?'fcap':'cap',x2:n}):'';
+  return n?ttCode('buildings.level_3',{name:lv.name,x:row.faction?'fcap':'cap',x2:n}):'';
 }
 function bldCvFind(label){
   const b=state.bld;
@@ -649,7 +649,7 @@ function bldCvFind(label){
   // the same line under its file-line name: the position above already says
   // it, and survives a move where this does not
   if(/^capline#/.test(label))return [];
-  const pre=tt('buildings.level_key',{name:lv.name});
+  const pre=ttCode('buildings.level_key',{name:lv.name});
   if(label===pre+':header')
     return [...document.querySelectorAll('#bldBody [data-settlement],#bldBody .clausebar')];
   if(label===pre+':upgrades'){const u=document.getElementById('bldUpg');return u?[u]:[];}
@@ -1592,7 +1592,7 @@ function bldCapRow(c){
     <select class="kw" data-kw>${bldCapOptions(c.keyword)}</select>
     ${qm(tt('buildings.write_the_value_as_bonus_n'),'bonus')}
     <label class="chk"><input type="checkbox" data-bonus ${c.bonus?'checked':''}> ${tt('buildings.bonus')}</label>
-    ${numBox(tt('buildings.class_val_data_val'),c.value,'1')}
+    ${numBox(ttCode('buildings.class_val_data_val'),c.value,'1')}
     <div class="clausebar" style="flex:1;min-width:110px">
       <div class="sum">${bldClauseSummary(c.conds)}</div>
       ${bldGateChip(c.conds)}

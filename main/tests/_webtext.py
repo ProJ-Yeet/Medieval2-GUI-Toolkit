@@ -10,6 +10,7 @@ back where it stood:
 * ``tt('id',{a:expr})`` elsewhere         ->  ```English ${expr}```
 * ``ttN('id', n, {...})``                 ->  the form for ``n``, chosen when it runs
 * ``tt(on ? 'a' : 'b', {...})``           ->  ``(on ? English a : English b)`` (88c)
+* ``ttCode`` and ``ttTitle`` as ``tt``: both are English when they run anyway
 
 and index.html without its ``data-i18n`` attributes. So a check written
 against the source before 88 reads the same after it.
@@ -24,7 +25,7 @@ from typing import Dict, List, Tuple
 ROOT = Path(__file__).resolve().parents[1]
 EN = ROOT / "web" / "i18n" / "en.json"
 _CAT: Dict[str, object] = {}
-_CALL = re.compile(r"(?<![\w$.])(tt|ttA|ttN)\('([a-z0-9_.]+)'")
+_CALL = re.compile(r"(?<![\w$.])(tt|ttA|ttN|ttCode|ttTitle)\('([a-z0-9_.]+)'")
 
 
 def cat() -> Dict[str, object]:
@@ -113,7 +114,7 @@ def _fill_tpl(text: str, params: Dict[str, str]) -> str:
                   if m.group(1) in params else m.group(0), text)
 
 
-_ANY_CALL = re.compile(r"(?<![\w$.])(tt|ttA|ttN)\(")
+_ANY_CALL = re.compile(r"(?<![\w$.])(tt|ttA|ttN|ttCode|ttTitle)\(")
 _ID = re.compile(r"'([a-z][a-z0-9_]*(?:\.[a-z0-9_]+)+)'")
 
 

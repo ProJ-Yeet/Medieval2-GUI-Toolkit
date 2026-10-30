@@ -595,7 +595,7 @@ const edSrcUrl=s=>edSrcAbs(s)?'/preview_image?path='+enc(s)
 function edIconSlot(kind){
   const e=state.ed, card=kind==='card';
   const key=card?'cardSrc':'infoSrc', src=e[key]||'';
-  const what=card?tt('editor.unit_card'):'info card';
+  const what=card?tt('editor.unit_card'):tt('editor.info_card');
   const many=((e.d.icon_variants||{})[kind]||[]).length;
   const pic=!!src||many<2;
   return `<div class="icoslot">
@@ -608,7 +608,7 @@ function edIconSlot(kind){
     </div>`:''}
     <div class="k">${card?tt('editor.unit_card_2'):tt('editor.info_card')}</div>
     <div class="fn">${src?esc(src.split(/[\\/]/).pop())
-      :(pic?'current':`${many} different pictures - below`)}</div>
+      :(pic?tt('editor.current_picture'):ttN('editor.icon_variants_below',many))}</div>
     <div class="sprrow">
       ${pic?'':`<button onclick="edPickIcon('${key}')"
         title="${ttA('editor.import_one_picture_and_copy_it')}">${tt('editor.replace_for_every_faction')}</button>`}
@@ -740,7 +740,7 @@ function edPickIcon(key){
 function edIcoRender(key){
   const e=state.ed,kind=edIcoKind(key);
   const rows=((e.d.icon_variants||{})[kind])||[];
-  const what=kind==='card'?tt('editor.unit_card'):'info card';
+  const what=kind==='card'?tt('editor.unit_card'):tt('editor.info_card');
   const fname=kind==='card'?tt('editor.tga',{dictionary:e.d.dictionary}):`${e.d.dictionary}_info.tga`;
   const folders=edIcoFolders(kind),merc=edIcoMerc(kind),sel=edIcoSel(key),has=edIcoHas(kind);
   const n=folders.filter(f=>sel.has(f)).length;
@@ -841,7 +841,7 @@ function edTakeIcon(key,i){
   edIcoStaged(key,row.rel.split('/').pop());
 }
 async function edBrowseIcon(key){
-  const what=edIcoKind(key)==='card'?tt('editor.unit_card'):'info card';
+  const what=edIcoKind(key)==='card'?tt('editor.unit_card'):tt('editor.info_card');
   const r=await api.post('/api/browse_file',
     {title:tt('editor.select_the_image_to_use_as',{what}),
      filter:tt('editor.images_tga_dds_png_jpg_jpeg')});

@@ -1968,7 +1968,7 @@ function cmapCompose(){
   // what the mask pass did is in the key: punching a colour through, lifting
   // the rivers out or drawing the heights as transparency all change the
   // picture, and a composite that did not notice would show the old one
-  const key = tt('campmap.comp_key',{layers:shown.map(code => `${code}:${c.layers[code].opacity}`
+  const key = ttCode('campmap.comp_key',{layers:shown.map(code => `${code}:${c.layers[code].opacity}`
     + `:${cmapModeKey(c, code)}`).join('|'),terrain:cmapTerrainOn(c) ? 1 : 0,fe:c.layers.fe && c.layers.fe.on ? 1 : 0});
   if(key === c.compKey && c.comp) return;
   if(!c.comp){
@@ -3048,7 +3048,7 @@ function cmapHeightRamp(src){
 function cmapModeKey(c, code){
   const L = c.layers[code];
   const bits = [...L.hide].sort().join('.');
-  const riv = (code === 'features' && c.rivers) ? tt('campmap.riv',{riverRgb:c.riverRgb.join(',')}) : '';
+  const riv = (code === 'features' && c.rivers) ? ttCode('campmap.riv',{riverRgb:c.riverRgb.join(',')}) : '';
   const alp = (code === 'heights' && c.heightAlpha) ? 'alpha' : '';
   // 23a: with the terrain on, the ground types layer draws nothing INTO the
   // composite - the composite would be one flat colour a tile over a picture

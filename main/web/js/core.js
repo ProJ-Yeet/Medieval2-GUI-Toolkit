@@ -1975,7 +1975,7 @@ const cssq=s=>s.replace(/"/g,'\\"');
 function openDrawer(type){
   const u=state.data.units.find(x=>x.type===type); if(!u)return;
   const d=document.getElementById('drawer');
-  const eras=['0','1','2'].filter(e=>(u.eras[e]||[]).length).map(e=>({0:tt('core.early'),1:tt('core.high'),2:tt('core.late')}[e])).join(', ')||'none';
+  const eras=['0','1','2'].filter(e=>(u.eras[e]||[]).length).map(e=>({0:tt('core.early'),1:tt('core.high'),2:tt('core.late')}[e])).join(', ')||tt('common.none');
   d.innerHTML=`<button class="close" onclick="drawer.classList.remove('open')">×</button>
     <div class="dh"><img onerror="iconRetry(this)" src="${iconUrl(state.src,u.type)}"><div><h2>${esc(u.name)}</h2><div class="sub">${esc(u.type)}</div></div></div>
     ${u.has_info?`<div class="infowrap"><div class="k">${tt('core.info_card')}</div><img onerror="this.parentElement.style.display='none'" src="${iconUrl(state.src,u.type,'info')}"></div>`:''}
@@ -1985,7 +1985,7 @@ function openDrawer(type){
       ${row(tt('core.category_class'),esc(u.kind||u.category||'none')+' / '+esc(u.class||'none'))}
       ${row(tt('core.eras'),eras)}
       ${row(tt('core.battle_models'),u.models.map(m=>`<span class="chip">${esc(m)}</span>`).join('')||'none')}
-      ${row(tt('core.officers_mount'),(u.officers.map(o=>`<span class="chip">${esc(o)}</span>`).join('')||'none')+(u.mount?`  ${tt('core.mount')} <span class="chip">${esc(u.mount)}</span>`:''))}
+      ${row(tt('core.officers_mount'),(u.officers.map(o=>`<span class="chip">${esc(o)}</span>`).join('')||tt('common.none'))+(u.mount?`  ${tt('core.mount')} <span class="chip">${esc(u.mount)}</span>`:''))}
       ${(u.engine||u.mounted_engine)?row(tt('core.siege_engine'),`<span class="chip">${esc(u.engine||u.mounted_engine)}</span>${u.mounted_engine&&!u.engine?' <span class="count">(mounted)</span>':''}${(u.engine_groups||[]).length?`<span class="count"> ${tt('core.groups',{engine_groups:(u.engine_groups||[]).map(esc).join(', ')})}</span>`:''}`):''}
       <button class="primary" style="width:100%;margin-top:6px" onclick="drawer.classList.remove('open');openComposer(['${q1(esc(u.type))}'])">${tt('core.transfer_to',{dst:esc(state.dst)})}</button>
     </div>`;

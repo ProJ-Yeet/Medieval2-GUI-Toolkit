@@ -279,5 +279,5 @@ function clnCount(){
   const c = state.cmap;
   if(!c || !c.labels || !c.lab) return '';
   const n = c.lab.boxes.length, t = c.lab.total;
-  return n === t ? `${t} named` : tt('maplabels.of_named',{x:n,x2:t});
+  return tt('maplabels.of_named',{x:n,x2:t});
 }

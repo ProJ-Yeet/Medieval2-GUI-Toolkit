@@ -99,7 +99,7 @@ function chxToggle(list, v){
   renderCharacters();
 }
 function chxBox(r, width, list){
-  return `<input style="width:${width}px" value="${esc(chxVal(r.line, r.value))}" ${list ? tt('characters.list',{list}) : ''}
+  return `<input style="width:${width}px" value="${esc(chxVal(r.line, r.value))}" ${list ? ttCode('characters.list',{list}) : ''}
     onchange="chxSet(${r.line}, this.value, '${q1(esc(r.value))}')">`;
 }
 

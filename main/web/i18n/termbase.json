@@ -2254,10 +2254,10 @@
     },
     "pl": {
      "t": "cecha",
-     "stem": "cech",
+     "stem": "cech|cesz",
      "src": "game",
      "conf": "medium",
-     "note": "locative cesze not covered"
+     "note": "Includes the dative and locative cesze."
     },
     "cs": {
      "t": "vlastnost",

@@ -823,6 +823,14 @@ four plural forms each, and the checker holds every `ttN` string to them.
 Done when, for each: the checker passes, the report is empty, and Home,
 Settings, Transfer and the map are walked in it at desktop width.
 
+*88i repair pass completed 2026-10-30; still unoffered.* All 9,739 current IDs
+and plural forms were directly reviewed; 4,875 IDs repaired/added versus the
+parked draft, including controls that translations could break. Coverage,
+glossary, integrity and plural runtime checks pass. Native-speaker sign-off is
+not claimed. Raw diagnostic reports remain English. The user's instruction not
+to ship Polish remains in force; no promotion or release. Current evidence and
+limits: `dev/i18n/pl-review.md`.
+
 *88i pulled 2026-10-30, not shipped* (the user: "dont ship polish for now"). The
 draft below was machine translation an audit found unfit (wrong meanings,
 dropped sentences, lost symbols, spaces inside tags); it is back in

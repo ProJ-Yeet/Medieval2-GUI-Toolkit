@@ -246,7 +246,7 @@ function cmpDatalists(){
 }
 function cmpWidget(w,r){
   const val=cmpPart(w,r.label,r.pi);
-  const p=r.part,at=tt('compare.data_cmp_data_cl_data_ci',{x:w,label:esc(r.label),pi:r.pi});
+  const p=r.part,at=ttCode('compare.data_cmp_data_cl_data_ci',{x:w,label:esc(r.label),pi:r.pi});
   if(p&&p.type==='sel'){
     const list=cmpVocabList(p.v);
     if(list.length)return `<select ${at}>${p.optional?'<option value=""></option>':''}${
