@@ -47,6 +47,7 @@ from .mod import Mod
 # with the transfer engine so both put mercenary icons in the same place
 from .transfer import MERC_CARD_DIR, MERC_INFO_DIR
 from . import i18n as _i18n
+from . import modeltext
 
 # ---------------------------------------------------------------------------
 # request objects (built from the JSON body by ``from_dict``)
@@ -1646,6 +1647,8 @@ def apply_edit(plan: EditPlan) -> Dict:
         return target
 
     def write_text(rel: str, text: str, encoding: str) -> None:
+        # 92a: a mod on M2EX's text models gets descr_model_battle.txt instead
+        rel, text, encoding = modeltext.redirect(mod, rel, text, encoding)
         target = backup_and(rel)
         target.parent.mkdir(parents=True, exist_ok=True)
         target.write_text(text, encoding=encoding)

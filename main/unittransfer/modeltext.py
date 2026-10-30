@@ -158,7 +158,8 @@ def render(e: mdb.ModelEntry) -> str:
         out.append(f"scale\t\t\t\t{_num(e.scale)}")
     for i, a in enumerate(e.animations):
         key = "skeleton" if i == 0 else f"skeleton_{a.mount_type or 'horse'}"
-        out.append(f"{key}\t\t\t{a.primary_skeleton}, {a.secondary_skeleton}".rstrip())
+        # "fs_horse, " with its space, as M2EX writes a skeleton with no second
+        out.append(f"{key}\t\t\t{a.primary_skeleton}, {a.secondary_skeleton}")
         out += [f"skeleton_attachment_primary\t{w}" for w in a.pri_weapons]
         out += [f"skeleton_attachment_secondary\t{w}" for w in a.sec_weapons]
     out += [f"mesh\t\t\t\t{m}, {_dist_to_text(d)}" for m, d in e.lods]
@@ -231,6 +232,9 @@ def read_db(mod, mounts: Optional[Callable[[], Dict[str, str]]] = None) -> mdb.M
     firsts = (mounts or (lambda: first_mounts(mod)))()
     entries = []
     for e in parse(text):
+        # the text's `blank` is the archive's sentinel, not a model
+        if e.name == "blank":
+            continue
         if e.animations and not e.animations[0].mount_type:
             only = len(e.animations) == 1
             e.animations[0].mount_type = firsts.get(e.name, "none") if only else "none"
@@ -239,7 +243,76 @@ def read_db(mod, mounts: Optional[Callable[[], Dict[str, str]]] = None) -> mdb.M
                               e.torch_index, e.torch)
         conv.raw = entry_raw(conv)
         entries.append(conv)
-    return mdb.ModelDb(header_ints=[], blank_raw="", entries=entries)
+    # a real archive's header and its `blank` sentinel, so an editor that
+    # writes the list back out as a .modeldb (to_text) writes one the reader
+    # takes (without the sentinel it reads the first entry as padded), and
+    # redirect() then turns it into text
+    return mdb.ModelDb(header_ints=[3, 0, 0, 0, 0, len(entries) + 1, 0, 0], blank_raw=BLANK_RAW,
+                       entries=entries, trailing="\n")
+
+
+#: the vanilla `blank` sentinel as a .modeldb writes it
+BLANK_RAW = "5 blank " + " ".join(["0"] * 39) + "\n"
+
+
+MODELDB_REL = "unit_models/battle_models.modeldb"
+
+
+def redirect(mod, rel: str, text: str, encoding: str):
+    """Where an editor's write of the ``.modeldb`` really belongs.
+
+    Every editor that changes battle models builds a whole ``.modeldb`` and
+    writes it. On a mod that reads ``descr_model_battle.txt`` (M2EX's text
+    models) the game never opens that file, so the write is turned here into
+    the text file: ``(rel, text, encoding)`` to write instead. An entry the
+    edit left as it was keeps its own lines byte for byte, comments, case and
+    spacing included; a changed or new one is written as M2EX writes them;
+    one the edit dropped is gone. On any other mod, or another file, the
+    arguments come back unchanged."""
+    if rel.replace("\\", "/").lower() != MODELDB_REL or not getattr(mod, "text_models", False):
+        return rel, text, encoding
+    # in \n: every one of those editors writes in text mode, which on Windows
+    # puts back the \r the file is written with (\r\n in would be \r\r\n out)
+    from . import keyblock as kb
+    return TEXT_REL, kb.to_newline(text_from_modeldb(mod, text), "\n"), ENCODING
+
+
+def text_from_modeldb(mod, db_text: str) -> str:
+    """A whole ``.modeldb`` text as the mod's ``descr_model_battle.txt``,
+    keeping every unchanged entry's own text (see :func:`redirect`)."""
+    from . import keyblock as kb
+    db = mdb.parse_text(db_text)
+    old_text = kb.read_text(text_path(mod), ENCODING)
+    nl = kb.newline_of(old_text)
+    # each entry's own stretch of the file, from its `type` line to the next
+    # one's: its comments and the blank lines after it ride with it
+    starts = [m.start() for m in re.finditer(r"^[ \t]*type[ \t]", old_text, re.M | re.I)]
+    head = old_text[:starts[0]] if starts else old_text
+    spans = [old_text[a:b] for a, b in zip(starts, starts[1:] + [len(old_text)])]
+    # by name, in file order: a name the file lists twice is matched in turn
+    old: Dict[str, List[tuple]] = {}
+    for e, span in zip(parse(old_text), spans):
+        old.setdefault(e.name, []).append((e, span))
+    out = [head]
+    # the text's `blank`, which the list carries as its sentinel, stays first
+    if old.get("blank"):
+        out.append(old["blank"].pop(0)[1])
+    for e in db.entries:
+        t = from_modeldb(e)
+        mine = old.get(e.name.lower()) or []
+        o, span = mine.pop(0) if mine else (None, "")
+        if o is not None and render(o) == render(t):
+            out.append(span)
+            continue
+        block = render(t)
+        if o is not None:
+            # the name as the file spells it (Mount_Eastern_Armoured_Horse2)
+            spelt = span.split(None, 2)[1]
+            block = re.sub(r"^(type\s+)\S+", lambda x: x.group(1) + spelt, block)
+        if out[-1] and not out[-1].endswith(nl + nl):
+            out[-1] = out[-1].rstrip("\r\n") + nl + nl
+        out.append(kb.to_newline(block, nl) + nl)
+    return "".join(out)
 
 
 def append(text: str, entries: List[mdb.ModelEntry]) -> str:

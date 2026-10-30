@@ -70,6 +70,7 @@ from . import mounts as mounts_mod
 from .logutil import block, counted, file_op, fingerprint, log
 from .mod import Mod
 from . import i18n as _i18n
+from . import modeltext
 
 # Slot kinds an entry can be referenced from. "soldier" is called out separately
 # because it is the one the merge suggestions are about; OTHER_KINDS is "doing a
@@ -1674,6 +1675,8 @@ def apply_cleanup(plan: CleanupPlan, progress: Progress = None) -> Dict:
         return t
 
     def write_text(rel: str, text: str, encoding: str) -> None:
+        # 92a: a mod on M2EX's text models gets descr_model_battle.txt instead
+        rel, text, encoding = modeltext.redirect(mod, rel, text, encoding)
         t = backup_and(rel)
         t.parent.mkdir(parents=True, exist_ok=True)
         t.write_text(text, encoding=encoding)
@@ -2274,7 +2277,8 @@ def _restore_entries(mod: Mod, picks: Sequence[dict], runs: Dict[str, dict],
         text = db.to_text()
     finally:
         db.entries = original
-    rel = "unit_models/battle_models.modeldb"
+    # 92a: a mod on M2EX's text models gets descr_model_battle.txt instead
+    rel, text, _enc = modeltext.redirect(mod, "unit_models/battle_models.modeldb", text, modeldb.ENCODING)
     target = mod.data / rel
     bpath = backup_root / "data" / rel
     bpath.parent.mkdir(parents=True, exist_ok=True)
@@ -2282,6 +2286,6 @@ def _restore_entries(mod: Mod, picks: Sequence[dict], runs: Dict[str, dict],
         shutil.copy2(target, bpath)
         manifest["backed_up"].append(rel)
         file_op("BACKUP", target, f"-> {bpath}")
-    target.write_text(text, encoding=modeldb.ENCODING)
+    target.write_text(text, encoding=_enc)
     file_op("WRITE", target, f"{len(found)} entr(y/ies) put back")
     return added, missed

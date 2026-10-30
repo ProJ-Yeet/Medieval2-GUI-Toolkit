@@ -51,6 +51,7 @@ from . import bmdb, config, modeldb
 from .logutil import file_op, log
 from .mod import Mod
 from . import i18n as _i18n
+from . import modeltext
 
 #: Where the file sits under a mod's ``data``. Same constant the edit path uses;
 #: it is spelled out here so this module can back up and write without going
@@ -427,15 +428,17 @@ def apply(p: DupePlan) -> Dict:
     backup_root = config.backup_root_for(tid)
     manifest: Dict[str, List[str]] = {"backed_up": [], "created": []}
 
-    target = path_for(mod)
-    bpath = backup_root / "data" / REL
+    # 92a: a mod on M2EX's text models gets descr_model_battle.txt instead
+    rel, text, enc = modeltext.redirect(mod, REL, p.text, modeldb.ENCODING)
+    target = mod.data / rel
+    bpath = backup_root / "data" / rel
     bpath.parent.mkdir(parents=True, exist_ok=True)
     shutil.copy2(target, bpath)
-    manifest["backed_up"].append(REL)
+    manifest["backed_up"].append(rel)
     file_op("BACKUP", target, f"-> {bpath}")
 
-    target.write_text(p.text, encoding=modeldb.ENCODING)
-    file_op("WRITE", target, f"{modeldb.ENCODING}, {len(p.text)} chars")
+    target.write_text(text, encoding=enc)
+    file_op("WRITE", target, f"{enc}, {len(text)} chars")
 
     rec = {
         "id": tid,

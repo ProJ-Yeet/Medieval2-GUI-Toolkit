@@ -372,6 +372,25 @@ def clone_texture_lines(text: str, src: str, new: str) -> Tuple[str, int]:
     return pat.sub(fix, text), done
 
 
+def clone_text_models(text: str, src: str, new: str) -> Tuple[str, int]:
+    """``descr_model_battle.txt``, M2EX's text models (92a): the donor's
+    ``texture`` and ``texture_attachments`` lines in every model, each
+    followed by the same line for the clone - the clone_modeldb of a mod that
+    reads its models as text."""
+    done = 0
+    for kw in ("texture", "texture_attachments"):
+        pat = re.compile(r"^([ \t]*" + kw + r"[ \t]+)" + _tok(src) + r"([ \t]*,[^\n]*)$", re.M | re.I)
+        if re.search(r"^[ \t]*" + kw + r"[ \t]+" + _tok(new) + r"[ \t]*,", text, re.M | re.I):
+            continue                       # already cloned once; do not double it
+
+        def fix(m):
+            nonlocal done
+            done += 1
+            return m.group(0) + "\n" + m.group(1) + new + m.group(2)
+        text = pat.sub(fix, text)
+    return text, done
+
+
 def clone_names(text: str, src: str, new: str) -> Tuple[str, int]:
     """``descr_names.txt``: the donor's ``faction: x`` section, copied whole.
 
@@ -552,6 +571,16 @@ class Job:
     required: bool = False
     encoding: str = ENCODING
     note: str = ""
+
+
+def jobs_for(mod) -> Tuple[Job, ...]:
+    """:data:`JOBS`, with the skins written into ``descr_model_battle.txt``
+    on a mod that reads its battle models from it (92a)."""
+    if not getattr(mod, "text_models", False):
+        return JOBS
+    from . import modeltext
+    return tuple(Job(modeltext.TEXT_REL, j.label, "text_models", note=j.note, encoding=modeltext.ENCODING)
+                 if j.how == "modeldb" else j for j in JOBS)
 
 
 JOBS: Tuple[Job, ...] = (
@@ -1059,6 +1088,8 @@ def clone_file(data: Path, job: Job, src: str, new: str, label: str = "",
             after, n = clone_braced(before, src, new)
         elif job.how == "modeldb":
             after, n = clone_modeldb(before, src, new)
+        elif job.how == "text_models":
+            after, n = clone_text_models(before, src, new)
         elif job.how == "banners":
             after, n = clone_banners(before, src, new, data, art)
         elif job.how == "wincond":
@@ -1155,7 +1186,7 @@ def plan(mod, body: dict, overlay: Optional[Dict[str, str]] = None) -> ClonePlan
     text_opts = {"rename": bool(body.get("rename")),
                  "titles": body.get("titles") if isinstance(body.get("titles"), dict) else None,
                  "art": want_art, "logos": logos}
-    for job in JOBS + campaign_jobs(mod):
+    for job in jobs_for(mod) + campaign_jobs(mod):
         edit = clone_file(data, job, src, new, label, overlay, text_opts)
         p.edits.append(edit)
         if edit.skipped and job.required and not edit.count:

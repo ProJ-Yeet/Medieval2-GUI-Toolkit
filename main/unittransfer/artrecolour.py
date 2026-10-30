@@ -35,6 +35,7 @@ from typing import Dict, List, Optional, Tuple
 
 from . import config, modeldb
 from . import i18n as _i18n
+from . import modeltext
 from .logutil import file_op, log
 
 RE_RGB = re.compile(r"red\s+(\d+)\s*,\s*green\s+(\d+)\s*,\s*blue\s+(\d+)", re.I)
@@ -633,8 +634,10 @@ def apply(mod, body: dict) -> Dict:
         finally:
             for e, raw in zip(db.entries, olds):
                 e.raw = raw
-        target_db = keep("unit_models/battle_models.modeldb")
-        target_db.write_text(text, encoding=modeldb.ENCODING)   # as apply_transfer writes it
+        # 92a: a mod on M2EX's text models gets descr_model_battle.txt instead
+        db_rel, text, db_enc = modeltext.redirect(mod, "unit_models/battle_models.modeldb", text, modeldb.ENCODING)
+        target_db = keep(db_rel)
+        target_db.write_text(text, encoding=db_enc)   # as apply_transfer writes it
         file_op("WRITE", target_db, f"{len(repoint)} texture(s) of {slot} pointed at its own copies")
     rec = {"id": tid, "when": time.strftime("%Y-%m-%d %H:%M:%S"), "mode": "factions",
            "action": "recolour", "source": mod.name, "source_root": str(mod.root),

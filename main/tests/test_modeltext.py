@@ -198,6 +198,73 @@ else:
     check("  its distances squared back",
           [d for _, d in got.lods] == [int(round(d)) ** 2 for _, d in was.lods])
 
+print("\n5) every editor's .modeldb write lands in the text file (redirect)")
+# the shapes two EX mods' own files have: a `blank` first, comments inside and
+# between entries, a name in mixed case, a name twice, mounted skeletons
+TEXT5 = "\r\n".join([
+    "; descr_model_battle.txt - generated from battle_models.modelDB", "",
+    "type\t\t\t\tblank", "scale\t\t\t\t0", "skeleton\t\t\t, ", "mesh\t\t\t\t, 0",
+    "texture\t\t\t\tall, , ", "torch\t\t\t\t0, 0, 0, 0, 0, 0, 0", "",
+    "type\t\t\t\tMount_Pony", "scale\t\t\t\t1.12", "skeleton\t\t\tfs_horse, ",
+    "mesh\t\t\t\tunit_models/m/pony_lod0.mesh, 11",
+    "texture\t\t\t\tengland, m/t.texture, m/n.texture, unit_sprites/p.spr", "",
+    "; a comment between entries", "type\t\t\t\tspearmen",
+    "skeleton\t\t\tMTW2_Spear, MTW2_Sword", "skeleton_attachment_primary\tMTW2_Spear_Primary",
+    "skeleton_horse\t\t\tMTW2_HR_Spear, ", "; a comment inside one",
+    "mesh\t\t\t\tunit_models/u/spear_lod0.mesh, 80",
+    "texture\t\t\t\tengland, u/s.texture, u/sn.texture, unit_sprites/s.spr",
+    "texture_attachments\t\tengland, u/a.texture, u/an.texture",
+    "torch\t\t\t\t2, 0, 0.1, 0, 0, 0, 0", "",
+    "type\t\t\t\tspearmen", "skeleton\t\t\tMTW2_Spear, ", "mesh\t\t\t\tu/twice.mesh, 30",
+    "texture\t\t\t\tengland, u/s.texture, u/sn.texture", ""])
+
+
+class TextMod:
+    text_models = True
+
+    def __init__(self, data):
+        self.data = data
+
+
+d5 = tmp / "five"
+d5.mkdir(parents=True, exist_ok=True)
+kb.write_text(d5 / mt.TEXT_REL, TEXT5, mt.ENCODING)
+tm = TextMod(d5)
+db5 = mt.read_db(tm, mounts=lambda: {})
+check("the text's blank is the archive's sentinel, not a model (3 models)",
+      [e.name for e in db5.entries] == ["mount_pony", "spearmen", "spearmen"])
+check("read as a list, it writes back as a .modeldb the reader takes",
+      len(mdb.parse_text(db5.to_text()).entries) == 3)
+check("a write that changes nothing gives the file back byte for byte",
+      mt.text_from_modeldb(tm, db5.to_text()) == TEXT5)
+e = db5.entries[1]
+e.main_textures.append(mdb.Texture("wales", "u/w.texture", "u/wn.texture", "unit_sprites/w.spr"))
+e.raw = mt.entry_raw(e)
+db5.entries.pop(0)
+new5 = mt.text_from_modeldb(tm, db5.to_text())
+check("a changed entry gets the new line, and its comment-free form",
+      "texture\t\t\t\twales, u/w.texture, u/wn.texture, unit_sprites/w.spr" in new5)
+check("an entry dropped by the edit is gone, the untouched ones byte for byte",
+      "Mount_Pony" not in new5 and "type\t\t\t\tspearmen\r\nskeleton\t\t\tMTW2_Spear, \r\nmesh\t\t\t\tu/twice.mesh, 30" in new5
+      and new5.startswith("; descr_model_battle.txt") and "texture\t\t\t\tall, , " in new5)
+check("the file keeps its CRLF", new5.count("\r\n") == new5.count("\n"))
+db5 = mt.read_db(tm, mounts=lambda: {})
+rel5, t5, enc5 = mt.redirect(tm, "unit_models/battle_models.modeldb", db5.to_text(), "latin-1")
+check("redirect sends the .modeldb write to descr_model_battle.txt", rel5 == mt.TEXT_REL)
+(d5 / "written.txt").write_text(t5, encoding=enc5)   # text mode, as the editors write
+check("written in text mode as the editors do, the file is byte for byte as it was",
+      (d5 / "written.txt").read_bytes() == TEXT5.replace("\r\n", __import__("os").linesep).encode("latin-1"))
+plain = TextMod(d5)
+plain.text_models = False
+check("and leaves a .modeldb mod, and any other file, alone",
+      mt.redirect(plain, "unit_models/battle_models.modeldb", "x", "latin-1")[0] == "unit_models/battle_models.modeldb"
+      and mt.redirect(tm, "export_descr_unit.txt", "x", "latin-1")[0] == "export_descr_unit.txt")
+from unittransfer import factionclone as _fc  # noqa: E402
+cl, n5 = _fc.clone_text_models(kb.to_newline(TEXT5, "\n"), "england", "wales")
+check(f"a faction clone copies both kinds of texture line ({n5})",
+      n5 == 4 and "texture_attachments\t\twales, u/a.texture, u/an.texture" in cl
+      and _fc.clone_text_models(cl, "england", "wales")[1] == 0)
+
 shutil.rmtree(tmp, ignore_errors=True)
 print(f"\n{sum(ok)}/{len(ok)} checks passed")
 print("ALL PASSED" if all(ok) else "SOME FAILED")

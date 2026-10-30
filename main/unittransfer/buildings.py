@@ -70,6 +70,7 @@ from . import (config, edbvocab, edu as edu_mod, eop, localization,
                minorfiles, modeldb as modeldb_mod, stringsbin)
 from .logutil import counted, file_op, fingerprint, log
 from . import i18n as _i18n
+from . import modeltext
 
 #: EDB is plain 8-bit text, like the EDU - latin-1 round-trips every byte.
 ENCODING = "latin-1"
@@ -2659,6 +2660,8 @@ def apply_edit(plan: BuildingPlan) -> Dict:
     log.info("  backups -> %s", backup_root)
 
     def write_text(rel: str, text: str, encoding: str) -> None:
+        # 92a: a mod on M2EX's text models gets descr_model_battle.txt instead
+        rel, text, encoding = modeltext.redirect(mod, rel, text, encoding)
         target = mod.data / rel
         if target.exists():
             bpath = backup_root / "data" / rel

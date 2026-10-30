@@ -52,6 +52,7 @@ from typing import Dict, List, Optional, Tuple
 
 from . import animedit, animloose, animpack, casanim, modeldb, skelslots
 from . import i18n as _i18n
+from . import modeltext
 
 DEFAULT_SLOT = animpack.SKELETON_SLOTS - 1
 FRAME_TIME = animloose.FRAME_TIME
@@ -659,7 +660,9 @@ def apply_skeleton(sp: SkeletonPort, mod, source_mod) -> dict:
                 old, loose.blocks, f"brought from {source_mod.name} by Unit Transfer ({tid})").encode("latin-1"))
     if sp.modeldb_text:
         rel = Path(mod.modeldb_path).relative_to(data).as_posix()
-        keep(rel).write_text(sp.modeldb_text, encoding=modeldb.ENCODING)
+        # 92a: a mod on M2EX's text models gets descr_model_battle.txt instead
+        rel, db_text, db_enc = modeltext.redirect(mod, rel, sp.modeldb_text, modeldb.ENCODING)
+        keep(rel).write_text(db_text, encoding=db_enc)
         file_op("WRITE", data / rel, f"{sp.entry}: {sp.entry_skeleton} -> {sp.dest_name}")
     summary = (f"skeleton {sp.port.skeletons[0].name} from {source_mod.name} into {mod.name}"
                + (f" as {sp.dest_name}" if sp.dest_name != sp.port.skeletons[0].name else "")
