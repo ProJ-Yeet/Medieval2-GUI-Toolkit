@@ -343,23 +343,26 @@ def text_from_db(db: mdb.ModelDb) -> str:
     return TEXT_HEAD + "\r\n\r\n".join(blocks) + "\r\n"
 
 
-def caps_with_text(text: str) -> str:
-    """``descr_caps_ex.txt`` saying ``model_battle_source text``: every live
-    line of it set to ``text``, or the line added at the end when there is
-    none. Comments and every other line as they were."""
+def caps_with_text(text: str, key: str = "model_battle_source") -> str:
+    """``descr_caps_ex.txt`` saying ``<key> text`` (``model_battle_source``,
+    or ``vegetation_source`` for vegtext.py): every live line of it set to
+    ``text``, or the line added at the end when there is none. Comments and
+    every other line as they were."""
     from . import keyblock as kb
+    line_re = _CAPS_LINE if key == "model_battle_source" else \
+        re.compile(r"^([ \t]*" + re.escape(key) + r"[ \t]+)(\S+)", re.I)
     nl = kb.newline_of(text) if text else "\r\n"
     out, n = [], 0
     for line in kb.to_newline(text, "\n").split("\n"):
         live = line.split(";", 1)[0]
-        m = _CAPS_LINE.match(live)
+        m = line_re.match(live)
         if m:
             n += 1
             line = m.group(1) + "text" + line[m.end():]
         out.append(line)
     body = "\n".join(out)
     if not n:
-        body = body.rstrip("\n") + ("\n" if body.strip() else "") + "model_battle_source text\n"
+        body = body.rstrip("\n") + ("\n" if body.strip() else "") + key + " text\n"
     return kb.to_newline(body, nl)
 
 

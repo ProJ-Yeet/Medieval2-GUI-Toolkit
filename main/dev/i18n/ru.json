@@ -12449,5 +12449,19 @@
   "few": "В {text} записаны {count} модели битв; в {caps} указано model_battle_source text",
   "many": "В {text} записано {count} моделей битв; в {caps} указано model_battle_source text",
   "other": "В {text} записано {count} модели битв; в {caps} указано model_battle_source text"
- }
+ },
+ "home.to_veg_text": "Записать растительность в виде текста",
+ "home.to_veg_text_title": "Прочитать vegetation.db может только игра, поэтому запускается M2EX для этого мода с ключом --util.vegetation_decompile. Дойдите до главного меню, выйдите, и descr_vegetation.txt попадет в мод с параметром vegetation_source text, одна отмена.",
+ "home.to_veg_text_confirm": "Запустить M2EX для мода {name}, чтобы записать его растительность в виде текста?\n\nКогда игра дойдет до ГЛАВНОГО МЕНЮ, выйдите из нее. Игра запишет data/descr_vegetation_decompiled.txt; он станет descr_vegetation.txt, а в descr_caps_ex.txt будет указано vegetation_source text. Уже имеющийся у мода descr_vegetation.txt сохраняется, а новый остается рядом для сравнения.",
+ "home.veg_started": "Игра запускается. Дождитесь главного меню и выйдите.",
+ "home.veg_waiting": "Ожидание закрытия игры…",
+ "home.veg_done": "descr_vegetation.txt записан, указано vegetation_source text",
+ "home.veg_kept": "У мода уже был descr_vegetation.txt, он сохранен. Файл игры лежит рядом: {path}",
+ "home.veg_text": "Растительность из descr_vegetation.txt",
+ "eng.vegtext.no_m2ex": "{exe} нет в папке игры {game}",
+ "eng.vegtext.no_cfg": "У {name} нет файла .cfg, поэтому игра не может его загрузить",
+ "eng.vegtext.running": "игра для {name} уже запущена",
+ "eng.vegtext.not_written": "игра не записала {rel}; перед выходом дойдите до главного меню. Причина указана в ее system.log.txt",
+ "eng.vegtext.converted": "{text} записан игрой; в {caps} указано vegetation_source text",
+ "eng.vegtext.not_in_mods": "{name} не находится в папке модов игры (mods)"
 }

@@ -717,7 +717,7 @@ from . import (bmdb, buildings, cards, cleaner, codeview, config, dupes, edit,
                modflags, modfiles, sounds, stratmap)
 from . import mapgen, mapnew, mapresize, modfork, vanilla, gamelog, modreport, rehearse, voices, emblem, bannermaker, artrecolour, stratfamily, scripts
 from . import armory, armbake, armlib, armunit, loosemesh, meshfolder, modeldb, modeltext
-from . import report
+from . import report, vegtext
 from . import ancillaries, areaeffects, campimport, edbimport, mapbundle, osmmap, osmsites, settlemodel, heroabilities, hordestart, walls, characters, projectzip, campaint, campdb, campevents, campfiles, campmap, campnew, campstrat, cas, casanim, animedit, animpack, animslot, animview, modelexport, launchcheck, packhouse, settlemech, fileswap, factionsites, sidefiles, banners, changesets, health, climatenew, guilds, mapcheck, mapfe, mapquery, mapterrain, mercpools, regiondel, edusort, factionaudit, factionbring, factionclone, factions, images, mesh, minorfiles, namekeys, portrecords, rawtext, rebelpools, renames, soundbanks, soundscripts, spawns, sprites, stratcamp, stratchar, stratedit, stratobj, strings, traits, triggers, winconds
 from . import eop as _eop
 from . import logutil
@@ -1945,7 +1945,9 @@ class Handler(BaseHTTPRequestHandler):
                                     "pack": self.registry.is_pack(n),
                                     "m2ex": modflags.is_m2ex(p),
                                     # 92a: reads descr_model_battle.txt, not the .modeldb
-                                    "text_models": modeltext.reads_text(p)}
+                                    "text_models": modeltext.reads_text(p),
+                                    # and descr_vegetation.txt (vegtext.py)
+                                    "veg_text": vegtext.vegetation_text(p)}
                                    for n, p in self.registry.discover().items()])
             if u.path == "/api/units":
                 name = (q.get("mod") or [None])[0]
@@ -2642,6 +2644,14 @@ class Handler(BaseHTTPRequestHandler):
                 return self._json(mapnew.view(self.registry.describe(name)))
             if u.path.startswith("/api/map"):
                 return self._map_route(u.path, q)
+            if u.path == "/api/vegtext/status":
+                name = (q.get("mod") or [""])[0]
+                if name not in self.registry.names():
+                    return self._err(404, "unknown mod")
+                try:
+                    return self._json(vegtext.status(self.registry.get(name)))
+                except OSError as e:
+                    return self._json({"error": str(e)})
             if u.path == "/api/report":
                 return self._json({"can_send": bool(report.webhook()), "folder": str(report.REPORTS)})
             if u.path == "/api/log":
@@ -2796,6 +2806,16 @@ class Handler(BaseHTTPRequestHandler):
                 return self._json(self._eop_dirs(body))
             if u.path == "/api/m2ex":
                 return self._json(self._m2ex(body))
+            if u.path == "/api/vegtext/start":
+                # M2EX started on the mod with --util.vegetation_decompile;
+                # the page asks /api/vegtext/status until the game is closed
+                name = body.get("mod") or ""
+                if name not in self.registry.names():
+                    return self._err(404, "unknown mod")
+                try:
+                    return self._json(vegtext.start(self.registry.get(name)))
+                except (vegtext.VegError, OSError) as e:
+                    return self._json({"error": str(e)})
             if u.path == "/api/modeltext/convert":
                 # an M2EX mod's battle models from its .modeldb into
                 # descr_model_battle.txt, and its caps line switched to it

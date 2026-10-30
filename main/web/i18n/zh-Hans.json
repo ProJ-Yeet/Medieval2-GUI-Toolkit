@@ -11054,5 +11054,19 @@
  },
  "eng.modeltext.converted": {
   "other": "已将 {count} 个战斗模型写入 {text}；{caps} 已设为 model_battle_source text"
- }
+ },
+ "home.to_veg_text": "将植被写为文本",
+ "home.to_veg_text_title": "只有游戏能读取 vegetation.db，因此这会以 --util.vegetation_decompile 开关为此模组启动 M2EX。进入主菜单后退出，descr_vegetation.txt 即会放入模组并设置 vegetation_source text，一次撤销即可还原。",
+ "home.to_veg_text_confirm": "为 {name} 启动 M2EX，将其植被写为文本？\n\n游戏进入主菜单后请退出。游戏会写出 data/descr_vegetation_decompiled.txt，它将成为 descr_vegetation.txt，并在 descr_caps_ex.txt 中设置 vegetation_source text。模组已有的 descr_vegetation.txt 会保留，新文件放在旁边以供比较。",
+ "home.veg_started": "游戏正在启动。请等待主菜单出现后退出。",
+ "home.veg_waiting": "正在等待游戏关闭…",
+ "home.veg_done": "已写入 descr_vegetation.txt，并设置 vegetation_source text",
+ "home.veg_kept": "模组已有 descr_vegetation.txt，因此予以保留。游戏写出的文件在旁边：{path}",
+ "home.veg_text": "植被来自 descr_vegetation.txt",
+ "eng.vegtext.no_m2ex": "游戏文件夹 {game} 中没有 {exe}",
+ "eng.vegtext.no_cfg": "{name} 没有 .cfg 文件，游戏无法加载",
+ "eng.vegtext.running": "游戏已在为 {name} 运行",
+ "eng.vegtext.not_written": "游戏未写出 {rel}；请进入主菜单后再退出。原因见其 system.log.txt",
+ "eng.vegtext.converted": "{text} 由游戏写出；{caps} 已设为 vegetation_source text",
+ "eng.vegtext.not_in_mods": "{name} 不在游戏的模组文件夹（mods）中"
 }

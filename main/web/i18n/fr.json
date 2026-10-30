@@ -11829,5 +11829,19 @@
   "one": "{count} modèle de bataille écrit dans {text} ; {caps} indique model_battle_source text",
   "many": "{count} de modèles de bataille écrits dans {text} ; {caps} indique model_battle_source text",
   "other": "{count} modèles de bataille écrits dans {text} ; {caps} indique model_battle_source text"
- }
+ },
+ "home.to_veg_text": "Écrire la végétation en texte",
+ "home.to_veg_text_title": "Seul le jeu peut lire vegetation.db : ceci lance donc M2EX sur ce mod avec son option --util.vegetation_decompile. Atteindre le menu principal, quitter, et descr_vegetation.txt est repris dans le mod avec vegetation_source text, une seule annulation.",
+ "home.to_veg_text_confirm": "Lancer M2EX sur {name} pour écrire sa végétation en texte ?\n\nQuand le jeu atteint le MENU PRINCIPAL, quittez-le. Le jeu écrit data/descr_vegetation_decompiled.txt ; il devient descr_vegetation.txt et vegetation_source text est défini dans descr_caps_ex.txt. Un descr_vegetation.txt que le mod possède déjà est conservé, et le nouveau est laissé à côté pour comparer.",
+ "home.veg_started": "Le jeu démarre. Attendez le menu principal, puis quittez-le.",
+ "home.veg_waiting": "En attente de la fermeture du jeu…",
+ "home.veg_done": "descr_vegetation.txt écrit et vegetation_source text défini",
+ "home.veg_kept": "Le mod avait déjà descr_vegetation.txt, il est donc conservé. Celui du jeu est à côté : {path}",
+ "home.veg_text": "Végétation depuis descr_vegetation.txt",
+ "eng.vegtext.not_in_mods": "{name} n’est pas dans le dossier mods du jeu",
+ "eng.vegtext.no_m2ex": "{exe} n’est pas dans le dossier du jeu {game}",
+ "eng.vegtext.no_cfg": "{name} n’a pas de fichier .cfg, le jeu ne peut donc pas le charger",
+ "eng.vegtext.running": "le jeu tourne déjà pour {name}",
+ "eng.vegtext.not_written": "le jeu n’a écrit aucun {rel} ; atteignez le menu principal avant de quitter. Son system.log.txt en donne la raison",
+ "eng.vegtext.converted": "{text} écrit par le jeu ; {caps} indique vegetation_source text"
 }

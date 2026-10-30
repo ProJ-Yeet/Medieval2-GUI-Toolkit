@@ -11730,5 +11730,19 @@
  "eng.modeltext.converted": {
   "one": "{count} Schlachtmodell in {text} geschrieben; {caps} sagt model_battle_source text",
   "other": "{count} Schlachtmodelle in {text} geschrieben; {caps} sagt model_battle_source text"
- }
+ },
+ "home.to_veg_text": "Vegetation als Text schreiben",
+ "home.to_veg_text_title": "Nur das Spiel kann vegetation.db lesen. Daher startet dies M2EX für diese Mod mit dem Schalter --util.vegetation_decompile. Zum Hauptmenü gehen, beenden, und descr_vegetation.txt wird mit vegetation_source text in die Mod übernommen, ein Rückgängig.",
+ "home.to_veg_text_confirm": "M2EX für {name} starten, um die Vegetation als Text zu schreiben?\n\nWenn das Spiel das HAUPTMENÜ erreicht, beenden. Das Spiel schreibt data/descr_vegetation_decompiled.txt; daraus wird descr_vegetation.txt, und vegetation_source text wird in descr_caps_ex.txt gesetzt. Eine descr_vegetation.txt, die die Mod schon hat, bleibt erhalten, und die neue liegt zum Vergleich daneben.",
+ "home.veg_started": "Das Spiel startet. Auf das Hauptmenü warten, dann beenden.",
+ "home.veg_waiting": "Warte, bis das Spiel geschlossen ist…",
+ "home.veg_done": "descr_vegetation.txt geschrieben und vegetation_source text gesetzt",
+ "home.veg_kept": "Die Mod hatte bereits descr_vegetation.txt, sie bleibt erhalten. Die des Spiels liegt daneben: {path}",
+ "home.veg_text": "Vegetation aus descr_vegetation.txt",
+ "eng.vegtext.not_in_mods": "{name} liegt nicht im mods-Ordner des Spiels",
+ "eng.vegtext.no_m2ex": "{exe} ist nicht im Spielordner {game}",
+ "eng.vegtext.no_cfg": "{name} hat keine .cfg-Datei, daher kann das Spiel sie nicht laden",
+ "eng.vegtext.running": "das Spiel läuft bereits für {name}",
+ "eng.vegtext.not_written": "das Spiel hat keine {rel} geschrieben; vor dem Beenden das Hauptmenü erreichen. Seine system.log.txt sagt, warum",
+ "eng.vegtext.converted": "{text} vom Spiel geschrieben; {caps} sagt vegetation_source text"
 }

@@ -207,7 +207,36 @@ function homeM2exHtml(m){
       onchange="homeSetM2ex('${q1(esc(m.name))}',this.checked)">
     ${tt('home.runs_on_m2ex_no_engine_limits')}</label>${m.text_models
     ? `<div class="count" title="${ttA('home.text_models_title')}">${tt('home.text_models')}</div>`
-    : m.m2ex ? `<div><button class="mini" onclick="homeTextModels('${q1(esc(m.name))}')" title="${ttA('home.to_text_models_title')}">${tt('home.to_text_models')}</button></div>` : ''}`;
+    : m.m2ex ? `<div><button class="mini" onclick="homeTextModels('${q1(esc(m.name))}')" title="${ttA('home.to_text_models_title')}">${tt('home.to_text_models')}</button></div>` : ''}${m.veg_text
+    ? `<div class="count">${tt('home.veg_text')}</div>`
+    : m.m2ex ? `<div><button class="mini" id="vegBtn_${esc(m.name)}" onclick="homeVegText('${q1(esc(m.name))}')" title="${ttA('home.to_veg_text_title')}">${tt('home.to_veg_text')}</button></div>` : ''}`;
+}
+/* Vegetation only the game can decode: M2EX is started on the mod with
+   --util.vegetation_decompile (vegtext.py), the player reaches the main
+   menu and quits, and this waits for that, then says what came of it. */
+async function homeVegText(name){
+  if(!confirm(tt('home.to_veg_text_confirm', {name}))) return;
+  const r = await api.post('/api/vegtext/start', {mod:name});
+  if(r.error){ toast('✗ ' + r.error, 8000); return; }
+  toast(tt('home.veg_started'), 12000);
+  const btn = document.getElementById('vegBtn_' + name);
+  if(btn){ btn.disabled = true; btn.textContent = tt('home.veg_waiting'); }
+  for(;;){
+    await new Promise(res => setTimeout(res, 3000));
+    let s;
+    try{ s = await api.get('/api/vegtext/status?mod=' + enc(name), 1); }catch(e){ continue; }
+    if(s.running) continue;
+    const d = s.done || {};
+    if(d.error) toast('✗ ' + d.error, 10000);
+    else if(d.kept) toast(tt('home.veg_kept', {path: d.path}), 10000);
+    else if(d.written){
+      toast(tt('home.veg_done'), 8000);
+      const m = (state.mods||[]).find(x => x.name === name);
+      if(m) m.veg_text = true;
+    }
+    if(state.mode === 'home' && typeof renderHome === 'function') renderHome();
+    return;
+  }
 }
 /* An M2EX mod's battle models into descr_model_battle.txt, as M2EX's own
    dumper makes it, and its caps line switched to read it (modeltext.convert) */
