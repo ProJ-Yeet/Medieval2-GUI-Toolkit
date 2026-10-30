@@ -11717,5 +11717,18 @@
  "settings.beta_opt_in": "Beta-Funktionen aktivieren",
  "settings.beta_hint": "Zeigt, was noch getestet wird: den Kampagnenkarten-Editor und das Armory Studio (mit dem Einheitenkarten-Macher, der dessen Modell zeichnet). Sie schreiben wie alles andere in deine Mod, gesichert und rückgängig zu machen, wurden aber weniger genutzt. Standardmäßig aus.",
  "settings.beta_on": "Beta-Funktionen sind an: Die Kampagnenkarte und das Armory Studio stehen im Menü",
- "settings.beta_off": "Beta-Funktionen sind aus"
+ "settings.beta_off": "Beta-Funktionen sind aus",
+ "eng.modeltext.already_text": "{name} liest seine Schlachtmodelle bereits aus {rel}",
+ "eng.modeltext.no_modeldb": "{name} hat keine eigene data/{rel} zum Umwandeln",
+ "home.to_text_models": "Schlachtmodelle als Text verwenden",
+ "home.to_text_models_title": "Schreibt die Schlachtmodelle dieser Mod aus battle_models.modeldb in data/descr_model_battle.txt, wie es der Dumper von M2EX tut, und setzt model_battle_source text in ihrer descr_caps_ex.txt. Beide Dateien werden gesichert, und ein Rückgängig stellt sie wieder her. Die .modeldb bleibt, wo sie ist.",
+ "home.to_text_models_confirm": "Die Schlachtmodelle von {name} in data/descr_model_battle.txt schreiben und model_battle_source text in ihrer descr_caps_ex.txt setzen?\n\nDanach lesen das Spiel und dieses Toolkit die Textdatei. Beide Dateien werden gesichert, und Rückgängig im Protokoll stellt sie wieder her. Die Vegetation gehört nicht dazu: vegetation_source text braucht die Dateien, die der Dumper von M2EX aus dem laufenden Spiel schreibt.",
+ "home.to_text_models_done": {
+  "one": "{count} Schlachtmodell in descr_model_battle.txt geschrieben",
+  "other": "{count} Schlachtmodelle in descr_model_battle.txt geschrieben"
+ },
+ "eng.modeltext.converted": {
+  "one": "{count} Schlachtmodell in {text} geschrieben; {caps} sagt model_battle_source text",
+  "other": "{count} Schlachtmodelle in {text} geschrieben; {caps} sagt model_battle_source text"
+ }
 }

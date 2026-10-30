@@ -322,3 +322,96 @@ def append(text: str, entries: List[mdb.ModelEntry]) -> str:
     blocks = [render(from_modeldb(e)).replace("\r\n", nl) for e in entries]
     body = text.rstrip("\r\n")
     return body + nl + nl + (nl).join(blocks)
+
+
+# ---------------------------------------------------------------------------
+# a .modeldb mod turned into a text-models one (M2EX's own dumper does this
+# from inside the running game; the .modeldb holds all of it already)
+
+#: the two comment lines M2EX's dumper opens its file with
+TEXT_HEAD = ("; descr_model_battle.txt - generated from battle_models.modelDB\r\n"
+             "; This file defines battle model types, their meshes, textures, and skeletons.\r\n\r\n")
+_CAPS_LINE = re.compile(r"^([ \t]*model_battle_source[ \t]+)(\S+)", re.M | re.I)
+
+
+def text_from_db(db: mdb.ModelDb) -> str:
+    """Every model of a ``.modeldb`` as ``descr_model_battle.txt``, as M2EX's
+    dumper writes it: its two comment lines, the models in order, a blank
+    line between, CRLF. The `blank` sentinel is not a model and is left out,
+    as the dumper leaves it out."""
+    blocks = [render(from_modeldb(e)).rstrip("\r\n") for e in db.entries if e.name != "blank"]
+    return TEXT_HEAD + "\r\n\r\n".join(blocks) + "\r\n"
+
+
+def caps_with_text(text: str) -> str:
+    """``descr_caps_ex.txt`` saying ``model_battle_source text``: every live
+    line of it set to ``text``, or the line added at the end when there is
+    none. Comments and every other line as they were."""
+    from . import keyblock as kb
+    nl = kb.newline_of(text) if text else "\r\n"
+    out, n = [], 0
+    for line in kb.to_newline(text, "\n").split("\n"):
+        live = line.split(";", 1)[0]
+        m = _CAPS_LINE.match(live)
+        if m:
+            n += 1
+            line = m.group(1) + "text" + line[m.end():]
+        out.append(line)
+    body = "\n".join(out)
+    if not n:
+        body = body.rstrip("\n") + ("\n" if body.strip() else "") + "model_battle_source text\n"
+    return kb.to_newline(body, nl)
+
+
+def convert(mod) -> dict:
+    """Write ``descr_model_battle.txt`` from the mod's ``battle_models.modeldb``
+    and switch its ``descr_caps_ex.txt`` to it, both backed up and one Undo.
+    The ``.modeldb`` is left where it is: switching back is the caps line."""
+    import shutil
+    import time
+    from . import config
+    from . import keyblock as kb
+    from .logutil import file_op, log
+    from . import i18n as _i18n
+    data = Path(mod.data)
+    if reads_text(mod) and text_path(mod).is_file():
+        raise ValueError(_i18n.msg("eng.modeltext.already_text",
+                                   "{name} already reads its battle models from {rel}", name=mod.name, rel=TEXT_REL))
+    src = data / MODELDB_REL
+    if not src.is_file():
+        raise ValueError(_i18n.msg("eng.modeltext.no_modeldb",
+                                   "{name} has no data/{rel} of its own to convert", name=mod.name, rel=MODELDB_REL))
+    db = mdb.parse_file(src)
+    text = text_from_db(db)
+    caps = data / CAPS_REL
+    caps_text = caps_with_text(kb.read_text(caps, ENCODING) if caps.is_file() else "")
+    tid = config.new_transfer_id()
+    backup_root = config.backup_root_for(tid)
+    manifest: Dict[str, List[str]] = {"backed_up": [], "created": []}
+    for rel, body in ((TEXT_REL, text), (CAPS_REL, caps_text)):
+        target = data / rel
+        if target.exists():
+            bpath = backup_root / "data" / rel
+            bpath.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(target, bpath)
+            manifest["backed_up"].append(rel)
+            file_op("BACKUP", target, f"-> {bpath}")
+        else:
+            manifest["created"].append(rel)
+        kb.write_text(target, body, ENCODING)
+        file_op("WRITE", target, f"{ENCODING}, {len(body)} chars")
+    models = sum(1 for e in db.entries if e.name != "blank")
+    rec = {"id": tid, "when": time.strftime("%Y-%m-%d %H:%M:%S"), "mode": "bmdb",
+           "action": "battle models to descr_model_battle.txt",
+           "source": mod.name, "source_root": str(mod.root), "dest": mod.name, "dest_root": str(mod.root),
+           "unit_type": "", "resolved_type": "", "options": {}, "applied": True, "undone": False, "note": "",
+           "summary": _i18n.msgN("eng.modeltext.converted", models,
+                                 "{count} battle model written to {text}; {caps} says model_battle_source text",
+                                 "{count} battle models written to {text}; {caps} says model_battle_source text",
+                                 text=TEXT_REL, caps=CAPS_REL),
+           "warnings": [], "manifest": manifest, "backup_root": str(backup_root)}
+    config.append_log(rec)
+    log.info("MODELS %s: %d battle models to %s, id=%s", mod.name, models, TEXT_REL, tid)
+    if hasattr(mod, "drop_caches"):
+        mod.drop_caches()
+    return {"id": tid, "models": models, "record": rec}

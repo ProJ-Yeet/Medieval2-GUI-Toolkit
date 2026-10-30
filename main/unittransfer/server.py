@@ -2796,6 +2796,16 @@ class Handler(BaseHTTPRequestHandler):
                 return self._json(self._eop_dirs(body))
             if u.path == "/api/m2ex":
                 return self._json(self._m2ex(body))
+            if u.path == "/api/modeltext/convert":
+                # an M2EX mod's battle models from its .modeldb into
+                # descr_model_battle.txt, and its caps line switched to it
+                name = body.get("mod") or ""
+                if name not in self.registry.names():
+                    return self._err(404, "unknown mod")
+                try:
+                    return self._json(modeltext.convert(self.registry.get(name)))
+                except (ValueError, OSError) as e:
+                    return self._json({"error": str(e)})
             if u.path in ("/api/voices/namecall/plan", "/api/voices/namecall/apply"):
                 # 96e5: a name call of the user's own, from a .wav
                 name = body.get("mod") or ""

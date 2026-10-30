@@ -12192,5 +12192,20 @@
  "settings.beta_opt_in": "Activar las funciones beta",
  "settings.beta_hint": "Muestra lo que aún se está probando: el editor del Mapa de campaña y Armory Studio (con el creador de tarjetas de unidad que dibuja su modelo). Escriben en tu mod como todo lo demás, con copia de seguridad y se pueden deshacer, pero se han usado menos. Desactivado por defecto.",
  "settings.beta_on": "Las funciones beta están activadas: el Mapa de campaña y Armory Studio están en el menú",
- "settings.beta_off": "Las funciones beta están desactivadas"
+ "settings.beta_off": "Las funciones beta están desactivadas",
+ "eng.modeltext.already_text": "{name} ya lee sus modelos de batalla de {rel}",
+ "eng.modeltext.no_modeldb": "{name} no tiene un data/{rel} propio que convertir",
+ "home.to_text_models": "Usar modelos de batalla en texto",
+ "home.to_text_models_title": "Escribe los modelos de batalla de este mod de battle_models.modeldb en data/descr_model_battle.txt, como hace el volcador del propio M2EX, y pone model_battle_source text en su descr_caps_ex.txt. Se hace copia de seguridad de los dos y un solo Deshacer los devuelve. El .modeldb se queda donde está.",
+ "home.to_text_models_confirm": "¿Escribir los modelos de batalla de {name} en data/descr_model_battle.txt y poner model_battle_source text en su descr_caps_ex.txt?\n\nA partir de entonces el juego y esta herramienta leen el archivo de texto. Se hace copia de seguridad de los dos archivos y Deshacer en el registro los devuelve. La vegetación no entra aquí: vegetation_source text necesita los archivos que el volcador de M2EX escribe con el juego en marcha.",
+ "home.to_text_models_done": {
+  "one": "{count} modelo de batalla escrito en descr_model_battle.txt",
+  "many": "{count} de modelos de batalla escritos en descr_model_battle.txt",
+  "other": "{count} modelos de batalla escritos en descr_model_battle.txt"
+ },
+ "eng.modeltext.converted": {
+  "one": "{count} modelo de batalla escrito en {text}; {caps} dice model_battle_source text",
+  "many": "{count} de modelos de batalla escritos en {text}; {caps} dice model_battle_source text",
+  "other": "{count} modelos de batalla escritos en {text}; {caps} dice model_battle_source text"
+ }
 }

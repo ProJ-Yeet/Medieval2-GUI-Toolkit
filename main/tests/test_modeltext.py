@@ -265,6 +265,50 @@ check(f"a faction clone copies both kinds of texture line ({n5})",
       n5 == 4 and "texture_attachments\t\twales, u/a.texture, u/an.texture" in cl
       and _fc.clone_text_models(cl, "england", "wales")[1] == 0)
 
+print("\n6) a .modeldb mod switched to text models (modeltext.convert)")
+d6 = tmp / "six"
+(d6 / "unit_models").mkdir(parents=True, exist_ok=True)
+db6 = mt.read_db(tm, mounts=lambda: {"mount_pony": "horse"})
+db6_text = db6.to_text()
+kb.write_text(d6 / "unit_models" / "battle_models.modeldb", db6_text, mdb.ENCODING)
+kb.write_text(d6 / mt.CAPS_REL, "; caps\r\nvegetation_source text\r\n", mt.ENCODING)
+
+
+class DbMod:
+    name = "six"
+    text_models = False
+
+    def __init__(self, data):
+        self.data = data
+        self.root = data.parent
+
+
+cfg6 = tmp / "cfg6"
+cfg6.mkdir(exist_ok=True)
+_was = (config.CONFIG_DIR, config.BACKUP_DIR, config.SETTINGS_PATH, config.LOG_PATH)
+config.CONFIG_DIR = cfg6; config.BACKUP_DIR = cfg6 / "backups"
+config.SETTINGS_PATH = cfg6 / "settings.json"; config.LOG_PATH = cfg6 / "transfers.json"
+try:
+    got6 = mt.convert(DbMod(d6))
+    out6 = kb.read_text(d6 / mt.TEXT_REL, mt.ENCODING)
+    check(f"every model of the .modeldb written, the blank left out ({got6['models']})",
+          got6["models"] == 3 and [e.name for e in mt.parse(out6)] == ["mount_pony", "spearmen", "spearmen"])
+    check("as M2EX's dumper writes it: its two comment lines, CRLF, distances as roots",
+          out6.startswith(mt.TEXT_HEAD) and out6.count("\r\n") == out6.count("\n")
+          and "mesh\t\t\t\tunit_models/m/pony_lod0.mesh, 11\r\n" in out6)
+    check("a mounted model's second skeleton block is written skeleton_horse",
+          "skeleton_horse\t\t\tMTW2_HR_Spear, \r\n" in out6)
+    caps6 = kb.read_text(d6 / mt.CAPS_REL, mt.ENCODING)
+    check("descr_caps_ex.txt gains model_battle_source text, its other lines kept",
+          caps6 == "; caps\r\nvegetation_source text\r\nmodel_battle_source text\r\n" and mt.reads_text(DbMod(d6)))
+    check("the .modeldb is left where it is", (d6 / "unit_models" / "battle_models.modeldb").is_file())
+    check("and the record backs up the caps file and lists the text as made",
+          got6["record"]["manifest"] == {"backed_up": [mt.CAPS_REL], "created": [mt.TEXT_REL]})
+    check("an existing model_battle_source line is switched, not doubled",
+          mt.caps_with_text("model_battle_source db ; x\r\n") == "model_battle_source text ; x\r\n")
+finally:
+    config.CONFIG_DIR, config.BACKUP_DIR, config.SETTINGS_PATH, config.LOG_PATH = _was
+
 shutil.rmtree(tmp, ignore_errors=True)
 print(f"\n{sum(ok)}/{len(ok)} checks passed")
 print("ALL PASSED" if all(ok) else "SOME FAILED")

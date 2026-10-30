@@ -11814,5 +11814,20 @@
  "settings.beta_opt_in": "Activer les fonctions bêta",
  "settings.beta_hint": "Affiche ce qui est encore en test : l’éditeur de carte de campagne et Armory Studio (avec le créateur de cartes d’unité qui dessine son modèle). Ils écrivent dans votre mod comme le reste, avec sauvegarde et annulation possible, mais ils ont été moins utilisés. Désactivé par défaut.",
  "settings.beta_on": "Les fonctions bêta sont activées : la carte de campagne et Armory Studio figurent dans le menu",
- "settings.beta_off": "Les fonctions bêta sont désactivées"
+ "settings.beta_off": "Les fonctions bêta sont désactivées",
+ "eng.modeltext.already_text": "{name} lit déjà ses modèles de bataille dans {rel}",
+ "eng.modeltext.no_modeldb": "{name} n’a pas de data/{rel} à lui à convertir",
+ "home.to_text_models": "Utiliser les modèles de bataille en texte",
+ "home.to_text_models_title": "Écrire les modèles de bataille de ce mod depuis battle_models.modeldb dans data/descr_model_battle.txt, comme le fait l’outil d’extraction de M2EX, et définir model_battle_source text dans son descr_caps_ex.txt. Les deux fichiers sont sauvegardés et une seule annulation les rétablit. Le .modeldb reste en place.",
+ "home.to_text_models_confirm": "Écrire les modèles de bataille de {name} dans data/descr_model_battle.txt et définir model_battle_source text dans son descr_caps_ex.txt ?\n\nEnsuite, le jeu et cet outil lisent le fichier texte. Les deux fichiers sont sauvegardés et Annuler dans le journal les rétablit. La végétation n’en fait pas partie : vegetation_source text demande les fichiers que l’outil d’extraction de M2EX écrit pendant que le jeu tourne.",
+ "home.to_text_models_done": {
+  "one": "{count} modèle de bataille écrit dans descr_model_battle.txt",
+  "many": "{count} de modèles de bataille écrits dans descr_model_battle.txt",
+  "other": "{count} modèles de bataille écrits dans descr_model_battle.txt"
+ },
+ "eng.modeltext.converted": {
+  "one": "{count} modèle de bataille écrit dans {text} ; {caps} indique model_battle_source text",
+  "many": "{count} de modèles de bataille écrits dans {text} ; {caps} indique model_battle_source text",
+  "other": "{count} modèles de bataille écrits dans {text} ; {caps} indique model_battle_source text"
+ }
 }

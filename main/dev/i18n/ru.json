@@ -12432,5 +12432,22 @@
  "settings.beta_opt_in": "Включить бета-функции",
  "settings.beta_hint": "Показывает то, что еще проходит проверку: редактор карты кампании и Armory Studio (с создателем карточек отрядов, который рисует свою модель). Они записывают в ваш мод, как и все остальное, с резервными копиями и отменой, но их меньше проверяли. По умолчанию выключено.",
  "settings.beta_on": "Бета-функции включены: карта кампании и Armory Studio есть в меню",
- "settings.beta_off": "Бета-функции выключены"
+ "settings.beta_off": "Бета-функции выключены",
+ "eng.modeltext.already_text": "{name} уже читает модели битв из {rel}",
+ "eng.modeltext.no_modeldb": "У {name} нет собственного data/{rel} для преобразования",
+ "home.to_text_models": "Использовать модели битв в виде текста",
+ "home.to_text_models_title": "Записать модели битв этого мода из battle_models.modeldb в data/descr_model_battle.txt, как это делает выгрузчик M2EX, и указать model_battle_source text в его descr_caps_ex.txt. Для обоих файлов создаются резервные копии, одна отмена возвращает их. Файл .modeldb остается на месте.",
+ "home.to_text_models_confirm": "Записать модели битв мода {name} в data/descr_model_battle.txt и указать model_battle_source text в его descr_caps_ex.txt?\n\nПосле этого игра и этот инструмент читают текстовый файл. Для обоих файлов создаются резервные копии, а отмена в журнале возвращает их. Растительность сюда не входит: для vegetation_source text нужны файлы, которые выгрузчик M2EX записывает из запущенной игры.",
+ "home.to_text_models_done": {
+  "one": "В descr_model_battle.txt записана {count} модель битвы",
+  "few": "В descr_model_battle.txt записаны {count} модели битв",
+  "many": "В descr_model_battle.txt записано {count} моделей битв",
+  "other": "В descr_model_battle.txt записано {count} модели битв"
+ },
+ "eng.modeltext.converted": {
+  "one": "В {text} записана {count} модель битвы; в {caps} указано model_battle_source text",
+  "few": "В {text} записаны {count} модели битв; в {caps} указано model_battle_source text",
+  "many": "В {text} записано {count} моделей битв; в {caps} указано model_battle_source text",
+  "other": "В {text} записано {count} модели битв; в {caps} указано model_battle_source text"
+ }
 }

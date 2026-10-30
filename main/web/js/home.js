@@ -206,7 +206,19 @@ function homeM2exHtml(m){
     <input type="checkbox" ${m.m2ex?'checked':''}
       onchange="homeSetM2ex('${q1(esc(m.name))}',this.checked)">
     ${tt('home.runs_on_m2ex_no_engine_limits')}</label>${m.text_models
-    ? `<div class="count" title="${ttA('home.text_models_title')}">${tt('home.text_models')}</div>` : ''}`;
+    ? `<div class="count" title="${ttA('home.text_models_title')}">${tt('home.text_models')}</div>`
+    : m.m2ex ? `<div><button class="mini" onclick="homeTextModels('${q1(esc(m.name))}')" title="${ttA('home.to_text_models_title')}">${tt('home.to_text_models')}</button></div>` : ''}`;
+}
+/* An M2EX mod's battle models into descr_model_battle.txt, as M2EX's own
+   dumper makes it, and its caps line switched to read it (modeltext.convert) */
+async function homeTextModels(name){
+  if(!confirm(tt('home.to_text_models_confirm', {name}))) return;
+  const r = await api.post('/api/modeltext/convert', {mod:name});
+  if(r.error){ toast('✗ ' + r.error, 7000); return; }
+  const m = (state.mods||[]).find(x => x.name === name);
+  if(m) m.text_models = true;
+  toast(ttN('home.to_text_models_done', r.models), 7000);
+  if(typeof renderHome === 'function' && state.mode === 'home') renderHome();
 }
 async function homeSetM2ex(name, on){
   const r = await api.post('/api/m2ex', {mod:name, on:!!on});

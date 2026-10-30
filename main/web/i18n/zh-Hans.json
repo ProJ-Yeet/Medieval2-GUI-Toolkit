@@ -11043,5 +11043,16 @@
  "scripts.save": "保存为扩展",
  "scripts.the_script": "将生成的脚本",
  "scripts.mine": "你的模块",
- "scripts.saved": "已保存 {title}，可在扩展列表中找到并加入。"
+ "scripts.saved": "已保存 {title}，可在扩展列表中找到并加入。",
+ "eng.modeltext.already_text": "{name} 已从 {rel} 读取战斗模型",
+ "eng.modeltext.no_modeldb": "{name} 没有可转换的自有 data/{rel}",
+ "home.to_text_models": "使用文本战斗模型",
+ "home.to_text_models_title": "像 M2EX 自带的导出工具一样，将此模组的战斗模型从 battle_models.modeldb 写入 data/descr_model_battle.txt，并在其 descr_caps_ex.txt 中设置 model_battle_source text。两个文件都会备份，一次撤销即可还原。.modeldb 保持原位。",
+ "home.to_text_models_confirm": "将 {name} 的战斗模型写入 data/descr_model_battle.txt，并在其 descr_caps_ex.txt 中设置 model_battle_source text？\n\n此后游戏和本工具都读取该文本文件。两个文件都会备份，在日志中撤销即可还原。植被不在此列：vegetation_source text 需要 M2EX 导出工具在游戏运行时写出的文件。",
+ "home.to_text_models_done": {
+  "other": "已将 {count} 个战斗模型写入 descr_model_battle.txt"
+ },
+ "eng.modeltext.converted": {
+  "other": "已将 {count} 个战斗模型写入 {text}；{caps} 已设为 model_battle_source text"
+ }
 }
