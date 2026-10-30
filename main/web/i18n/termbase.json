@@ -318,7 +318,7 @@
     },
     "pl": {
      "t": "bitwa",
-     "stem": "bitw",
+     "stem": "bitw|bitew",
      "src": "game",
      "conf": "high"
     },
@@ -882,7 +882,7 @@
     },
     "pl": {
      "t": "miasto",
-     "stem": "mias",
+     "stem": "mias|mieś",
      "src": "game",
      "conf": "high",
      "note": "locative mieście not covered by the stem"
@@ -1215,7 +1215,7 @@
     },
     "pl": {
      "t": "żołnierz",
-     "stem": "żołnierz",
+     "stem": "żołnierz|żołniers",
      "src": "game",
      "conf": "high"
     },
@@ -1670,7 +1670,7 @@
     },
     "pl": {
      "t": "agent",
-     "stem": "agent",
+     "stem": "agent|agenc",
      "src": "game",
      "conf": "medium"
     },
@@ -3374,7 +3374,7 @@
     },
     "pl": {
      "t": "wydarzenie",
-     "stem": "wydarzeni",
+     "stem": "wydarzeni|wydarze",
      "src": "game",
      "conf": "medium"
     },
@@ -4059,7 +4059,7 @@
     },
     "pl": {
      "t": "okręt",
-     "stem": "okręt",
+     "stem": "okręt|okręc",
      "src": "game",
      "conf": "medium",
      "note": "alternative: statek"
@@ -4394,7 +4394,7 @@
     },
     "pl": {
      "t": "oblężenie",
-     "stem": "oblężen",
+     "stem": "oblęż",
      "src": "game",
      "conf": "high"
     },
@@ -7100,7 +7100,7 @@
     },
     "pl": {
      "t": "muzyka",
-     "stem": "muzyk",
+     "stem": "muzyk|muzycz",
      "src": "game",
      "conf": "high"
     },
@@ -7791,7 +7791,7 @@
     },
     "pl": {
      "t": "rok",
-     "stem": "rok",
+     "stem": "rok|lat",
      "src": "game",
      "conf": "high",
      "note": "plural lata not covered by the stem"
@@ -9170,7 +9170,7 @@
     },
     "pl": {
      "t": "szkielet",
-     "stem": "szkielet",
+     "stem": "szkielet|szkielec",
      "src": "community",
      "conf": "high"
     },
@@ -9511,7 +9511,7 @@
     },
     "pl": {
      "t": "pakiet animacji",
-     "stem": "pakiet",
+     "stem": "pakiet|pakiec",
      "src": "community",
      "conf": "low"
     },
@@ -12013,7 +12013,7 @@
     },
     "pl": {
      "t": "skrypt",
-     "stem": "skrypt",
+     "stem": "skrypt|skrypc",
      "src": "community",
      "conf": "high"
     },
@@ -12807,7 +12807,7 @@
     },
     "pl": {
      "t": "slot",
-     "stem": "slot",
+     "stem": "slot|sloc",
      "src": "loan",
      "conf": "medium"
     },
@@ -13381,7 +13381,7 @@
     },
     "pl": {
      "t": "portować",
-     "stem": "portow",
+     "stem": "portow|portuj",
      "src": "community",
      "conf": "low",
      "note": "colloquial modding verb"
@@ -13499,7 +13499,7 @@
     },
     "pl": {
      "t": "klonować",
-     "stem": "klonow",
+     "stem": "klonow|klonuj|klon",
      "src": "community",
      "conf": "medium"
     },
@@ -13844,7 +13844,7 @@
     },
     "pl": {
      "t": "osierocony",
-     "stem": "osierocon",
+     "stem": "osieroc",
      "src": "community",
      "conf": "low"
     },

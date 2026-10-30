@@ -92,6 +92,18 @@ check("Turkish case handling still rejects a missing term",
       any("term rebel" in p for p in tb.check_catalogue(
           {"t.rebel": "Rebels"}, {"t.rebel": "Diğerleri"}, tb.load(), "tr")))
 
+polish_en = {"t.battle": "Battle models", "t.agent": "Agents", "t.siege": "Siege",
+             "t.port": "Port models", "t.clone": "Clone", "t.event": "Events",
+             "t.music": "Music", "t.year": "Years", "t.slot": "Slot"}
+polish_cat = {"t.battle": "Modele bitewne", "t.agent": "Agenci", "t.siege": "Oblężniczy",
+              "t.port": "Portuj modele", "t.clone": "Klonuj", "t.event": "Pozycje wydarzeń",
+              "t.music": "Plik muzyczny", "t.year": "Lata", "t.slot": "W slocie"}
+check("Polish consonant alternations and irregular plurals match glossary terms",
+      tb.check_catalogue(polish_en, polish_cat, tb.load(), "pl") == [])
+check("Polish inflection stems still reject unrelated words",
+      all(tb.check_catalogue({key: text}, {key: "Inne"}, tb.load(), "pl")
+          for key, text in polish_en.items()))
+
 
 def with_(**kw):
     c = json.loads(json.dumps(good))

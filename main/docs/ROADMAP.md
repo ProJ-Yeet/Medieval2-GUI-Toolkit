@@ -823,6 +823,21 @@ four plural forms each, and the checker holds every `ttN` string to them.
 Done when, for each: the checker passes, the report is empty, and Home,
 Settings, Transfer and the map are walked in it at desktop width.
 
+*88i pulled 2026-10-30, not shipped* (the user: "dont ship polish for now"). The
+draft below was machine translation an audit found unfit (wrong meanings,
+dropped sentences, lost symbols, spaces inside tags); it is back in
+`dev/i18n/pl.json`, not offered, and needs a real translation pass.
+
+*88i drafted 2026-10-28.* **Polish**: 9,633/9,633 strings, including 379
+plural objects with one/few/many/other; zero missing, stale or extra IDs and
+zero checker/strict audit problems. Was offered as *Polski (Polish) - wersja robocza*.
+Machine-assisted draft with direct corrections; native review remains pending.
+Home, Settings, Transfer and Campaign Map inspected at 1280 and 375 px using
+isolated test fixtures, without mod writes. Polish glossary inflections have
+positive/negative regression checks. Termbase 31/31, i18n 37/37, web modules
+124/124. Style, provenance, limits and exceptions: `dev/i18n/pl.md` and
+`dev/i18n/pl-review.md`. No release cut.
+
 *88e done 2026-10-26.* **French**: 9,605 strings, including 378 plural
 objects with one/many/other, zero missing, stale or extra IDs and zero checker
 problems. Offered in Settings as *Français (French) - brouillon*. Polite
