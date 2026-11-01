@@ -1086,6 +1086,12 @@ split by area, each built from the behaviour described in the checklist:
   events naming it, traits only it has, its shields on the logo sheets. `tests/test_factionbring` (33). Both
   installed mods are at 31 of 31 slots, so the real-mod check is a plan (Divide and Conquer's Gondor into Heirs
   of Elendil: 63 texts, 588 names, 4 figures, 22 art items laid over, 31 units to transfer), not a write.
+* **96f, a culture change with its preview, 2026-11-01**: the faction editor's Culture pick says, under the pick and in
+  Save's confirm, the units the faction gains and loses and the buildings in its towns (every campaign) the new culture
+  cannot build (`culturechange.py`, `/api/factions/culture_preview`). The EDU's ownership names factions, so it is the
+  EDB's level and `recruit_pool` clauses read with the culture swapped; a gained unit its ownership leaves out is said so.
+  `tests/test_culturechange` (20). Built from the editor's CHANGELOG, not its code: the editor's repo no longer carries
+  its source, so every remaining 96f item is a port of behaviour.
 
 **Left in major III**: 96f, round two's major III items. Porting the editor's current files already brought its control blocks (ELSE, all / any / none, for each), its newer WHENs and the Recruitment Order, One Recruitment Grid and Upkeep x N add-ons; the Scratch-style blocks view and the campaign script by pieces are still to do. The thin mod needs every editor to copy a game file in
 on its first write (the editor's `ModData.under`), so it is a piece of its own, not a flag on 96e7.

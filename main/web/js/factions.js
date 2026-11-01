@@ -257,12 +257,71 @@ function facGeneralSection(d){
         <div><input value="${esc(d.modifier)}" disabled>
         <div class="trhint count">${tt('factions.carried_on_the_faction_line_itself')}</div></div>` : ''}
       ${facPick(d, 'culture', tt('common.culture'), v.cultures)}
+      <span></span><div id="facCultPrev">${facCultPrevHtml(d)}</div>
       ${facPick(d, 'religion', tt('factions.religion'), v.religions)}
       ${facColour(d, 'primary_colour', tt('factions.primary_colour'))}
       ${facColour(d, 'secondary_colour', tt('factions.secondary_colour'))}
       ${facPick(d, 'special_faction_type', tt('factions.special_type'), v.special_types, true)}
     </div>
   </section>`;
+}
+/* ---- 96f: what a culture change costs, before Save ----
+   The Culture pick moves no line but its own. What moves is every EDB clause
+   that names a culture (`requires factions { northern_european, }`), so the
+   server reads each one both ways (unittransfer/culturechange.py) and this box
+   under the pick says the difference: units gained and lost, and the buildings
+   in its towns the new culture cannot build. Painted into its own div, so the
+   rest of the form is left alone; an Undo back to another culture asks again. */
+const FAC_CULT_ROWS = 30;
+function facCultPrevHtml(d){
+  const cur = d.w.culture || '';
+  if(!cur || cur === (d.faction.culture || '')) return '';
+  const p = d.cultPrev;
+  if(!p || p.culture !== cur.toLowerCase()){
+    if(d.cultAsk !== cur) queueMicrotask(facCultFetch);
+    return `<div class="trhint count">${tt('factions.cult_prev_reading')}</div>`;
+  }
+  if(p.error) return `<div class="trfind w-bad">✗ ${esc(p.error)}</div>`;
+  const head = `<div>${tt('factions.cult_prev_head',{old:esc(p.old),culture:esc(p.culture)})}</div>`;
+  if(!p.has_edb) return `<div class="trnote">${head}<div class="count">${tt('factions.cult_prev_no_edb')}</div></div>`;
+  const more = n => n > 0 ? `<div class="count">${tt('factions.cult_prev_more',{n})}</div>` : '';
+  const unitRows = rows => rows.slice(0, FAC_CULT_ROWS).map(r => `<div>${esc(r.label || r.unit)}
+      <span class="count">${r.label ? '(' + esc(r.unit) + ') · ' : ''}${tt('factions.cult_prev_trained_at',{levels:esc(r.levels.join(', ')) + (r.more ? ' +' + r.more : '')})}</span>${
+      r.known && !r.owned ? ` <span class="w-warn">${tt('factions.cult_prev_not_owned')}</span>` : ''}</div>`).join('')
+    + more(rows.length - FAC_CULT_ROWS);
+  const camps = new Set(p.buildings.map(b => b.campaign)).size;
+  const parts = [head];
+  if(p.gained.length) parts.push(`<div style="margin-top:6px"><b>${ttN('factions.cult_prev_gained', p.gained.length)}</b></div>${unitRows(p.gained)}`);
+  if(p.lost.length) parts.push(`<div style="margin-top:6px"><b>${ttN('factions.cult_prev_lost', p.lost.length)}</b></div>${unitRows(p.lost)}`);
+  if(p.buildings.length) parts.push(`<div style="margin-top:6px"><b>${ttN('factions.cult_prev_buildings', p.buildings.length)}</b></div>${
+    p.buildings.slice(0, FAC_CULT_ROWS).map(b => `<div>${esc(b.region)}: ${esc(b.level)}
+      <span class="count">${esc(b.line)}${camps > 1 ? ' · ' + esc(b.campaign) : ''}</span></div>`).join('')}${
+    more(p.buildings.length - FAC_CULT_ROWS)}`);
+  if(parts.length === 1) parts.push(`<div class="count">${tt('factions.cult_prev_nothing')}</div>`);
+  return `<div class="trnote">${parts.join('')}</div>`;
+}
+async function facCultFetch(){
+  const f = state.fac, d = f && f.d;
+  if(!d || d.error) return;
+  const cur = d.w.culture || '';
+  const paint = () => { const el = document.getElementById('facCultPrev'); if(el) el.innerHTML = facCultPrevHtml(d); };
+  if(!cur || cur === (d.faction.culture || '') || (d.cultPrev && d.cultPrev.culture === cur.toLowerCase())){ paint(); return; }
+  d.cultAsk = cur;
+  paint();
+  let p;
+  try{ p = await api.get(`/api/factions/culture_preview?mod=${enc(f.mod)}&name=${enc(d.name)}&culture=${enc(cur)}`); }
+  catch(e){ p = {error: errText(e)}; }
+  if(state.fac !== f || f.d !== d || (d.w.culture || '') !== cur) return;
+  d.cultPrev = Object.assign({culture: cur.toLowerCase()}, p);
+  paint();
+}
+/* The same, in one line for Save's confirm, once the box has been read. */
+function facCultConfirm(d){
+  const cur = d.w.culture || '', p = d.cultPrev;
+  if(!cur || cur === (d.faction.culture || '') || !p || p.error || !p.has_edb
+     || p.culture !== cur.toLowerCase()) return '';
+  return '\n\n⚠ ' + tt('factions.cult_prev_confirm',{old:p.old, culture:p.culture,  // i18n-ok: a mark before a whole sentence
+    gained:p.gained.length, lost:p.lost.length, buildings:p.buildings.length});
 }
 function facArtSection(d){
   const v = d.vocab || {};
@@ -649,6 +708,7 @@ function facSet(key, value){
   const d = state.fac.d; if(!d) return;
   d.w[key] = value;
   facTouched(false);
+  if(key === 'culture') facCultFetch();
 }
 /* Write one colour down, and update the row IN PLACE.
 
@@ -766,7 +826,7 @@ async function facSave(){
   const found = (p.findings || []).map(x => '⚠ ' + x.message);
   const changes = `${lines.join('\n') || tt('common.no_visible_change')}${
     (p.changes || []).length > 14 ? tt('factions.and_more',{changes:p.changes.length - 14}) : ''}${
-    found.length ? '\n\n' + found.slice(0, 4).join('\n') : ''}`;
+    found.length ? '\n\n' + found.slice(0, 4).join('\n') : ''}${facCultConfirm(d)}`;
   if(!confirm(tt('factions.confirm_write',{slot:d.slot,changes}))) return;
   f.busy = true;
   let res;

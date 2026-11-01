@@ -12373,5 +12373,28 @@
   "one": "{count} entrada escrita en {mod}.",
   "many": "{count} de entradas escritas en {mod}.",
   "other": "{count} entradas escritas en {mod}."
+ },
+ "factions.cult_prev_confirm": "Cultura {old} a {culture}: {gained} unidad(es) ganadas, {lost} perdidas, {buildings} edificio(s) en sus ciudades ya no construibles.",
+ "factions.cult_prev_head": "De <code>{old}</code> a <code>{culture}</code>. En el juego sus ciudades, retratos e imágenes de edificios siguen a la nueva cultura; abajo está lo que cambian las cláusulas de cultura del archivo de edificios.",
+ "factions.cult_prev_more": "…y {n} más",
+ "factions.cult_prev_no_edb": "Este mod no tiene un export_descr_buildings.txt suelto, así que aquí no se puede leer lo que el cambio hace a sus unidades y edificios.",
+ "factions.cult_prev_not_owned": "su línea ownership no nombra a esta facción, así que el juego no la entrena",
+ "factions.cult_prev_nothing": "Ninguna unidad ganada ni perdida, y todos los edificios de sus ciudades se pueden seguir construyendo.",
+ "factions.cult_prev_reading": "Calculando lo que cambia la nueva cultura…",
+ "factions.cult_prev_trained_at": "entrenada en {levels}",
+ "factions.cult_prev_buildings": {
+  "one": "{count} edificio en sus ciudades que la nueva cultura no puede construir. Está al principio, pero nadie puede volver a construirlo.",
+  "many": "{count} de edificios en sus ciudades que la nueva cultura no puede construir. Están al principio, pero nadie puede volver a construirlos.",
+  "other": "{count} edificios en sus ciudades que la nueva cultura no puede construir. Están al principio, pero nadie puede volver a construirlos."
+ },
+ "factions.cult_prev_gained": {
+  "one": "Gana {count} unidad",
+  "many": "Gana {count} de unidades",
+  "other": "Gana {count} unidades"
+ },
+ "factions.cult_prev_lost": {
+  "one": "Pierde {count} unidad",
+  "many": "Pierde {count} de unidades",
+  "other": "Pierde {count} unidades"
  }
 }

@@ -6259,6 +6259,26 @@
 "factions.couldnt_read_the_faction_roster": "Couldn't read the faction roster.",
 "factions.create_faction": "Create faction",
 "factions.create_factions": "Create {rows_n} factions",
+"factions.cult_prev_buildings": {
+"one": "{count} building in its towns the new culture cannot build. It stands at the start, but nobody can build it again.",
+"other": "{count} buildings in its towns the new culture cannot build. They stand at the start, but nobody can build them again."
+},
+"factions.cult_prev_confirm": "Culture {old} to {culture}: {gained} unit(s) gained, {lost} lost, {buildings} building(s) in its towns no longer buildable.",
+"factions.cult_prev_gained": {
+"one": "Gains {count} unit",
+"other": "Gains {count} units"
+},
+"factions.cult_prev_head": "From <code>{old}</code> to <code>{culture}</code>. In the game its towns, portraits and building pictures follow the new culture; below is what the buildings file's culture clauses change.",
+"factions.cult_prev_lost": {
+"one": "Loses {count} unit",
+"other": "Loses {count} units"
+},
+"factions.cult_prev_more": "…and {n} more",
+"factions.cult_prev_no_edb": "This mod has no loose export_descr_buildings.txt, so what the change does to its units and buildings cannot be read here.",
+"factions.cult_prev_not_owned": "its ownership line does not name this faction, so the game will not train it",
+"factions.cult_prev_nothing": "No unit gained or lost, and every building in its towns can still be built.",
+"factions.cult_prev_reading": "Working out what the new culture changes…",
+"factions.cult_prev_trained_at": "trained at {levels}",
 "factions.e_g_gondor_south": "e.g. gondor_south",
 "factions.emblem_apply": "Write {n} pictures",
 "factions.emblem_hint": "One picture makes every menu button (normal, mouse over, selected, greyed out), the faction-screen symbol, the panels' symbol and the loading logo, each at this mod's own size.",

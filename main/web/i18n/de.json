@@ -11896,5 +11896,25 @@
  "eng.folderimport.pick_a_clone": "'{name}' hat keine _bmdb.txt: wählen Sie einen Eintrag der Mod, dessen Skelette und Fraktionen übernommen werden",
  "eng.folderimport.replace_needs_bmdb": "'{name}' hat keine _bmdb.txt und kann den Eintrag der Mod daher nicht ersetzen: geben Sie einen neuen Namen an",
  "eng.folderimport.two_sources": "zwei Modelle legen ein unterschiedliches {rel} ab: das des ersten bleibt erhalten",
- "eng.folderimport.unknown_factions": "'{name}' hat Skins für Fraktionen, die {mod} nicht hat: {factions}"
+ "eng.folderimport.unknown_factions": "'{name}' hat Skins für Fraktionen, die {mod} nicht hat: {factions}",
+ "factions.cult_prev_buildings": {
+  "one": "{count} Gebäude in ihren Städten kann die neue Kultur nicht bauen. Es steht zu Beginn, aber niemand kann es wieder bauen.",
+  "other": "{count} Gebäude in ihren Städten kann die neue Kultur nicht bauen. Sie stehen zu Beginn, aber niemand kann sie wieder bauen."
+ },
+ "factions.cult_prev_confirm": "Kultur {old} zu {culture}: {gained} Einheit(en) dazu, {lost} verloren, {buildings} Gebäude in ihren Städten nicht mehr baubar.",
+ "factions.cult_prev_gained": {
+  "one": "Erhält {count} Einheit",
+  "other": "Erhält {count} Einheiten"
+ },
+ "factions.cult_prev_head": "Von <code>{old}</code> zu <code>{culture}</code>. Im Spiel folgen ihre Städte, Porträts und Gebäudebilder der neuen Kultur; darunter steht, was die Kulturklauseln der Gebäudedatei ändern.",
+ "factions.cult_prev_lost": {
+  "one": "Verliert {count} Einheit",
+  "other": "Verliert {count} Einheiten"
+ },
+ "factions.cult_prev_more": "…und {n} weitere",
+ "factions.cult_prev_no_edb": "Diese Mod hat keine lose export_descr_buildings.txt, daher lässt sich hier nicht lesen, was die Änderung an ihren Einheiten und Gebäuden bewirkt.",
+ "factions.cult_prev_not_owned": "ihre ownership-Zeile nennt diese Fraktion nicht, daher bildet das Spiel sie nicht aus",
+ "factions.cult_prev_nothing": "Keine Einheit kommt dazu oder geht verloren, und jedes Gebäude in ihren Städten kann weiter gebaut werden.",
+ "factions.cult_prev_reading": "Ermittle, was die neue Kultur ändert…",
+ "factions.cult_prev_trained_at": "ausgebildet in {levels}"
 }

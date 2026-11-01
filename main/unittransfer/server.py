@@ -171,6 +171,10 @@ Factions mode (descr_sm_factions.txt, see :mod:`unittransfer.factions`)
   POST /api/factions/plan|/apply -> edit one faction and its shown name together
                                     (backups + undo). Editing only: a faction
                                     slot lives in thirteen files at once
+  GET  /api/factions/culture_preview?mod=&name=&culture=
+                                 -> 96f: the units it gains and loses, and the
+                                    buildings in its towns it could no longer
+                                    build (:mod:`unittransfer.culturechange`)
   GET  /api/factions/audit?mod=&campaign=
                                  -> 21, D6: every faction against every file
                                     that should name it, gap or note per row,
@@ -717,7 +721,7 @@ from . import (bmdb, buildings, cards, cleaner, codeview, config, dupes, edit,
                modflags, modfiles, sounds, stratmap)
 from . import mapgen, mapnew, mapresize, modfork, vanilla, gamelog, modreport, rehearse, voices, emblem, bannermaker, artrecolour, stratfamily, scripts
 from . import armory, armbake, armlib, armunit, folderimport, loosemesh, meshfolder, modeldb, modeltext
-from . import report, vegtext
+from . import report, vegtext, culturechange
 from . import ancillaries, areaeffects, campimport, edbimport, mapbundle, osmmap, osmsites, settlemodel, heroabilities, hordestart, walls, characters, projectzip, campaint, campdb, campevents, campfiles, campmap, campnew, campstrat, cas, casanim, animedit, animpack, animslot, animview, modelexport, launchcheck, packhouse, settlemech, fileswap, factionsites, sidefiles, banners, changesets, health, climatenew, guilds, mapcheck, mapfe, mapquery, mapterrain, mercpools, regiondel, edusort, factionaudit, factionbring, factionclone, factions, images, mesh, minorfiles, namekeys, portrecords, rawtext, rebelpools, renames, soundbanks, soundscripts, spawns, sprites, stratcamp, stratchar, stratedit, stratobj, strings, traits, triggers, winconds
 from . import eop as _eop
 from . import logutil
@@ -2308,6 +2312,15 @@ class Handler(BaseHTTPRequestHandler):
                 for r in rows:
                     r["frame"] = factionbring.frame_for(mod, r["culture"])
                 return self._json({"factions": rows})
+            if u.path == "/api/factions/culture_preview":
+                # 96f: the units gained and lost, and the buildings in its towns
+                # no longer buildable, if this faction's culture changes
+                name = (q.get("mod") or [None])[0]
+                if not name or name not in self.registry.names():
+                    return self._err(404, "unknown mod")
+                return self._json(culturechange.preview(
+                    self.registry.get(name), (q.get("name") or [""])[0],
+                    (q.get("culture") or [""])[0]))
             if u.path == "/api/factions/audit":
                 name = (q.get("mod") or [None])[0]
                 if not name or name not in self.registry.names():
