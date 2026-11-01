@@ -6360,6 +6360,8 @@
 "factions.small_logo_index": "Small logo index",
 "factions.special_type": "Special type",
 "factions.strengths": "Strengths",
+"factions.title_not_written": "not in the text yet, the game shows the key until one is written",
+"factions.titles_head": "Titles <span class=\"count\">The leader's title ('King %S'), the heir's, the former leader's, and the strengths and weaknesses on the faction screen, saved into text/expanded.txt</span>",
 "factions.take_this_one_out": "Take this one out",
 "factions.the_colour_as_a_hex_code": "The colour as a hex code - paste one from anywhere.",
 "factions.the_faction_slot_descr_strat_every": "The faction slot. descr_strat, every unit's ownership line and\nevery 'requires factions' clause point at it, so it is not renamed here.",

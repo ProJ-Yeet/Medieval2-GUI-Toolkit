@@ -697,7 +697,12 @@ def detail(mod, name: str) -> Dict:
         "findings": modflags.uncapped(
             [f for f in check_file(rf, mod) if f["name"] == rec.name], mod),
         "loc_tag": tag, "loc_file": LOC_REL, "loc_writable": True,
-        "loc": {tag: names.get(tag, "")},
+        "loc": {tag: names.get(tag, ""),
+                **{t: names[t] for t in title_tags(rec.name).values() if t in names}},
+        # 96f: the leader's, heir's and former leader's titles, the strengths
+        # and the weaknesses, edited here as the clone dialog writes them
+        "titles": [{"key": k, "tag": t, "has": t in names}
+                   for k, t in title_tags(rec.name).items()],
         "missing_loc": [tag] if names and tag not in names else [],
         "has_loc": bool(names),
         "art_found": art,
@@ -834,6 +839,17 @@ def plan(mod, body: dict) -> FactionPlan:
     return p
 
 
+def title_tags(name: str) -> Dict[str, str]:
+    """``{leader: EMT_<SLOT>_FACTION_LEADER_TITLE, ...}`` for one faction.
+
+    The clone's own five keys (:data:`factionclone.TITLE_KEYS`), so an edited
+    title lands under the key a cloned one was written to.
+    """
+    from .factionclone import TITLE_KEYS
+    up = slot_of(name).upper()
+    return {k: v.replace("{N}", up) for k, v in TITLE_KEYS.items()}
+
+
 def _plan_loc(p: FactionPlan, mod, rec, wanted: Dict) -> None:
     """What this save would write into ``text/expanded.txt``."""
     from . import stringsbin
@@ -851,6 +867,18 @@ def _plan_loc(p: FactionPlan, mod, rec, wanted: Dict) -> None:
     elif want and want != have[tag]:
         p.loc_writes[tag] = want
         p.changes.append(f"~ the name in {Path(LOC_REL).name}")
+    # 96f: a title only when it was sent and differs; an emptied one is kept,
+    # since an empty title shows the bare key in game
+    for key in title_tags(rec.name).values():
+        if key not in (wanted or {}):
+            continue
+        want = str(wanted[key]).strip("\r\n")
+        if not want.strip() or want == have.get(key):
+            continue
+        p.loc_writes[key] = want
+        if key not in have:
+            p.loc_new.append(key)
+        p.changes.append(f"{'+' if key not in have else '~'} {key} in {Path(LOC_REL).name}")
 
 
 def apply(p: FactionPlan) -> Dict:

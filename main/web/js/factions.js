@@ -263,6 +263,26 @@ function facGeneralSection(d){
       ${facColour(d, 'secondary_colour', tt('factions.secondary_colour'))}
       ${facPick(d, 'special_faction_type', tt('factions.special_type'), v.special_types, true)}
     </div>
+  </section>
+  ${facTitlesSection(d)}`;
+}
+/* 96f: the leader's, heir's and former leader's titles ('King %S'), the
+   strengths and the weaknesses: the clone dialog's five keys, kept editable
+   after the faction exists. Saved into expanded.txt with the shown name. */
+const FAC_TITLE_LABELS = {leader: tt('factions.leader_title'), heir: tt('factions.heir_title'),
+  former: tt('factions.former_leader_title'), strength: tt('factions.strengths'), weakness: tt('factions.weaknesses')};
+function facTitlesSection(d){
+  if(!(d.titles || []).length) return '';
+  return `<section class="trsec">
+    <div class="trsechead">${tt('factions.titles_head')}</div>
+    <div class="trgrid">${d.titles.map(t => {
+      const cur = d.locEdits[t.tag] !== undefined ? d.locEdits[t.tag] : ((d.loc || {})[t.tag] || '');
+      const box = (t.key === 'strength' || t.key === 'weakness')
+        ? `<textarea rows="3" style="width:100%" oninput="facSetLocKey('${t.tag}',this.value)">${esc(cur)}</textarea>`
+        : `<input value="${esc(cur)}" oninput="facSetLocKey('${t.tag}',this.value)">`;
+      return `<label class="lbl">${esc(FAC_TITLE_LABELS[t.key] || t.key)}</label>
+        <div>${box}<div class="trhint count"><code>${esc(t.tag)}</code>${t.has ? '' : ` · ${tt('factions.title_not_written')}`}</div></div>`;
+    }).join('')}</div>
   </section>`;
 }
 /* ---- 96f: what a culture change costs, before Save ----
@@ -737,6 +757,10 @@ function facSetColour(key, hex){ facWriteColour(key, hex, 'swatch'); }
 function facSetHex(key, text){
   const hex = facHexFull(text);
   if(hex) facWriteColour(key, hex, 'hex');
+}
+function facSetLocKey(tag, value){
+  const d = state.fac.d; if(!d) return;
+  (d.locEdits = d.locEdits || {})[tag] = value;
 }
 function facSetLoc(value){
   const d = state.fac.d; if(!d) return;

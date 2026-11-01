@@ -12396,5 +12396,7 @@
   "one": "Pierde {count} unidad",
   "many": "Pierde {count} de unidades",
   "other": "Pierde {count} unidades"
- }
+ },
+ "factions.title_not_written": "aún no está en el texto; el juego muestra la clave hasta que se escriba uno",
+ "factions.titles_head": "Títulos <span class=\"count\">El título del líder ('Rey %S'), el del heredero, el del líder anterior, y las fortalezas y debilidades en la pantalla de facción, guardados en text/expanded.txt</span>"
 }

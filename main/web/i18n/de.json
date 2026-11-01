@@ -11916,5 +11916,7 @@
  "factions.cult_prev_not_owned": "ihre ownership-Zeile nennt diese Fraktion nicht, daher bildet das Spiel sie nicht aus",
  "factions.cult_prev_nothing": "Keine Einheit kommt dazu oder geht verloren, und jedes Gebäude in ihren Städten kann weiter gebaut werden.",
  "factions.cult_prev_reading": "Ermittle, was die neue Kultur ändert…",
- "factions.cult_prev_trained_at": "ausgebildet in {levels}"
+ "factions.cult_prev_trained_at": "ausgebildet in {levels}",
+ "factions.title_not_written": "noch nicht im Text, das Spiel zeigt den Schlüssel, bis einer geschrieben ist",
+ "factions.titles_head": "Titel <span class=\"count\">Der Titel des Anführers ('König %S'), des Erben und des früheren Anführers sowie Stärken und Schwächen auf dem Fraktionsbildschirm, gespeichert in text/expanded.txt</span>"
 }
