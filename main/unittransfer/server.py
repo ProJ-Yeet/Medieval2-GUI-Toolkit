@@ -217,6 +217,12 @@ Hidden resources (45)
                                     and clause it would darken and is refused
                                     until acknowledged (one backup + undo)
 
+Campaign script by pieces (96f, see :mod:`unittransfer.campscript`)
+  GET  /api/campscript?mod=&campaign= -> campaign_script.txt's top-level pieces
+                                    (monitors, loops, counters, commands)
+  POST /api/campscript/plan|/apply -> take the picked pieces out, through the raw
+                                    editor's writer (one backup + undo)
+
 Raw text (21, D11, see :mod:`unittransfer.rawtext`) - the escape hatch
   GET  /api/raw/files?mod=       -> every text file the toolkit reads, grouped,
                                     with its size, encoding and which screen
@@ -724,7 +730,7 @@ from . import (bmdb, buildings, cards, cleaner, codeview, config, dupes, edit,
                modflags, modfiles, sounds, stratmap)
 from . import mapgen, mapnew, mapresize, modfork, vanilla, gamelog, modreport, rehearse, voices, emblem, bannermaker, artrecolour, stratfamily, scripts
 from . import armory, armbake, armlib, armunit, folderimport, loosemesh, meshfolder, modeldb, modeltext
-from . import report, vegtext, culturechange
+from . import report, vegtext, culturechange, campscript
 from . import ancillaries, areaeffects, campimport, edbimport, mapbundle, osmmap, osmsites, settlemodel, heroabilities, hordestart, walls, characters, projectzip, campaint, campdb, campevents, campfiles, campmap, campnew, campstrat, cas, casanim, animedit, animpack, animslot, animview, modelexport, launchcheck, packhouse, settlemech, fileswap, factionsites, sidefiles, banners, changesets, health, climatenew, guilds, mapcheck, mapfe, mapquery, mapterrain, mercpools, regiondel, edusort, factionaudit, factionbring, factionclone, factions, images, mesh, minorfiles, namekeys, portrecords, rawtext, rebelpools, renames, soundbanks, soundscripts, spawns, sprites, stratcamp, stratchar, stratedit, stratobj, strings, traits, triggers, winconds
 from . import eop as _eop
 from . import logutil
@@ -2316,6 +2322,12 @@ class Handler(BaseHTTPRequestHandler):
                 for r in rows:
                     r["frame"] = factionbring.frame_for(mod, r["culture"])
                 return self._json({"factions": rows})
+            if u.path == "/api/campscript":
+                name = (q.get("mod") or [None])[0]
+                if not name or name not in self.registry.names():
+                    return self._err(404, "unknown mod")
+                return self._json(campscript.view(self.registry.describe(name),
+                                                  (q.get("campaign") or [""])[0]))
             if u.path == "/api/namekeys/pool":
                 # 96f: a faction's first names and surnames, for the pickers
                 name = (q.get("mod") or [None])[0]
@@ -3269,6 +3281,8 @@ class Handler(BaseHTTPRequestHandler):
                 return self._json(self._changes(u.path.rsplit("/", 1)[-1], body))
             if u.path in ("/api/raw/plan", "/api/raw/apply"):
                 return self._json(self._raw(u.path.rsplit("/", 1)[-1], body))
+            if u.path in ("/api/campscript/plan", "/api/campscript/apply"):
+                return self._json(self._raw(u.path.rsplit("/", 1)[-1], body, campscript))
             if u.path in ("/api/minor/plan", "/api/minor/apply"):
                 return self._json(self._minor(u.path.rsplit("/", 1)[-1], body))
             if u.path in ("/api/guilds/plan", "/api/guilds/apply"):
@@ -4296,7 +4310,7 @@ class Handler(BaseHTTPRequestHandler):
             return {"error": str(e)}
 
     # ---- the raw text editor (21, D11) ----
-    def _raw(self, action, body):
+    def _raw(self, action, body, via=rawtext):
         """Preview or write one whole text file - see :mod:`unittransfer.rawtext`.
 
         The plan is the confirmation's content: the lines that change, and what
@@ -4305,8 +4319,8 @@ class Handler(BaseHTTPRequestHandler):
         """
         try:
             mod = self.registry.describe(body["mod"])
-            plan = rawtext.plan(mod, body)
-        except (KeyError, OSError) as e:
+            plan = via.plan(mod, body)
+        except (KeyError, OSError, rawtext.RawError) as e:
             return {"error": str(e)}
         out = {"plan": plan.payload()}
         if action == "plan" or plan.errors:

@@ -12409,5 +12409,24 @@
  "eng.transfer.own_voice_files_lost": "voz: {n} archivo(s) de sonido que nombra su entrada no están en ningún mod ni en el juego, así que quedan mudos: {files}",
  "transfer.bring_the_building": "Traer el edificio…",
  "transfer.recruit_missing_lines": "En {src} se recluta en {lines}, que {dst} no tiene en absoluto.",
- "transfer.bring_the_building_confirm": "¿Abrir la importación de edificios en {dst} con {lines} elegido?\n\nOcupa el lugar de esta ventana. Primero aplica la transferencia: las reservas de reclutamiento de un edificio solo vienen para unidades que {dst} ya tiene."
+ "transfer.bring_the_building_confirm": "¿Abrir la importación de edificios en {dst} con {lines} elegido?\n\nOcupa el lugar de esta ventana. Primero aplica la transferencia: las reservas de reclutamiento de un edificio solo vienen para unidades que {dst} ya tiene.",
+ "scripts.tab_campscript": "Script de campaña",
+ "scripts.cs_filter": "Filtrar por tipo, primera línea o comentario",
+ "scripts.cs_take_picked": "Quitar las marcadas",
+ "scripts.cs_take_shown": "Quitar todas las mostradas",
+ "scripts.cs_clear": "Desmarcar todo",
+ "scripts.cs_shown": "{n} de {of} piezas mostradas, {picked} marcadas",
+ "scripts.cs_lines": "líneas {a} a {b}",
+ "scripts.cs_n_lines": {
+  "one": "{count} línea",
+  "many": "{count} de líneas",
+  "other": "{count} líneas"
+ },
+ "scripts.cs_more": "…y {n} más; filtra para verlas",
+ "scripts.cs_none": "Nada que quitar.",
+ "scripts.cs_confirm": "¿Quitar {n} pieza(s) del script de campaña?\n\n{changes}\n{warnings}\n\nSe hace antes una copia de seguridad, y 🕑 Historial puede deshacerlo.",
+ "eng.campscript.close_without_open": "línea {line}: {word} cierra un bloque que nunca se abrió, así que las piezas de después no se ofrecen",
+ "eng.campscript.never_closed": "línea {line}: un bloque {word} nunca se cierra, así que ni él ni lo que sigue se ofrecen",
+ "eng.campscript.took_out": "quitadas {n} pieza(s) de {name}: {heads}",
+ "scripts.cs_head": "<code>data/{rel}</code>, {lines} líneas, en sus piezas: cada monitor, bucle, bloque if, contador y orden fuera de todo bloque, con el comentario de encima. Las líneas script, wait_monitors y end_script se quedan siempre."
 }

@@ -42,8 +42,8 @@ function renderScripts(){
   main.innerHTML = `<div class="sxwrap">
     <div class="cdbhead"><div>${tt('scripts.head')}</div></div>
     <div class="trnote">${s.m2ex ? tt('scripts.m2ex_yes',{target:esc(s.target)}) : tt('scripts.m2ex_no')}</div>
-    <div class="hxtabs">${tab('addons', tt('scripts.tab_addons'))}${tab('builder', tt('scripts.tab_builder'))}</div>
-    ${s.tab === 'builder' ? sxBuilderHtml() : sxAddonsHtml()}
+    <div class="hxtabs">${tab('addons', tt('scripts.tab_addons'))}${tab('builder', tt('scripts.tab_builder'))}${tab('campscript', tt('scripts.tab_campscript'))}</div>
+    ${s.tab === 'builder' ? sxBuilderHtml() : s.tab === 'campscript' ? sxCsHtml() : sxAddonsHtml()}
   </div>`;
 }
 
@@ -211,4 +211,85 @@ async function sxSave(){
   if(r.error){ toast('✗ ' + r.error, 8000); return; }
   toast(tt('scripts.saved',{title:r.title}), 6000);
   const keep = s.recipe; state.sx = null; await loadScripts(); state.sx.recipe = keep; state.sx.tab = 'addons'; renderScripts();
+}
+
+/* ---- 96f: the campaign script by pieces ----
+   campaign_script.txt listed as its top-level pieces - each monitor, loop,
+   if block, counter and command, with the comment above it - and any taken
+   out: the ticked ones, or every one the filter shows. The frame (script,
+   wait_monitors, end_script) is never offered. The save goes through the raw
+   editor's writer, so it is byte-exact elsewhere, refused if the file changed
+   since it was read, and undone from the Log. */
+const SX_CS_ROWS = 500;
+async function sxCsLoad(campaign){
+  const s = state.sx;
+  s.cs = {campaign: campaign === undefined ? ((s.cs && s.cs.campaign) || '') : campaign,
+          d: null, picked: new Set(), filter: '', busy: false};
+  renderScripts();
+  let d;
+  try{ d = await api.get(`/api/campscript?mod=${enc(s.mod)}&campaign=${enc(s.cs.campaign)}`); }
+  catch(e){ d = {error: errText(e)}; }
+  if(state.sx !== s) return;
+  s.cs.d = d;
+  if(!s.cs.campaign && d.campaign) s.cs.campaign = d.campaign;
+  renderScripts();
+}
+function sxCsShown(){
+  const c = state.sx.cs, q = c.filter.trim().toLowerCase();
+  return c.d.pieces.filter(p => !p.frame && (!q || p.head.toLowerCase().includes(q)
+    || p.kind.includes(q) || (p.comment || '').toLowerCase().includes(q)));
+}
+function sxCsListHtml(){
+  const c = state.sx.cs, rows = sxCsShown();
+  return `<div class="count">${tt('scripts.cs_shown',{n: rows.length, of: c.d.pieces.filter(p => !p.frame).length, picked: c.picked.size})}</div>
+    ${rows.slice(0, SX_CS_ROWS).map(p => `<div class="sxcsrow"><label class="chk" title="${esc(tt('scripts.cs_lines',{a: p.start + 1, b: p.end + 1}))}">
+      <input type="checkbox" ${c.picked.has(p.n) ? 'checked' : ''} onchange="sxCsPick(${p.n}, this.checked)">
+      <span class="badge">${esc(p.kind)}</span> <code>${esc(p.head)}</code>
+      <span class="count">${ttN('scripts.cs_n_lines', p.lines)}${p.comment ? ` · ${esc(p.comment)}` : ''}</span></label></div>`).join('')}
+    ${rows.length > SX_CS_ROWS ? `<div class="count">${tt('scripts.cs_more',{n: rows.length - SX_CS_ROWS})}</div>` : ''}`;
+}
+function sxCsHtml(){
+  const s = state.sx, c = s.cs;
+  if(!c){ queueMicrotask(() => sxCsLoad()); return `<div class="empty">${tt('common.reading')}</div>`; }
+  if(!c.d) return `<div class="empty">${tt('common.reading')}</div>`;
+  const d = c.d;
+  const camps = (d.campaigns || []).length > 1 ? `<select onchange="sxCsLoad(this.value)">${d.campaigns.map(x =>
+    `<option value="${esc(x)}" ${x === c.campaign ? 'selected' : ''}>${esc(x)}</option>`).join('')}</select>` : '';
+  if(d.error || d.problem) return `<div class="bsec">${camps}<div class="w-bad">✗ ${esc(d.error || d.problem)}</div></div>`;
+  if(d.readonly) return `<div class="bsec">${camps}<div class="w-warn">${esc(d.readonly)}</div></div>`;
+  return `<div class="bsec sxcs">
+    <div class="trnote">${tt('scripts.cs_head',{rel: esc(d.rel), lines: d.lines})}</div>
+    ${(d.warnings || []).map(w => `<div class="trfind w-warn">${esc(w)}</div>`).join('')}
+    <div class="brow">${camps}
+      <input placeholder="${ttA('scripts.cs_filter')}" value="${esc(c.filter)}" oninput="sxCsFilter(this.value)">
+      <button onclick="sxCsTake(false)" ${c.busy ? 'disabled' : ''}>${tt('scripts.cs_take_picked')}</button>
+      <button onclick="sxCsTake(true)" ${c.busy ? 'disabled' : ''}>${tt('scripts.cs_take_shown')}</button>
+      <button onclick="state.sx.cs.picked.clear();sxCsPaintList()">${tt('scripts.cs_clear')}</button>
+    </div>
+    <div id="sxCsList" class="sxcslist">${sxCsListHtml()}</div>
+  </div>`;
+}
+//: the filter repaints only the list, so the caret stays in the box
+function sxCsFilter(v){ state.sx.cs.filter = v; sxCsPaintList(); }
+function sxCsPaintList(){ const el = document.getElementById('sxCsList'); if(el) el.innerHTML = sxCsListHtml(); }
+function sxCsPick(n, on){ const p = state.sx.cs.picked; on ? p.add(n) : p.delete(n); sxCsPaintList(); }
+async function sxCsTake(shown){
+  const s = state.sx, c = s.cs;
+  const drop = shown ? sxCsShown().map(p => p.n) : [...c.picked];
+  if(!drop.length){ toast(tt('scripts.cs_none')); return; }
+  const body = {mod: s.mod, campaign: c.campaign, sig: c.d.sig, drop};
+  c.busy = true;
+  let r;
+  try{ r = await api.post('/api/campscript/plan', body); }catch(e){ r = {error: errText(e)}; }
+  c.busy = false;
+  if(r.error){ toast('✗ ' + r.error, 7000); return; }
+  const p = r.plan || {};
+  if(!confirm(tt('scripts.cs_confirm',{n: drop.length, changes: (p.changes || []).join('\n'),
+    warnings: (p.warnings || []).slice(0, 4).join('\n')}))) return;
+  c.busy = true;
+  try{ r = await api.post('/api/campscript/apply', body); }catch(e){ r = {error: errText(e)}; }
+  c.busy = false;
+  if(r.error){ toast('✗ ' + r.error, 7000); return; }
+  toast(tt('common.saved_log_can_undo_it'));
+  sxCsLoad(c.campaign);
 }

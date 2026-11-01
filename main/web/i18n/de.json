@@ -11929,5 +11929,23 @@
  "eng.transfer.own_voice_files_lost": "Sprachausgabe: {n} Sounddatei(en), die ihr Eintrag nennt, sind weder in einer der Mods noch im Spiel, also bleiben sie stumm: {files}",
  "transfer.bring_the_building": "Gebäude mitbringen…",
  "transfer.bring_the_building_confirm": "Den Gebäudeimport nach {dst} mit {lines} ausgewählt öffnen?\n\nEr tritt an die Stelle dieses Fensters. Zuerst die Übertragung anwenden: Die Rekrutierungspools eines Gebäudes kommen nur für Einheiten mit, die {dst} schon hat.",
- "transfer.recruit_missing_lines": "In {src} wird sie in {lines} rekrutiert, das {dst} gar nicht hat."
+ "transfer.recruit_missing_lines": "In {src} wird sie in {lines} rekrutiert, das {dst} gar nicht hat.",
+ "scripts.tab_campscript": "Kampagnenskript",
+ "scripts.cs_filter": "Nach Art, erster Zeile oder Kommentar filtern",
+ "scripts.cs_take_picked": "Die angehakten entfernen",
+ "scripts.cs_take_shown": "Alle gezeigten entfernen",
+ "scripts.cs_clear": "Alle abhaken",
+ "scripts.cs_shown": "{n} von {of} Teilen gezeigt, {picked} angehakt",
+ "scripts.cs_lines": "Zeilen {a} bis {b}",
+ "scripts.cs_n_lines": {
+  "one": "{count} Zeile",
+  "other": "{count} Zeilen"
+ },
+ "scripts.cs_more": "…und {n} weitere; filtern, um sie zu sehen",
+ "scripts.cs_none": "Nichts zu entfernen.",
+ "scripts.cs_confirm": "{n} Teil(e) aus dem Kampagnenskript entfernen?\n\n{changes}\n{warnings}\n\nVorher gesichert, und 🕑 Protokoll kann es rückgängig machen.",
+ "eng.campscript.close_without_open": "Zeile {line}: {word} schließt einen Block, der nie geöffnet wurde, daher werden die Teile danach nicht angeboten",
+ "eng.campscript.never_closed": "Zeile {line}: ein {word}-Block wird nie geschlossen, daher werden er und was folgt nicht angeboten",
+ "eng.campscript.took_out": "{n} Teil(e) aus {name} entfernt: {heads}",
+ "scripts.cs_head": "<code>data/{rel}</code>, {lines} Zeilen, in seinen Teilen: jeder Monitor, jede Schleife, jeder if-Block, Zähler und Befehl außerhalb jedes Blocks, mit dem Kommentar darüber. Die Skriptzeilen script, wait_monitors und end_script bleiben immer."
 }
