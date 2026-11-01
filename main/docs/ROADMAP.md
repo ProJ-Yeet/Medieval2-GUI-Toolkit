@@ -1092,21 +1092,23 @@ split by area, each built from the behaviour described in the checklist:
   EDB's level and `recruit_pool` clauses read with the culture swapped; a gained unit its ownership leaves out is said so.
   `tests/test_culturechange` (20). Built from the editor's CHANGELOG, not its code: the editor's repo no longer carries
   its source, so every remaining 96f item is a port of behaviour.
-* **96f, seven more pieces, 2026-11-01** (the user: "finish up major III"): leader, heir and former leader titles with
+* **96f, eight more pieces, 2026-11-01** (the user: "finish up major III"): leader, heir and former leader titles with
   the strengths and weaknesses on an existing faction (`tests/test_factiontitles`); surnames from the faction's own
   list in the character form and the family tree (`/api/namekeys/pool`, `tests/test_namepool`); an Armour button in
   the unit editor's 3D preview; Unit Transfer's *Use its own voice*, the name call and the sounds it names brought
   out of the source's files or packs (`tests/test_transfer_ownvoice`); a missing recruitment building named by
   Transfer and brought by Phase 76's import (`tests/test_transfer_missingbuilding`); the campaign script by pieces on
   the Scripts screen (`campscript.py`, `tests/test_campscript`); Health's two-guilds-in-a-town check
-  (`tests/test_guildrule`). Renaming a slot everywhere was 19b's already; the other new checks were rules already.
+  (`tests/test_guildrule`); community translation files in `config/translations/` and *Words to translate* in
+  Settings (`tests/test_i18n_community`). Renaming a slot everywhere was 19b's already; the other new checks were
+  rules already; more campaign rules needed nothing (recruitment slots are campdb fields, chains past 9 levels warn,
+  climates on the sea are major II's map work).
 * **Left in 96f**, each a port of behaviour from the editor's CHANGELOG (its code is gone, see `STATE.md`): the 3D
   viewer's animations, riders and crews where Armory Studio lacks them; a card from the 3D model where the card
   maker lacks it; the new-unit wizard's steps; the editor's own look (a layout editor for the toolkit's pages); the
   game's menu screens page by page; the art browser by kind; drawing pictures from the campaign map; own logos and
   the area recolour; the Scratch-style blocks view of the module builder; the thin mod; keep-for-Apply where change
-  sets lack it; hover cards; a religion and a building from nothing; more campaign rules; community translation
-  files.
+  sets lack it; hover cards; a religion from nothing (a building from nothing is `buildings.plan_new_tree` already).
 
 **Left in major III**: 96f, round two's major III items. Porting the editor's current files already brought its control blocks (ELSE, all / any / none, for each), its newer WHENs and the Recruitment Order, One Recruitment Grid and Upkeep x N add-ons; the Scratch-style blocks view and the campaign script by pieces are still to do. The thin mod needs every editor to copy a game file in
 on its first write (the editor's `ModData.under`), so it is a piece of its own, not a flag on 96e7.
