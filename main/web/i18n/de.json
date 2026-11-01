@@ -11922,5 +11922,9 @@
  "stratchar.no_surname": "kein Nachname",
  "stratchar.surname_title": "Ein Nachname aus der eigenen Liste dieser Fraktion in descr_names.txt; ein anderer ersetzt ihn",
  "editor.armour_step": "Rüstung {n}/{of} · Stufe {level}",
- "editor.armour_step_title": "Die Rüstungs-Aufrüstungen dieser Einheit durchgehen (armour_ug_models), jede so, wie das Spiel sie auf ihrer Rüstungsstufe zeigt"
+ "editor.armour_step_title": "Die Rüstungs-Aufrüstungen dieser Einheit durchgehen (armour_ug_models), jede so, wie das Spiel sie auf ihrer Rüstungsstufe zeigt",
+ "transfer.its_name_call_and_barks": "ihr Namensruf und ihre Rufe, aus der Mod, aus der sie kommt",
+ "transfer.use_its_own_voice": "Eigene Sprachausgabe verwenden",
+ "transfer.own_voice_note": "Ihr eigener Eintrag in der Sprachausgabe-Bank von {src} kommt in denselben Akzent und dieselbe Klasse in {dst}, und jede Sounddatei, die er nennt und die {dst} nicht hat, wird lose hineinkopiert (wenn nötig aus den Packs von {src}). Die kompilierten Ereignisdateien werden entfernt, damit das Spiel sie neu erstellt.",
+ "eng.transfer.own_voice_files_lost": "Sprachausgabe: {n} Sounddatei(en), die ihr Eintrag nennt, sind weder in einer der Mods noch im Spiel, also bleiben sie stumm: {files}"
 }

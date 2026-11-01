@@ -341,6 +341,34 @@ def add_unit(bank: SoundBank, unit_name: str, donor: VoiceEntry,
     return "".join(out)
 
 
+def add_foreign(bank: SoundBank, unit_name: str, src_lines: List[str],
+                accent: str, voice_class: str) -> str:
+    """Return the file text with ``unit_name`` added from another bank's entry.
+
+    96f: a transferred unit bringing its own voice. ``src_lines`` are the
+    source mod's entry, keyword line first; they land after the block's last
+    unit, in this file's own indent and line ending. A ``unit_name`` already in
+    the bank is taken out first, so the bank never names it twice. Raises
+    ``ValueError`` as :func:`add_unit` does when this bank has no block for the
+    accent and class.
+    """
+    if bank.get(unit_name) is not None:
+        bank = parse_text(remove_unit(bank, unit_name))
+    block = bank.unit_select(accent, voice_class)
+    if block is None:
+        raise ValueError(_i18n.msg("eng.sounds.no_unit_select_block_in_the", "no '{accent}' / '{voice_class}' Unit_Select block in the voice bank", accent=accent, voice_class=voice_class))
+    if not src_lines:
+        raise ValueError(_i18n.msg("eng.sounds.voice_entry_for_is_empty", "voice entry for {name} is empty", name=repr(unit_name)))
+    nl = next((ln[len(ln.rstrip("\r\n")):] for ln in bank.lines if ln.endswith("\n")), "\n")
+    lines = [ln.rstrip("\r\n") + nl for ln in src_lines]
+    copied = _reindent(lines, _indent_of(lines[0]), entry_indent(block, bank))
+    copied[0] = _rename_keyword_line(copied[0], unit_name)
+    at = _insert_at(block, None)
+    out = list(bank.lines)
+    out[at:at] = copied
+    return "".join(out)
+
+
 def remove_unit(bank: SoundBank, unit_name: str) -> str:
     """Return the file text with ``unit_name``'s entry deleted (no-op if absent)."""
     e = bank.get(unit_name)

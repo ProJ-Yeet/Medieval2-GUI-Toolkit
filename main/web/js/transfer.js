@@ -698,6 +698,8 @@ function soundDonor(c){
   const ds=state.destSnd;
   if(!ds||!ds.has_file)return {mode:c.sound_mode,blocked:'nobank'};
   if(c.sound_mode==='none')return {mode:'none'};
+  // 96f: its own voice comes from the source mod's bank; the plan finds it
+  if(c.sound_mode==='own')return {mode:'own'};
   // Replacing: "the base's voice" would be the replaced unit's own entry, copied
   // onto itself. It already has it, and its accent/voice_type come across with
   // its stats - so the default means "leave the voice alone", and nothing is
@@ -734,6 +736,8 @@ function soundFieldset(c,u){
     body=`<div class="count" style="margin-top:6px">${tt('transfer.keeps_the_barks_it_already_has',{name:esc(d.name)})}</div>`;
   else if(c.sound_mode==='none')
     body=`<div class="count" style="margin-top:6px">${tt('transfer.no_entry_is_written_and_accent')}</div>`;
+  else if(c.sound_mode==='own')
+    body=`<div class="count" style="margin-top:6px">${tt('transfer.own_voice_note',{src:esc(state.src),dst:esc(state.dst)})}</div>`;
   else if(d.blocked==='nobase')
     body=`<div class="count w-warn" style="margin-top:6px">${tt('transfer.no_base_unit_picked_yet_so')}</div>`;
   else if(d.blocked==='silent')
@@ -760,6 +764,7 @@ function soundFieldset(c,u){
       ${radio('unit',tt('transfer.use_another_units_sound'),
               isReplace(c)?tt('transfer.copy_another_units_barks_over_it')
                           :tt('transfer.take_the_voice_from_a_different'))}
+      ${radio('own',tt('transfer.use_its_own_voice'),tt('transfer.its_name_call_and_barks'))}
       ${radio('none',tt('transfer.dont_import_sound'),isReplace(c)
               ?tt('transfer.same_as_keeping_it')
               :tt('transfer.use_the_classs_generic_barks'))}

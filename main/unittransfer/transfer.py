@@ -223,6 +223,8 @@ class TransferOptions:
     #          come from the base, so the entry lands in a block that exists)
     #   "unit" copy some OTHER destination unit's entry, named by `sound_donor`
     #          (base one unit for stats, another for the voice)
+    #   "own"  bring the unit's OWN entry from the source mod, its name call
+    #          and the sound files the destination lacks with it (96f)
     #   "none" write no voice entry at all
     # A copied voice also PINS the EDU's `accent` / `voice_type` to the donor's:
     # the entry is dead weight unless those two fields point at the same block.
@@ -378,6 +380,10 @@ class TransferPlan:
     sound_class: str = ""            # onto the EDU block's accent / voice_type
     sound_text: str = ""             # whole new voice-bank file ("" = unchanged)
     sound_detail: str = ""           # human-readable note for the summary
+    # 96f, sound_mode "own": (path under data/, bytes) of each sound brought, and
+    # the compiled events files that go so the game rebuilds them
+    sound_files: List[Tuple[str, bytes]] = field(default_factory=list)
+    sound_compiled: List[str] = field(default_factory=list)
     # 1 if this transfer adds a NEW unit type to the destination EDU, else 0
     # (overwrite/skip add none) - drives the 500 vanilla unit-limit warning. A
     # unit written as an M2TWEOP unit adds none either: the cap is a property of
@@ -676,6 +682,9 @@ class TransferPlan:
             L.append(f"  voice: copied {self.sound_donor}'s Unit_Select entry into "
                      f"{self.sound_accent}/{self.sound_class} "
                      f"(EDU accent + voice_type pinned to match)")
+            if self.sound_files:
+                L.append(f"  voice: {len(self.sound_files)} sound file(s) brought loose, "
+                         f"{len(self.sound_compiled)} compiled events file(s) removed")
         elif self.sound_action in ("missing", "no_base"):
             L.append("  ! voice: " + self.sound_detail)
         elif self.sound_action == "none" and self.sound_detail:
@@ -1616,6 +1625,66 @@ def _resolve_engines(plan: "TransferPlan", source: Mod, dest: Mod, unit,
                 _i18n.msg("eng.transfer.unit_has_which_names_an_entry", "unit has `{field_key} {val}`, which names an entry in {filename} - that file is NOT transferred; add the entry by hand if the destination lacks it.", field_key=field_key, val=val, filename=filename))
 
 
+def _resolve_own_voice(plan: "TransferPlan", dest: Mod) -> None:
+    """96f: the unit brings its OWN voice entry, and the sounds it names.
+
+    The entry is the unit's ``Unit_Select`` in the SOURCE mod's bank - its name
+    call ("Khan's Guard!") and its barks - laid into the same accent and class
+    of the destination's bank, the EDU pinned to them as for any copied voice.
+    Every ``.wav`` / ``.mp3`` the entry names that the destination plays from
+    nowhere (not loose, not in its packs or the game's) is taken out of the
+    source's loose files or packs and written loose at the same path; the
+    compiled ``events.dat`` / ``.idx`` then go, so the game builds them again
+    from the text, as :mod:`unittransfer.voices` does for a name call.
+    """
+    from . import voices
+    src = plan.source
+    entry = src.sounds.get(plan.unit_type)
+    if entry is None:
+        plan.sound_action = "missing"
+        plan.sound_detail = (f"'{plan.unit_type}' has no Unit_Select entry in "
+                             f"{src.name}'s voice bank, so it has no voice of its own "
+                             "to bring (it uses its class's generic barks)")
+        plan.warnings.append(plan.sound_detail)
+        return
+    src_lines = src.sounds.lines[entry.start:entry.end]
+    try:
+        plan.sound_text = sounds.add_foreign(dest.sounds, plan.resolved_type, src_lines,
+                                             entry.accent, entry.voice_class)
+    except ValueError as exc:
+        plan.sound_action = "missing"
+        plan.sound_detail = f"voice entry not written: {exc}"
+        plan.warnings.append(plan.sound_detail)
+        return
+    plan.sound_action = "copy"
+    plan.sound_donor = plan.unit_type
+    plan.sound_accent = entry.accent
+    plan.sound_class = entry.voice_class
+
+    dest_index = voices.pack_index(dest)
+    src_index = voices.pack_index(src)
+    lost: List[str] = []
+    for rel in dict.fromkeys(r.replace("\\", "/") for ev in voices._files(src_lines) for r in ev):
+        if voices.loose_path(dest, rel) or rel.lower() in dest_index:
+            continue
+        raw = voices.sound_bytes(src, rel, src_index)
+        if raw is None:
+            lost.append(rel)
+            continue
+        plan.sound_files.append((rel[5:] if rel.lower().startswith("data/") else rel, raw))
+    if plan.sound_files:
+        sdir = voices._ci(Path(dest.data), "sounds")
+        for name in ("events.dat", "events.idx"):
+            got = voices._ci(sdir, name) if sdir else None
+            if got:
+                plan.sound_compiled.append(os.path.relpath(got, dest.data).replace("\\", "/"))
+    if lost:
+        plan.warnings.append(_i18n.msg(
+            "eng.transfer.own_voice_files_lost",
+            "voice: {n} sound file(s) its entry names are in neither mod nor the game, so they stay silent: {files}",
+            n=len(lost), files=", ".join(lost[:3])))
+
+
 def _resolve_sound(plan: "TransferPlan", dest: Mod) -> None:
     """Decide the transferred unit's voice entry and compose the new voice bank.
 
@@ -1652,6 +1721,9 @@ def _resolve_sound(plan: "TransferPlan", dest: Mod) -> None:
         plan.warnings.append(plan.sound_detail)
         return
 
+    if mode == "own":
+        _resolve_own_voice(plan, dest)
+        return
     if mode == "base":
         donor_name = opts.base_type or ""
         if not donor_name:
@@ -3536,6 +3608,16 @@ def apply_transfer(plan: TransferPlan) -> Dict:
     # ---- 3e) voice bank ----
     if plan.sound_text:
         write_text(sounds.EDS_REL, plan.sound_text, sounds.ENCODING)
+    for rel, raw in plan.sound_files:
+        target = backup_and(rel)
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_bytes(raw)
+        file_op("WRITE", target, f"{len(raw)} bytes")
+    for rel in plan.sound_compiled:
+        target = backup_and(rel)
+        if target.exists():
+            os.remove(target)
+            file_op("DELETE", target, "the game builds it again from the sound texts")
 
     # ---- 4) assets + icons ----
     engine_rels = {r.lower() for r in plan.engine_assets}
