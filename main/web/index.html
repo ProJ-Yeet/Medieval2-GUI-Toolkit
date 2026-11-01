@@ -683,6 +683,16 @@
   /* ...and the one that opens a folder outside the mod */
   .bmfolderpick{display:flex;gap:4px;margin:4px 0}
   .bmfolderpick input{flex:1;min-width:0}
+  .bmimp .bmimplist{max-height:52vh;overflow:auto;display:flex;flex-direction:column;gap:6px;margin:8px 0}
+  .bmimprow{padding:6px 8px;border:1px solid var(--edge);border-radius:6px;background:var(--panel2)}
+  .bmimprow.off{opacity:.6}
+  .bmimptag{font-size:11px;padding:0 5px;border-radius:4px;border:1px solid var(--edge)}
+  .bmimptag.ok{border-color:#4f9a5d}.bmimptag.warn{border-color:#d9a43a;color:#d9a43a}
+  .bmimppics{display:flex;gap:6px;flex-wrap:wrap;margin:4px 0}
+  .bmimppic{display:flex;flex-direction:column;align-items:center;gap:2px;padding:3px;max-width:96px}
+  .bmimppic img{max-width:88px;max-height:120px;object-fit:contain}
+  .bmimppic .count{max-width:88px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .bmimppic.on{outline:2px solid var(--accent)}
   /* folder mode: the list is the left column and runs the page's length, and
      the panel beside it is the model alone */
   .bmfoldercol{display:flex;flex-direction:column;gap:6px}

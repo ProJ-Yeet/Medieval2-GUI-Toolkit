@@ -121,6 +121,13 @@ class NewModel:
     attach_normal_src: str = ""
     apply_to_attach: bool = False     # also repoint the attachment textures
     assign_to: str = ""               # EDU slot to point at the new entry
+    # An entry written out whole, a Blender export's ``<name>_bmdb.txt``, in
+    # place of a clone: its text as it stands (renamed to ``name`` if that
+    # differs), and the files it names, each copied from disk to exactly the
+    # path the entry gives it (``{rel under data/: absolute source}``).
+    raw_entry: str = ""
+    files: Dict[str, str] = field(default_factory=dict)
+    replace: bool = False             # put it in place of the mod's entry of that name
 
 
 @dataclass
@@ -252,7 +259,10 @@ def request_from_dict(d: dict) -> EditRequest:
                              attach_texture_src=(n.get("attach_texture_src") or "").strip(),
                              attach_normal_src=(n.get("attach_normal_src") or "").strip(),
                              apply_to_attach=bool(n.get("apply_to_attach", False)),
-                             assign_to=(n.get("assign_to") or "").strip())
+                             assign_to=(n.get("assign_to") or "").strip(),
+                             raw_entry=n.get("raw_entry") or "",
+                             files={str(k): str(v) for k, v in (n.get("files") or {}).items()},
+                             replace=bool(n.get("replace", False)))
                     for n in (d.get("new_models") or [])],
         card_src=(d.get("card_src") or "").strip(),
         info_src=(d.get("info_src") or "").strip(),
@@ -1379,6 +1389,9 @@ def _plan_new_model(plan: EditPlan, mod: Mod, nm: NewModel,
     if " " in nm.name:
         plan.errors.append(_i18n.msg("eng.edit.model_entry_names_cannot_contain_spaces", "'{name}': model entry names cannot contain spaces", name=nm.name))
         return
+    if nm.raw_entry:
+        _plan_raw_model(plan, mod, nm, entries, taken)
+        return
     if nm.name in entries or nm.name in taken:
         plan.errors.append(_i18n.msg("eng.edit.a_model_entry_with_that_name", "'{name}': a model entry with that name already exists", name=nm.name))
         return
@@ -1447,6 +1460,47 @@ def _plan_new_model(plan: EditPlan, mod: Mod, nm: NewModel,
         plan.warnings.append(
             _i18n.msg("eng.edit.points_at_exactly_the_same_files", "'{name}' points at exactly the same files as '{name2}' - give it a mesh and/or a texture to make it a different model.", name=nm.name, name2=clone.name))
     for skel in dict.fromkeys(clone.skeletons()):
+        if skel and skel not in mod.modeldb.all_skeletons():
+            plan.warnings.append(_i18n.msg("eng.edit.animation_is_not_in_this_mods", "animation '{skel}' is not in this mod's modeldb", skel=skel))
+
+
+def _plan_raw_model(plan: EditPlan, mod: Mod, nm: NewModel,
+                    entries: Dict[str, "modeldb.ModelEntry"], taken: set) -> None:
+    """A new entry from its own text, its files copied where it names them."""
+    # ``taken`` holds the mod's names as well as this plan's
+    exists = nm.name in entries
+    if (exists and (not nm.replace or nm.name in plan.entry_updates)) or (not exists and nm.name in taken):
+        plan.errors.append(_i18n.msg("eng.edit.a_model_entry_with_that_name", "'{name}': a model entry with that name already exists", name=nm.name))
+        return
+    if nm.replace and nm.name in entries and entries[nm.name].first_entry_pad:
+        plan.errors.append(pad_entry_kept(nm.name))
+        return
+    # an entry in a modeldb starts on a line of its own
+    raw = "\n" + nm.raw_entry.replace("\r\n", "\n").strip()
+    try:
+        e = modeldb.parse_entry_text(raw)
+    except ValueError as err:
+        plan.errors.append(_i18n.msg("eng.edit.entry_text_unreadable", "'{name}': the entry's text does not read as a modeldb entry ({why})", name=nm.name, why=err))
+        return
+    if e.name.lower() != nm.name:
+        raw = modeldb.rename_entry_raw(raw, nm.name)
+    for rel, src in nm.files.items():
+        rel_dir, _sep, fname = rel.replace("\\", "/").rpartition("/")
+        got = _plan_file_copy(plan, mod, Path(src), rel_dir)
+        if got is not None and Path(src).name != fname:
+            plan.errors.append(_i18n.msg("eng.edit.copy_name_differs", "'{name}': {src} cannot be copied as {rel}", name=nm.name, src=src, rel=rel))
+    taken.add(nm.name)
+    facs = e.factions()
+    if nm.replace and nm.name in entries:
+        plan.entry_updates[nm.name] = raw
+        plan.changes.append(f"model entry '{nm.name}' replaced by the one given "
+                            f"({len(e.lods)} LOD(s), {len(facs)} faction skin(s))")
+    else:
+        plan.new_entries.append((nm.name, raw, False))
+        plan.changes.append(f"new model entry '{nm.name}' as given "
+                            f"({len(e.lods)} LOD(s), {len(facs)} faction skin(s): {', '.join(facs[:6])}"
+                            f"{'…' if len(facs) > 6 else ''})")
+    for skel in dict.fromkeys(e.skeletons()):
         if skel and skel not in mod.modeldb.all_skeletons():
             plan.warnings.append(_i18n.msg("eng.edit.animation_is_not_in_this_mods", "animation '{skel}' is not in this mod's modeldb", skel=skel))
 

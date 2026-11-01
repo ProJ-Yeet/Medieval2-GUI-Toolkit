@@ -145,6 +145,21 @@ def _new_model(req: dict, templates: Dict[str, dict], assign: str = "") -> dict:
     return nm
 
 
+def _unit_request(mod, unit_type: str, req: dict, templates: Dict[str, dict],
+                  fields: Optional[dict] = None) -> "edit.EditRequest":
+    """The edit that makes ``unit_type`` wear the model: a new entry from the
+    bake, or with ``entry`` one the mod already has; and with ``card_src`` /
+    ``info_src`` a picture copied in as its cards, under its dictionary name."""
+    d = {"unit": unit_type, "field_overrides": dict(fields or {}),
+         "card_src": req.get("card_src") or "", "info_src": req.get("info_src") or ""}
+    if req.get("entry"):
+        u = mod.edu.by_type()[unit_type]
+        d["raw_block"] = edu.set_model_slot(u.raw, "soldier", req["entry"])
+    else:
+        d["new_models"] = [_new_model(req, templates, "soldier")]
+    return edit.request_from_dict(d)
+
+
 def plan_install(mod, req: dict) -> dict:
     """What the chosen way would write, planned and not written.
 
@@ -157,6 +172,14 @@ def plan_install(mod, req: dict) -> dict:
     """
     choice = req.get("choice") or "skip"
     templates = role_templates(mod)
+    entry = (req.get("entry") or "").strip().lower()
+    if entry:
+        # an entry the mod has (a folder's import): it needs a unit to wear it
+        if entry not in mod.modeldb.by_name():
+            raise InstallError(_i18n.msg("eng.armunit.no_entry", "{mod} has no model entry {entry}", mod=mod.name, entry=entry))
+        if choice == "skip":
+            raise InstallError(_i18n.msg("eng.armunit.entry_needs_unit", "choose a unit to wear {entry}, or a new one", entry=entry))
+        req = dict(req, entry=entry, clone_from=req.get("clone_from") or entry)
     if choice == "skip":
         er = edit.bmdb_request_from_dict({"new_models": [_new_model(req, templates)]})
         return {"choice": choice, "steps": [{"kind": "bmdb", "plan": edit.plan_bmdb(mod, er)}]}
@@ -166,7 +189,7 @@ def plan_install(mod, req: dict) -> dict:
     if choice == "add":
         if not req.get("clone_from") and not req.get("template"):
             req = dict(req, clone_from=mod.edu.by_type()[unit].soldier_model)
-        er = edit.request_from_dict({"unit": unit, "new_models": [_new_model(req, templates, "soldier")]})
+        er = _unit_request(mod, unit, req, templates)
         return {"choice": choice, "steps": [{"kind": "edit", "plan": edit.plan_edit(mod, er)}]}
     new_type = (req.get("new_type") or "").strip()
     if not new_type:
@@ -181,8 +204,7 @@ def plan_install(mod, req: dict) -> dict:
                            sound_mode="unit", sound_donor=unit)
     dup = plan_transfer(mod, unit, mod, opts)
     t = templates.get(req.get("template") or "")
-    er = edit.request_from_dict({"unit": unit, "new_models": [_new_model(req, templates, "soldier")],
-                                 "field_overrides": dict(t["fields"]) if t else {}})
+    er = _unit_request(mod, unit, req, templates, t["fields"] if t else None)
     return {"choice": choice, "new_type": new_type,
             "steps": [{"kind": "transfer", "plan": dup}, {"kind": "edit", "plan": edit.plan_edit(mod, er), "on": unit}]}
 
@@ -209,9 +231,10 @@ def apply_install(mod_of, mod_name: str, req: dict, invalidate=None) -> dict:
     templates = role_templates(mod)
     if not req.get("clone_from") and not req.get("template"):
         req = dict(req, clone_from=mod.edu.by_type()[req["unit"]].soldier_model)
+    if req.get("entry"):
+        req = dict(req, entry=req["entry"].strip().lower())
     t = templates.get(req.get("template") or "")
-    er = edit.request_from_dict({"unit": new_type, "new_models": [_new_model(req, templates, "soldier")],
-                                 "field_overrides": dict(t["fields"]) if t else {}})
+    er = _unit_request(mod, new_type, req, templates, t["fields"] if t else None)
     plan = edit.plan_edit(mod, er)
     if plan.errors:
         raise InstallError("; ".join(str(e) for e in plan.errors))

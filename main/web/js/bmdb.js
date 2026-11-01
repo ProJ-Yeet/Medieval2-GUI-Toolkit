@@ -534,7 +534,10 @@ function bmFolderBodyHtml(){
                 d.truncated ? tt('bmdb.folder_truncated') : ''].filter(Boolean)
     .map(t => `<div class="w-warn">${t}</div>`).join('');
   if(!all.length) return warn + `<div class="count">${tt('bmdb.folder_no_models')}</div>`;
-  return `<div class="count">${summary}</div>${warn}
+  const imp = d.kind === 'export' && state.src
+    ? `<div class="bmfolderpick"><button class="primary" onclick="bmImpOpen()"
+        title="${ttA('bmdb.imp_button_title', {mod: state.src})}">${tt('bmdb.imp_button', {mod: esc(state.src)})}</button></div>` : '';
+  return `<div class="count">${summary}</div>${warn}${imp}
     ${all.length > 8 ? `<label class="v3f"><span>${tt('common.find')}</span>
       <input id="bmFolderFilter" type="text" value="${esc(k.filter)}"
         oninput="bmFolderFilter(this.value)"></label>` : ''}
@@ -561,6 +564,260 @@ function bmFolderRowsHtml(k){
   return `${want ? `<div class="count">${tt('stratview.shown_of_total',{shown,total:all.length})}</div>` : ''}
     <div class="cmodlist">${rows || `<div class="count">${tt('stratview.nothing_by_that_name')}</div>`}</div>`;
 }
+/* ---- the folder's models into the mod (folderimport.py) ------------------
+   Two steps in one dialog. First the models: each with its _bmdb.txt goes in
+   as written, its files copied where it names them; one without needs an
+   entry of the mod to clone, for its skeletons and factions. A name the mod
+   has, or that two exports share, is offered a free one. The import is one
+   edit, one Undo. Then each entry written can be made a unit's soldier or a
+   new unit's, with a card and an info card: pictures in the folder named
+   nearest the model or the unit first, or any file, copied in under the
+   unit's own name. */
+function bmImp(){ return state.bmImp; }
+
+async function bmImpOpen(){
+  const k = bmFolderState();
+  if(!k.data || !state.src) return;
+  state.bmImp = {mod: state.src, path: k.data.root, step: 'models', busy: true, err: '',
+                 data: null, rows: {}, clone_all: '', plan: null, units: null, done: [],
+                 pics: [], at: {}};
+  bmImpPaint();
+  overlay.classList.add('open');
+  const m = bmImp();
+  try{
+    const [scan, units] = await Promise.all([
+      api.post('/api/model/folder/import/scan', {mod: m.mod, path: m.path}),
+      api.get('/api/armory/templates?mod=' + enc(m.mod))]);
+    if(bmImp() !== m) return;
+    m.data = scan; m.units = units;
+    for(const r of scan.models)
+      m.rows[r.id] = {on: !!r.bmdb, action: r.suggest ? 'rename' : 'new',
+                      name: r.suggest || r.name, clone_from: ''};
+  }catch(e){ m.err = errText(e); }
+  m.busy = false;
+  bmImpPaint();
+}
+
+function bmImpPaint(){
+  const m = bmImp();
+  if(!m) return;
+  document.getElementById('modal').className = 'modal wide';
+  modal.innerHTML = `<div class="bmimp">
+    <h3>${tt('bmdb.imp_title', {mod: esc(m.mod)})}</h3>
+    <div class="count">${esc(m.path)}</div>
+    ${m.err ? `<div class="armexperr">${esc(m.err)}</div>` : ''}
+    ${m.busy ? `<div class="count">${tt('bmdb.imp_working')}</div>` : ''}
+    <div id="bmImpBody">${m.data ? (m.step === 'models' ? bmImpModelsHtml() : bmImpUnitsHtml()) : ''}</div>
+    <div style="text-align:right;margin-top:10px"><button onclick="closeModal()">${tt('common.close')}</button></div>
+  </div>`;
+}
+
+const bmImpFileNote = f => ({new: tt('bmdb.imp_file_new'), same: tt('bmdb.imp_file_same'),
+  differs: tt('bmdb.imp_file_differs'), in_mod: tt('bmdb.imp_file_in_mod'),
+  missing: tt('bmdb.imp_file_missing')})[f.state] || f.state;
+
+function bmImpModelsHtml(){
+  const m = bmImp(), d = m.data;
+  const entries = `<datalist id="bmImpEntries">${(m.units.entries || []).map(n => `<option value="${esc(n)}">`).join('')}</datalist>`;
+  const on = d.models.filter(r => m.rows[r.id].on).length;
+  const noBmdb = d.models.filter(r => !r.bmdb).length;
+  const rows = d.models.map(r => {
+    const s = m.rows[r.id], id = esc(q1(r.id));
+    const tags = [r.bmdb ? `<span class="bmimptag ok">_bmdb.txt</span>` : `<span class="bmimptag">${tt('bmdb.imp_no_bmdb')}</span>`,
+                  r.clash ? `<span class="bmimptag warn">${tt('bmdb.imp_clash')}</span>` : '',
+                  r.dup ? `<span class="bmimptag warn">${tt('bmdb.imp_dup')}</span>` : ''].join(' ');
+    const counts = {};
+    r.files.forEach(f => { counts[f.state] = (counts[f.state] || 0) + 1; });
+    const files = Object.entries(counts).map(([st, n]) => `${n} ${bmImpFileNote({state: st})}`).join(', ');
+    const fileTitle = r.files.map(f => `${f.rel} (${bmImpFileNote(f)})`).join('\n');
+    const acts = ['new', ...(r.bmdb && r.clash ? ['replace'] : []), 'rename', 'skip'];
+    const act = `<select onchange="bmImpSet('${id}','action',this.value)">${acts.map(a =>
+      `<option value="${a}"${s.action === a ? ' selected' : ''}>${tt('bmdb.imp_act_' + a)}</option>`).join('')}</select>`;
+    const extra = [
+      s.action === 'rename' ? `<input value="${esc(s.name)}" oninput="bmImpSet('${id}','name',this.value,true)" title="${ttA('bmdb.imp_new_name')}">` : '',
+      r.bmdb ? '' : `<input list="bmImpEntries" value="${esc(s.clone_from)}" placeholder="${ttA('bmdb.imp_clone_from')}"
+          title="${ttA('bmdb.imp_clone_title')}" onchange="bmImpSet('${id}','clone_from',this.value)">`].join(' ');
+    const notes = [(r.missing_skeletons || []).length ? tt('bmdb.imp_missing_skeletons', {names: esc(r.missing_skeletons.join(', '))}) : '',
+                   (r.unknown_factions || []).length ? ttN('bmdb.imp_unknown_factions', r.unknown_factions.length, {names: esc(r.unknown_factions.join(', '))}) : '']
+      .filter(Boolean).map(t => `<div class="armexpwarn">${t}</div>`).join('');
+    return `<div class="bmimprow${s.on ? '' : ' off'}">
+      <label class="armcheck"><input type="checkbox"${s.on ? ' checked' : ''} onchange="bmImpSet('${id}','on',this.checked)">
+        <b>${esc(r.name)}</b></label> ${tags}
+      <span class="count" title="${esc(r.id)}">${esc(r.folder)}</span>
+      <div class="armexprow">${act} ${extra} <span class="count" title="${esc(fileTitle)}">${files}</span></div>${notes}</div>`;
+  }).join('');
+  const plan = m.plan ? `<div class="armissue ${m.plan.ok ? 'ok' : 'error'}">
+      ${m.plan.lines.filter(l => !l.startsWith('!')).slice(1).map(l => `<div class="count">${esc(l)}</div>`).join('')}
+      ${m.plan.warnings.map(w => `<div class="armexpwarn">${esc(w)}</div>`).join('')}
+      ${m.plan.errors.map(w => `<div class="armexperr">${esc(w)}</div>`).join('')}</div>` : '';
+  return `<div class="count">${tt('bmdb.imp_intro')}</div>
+    <div class="armexprow">
+      <button class="mini" onclick="bmImpTick(true)">${tt('bmdb.imp_tick_all')}</button>
+      <button class="mini" onclick="bmImpTick(false)">${tt('bmdb.imp_tick_none')}</button>
+      ${noBmdb ? `<label>${tt('bmdb.imp_clone_all')}<input list="bmImpEntries" value="${esc(m.clone_all)}"
+          onchange="bmImpCloneAll(this.value)"></label>` : ''}
+      <span class="count">${tt('bmdb.imp_ticked', {n: on, total: d.models.length})}</span></div>
+    ${entries}<div class="bmimplist">${rows}</div>
+    <div class="armexprow"><button onclick="bmImpPlan()"${on && !m.busy ? '' : ' disabled'}>${tt('bmdb.imp_plan')}</button>
+      <button class="primary" onclick="bmImpApply()"${m.plan && m.plan.ok && !m.busy ? '' : ' disabled'}>${tt('bmdb.imp_apply', {n: on})}</button></div>
+    ${plan}`;
+}
+
+function bmImpSet(id, k, v, live){
+  const m = bmImp();
+  const s = m.rows[id];
+  s[k] = v;
+  // a clone picked for a model is a model meant to go in
+  if(k === 'clone_from' && v) s.on = true;
+  if(k === 'action' && v === 'rename' && !s.name){
+    const r = m.data.models.find(x => x.id === id);
+    s.name = r.suggest || r.name;
+  }
+  m.plan = null;
+  if(!live) bmImpPaint();
+}
+function bmImpTick(on){
+  const m = bmImp();
+  for(const r of m.data.models) m.rows[r.id].on = on && (!!r.bmdb || !!m.rows[r.id].clone_from);
+  m.plan = null; bmImpPaint();
+}
+function bmImpCloneAll(v){
+  const m = bmImp();
+  m.clone_all = v;
+  for(const r of m.data.models)
+    if(!r.bmdb){ m.rows[r.id].clone_from = v; if(v) m.rows[r.id].on = true; }
+  m.plan = null; bmImpPaint();
+}
+function bmImpBody(){
+  const m = bmImp();
+  return {mod: m.mod, path: m.path, models: m.data.models.filter(r => m.rows[r.id].on).map(r => {
+    const s = m.rows[r.id];
+    return {id: r.id, action: s.action, name: s.name.trim(), clone_from: s.clone_from.trim()};
+  })};
+}
+async function bmImpPlan(){
+  const m = bmImp();
+  m.busy = true; m.err = ''; bmImpPaint();
+  try{ m.plan = await api.post('/api/model/folder/import/plan', bmImpBody()); }
+  catch(e){ m.plan = null; m.err = errText(e); }
+  m.busy = false; bmImpPaint();
+}
+async function bmImpApply(){
+  const m = bmImp();
+  if(!m.plan || !m.plan.ok) return;
+  m.busy = true; m.err = ''; bmImpPaint();
+  try{
+    const out = await api.post('/api/model/folder/import/apply', bmImpBody());
+    state.bmdb = null;
+    toast(ttN('bmdb.imp_written', out.names.length, {mod: m.mod}));
+    m.done = out.names.map(name => ({entry: name, choice: 'none', unit: '', new_type: '', new_name: '',
+                                     card: '', info: '', plan: null, written: ''}));
+    m.step = 'units'; m.plan = null;
+    m.units = await api.get('/api/armory/templates?mod=' + enc(m.mod));
+  }catch(e){ m.err = errText(e); }
+  m.busy = false; bmImpPaint();
+  m.done.forEach((_x, i) => bmImpPictures(i));
+}
+
+/* step two: each entry written, onto a unit, with its cards */
+function bmImpUnitsHtml(){
+  const m = bmImp();
+  const units = `<datalist id="bmImpUnits">${m.units.units.map(u => `<option value="${esc(u.type)}">${esc(u.category)} · ${esc(u['class'])}</option>`).join('')}</datalist>`;
+  return `<div class="armissue ok">${ttN('bmdb.imp_written', m.done.length, {mod: esc(m.mod)})}</div>
+    <div class="count">${tt('bmdb.imp_units_intro')}</div>${units}
+    <div class="bmimplist">${m.done.map((x, i) => bmImpUnitHtml(x, i)).join('')}</div>`;
+}
+
+function bmImpUnitHtml(x, i){
+  const radio = (v, label) => `<label class="armcheck"><input type="radio" name="bmImpChoice${i}"${x.choice === v ? ' checked' : ''}
+      onchange="bmImpUnitSet(${i},'choice','${v}')"> ${label}</label>`;
+  let html = `<div class="bmimprow"><b>${esc(x.entry)}</b>
+    ${x.written ? `<span class="bmimptag ok">${tt('bmdb.imp_unit_written', {unit: esc(x.written)})}</span>` : ''}
+    <div class="armexprow">${radio('none', tt('bmdb.imp_unit_none'))}${radio('add', tt('bmdb.imp_unit_add'))}${radio('new', tt('bmdb.imp_unit_new'))}</div>`;
+  if(x.choice === 'none') return html + '</div>';
+  html += `<div class="armexprow"><label>${x.choice === 'new' ? tt('armory.exp_unit_from') : tt('armory.exp_unit')}<input list="bmImpUnits" value="${esc(x.unit)}"
+      placeholder="${ttA('armory.find')}" onchange="bmImpUnitSet(${i},'unit',this.value)"></label>
+    ${x.choice === 'new' ? `<label>${tt('armory.exp_new_type')}<input value="${esc(x.new_type)}" onchange="bmImpUnitSet(${i},'new_type',this.value)"></label>
+      <label>${tt('armory.exp_new_name')}<input value="${esc(x.new_name)}" onchange="bmImpUnitSet(${i},'new_name',this.value)"></label>` : ''}</div>`;
+  html += ['card', 'info'].map(kind => bmImpPicHtml(x, i, kind)).join('');
+  html += `<div class="armexprow"><button onclick="bmImpUnitPlan(${i})">${tt('bmdb.imp_plan')}</button>
+    <button class="primary" onclick="bmImpUnitApply(${i})"${x.plan && x.plan.ok ? '' : ' disabled'}>${tt('armory.exp_write')}</button></div>`;
+  if(x.plan) html += x.plan.steps.map(st => `<div class="armissue ${st.errors.length ? 'error' : 'ok'}">
+      <b>${st.kind === 'transfer' ? tt('armory.exp_step_duplicate')
+           : x.choice === 'new' ? tt('armory.exp_step_new_unit_edit', {unit: esc(st.on)}) : tt('armory.exp_step_unit_edit')}</b>
+      ${st.lines.slice(1).map(l => `<div class="count">${esc(l)}</div>`).join('')}
+      ${st.warnings.map(w => `<div class="armexpwarn">${esc(w)}</div>`).join('')}
+      ${st.errors.map(w => `<div class="armexperr">${esc(w)}</div>`).join('')}</div>`).join('');
+  return html + '</div>';
+}
+
+/* The pictures offered for one kind of card: the nearest names in the folder,
+   any file picked by hand, or none (the unit keeps what it has). */
+function bmImpPicHtml(x, i, kind){
+  const m = bmImp();
+  const pics = (m.at[i] || []).filter(p => p.kind === kind).slice(0, 8);
+  const src = `/icon?kind=folder&root=${enc(m.path)}&rel=`;
+  const cur = x[kind];
+  const tiles = pics.map(p => `<button class="bmimppic${cur === p.path ? ' on' : ''}" title="${esc(p.rel)}"
+      onclick="bmImpUnitSet(${i},'${kind}','${esc(q1(p.path))}')"><img loading="lazy" src="${src}${enc(p.rel)}">
+      <span class="count">${p.score >= 0.75 ? '★ ' : ''}${esc(p.rel.split('/').pop())}</span></button>`).join('');
+  const picked = cur && !pics.some(p => p.path === cur) ? `<span class="count">${esc(cur)}</span>` : '';
+  return `<div class="armsect">${tt(kind === 'card' ? 'bmdb.imp_card' : 'bmdb.imp_info')}</div>
+    <div class="bmimppics">${tiles || `<span class="count">${tt('bmdb.imp_no_pictures')}</span>`}</div>
+    <div class="armexprow"><button class="mini" onclick="bmImpPick(${i},'${kind}')">${tt('bmdb.imp_pick_file')}</button>
+      ${cur ? `<button class="mini" onclick="bmImpUnitSet(${i},'${kind}','')">${tt('bmdb.imp_no_card')}</button>` : ''}
+      ${picked}<span class="count">${tt('bmdb.imp_card_named')}</span></div>`;
+}
+
+async function bmImpPictures(i){
+  const m = bmImp(), x = m.done[i];
+  if(!x) return;
+  try{
+    const r = await api.post('/api/model/folder/cards', {path: m.path, names: [x.entry, x.unit, x.new_type, x.new_name]});
+    if(bmImp() !== m) return;
+    m.at[i] = r.pictures;
+  }catch(e){ m.at[i] = []; }
+  bmImpPaint();
+}
+async function bmImpPick(i, kind){
+  let r;
+  try{ r = await api.post('/api/browse_file', {title: tt(kind === 'card' ? 'bmdb.imp_card' : 'bmdb.imp_info'),
+                                              filter: 'Images|*.tga;*.png;*.dds;*.jpg;*.jpeg;*.bmp', dir: bmImp().path}); }
+  catch(e){ return toast(errText(e), 4000); }
+  if(r && r.path) bmImpUnitSet(i, kind, r.path);
+}
+function bmImpUnitSet(i, k, v){
+  const m = bmImp(), x = m.done[i];
+  x[k] = v; x.plan = null;
+  bmImpPaint();
+  // a unit's name is a name its card may carry
+  if(['unit', 'new_type', 'new_name'].includes(k)) bmImpPictures(i);
+}
+function bmImpUnitBody(x){
+  return {mod: bmImp().mod, choice: x.choice, entry: x.entry, unit: x.unit.trim(),
+          new_type: x.new_type.trim(), new_name: x.new_name.trim(),
+          card_src: x.card, info_src: x.info};
+}
+async function bmImpUnitPlan(i){
+  const m = bmImp(), x = m.done[i];
+  m.busy = true; m.err = ''; bmImpPaint();
+  try{ x.plan = await api.post('/api/armory/install/plan', bmImpUnitBody(x)); }
+  catch(e){ x.plan = null; m.err = errText(e); }
+  m.busy = false; bmImpPaint();
+}
+async function bmImpUnitApply(i){
+  const m = bmImp(), x = m.done[i];
+  if(!x.plan || !x.plan.ok) return;
+  m.busy = true; m.err = ''; bmImpPaint();
+  try{
+    await api.post('/api/armory/install/apply', bmImpUnitBody(x));
+    x.written = x.choice === 'new' ? x.new_type.trim() : x.unit.trim();
+    x.plan = null; state.bmdb = null; state.destData = null;
+    toast(tt('bmdb.imp_unit_written', {unit: x.written}));
+  }catch(e){ m.err = errText(e); }
+  m.busy = false; bmImpPaint();
+}
+
 function bmPrevFull(){
   const el = bmPrevNode;
   if(!el) return;

@@ -716,7 +716,7 @@ from typing import Dict, List, Optional
 from . import (bmdb, buildings, cards, cleaner, codeview, config, dupes, edit,
                modflags, modfiles, sounds, stratmap)
 from . import mapgen, mapnew, mapresize, modfork, vanilla, gamelog, modreport, rehearse, voices, emblem, bannermaker, artrecolour, stratfamily, scripts
-from . import armory, armbake, armlib, armunit, loosemesh, meshfolder, modeldb, modeltext
+from . import armory, armbake, armlib, armunit, folderimport, loosemesh, meshfolder, modeldb, modeltext
 from . import report, vegtext
 from . import ancillaries, areaeffects, campimport, edbimport, mapbundle, osmmap, osmsites, settlemodel, heroabilities, hordestart, walls, characters, projectzip, campaint, campdb, campevents, campfiles, campmap, campnew, campstrat, cas, casanim, animedit, animpack, animslot, animview, modelexport, launchcheck, packhouse, settlemech, fileswap, factionsites, sidefiles, banners, changesets, health, climatenew, guilds, mapcheck, mapfe, mapquery, mapterrain, mercpools, regiondel, edusort, factionaudit, factionbring, factionclone, factions, images, mesh, minorfiles, namekeys, portrecords, rawtext, rebelpools, renames, soundbanks, soundscripts, spawns, sprites, stratcamp, stratchar, stratedit, stratobj, strings, traits, triggers, winconds
 from . import eop as _eop
@@ -3060,6 +3060,32 @@ class Handler(BaseHTTPRequestHandler):
                     log.info("ARMORY installed %r into %s (%s)", body.get("name"), name, body.get("choice"))
                     return self._json(out)
                 except (armunit.InstallError, armory.ArmoryError, KeyError, ValueError, OSError) as e:
+                    return self._err(400, str(e))
+            if u.path in ("/api/model/folder/import/scan", "/api/model/folder/import/plan",
+                          "/api/model/folder/import/apply"):
+                # a Blender export's models into a mod (folderimport.py), one
+                # edit record, so My Changes shows it and Undo takes it back
+                name = body.get("mod") or ""
+                if name not in self.registry.names():
+                    return self._err(404, "unknown mod")
+                try:
+                    mod = self.registry.get(name)
+                    if u.path.endswith("/scan"):
+                        return self._json(folderimport.scan(mod, body.get("path") or "",
+                                                            fresh=bool(body.get("fresh"))))
+                    if u.path.endswith("/plan"):
+                        return self._json(folderimport.payload(folderimport.plan_import(mod, body)))
+                    out = folderimport.apply_import(mod, body)
+                    self.registry.invalidate(name)
+                    log.info("FOLDER imported %s into %s", ", ".join(out["names"]), name)
+                    return self._json(out)
+                except (folderimport.FolderImportError, KeyError, ValueError, OSError) as e:
+                    return self._err(400, str(e))
+            if u.path == "/api/model/folder/cards":
+                try:
+                    return self._json({"pictures": folderimport.card_pictures(
+                        body.get("path") or "", [str(n) for n in body.get("names") or []])})
+                except (ValueError, OSError) as e:
                     return self._err(400, str(e))
             if u.path in ("/api/armory/check", "/api/armory/uv", "/api/armory/bake"):
                 # 95i: the export's check, UV menu and bake, each on the
@@ -6497,6 +6523,11 @@ class Handler(BaseHTTPRequestHandler):
                 # stock picture without shipping it falls through to vanilla's.
                 src = ancillaries.image_path(self.registry.get(name),
                                              (q.get("image") or [""])[0])
+                self._send(200, self.registry.icons.png_bytes(src), "image/png")
+                return
+            if kind == "folder":
+                # a picture in a folder the Models Editor opened, offered as a card
+                src = folderimport.picture_path((q.get("root") or [""])[0], (q.get("rel") or [""])[0])
                 self._send(200, self.registry.icons.png_bytes(src), "image/png")
                 return
             if kind in ("faction", "modfile") and name and name in self.registry.names():
