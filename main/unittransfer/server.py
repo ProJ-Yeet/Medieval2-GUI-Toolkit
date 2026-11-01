@@ -1711,6 +1711,7 @@ def _plan_payload(plan) -> dict:
         "recruit_pools": [{"line": a, "level": b, "requires": c}
                           for a, b, c in plan.recruit_pools],
         "recruit_none": plan.recruit_none,
+        "recruit_missing_lines": list(plan.recruit_missing_lines),
         "engine_conflict": plan.options.engine_conflict,
         "engine_actions": [{"name": n, "action": a, "detail": d}
                            for n, a, d in plan.engine_actions],

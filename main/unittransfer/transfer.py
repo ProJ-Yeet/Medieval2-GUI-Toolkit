@@ -339,6 +339,9 @@ class TransferPlan:
     recruit_pools: List[Tuple[str, str, str]] = field(default_factory=list)
     recruit_text: str = ""
     recruit_none: str = ""
+    # 96f: source building lines that recruit the unit and that the destination
+    # has not at all; the building import (Phase 76) brings them, pools included
+    recruit_missing_lines: List[str] = field(default_factory=list)
     # siege engines (descr_engines.txt / descr_mounted_engines.txt /
     # descr_engine_skeleton.txt). See `_resolve_engines`.
     engine_actions: List[Tuple[str, str, str]] = field(default_factory=list)  # (name,action,detail)
@@ -3031,6 +3034,8 @@ def _plan_recruitment(plan: TransferPlan, source: Mod, dest: Mod, block: str) ->
                     if pool.unit != plan.unit_type:
                         continue
                     dl = dest.edb.get(bl_.name)
+                    if dl is None and bl_.name not in plan.recruit_missing_lines:
+                        plan.recruit_missing_lines.append(bl_.name)
                     if dl is None or dl.level(blk.name) is None:
                         continue
                     add(bl_.name, blk.name, pool,

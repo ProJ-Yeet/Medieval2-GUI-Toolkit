@@ -11926,5 +11926,8 @@
  "transfer.its_name_call_and_barks": "ihr Namensruf und ihre Rufe, aus der Mod, aus der sie kommt",
  "transfer.use_its_own_voice": "Eigene Sprachausgabe verwenden",
  "transfer.own_voice_note": "Ihr eigener Eintrag in der Sprachausgabe-Bank von {src} kommt in denselben Akzent und dieselbe Klasse in {dst}, und jede Sounddatei, die er nennt und die {dst} nicht hat, wird lose hineinkopiert (wenn nötig aus den Packs von {src}). Die kompilierten Ereignisdateien werden entfernt, damit das Spiel sie neu erstellt.",
- "eng.transfer.own_voice_files_lost": "Sprachausgabe: {n} Sounddatei(en), die ihr Eintrag nennt, sind weder in einer der Mods noch im Spiel, also bleiben sie stumm: {files}"
+ "eng.transfer.own_voice_files_lost": "Sprachausgabe: {n} Sounddatei(en), die ihr Eintrag nennt, sind weder in einer der Mods noch im Spiel, also bleiben sie stumm: {files}",
+ "transfer.bring_the_building": "Gebäude mitbringen…",
+ "transfer.bring_the_building_confirm": "Den Gebäudeimport nach {dst} mit {lines} ausgewählt öffnen?\n\nEr tritt an die Stelle dieses Fensters. Zuerst die Übertragung anwenden: Die Rekrutierungspools eines Gebäudes kommen nur für Einheiten mit, die {dst} schon hat.",
+ "transfer.recruit_missing_lines": "In {src} wird sie in {lines} rekrutiert, das {dst} gar nicht hat."
 }

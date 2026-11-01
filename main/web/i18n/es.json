@@ -12406,5 +12406,8 @@
  "transfer.use_its_own_voice": "Usar su propia voz",
  "transfer.its_name_call_and_barks": "su grito de nombre y sus frases, del mod del que viene",
  "transfer.own_voice_note": "Su propia entrada en el banco de voces de {src} va al mismo acento y clase en {dst}, y cada archivo de sonido que nombra y que {dst} no tiene se copia suelto (de los packs de {src} si hace falta). Los archivos de eventos compilados se quitan para que el juego los vuelva a crear.",
- "eng.transfer.own_voice_files_lost": "voz: {n} archivo(s) de sonido que nombra su entrada no están en ningún mod ni en el juego, así que quedan mudos: {files}"
+ "eng.transfer.own_voice_files_lost": "voz: {n} archivo(s) de sonido que nombra su entrada no están en ningún mod ni en el juego, así que quedan mudos: {files}",
+ "transfer.bring_the_building": "Traer el edificio…",
+ "transfer.recruit_missing_lines": "En {src} se recluta en {lines}, que {dst} no tiene en absoluto.",
+ "transfer.bring_the_building_confirm": "¿Abrir la importación de edificios en {dst} con {lines} elegido?\n\nOcupa el lugar de esta ventana. Primero aplica la transferencia: las reservas de reclutamiento de un edificio solo vienen para unidades que {dst} ya tiene."
 }

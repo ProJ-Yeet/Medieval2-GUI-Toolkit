@@ -1642,10 +1642,23 @@ function recruitUI(type,r){
     `<li>${esc(p.line)} · ${esc(p.level)} <code>${esc(p.requires)}</code></li>`).join('')}${
     pools.length>12?`<li>${tt('transfer.recruit_more',{n:pools.length-12})}</li>`:''}</ul>`
     :(c.set_recruitment&&r.recruit_none?`<div class="count w-warn">${esc(r.recruit_none)}</div>`:'');
+  // 96f: the source's buildings that train it and the destination lacks whole
+  const miss=c._missLines=r.recruit_missing_lines||[];
+  const bring=miss.length?`<div class="count" style="margin-top:6px">${tt('transfer.recruit_missing_lines',{src:esc(state.src),dst:esc(state.dst),lines:esc(miss.join(', '))})}
+    <button onclick="transferBringLines()">${tt('transfer.bring_the_building')}</button></div>`:'';
   return `<fieldset class="assetconf" style="margin-top:10px">
     <legend>${tt('transfer.recruit_legend')}</legend>
     <label class="chk"><input type="checkbox" id="setRecruit" ${c.set_recruitment?'checked':''}>
-      ${tt('transfer.recruit_label')}</label>${list}</fieldset>`;
+      ${tt('transfer.recruit_label')}</label>${list}${bring}</fieldset>`;
+}
+/* Opens Phase 76's building import on the destination with those lines picked.
+   It takes this dialog's place, so the transfer is applied first: a pool comes
+   across only for a unit the destination already has. */
+function transferBringLines(){
+  const lines=(cfgFor(state.editing)||{})._missLines||[];
+  if(!lines.length||typeof bimOpen!=='function')return;
+  if(!confirm(tt('transfer.bring_the_building_confirm',{dst:state.dst,lines:lines.join(', ')})))return;
+  bimOpen({into:state.dst,from:state.src,lines});
 }
 function wireRecruit(type){const c=cfgFor(type), b=document.getElementById('setRecruit');
   if(b)b.onchange=()=>{c.set_recruitment=b.checked;doPreview();};

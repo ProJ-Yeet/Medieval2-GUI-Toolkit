@@ -16,12 +16,23 @@
    refuses what the game would refuse, saying which line to add. One Undo.
    ===================================================================== */
 
-function bimOpen(){
-  state.bim = {from: '', lines: null, targets: null, picked: [], filter: '',
+/* 96f: `into` is the mod the lines go to (the buildings screen's own mod when
+   left out); Unit Transfer opens it on its destination with `from` and the
+   lines that recruit the unit already picked. */
+const bimInto = () => (state.bim && state.bim.into) || state.src;
+function bimOpen(opts){
+  const o = opts || {};
+  state.bim = {from: '', lines: null, targets: null, picked: [], filter: '', into: o.into || '',
                replace: false, map: {}, plan: null, stale: false, busy: false, err: ''};
   overlay.classList.add('open');
   document.getElementById('modal').className = 'modal wide';
   bimPaint();
+  if(o.from) bimFrom(o.from).then(() => {
+    const k = state.bim;
+    if(!k || !k.lines) return;
+    k.picked = (o.lines || []).filter(n => k.lines.some(l => l.name === n));
+    bimPaint();
+  });
 }
 
 function bimClose(){ state.bim = null; closeModal(); }
@@ -34,7 +45,7 @@ async function bimFrom(src){
   bimPaint();
   if(!src) return;
   try{
-    const r = await api.get(`/api/edbimport/lines?mod=${enc(state.src)}&from=${enc(src)}`,
+    const r = await api.get(`/api/edbimport/lines?mod=${enc(bimInto())}&from=${enc(src)}`,
                             {label: tt('edbimport.reading_s_building_lines',{src})});
     if(state.bim !== k || k.from !== src) return;
     k.lines = r.lines || [];
@@ -84,7 +95,7 @@ function bimAdd(name){
 
 function bimBody(){
   const k = state.bim;
-  return {mod: state.src, from: k.from, lines: k.picked, replace: k.replace,
+  return {mod: bimInto(), from: k.from, lines: k.picked, replace: k.replace,
           map: k.map, clear_strings_bin: clearBinOn()};
 }
 
@@ -119,10 +130,11 @@ async function bimApply(){
     return;
   }
   toast(tt('edbimport.brought_in_from_log_can_undo',{picked:k.picked.join(', '),x:k.from}), 7000);
-  activity(tt('edbimport.building_import'), tt('edbimport.from',{src:state.src,picked:k.picked.join(', '),x:k.from}));
-  const first = k.picked[0];
+  activity(tt('edbimport.building_import'), tt('edbimport.from',{src:bimInto(),picked:k.picked.join(', '),x:k.from}));
+  const first = k.picked[0], away = !!k.into;
   state.bim = null;
   closeModal();
+  if(away) return;                  // opened from Unit Transfer: no buildings screen to redraw
   await loadBuildings(true);
   _bldFiltersFor = '';
   render();
@@ -142,7 +154,7 @@ function bimListHtml(k){
       <input type="checkbox" ${k.picked.includes(l.name) ? 'checked' : ''}
         onchange="bimToggle('${q1(esc(l.name))}')">
       <code>${esc(l.name)}</code>
-      ${tt(l.units ? 'edbimport.line_summary_units' : 'edbimport.line_summary',{label:esc(l.label || ''),levels:ttN('edbimport.n_levels',l.levels.length),units:l.units ? ttN('edbimport.n_units',l.units) : '',in_dest:l.in_dest ? `<span class="w-warn">${tt('edbimport.in_too',{src:esc(state.src)})}</span>` : ''})}
+      ${tt(l.units ? 'edbimport.line_summary_units' : 'edbimport.line_summary',{label:esc(l.label || ''),levels:ttN('edbimport.n_levels',l.levels.length),units:l.units ? ttN('edbimport.n_units',l.units) : '',in_dest:l.in_dest ? `<span class="w-warn">${tt('edbimport.in_too',{src:esc(bimInto())})}</span>` : ''})}
     </label>`).join('');
 }
 
@@ -170,7 +182,7 @@ function bimPlanHtml(k, p){
   return `${head}
     ${adds.length ? `<div class="cmbar2">${adds.map(n =>
       `<button onclick="bimAdd('${q1(esc(n))}')">${tt('edbimport.add',{x:esc(n)})}</button>`).join('')}</div>` : ''}
-    ${names.length ? `<div class="bsec"><h4>${tt('edbimport.names_does_not_have',{src:esc(state.src)})}
+    ${names.length ? `<div class="bsec"><h4>${tt('edbimport.names_does_not_have',{src:esc(bimInto())})}
         <span class="n">${names.length}</span></h4>
       <div class="bnote">${tt('edbimport.each_is_mapped_onto_one_of')}</div>
       <div class="bimmap">${names.map(n => `<div>
@@ -179,7 +191,7 @@ function bimPlanHtml(k, p){
         <select onchange="bimMap('${q1(esc(n.name))}',this.value)">${bimTargetOptions(k, n.to)}</select>
       </div>`).join('')}</div></div>` : ''}
     ${units.length ? `<div class="bsec ${foldCls('bim.units')}" data-fold="bim.units">
-      <h4>${tt('edbimport.units_does_not_have',{src:esc(state.src)})} <span class="n">${units.length}</span></h4>
+      <h4>${tt('edbimport.units_does_not_have',{src:esc(bimInto())})} <span class="n">${units.length}</span></h4>
       <div class="bnote">${tt('edbimport.their_recruit_pools_are_left_out')}</div>
       <div class="ntslots">${units.map(u => `<div>${ttN('edbimport.unit_pools',u.pools,{unit:esc(u.unit)})}</div>`).join('')}</div>
     </div>` : ''}
@@ -192,10 +204,10 @@ function bimPlanHtml(k, p){
 function bimPaint(){
   const k = state.bim;
   if(!k) return;
-  const others = (state.mods || []).map(m => m.name).filter(n => n !== state.src);
+  const others = (state.mods || []).map(m => m.name).filter(n => n !== bimInto());
   const clash = (k.lines || []).some(l => l.in_dest && k.picked.includes(l.name));
   const p = k.plan;
-  document.getElementById('modal').innerHTML = `<h2>${tt('edbimport.building_lines_from_another_mod_into',{src:esc(state.src)})}</h2>
+  document.getElementById('modal').innerHTML = `<h2>${tt('edbimport.building_lines_from_another_mod_into',{src:esc(bimInto())})}</h2>
     <div class="mbody">
       <div class="brow">
         <label style="flex:0 0 260px">${tt('common.from')}
@@ -212,7 +224,7 @@ function bimPaint(){
         <div id="bimList" class="bimlist">${bimListHtml(k)}</div></div>` : ''}
       ${clash ? `<label class="bimrow"><input type="checkbox" ${k.replace ? 'checked' : ''}
           onchange="bimSet('replace',this.checked)">
-        ${ttN('edbimport.replace_same_named_lines',k.picked.length,{src:esc(state.src)})}</label>` : ''}
+        ${ttN('edbimport.replace_same_named_lines',k.picked.length,{src:esc(bimInto())})}</label>` : ''}
       ${k.from ? `<div class="bnote">${docPoints(tt('edbimport.what_comes_across'), [
         tt('edbimport.each_line_whole_every_faction_and'),
         tt('edbimport.its_text_keys_in_text_export'),
