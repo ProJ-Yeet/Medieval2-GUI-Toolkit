@@ -45,9 +45,33 @@ def locales() -> dict:
     return json.loads((I18N_DIR / "locales.json").read_text(encoding="utf-8"))
 
 
+#: 96f: community translations. A ``<tag>.json`` in this folder, flat
+#: ``{id: text}`` like the shipped ones, is laid over the shipped catalogue of
+#: that tag, or offered as a language of its own (named by its ``_meta``) when
+#: none ships. It sits in the config folder, so an update leaves it alone.
+COMMUNITY = "translations"
+
+
+def community_dir() -> Path:
+    from . import config
+    return Path(config.CONFIG_DIR) / COMMUNITY
+
+
+def _community(tag: str) -> Dict[str, Any]:
+    p = community_dir() / f"{tag}.json"
+    if not p.is_file():
+        return {}
+    try:
+        got = json.loads(p.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return {}
+    return got if isinstance(got, dict) else {}
+
+
 def available() -> List[dict]:
     """The locales Settings offers: those with a catalogue, then the pseudo
-    ones. Each row carries its status (source, draft, reviewed, test)."""
+    ones. Each row carries its status (source, draft, reviewed, test), and
+    ``community`` when a file of the user's own lays words over it."""
     meta = locales()
     out = []
     for row in meta["locales"]:
@@ -60,7 +84,24 @@ def available() -> List[dict]:
             r["status"] = own.get("status", r.get("status"))
         except (OSError, ValueError):
             continue
+        r["community"] = (community_dir() / f"{row['tag']}.json").is_file()
         out.append(r)
+    have = {r["tag"].lower() for r in out} | {r["tag"].lower() for r in meta["locales"]}
+    folder = community_dir()
+    for f in sorted(folder.glob("*.json")) if folder.is_dir() else []:
+        tag = f.stem
+        if tag.lower() in have or tag.lower() == SOURCE:
+            continue
+        words = _community(tag)
+        if not words:                   # unreadable or empty: nothing to offer
+            continue
+        own = words.get("_meta") or {}
+        if not isinstance(own, dict):
+            own = {}
+        out.append({"tag": tag, "name": str(own.get("name") or tag),
+                    "native": str(own.get("native") or own.get("name") or tag),
+                    "dir": "rtl" if own.get("dir") == "rtl" else "ltr",
+                    "status": "community", "community": True})
     out.extend(dict(r) for r in meta.get("pseudo", []))
     return out
 
@@ -104,12 +145,34 @@ def pick(saved: str = "", accept_language: str = "") -> str:
 
 def catalogue(tag: str) -> Dict[str, Any]:
     p = I18N_DIR / f"{tag}.json"
-    if not p.is_file():
-        return {}
-    try:
-        return json.loads(p.read_text(encoding="utf-8"))
-    except ValueError:
-        return {}
+    out: Dict[str, Any] = {}
+    if p.is_file():
+        try:
+            out = json.loads(p.read_text(encoding="utf-8"))
+        except ValueError:
+            out = {}
+    if tag != SOURCE:
+        # 96f: the user's own words win, string by string; the shipped _meta stays
+        out.update({k: v for k, v in _community(tag).items()
+                    if k != "_meta" and isinstance(v, (str, dict))})
+    return out
+
+
+def words_to_translate(tag: str) -> Dict[str, Any]:
+    """96f: a file for a translator: every ID with the words it has now in
+    ``tag`` (English where it has none), ready to edit and drop into
+    :func:`community_dir` under the same name."""
+    en = catalogue(SOURCE)
+    have = catalogue(tag) if tag and tag != SOURCE else {}
+    row = next((r for r in locales()["locales"] if r["tag"] == tag), {})
+    out: Dict[str, Any] = {"_meta": {"lang": tag, "status": "community",
+                                     "name": row.get("name", tag), "native": row.get("native", tag),
+                                     "dir": row.get("dir", "ltr")}}
+    for k, v in en.items():
+        if k == "_meta":
+            continue
+        out[k] = have.get(k, v)
+    return out
 
 
 def catalogue_js(tag: str) -> str:
@@ -121,7 +184,7 @@ def catalogue_js(tag: str) -> str:
     boot = {"lang": row["tag"], "dir": row.get("dir", "ltr"), "status": row.get("status", ""),
             "base": row.get("base", ""), "en": catalogue(SOURCE),
             "cat": catalogue(row["tag"]) if row["tag"] != SOURCE and not row.get("base") else {},
-            "offered": rows}
+            "offered": rows, "community_dir": str(community_dir())}
     body = json.dumps(boot, ensure_ascii=False, separators=(",", ":"))
     # `</script>` cannot occur in JSON's output unescaped in a way that
     # matters here (this is a separate file), but a U+2028 would end a line

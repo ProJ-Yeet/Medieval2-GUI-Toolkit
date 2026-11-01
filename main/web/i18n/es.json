@@ -12429,5 +12429,8 @@
  "eng.campscript.never_closed": "línea {line}: un bloque {word} nunca se cierra, así que ni él ni lo que sigue se ofrecen",
  "eng.campscript.took_out": "quitadas {n} pieza(s) de {name}: {heads}",
  "scripts.cs_head": "<code>data/{rel}</code>, {lines} líneas, en sus piezas: cada monitor, bucle, bloque if, contador y orden fuera de todo bloque, con el comentario de encima. Las líneas script, wait_monitors y end_script se quedan siempre.",
- "eng.crashrules.two_guilds_in_town": "{region} empieza {camp} con dos edificios de gremio ({guilds}). Un asentamiento tiene un gremio; deja uno."
+ "eng.crashrules.two_guilds_in_town": "{region} empieza {camp} con dos edificios de gremio ({guilds}). Un asentamiento tiene un gremio; deja uno.",
+ "i18n.language_community": "{name} (tus propias palabras)",
+ "settings.words_to_translate": "Palabras para traducir",
+ "settings.words_to_translate_hint": "descarga {tag}.json, cada palabra de la herramienta. Tradúcelo o corrígelo y ponlo en {folder}: en el próximo inicio se ofrece aquí, sobre las palabras que trae la herramienta, y una actualización no lo toca. El archivo de un idioma nuevo puede nombrarse en su _meta (name, native)."
 }

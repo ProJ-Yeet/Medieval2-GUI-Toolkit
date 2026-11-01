@@ -44,6 +44,7 @@ const I18N=(()=>{
   const pseudo=boot.base?lang:'';
   return {lang,dir:boot.dir||'ltr',status:boot.status||'',pseudo,
     en:boot.en||{},cat:boot.cat||{},offered:boot.offered||[],missing:new Set(),
+    communityDir:boot.community_dir||'',
     isSource:lang==='en'};
 })();
 if(typeof document!=='undefined'&&document.documentElement){
@@ -220,7 +221,8 @@ function i18nFromServer(obj){
 function i18nOptionsHtml(){
   const row=r=>{
     const base=r.native+(r.name&&r.name!==r.native?` (${r.name})`:'');
-    const label=r.status==='draft'?tt('i18n.language_draft',{name:base}):base;
+    const label=r.status==='draft'?tt('i18n.language_draft',{name:base})
+      :r.status==='community'||r.community?tt('i18n.language_community',{name:base}):base;
     return `<option value="${r.tag}"${r.tag===I18N.lang?' selected':''}>${esc(label)}</option>`;
   };
   const real=I18N.offered.filter(r=>r.status!=='test'), test=I18N.offered.filter(r=>r.status==='test');

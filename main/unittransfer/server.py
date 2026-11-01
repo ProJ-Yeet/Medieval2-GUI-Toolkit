@@ -171,6 +171,9 @@ Factions mode (descr_sm_factions.txt, see :mod:`unittransfer.factions`)
   POST /api/factions/plan|/apply -> edit one faction and its shown name together
                                     (backups + undo). Editing only: a faction
                                     slot lives in thirteen files at once
+  GET  /api/i18n/words?lang=       -> 96f: every ID with its words in that language
+                                    (English where none), for a community
+                                    translation dropped into config/translations/
   GET  /api/factions/culture_preview?mod=&name=&culture=
                                  -> 96f: the units it gains and loses, and the
                                     buildings in its towns it could no longer
@@ -1921,6 +1924,14 @@ class Handler(BaseHTTPRequestHandler):
                 return self._web_asset(u.path)
             if u.path.startswith("/i18n/") and u.path.endswith(".json"):
                 return self._web_asset(u.path)
+            if u.path == "/api/i18n/words":
+                # 96f: every word of the tool for a translator, as <tag>.json
+                tag = (q.get("lang") or ["en"])[0]
+                if not re.fullmatch(r"[A-Za-z]{2,3}(-[A-Za-z0-9]{2,8})*", tag or ""):
+                    return self._err(400, "bad language tag")
+                blob = json.dumps(i18n.words_to_translate(tag), ensure_ascii=False, indent=1).encode("utf-8")
+                return self._send(200, blob, "application/json; charset=utf-8",
+                                  {"Content-Disposition": f'attachment; filename="{tag}.json"'})
             if u.path == "/i18n/catalogue.js":
                 # Phase 88: English and the interface language's catalogue,
                 # loaded before any module so every string is there at once

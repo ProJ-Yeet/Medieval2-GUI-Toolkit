@@ -96,6 +96,8 @@ async function openSettings(){
         <label style="display:block;margin-top:10px">${tt('settings.interface_language')}
           <select id="uiLang" onchange="i18nChoose(this.value)" style="margin-left:6px">${i18nOptionsHtml()}</select></label>
         <div class="count" style="margin-top:6px">${tt('settings.interface_language_hint')}</div>
+        <div class="count" style="margin-top:6px"><a href="/api/i18n/words?lang=${enc(I18N.lang)}" download>${tt('settings.words_to_translate')}</a>
+          ${tt('settings.words_to_translate_hint',{folder:esc(I18N.communityDir),tag:esc(I18N.lang)})}</div>
       </fieldset>
       <fieldset><legend>${tt('settings.medieval_ii_root_folder')}</legend>
         <div class="count" style="margin-bottom:8px">${tt('settings.point_to_your_medieval_ii_install')}</div>

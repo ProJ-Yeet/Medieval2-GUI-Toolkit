@@ -11948,5 +11948,8 @@
  "eng.campscript.never_closed": "Zeile {line}: ein {word}-Block wird nie geschlossen, daher werden er und was folgt nicht angeboten",
  "eng.campscript.took_out": "{n} Teil(e) aus {name} entfernt: {heads}",
  "scripts.cs_head": "<code>data/{rel}</code>, {lines} Zeilen, in seinen Teilen: jeder Monitor, jede Schleife, jeder if-Block, Zähler und Befehl außerhalb jedes Blocks, mit dem Kommentar darüber. Die Skriptzeilen script, wait_monitors und end_script bleiben immer.",
- "eng.crashrules.two_guilds_in_town": "{region} beginnt {camp} mit zwei Gildengebäuden ({guilds}). Eine Siedlung hat eine Gilde; eines behalten."
+ "eng.crashrules.two_guilds_in_town": "{region} beginnt {camp} mit zwei Gildengebäuden ({guilds}). Eine Siedlung hat eine Gilde; eines behalten.",
+ "i18n.language_community": "{name} (eigene Wörter)",
+ "settings.words_to_translate": "Wörter zum Übersetzen",
+ "settings.words_to_translate_hint": "lädt {tag}.json herunter, jedes Wort des Werkzeugs. Übersetzen oder korrigieren und in {folder} legen: beim nächsten Start wird sie hier angeboten, über die Wörter des Werkzeugs gelegt, und ein Update lässt sie in Ruhe. Die Datei einer neuen Sprache kann sich in ihrem _meta benennen (name, native)."
 }
