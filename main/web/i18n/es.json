@@ -12432,5 +12432,9 @@
  "eng.crashrules.two_guilds_in_town": "{region} empieza {camp} con dos edificios de gremio ({guilds}). Un asentamiento tiene un gremio; deja uno.",
  "i18n.language_community": "{name} (tus propias palabras)",
  "settings.words_to_translate": "Palabras para traducir",
- "settings.words_to_translate_hint": "descarga {tag}.json, cada palabra de la herramienta. Tradúcelo o corrígelo y ponlo en {folder}: en el próximo inicio se ofrece aquí, sobre las palabras que trae la herramienta, y una actualización no lo toca. El archivo de un idioma nuevo puede nombrarse en su _meta (name, native)."
+ "settings.words_to_translate_hint": "descarga {tag}.json, cada palabra de la herramienta. Tradúcelo o corrígelo y ponlo en {folder}: en el próximo inicio se ofrece aquí, sobre las palabras que trae la herramienta, y una actualización no lo toca. El archivo de un idioma nuevo puede nombrarse en su _meta (name, native).",
+ "minorfiles.pip_drawn_here": "Sin copia: dibujarlo aquí (su primera letra sobre un disco)",
+ "minorfiles.pip_drawn_hint": "dibujado al tamaño de los demás pips de este mod; la primera letra del nombre, sobre el color elegido",
+ "eng.minorfiles.a_pip_colour_is_rrggbb": "el color de un pip se escribe #rrggbb, no {colour}",
+ "eng.minorfiles.drawing_a_pip_needs_pillow": "dibujar un pip necesita Pillow, que este Python no tiene"
 }

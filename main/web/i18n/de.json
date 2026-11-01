@@ -11951,5 +11951,9 @@
  "eng.crashrules.two_guilds_in_town": "{region} beginnt {camp} mit zwei Gildengebäuden ({guilds}). Eine Siedlung hat eine Gilde; eines behalten.",
  "i18n.language_community": "{name} (eigene Wörter)",
  "settings.words_to_translate": "Wörter zum Übersetzen",
- "settings.words_to_translate_hint": "lädt {tag}.json herunter, jedes Wort des Werkzeugs. Übersetzen oder korrigieren und in {folder} legen: beim nächsten Start wird sie hier angeboten, über die Wörter des Werkzeugs gelegt, und ein Update lässt sie in Ruhe. Die Datei einer neuen Sprache kann sich in ihrem _meta benennen (name, native)."
+ "settings.words_to_translate_hint": "lädt {tag}.json herunter, jedes Wort des Werkzeugs. Übersetzen oder korrigieren und in {folder} legen: beim nächsten Start wird sie hier angeboten, über die Wörter des Werkzeugs gelegt, und ein Update lässt sie in Ruhe. Die Datei einer neuen Sprache kann sich in ihrem _meta benennen (name, native).",
+ "minorfiles.pip_drawn_here": "Keine Kopie: hier zeichnen (der erste Buchstabe auf einer Scheibe)",
+ "minorfiles.pip_drawn_hint": "in der Größe der anderen Pips dieser Mod gezeichnet; der erste Buchstabe des Namens auf der gewählten Farbe",
+ "eng.minorfiles.a_pip_colour_is_rrggbb": "die Farbe eines Pips wird #rrggbb geschrieben, nicht {colour}",
+ "eng.minorfiles.drawing_a_pip_needs_pillow": "zum Zeichnen eines Pips braucht es Pillow, das diesem Python fehlt"
 }

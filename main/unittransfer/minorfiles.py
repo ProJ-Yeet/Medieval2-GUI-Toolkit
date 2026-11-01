@@ -2027,6 +2027,8 @@ class MinorPlan:
     needs: List[Dict] = field(default_factory=list)
     #: 60: pictures copied, ``(from, to)`` relative to data/ - a new religion's pip
     copies: List[Tuple[str, str]] = field(default_factory=list)
+    #: 96f: pictures drawn here, ``(to, tga bytes)`` - a new religion's own pip
+    drawn: List[Tuple[str, bytes]] = field(default_factory=list)
     #: 89b: text keys for a second ``data/text`` file, ``{rel: {tag: text}}`` - a
     #: new resource's tooltip, which lives apart from its name
     loc_more: Dict[str, Dict[str, str]] = field(default_factory=dict)
@@ -2047,7 +2049,7 @@ class MinorPlan:
 
     def touched(self) -> bool:
         return bool(self.text or self.extra or self.loc_writes or self.copies
-                    or self.loc_more)
+                    or self.drawn or self.loc_more)
 
     def payload(self) -> Dict:
         return {"tab": self.tab, "action": self.action, "name": self.name,
@@ -2107,6 +2109,9 @@ def plan(mod, body: dict) -> MinorPlan:
             _plan_religion_regions(p, mod, body.get("seeds") or [])
         if p.action == "add" and body.get("pip_from"):
             _plan_pip_copy(p, mod, str(body["pip_from"]).strip(),
+                           str((body.get("edits") or {}).get("pip_path") or "").strip())
+        elif p.action == "add" and body.get("pip_draw"):
+            _plan_pip_draw(p, mod, str(body["pip_draw"]).strip(),
                            str((body.get("edits") or {}).get("pip_path") or "").strip())
     if p.tab == "cultures" and p.action == "duplicate":
         _plan_culture_needs(p, mod, str(body.get("source") or "").strip())
@@ -2535,6 +2540,75 @@ def _plan_pip_copy(p: MinorPlan, mod, donor: str, pip_path: str) -> None:
     p.changes.append(f"+ {dst}, copied from {donor}'s pip")
 
 
+def pip_size(mod) -> int:
+    """The size most of this mod's loose pips are drawn at, 16 when it has none
+    (the game's own)."""
+    from collections import Counter
+    sizes: Counter = Counter()
+    folder = Path(getattr(mod, "data", "")) / "ui" / "pips"
+    try:
+        from PIL import Image
+        for f in sorted(folder.glob("*.tga"))[:60] if folder.is_dir() else []:
+            try:
+                with Image.open(f) as im:
+                    if im.size[0] == im.size[1]:
+                        sizes[im.size[0]] += 1
+            except (OSError, ValueError):
+                continue
+    except ImportError:
+        pass
+    return sizes.most_common(1)[0][0] if sizes else 16
+
+
+_HEX = re.compile(r"#?([0-9a-fA-F]{6})")
+
+
+def draw_pip(name: str, colour: str, size: int = 16, fmt: str = "TGA") -> bytes:
+    """96f: a pip drawn from nothing: ``name``'s first letter on a disc of
+    ``colour`` (``#rrggbb``), ``size`` pixels square, the rest clear. Drawn four
+    times as large and scaled down, so the edge is smooth at 16."""
+    import io
+    from PIL import Image, ImageDraw, ImageFont
+    m = _HEX.fullmatch((colour or "").strip())
+    if not m:
+        raise MinorError(_i18n.msg("eng.minorfiles.a_pip_colour_is_rrggbb", "a pip's colour is written #rrggbb, not {colour}", colour=colour))
+    rgb = tuple(int(m.group(1)[i:i + 2], 16) for i in (0, 2, 4))
+    size = max(8, min(int(size or 16), 128))
+    big = size * 4
+    im = Image.new("RGBA", (big, big), (0, 0, 0, 0))
+    d = ImageDraw.Draw(im)
+    d.ellipse((2, 2, big - 3, big - 3), fill=rgb + (255,), outline=(20, 20, 20, 255),
+              width=max(2, big // 16))
+    letter = (name.strip()[:1] or "?").upper()
+    # a dark letter on a light disc, a light one on a dark disc
+    light = (rgb[0] * 299 + rgb[1] * 587 + rgb[2] * 114) / 1000 > 140
+    font = ImageFont.load_default(size=int(big * 0.62))
+    d.text((big / 2, big / 2), letter, fill=(20, 20, 20, 255) if light else (245, 240, 225, 255),
+           font=font, anchor="mm")
+    im = im.resize((size, size), Image.LANCZOS)
+    buf = io.BytesIO()
+    im.save(buf, fmt)
+    return buf.getvalue()
+
+
+def _plan_pip_draw(p: MinorPlan, mod, colour: str, pip_path: str) -> None:
+    """96f: the new religion's pip drawn here, written where its block points."""
+    dst = _data_rel(pip_path or f"ui/pips/pip_{p.name}.tga")
+    if (Path(getattr(mod, "data", "")) / dst).exists():
+        p.warnings.append(_i18n.msg("eng.minorfiles.is_already_there_and_is_kept", "{dst} is already there, and is kept", dst=dst))
+        return
+    size = pip_size(mod)
+    try:
+        p.drawn.append((dst, draw_pip(p.name, colour, size)))
+    except MinorError as e:
+        p.errors.append(e.message)
+        return
+    except ImportError:
+        p.errors.append(_i18n.msg("eng.minorfiles.drawing_a_pip_needs_pillow", "drawing a pip needs Pillow, which this Python lacks"))
+        return
+    p.changes.append(f"+ {dst}, drawn: {p.name[:1].upper()} on {colour}, {size}x{size}")
+
+
 #: where a resource's icon lives when this tool names it, as the files write it
 RESOURCE_ICON = "data/ui/resources/resource_{name}.tga"
 
@@ -2705,6 +2779,10 @@ def apply(p: MinorPlan) -> Dict:
         target = keep(dst)
         shutil.copy2(Path(mod.data) / src, target)
         file_op("COPY", target, f"<- {src}")
+    for dst, blob in p.drawn:
+        target = keep(dst)
+        target.write_bytes(blob)
+        file_op("WRITE", target, f"{len(blob)} bytes, drawn")
     def write_txt(rel: str, writes: Dict[str, str]) -> Dict:
         """Set these keys in one ``data/text`` file and bring its cache in step."""
         target = keep(rel)

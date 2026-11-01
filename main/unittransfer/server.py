@@ -659,6 +659,9 @@ Renaming a thing whose name is its identity (19b, see :mod:`unittransfer.renames
                                     for all of it - a rename half applied is a
                                     mod that will not load
 
+  GET  /api/minor/pip_preview?mod=&name=&colour=
+                                 -> 96f: a new religion's pip drawn from nothing
+                                    (its first letter on a disc), as PNG
   POST /api/minor/plan|/apply    -> add, edit or delete one record. A religion's
                                     save is four files at once - its block, the
                                     `religions` list, descr_religions_lookup.txt
@@ -2385,6 +2388,18 @@ class Handler(BaseHTTPRequestHandler):
                 if not name or name not in self.registry.names():
                     return self._err(404, "unknown mod")
                 return self._json(edusort.overview(self.registry.get(name)))
+            if u.path == "/api/minor/pip_preview":
+                # 96f: what a new religion's drawn pip will look like, as PNG
+                name = (q.get("mod") or [None])[0]
+                if not name or name not in self.registry.names():
+                    return self._err(404, "unknown mod")
+                mod = self.registry.get(name)
+                try:
+                    blob = minorfiles.draw_pip((q.get("name") or ["?"])[0], (q.get("colour") or [""])[0],
+                                               minorfiles.pip_size(mod), "PNG")
+                except minorfiles.MinorError as e:
+                    return self._err(400, e.message)
+                return self._send(200, blob, "image/png")
             if u.path in ("/api/minor", "/api/minor/record"):
                 name = (q.get("mod") or [None])[0]
                 if not name or name not in self.registry.names():

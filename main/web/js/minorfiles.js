@@ -509,10 +509,11 @@ function mfReligionStartHtml(d){
     <div class="trsechead">${tt('minorfiles.where_it_starts_every_regions_religions',{name:esc((w.name||'').trim() || 'name')})}</div>
     <div class="trgrid">
       <label class="lbl mfstartlbl">${tt('minorfiles.pip_from')}</label>
-      <div><select onchange="mfSet('pip_from', this.value)">
+      <div><select onchange="mfSet('pip_from', this.value); renderMinor()">
         <option value="">${tt('minorfiles.no_copy_draw_ui_pips_pip',{name:esc((w.name||'').trim() || 'name')})}</option>
+        <option value=":draw" ${w.pip_from === ':draw' ? 'selected' : ''}>${tt('minorfiles.pip_drawn_here')}</option>
         ${rels.map(r => `<option value="${esc(r)}" ${w.pip_from === r ? 'selected' : ''}>${tt('minorfiles.copy_s_pip',{x:esc(r)})}</option>`).join('')}
-      </select></div>
+      </select>${w.pip_from === ':draw' ? mfPipDrawHtml(w) : ''}</div>
       <label class="lbl mfstartlbl">${tt('minorfiles.starting_in')}</label>
       <div>
         ${seeds.map((row, i) => `<div class="mfseed">
@@ -527,6 +528,17 @@ function mfReligionStartHtml(d){
       </div>
     </div>
   </section>`;
+}
+
+// 96f: a religion from nothing - its pip drawn by the server, the letter on a
+// disc of the colour picked, at the size this mod's other pips are
+function mfPipDrawHtml(w){
+  const colour = w.pip_colour || '#a08040';
+  const src = `/api/minor/pip_preview?mod=${enc(state.mf.mod)}&name=${enc((w.name||'').trim() || '?')}&colour=${enc(colour)}`;
+  return `<div class="mfseed"><input type="color" value="${esc(colour)}"
+      onchange="mfSet('pip_colour', this.value); renderMinor()">
+    <img class="mfpip" src="${esc(src)}" alt="" style="width:32px;height:32px;image-rendering:pixelated">
+    <span class="count">${tt('minorfiles.pip_drawn_hint')}</span></div>`;
 }
 
 function mfSeed(i, what, value){
@@ -1039,7 +1051,8 @@ function mfBody(action){
     if(d.raw) body.raw_block = d.raw;
   }
   if(f.tab === 'religions' && action === 'add'){
-    body.pip_from = d.w.pip_from || '';
+    body.pip_from = d.w.pip_from === ':draw' ? '' : (d.w.pip_from || '');
+    if(d.w.pip_from === ':draw') body.pip_draw = d.w.pip_colour || '#a08040';
     body.seeds = (d.w.seeds || []).filter(r => r.region && r.share);
   }
   if(f.tab === 'resources' && action === 'add'){
