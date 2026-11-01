@@ -11955,5 +11955,12 @@
  "minorfiles.pip_drawn_here": "Keine Kopie: hier zeichnen (der erste Buchstabe auf einer Scheibe)",
  "minorfiles.pip_drawn_hint": "in der Größe der anderen Pips dieser Mod gezeichnet; der erste Buchstabe des Namens auf der gewählten Farbe",
  "eng.minorfiles.a_pip_colour_is_rrggbb": "die Farbe eines Pips wird #rrggbb geschrieben, nicht {colour}",
- "eng.minorfiles.drawing_a_pip_needs_pillow": "zum Zeichnen eines Pips braucht es Pillow, das diesem Python fehlt"
+ "eng.minorfiles.drawing_a_pip_needs_pillow": "zum Zeichnen eines Pips braucht es Pillow, das diesem Python fehlt",
+ "minorfiles.temples_of_its_own_head": "Eigene Tempel",
+ "minorfiles.temples_of_its_own_hint": "Eine Tempelkette für {name} aus dem Nichts: die üblichen Tempelwerte der Mod (Stufen, Kosten, Runden, Siedlungsgröße, Glaube und Zufriedenheit), die Linie nennt {name}, gebaut von den angehakten Fraktionen (alle, wenn keine angehakt ist), schlichte Karten für ihre Kulturen gezeichnet. ★ markiert eine Fraktion dieser Religion.",
+ "minorfiles.temples_pick_its_own": "Ihre Fraktionen anhaken ({n})",
+ "minorfiles.temples_of_its_own_button": "Ihre Tempel anlegen…",
+ "minorfiles.temples_what": "Tempel von {name}",
+ "minorfiles.temples_done": "{line} angelegt, {n} Änderungen. Es steht im Gebäude-Bildschirm.",
+ "eng.buildings.drawing_cards_needs_pillow": "zum Zeichnen von Gebäudekarten braucht es Pillow, das diesem Python fehlt"
 }

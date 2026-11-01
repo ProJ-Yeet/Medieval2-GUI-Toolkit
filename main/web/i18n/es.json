@@ -12436,5 +12436,12 @@
  "minorfiles.pip_drawn_here": "Sin copia: dibujarlo aquí (su primera letra sobre un disco)",
  "minorfiles.pip_drawn_hint": "dibujado al tamaño de los demás pips de este mod; la primera letra del nombre, sobre el color elegido",
  "eng.minorfiles.a_pip_colour_is_rrggbb": "el color de un pip se escribe #rrggbb, no {colour}",
- "eng.minorfiles.drawing_a_pip_needs_pillow": "dibujar un pip necesita Pillow, que este Python no tiene"
+ "eng.minorfiles.drawing_a_pip_needs_pillow": "dibujar un pip necesita Pillow, que este Python no tiene",
+ "minorfiles.temples_of_its_own_head": "Templos propios",
+ "minorfiles.temples_of_its_own_hint": "Una cadena de templos para {name} desde cero: los valores habituales de templo del mod (niveles, coste, turnos, tamaño de asentamiento, fe y felicidad), la línea nombra {name}, construida por las facciones marcadas (todas si no hay ninguna), con tarjetas sencillas dibujadas para sus culturas. ★ marca una facción de esta religión.",
+ "minorfiles.temples_pick_its_own": "Marcar sus facciones ({n})",
+ "minorfiles.temples_of_its_own_button": "Crear sus templos…",
+ "minorfiles.temples_what": "templos de {name}",
+ "minorfiles.temples_done": "{line} creado, {n} cambios. Está en la pantalla de Edificios.",
+ "eng.buildings.drawing_cards_needs_pillow": "dibujar tarjetas de edificio necesita Pillow, que este Python no tiene"
 }

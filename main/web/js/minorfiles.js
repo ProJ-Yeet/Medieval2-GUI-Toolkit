@@ -489,7 +489,62 @@ function mfReligionForm(d){
       </div>
     </div>
     ${d.listed === false ? `<div class="trfind w-bad">${tt('minorfiles.this_religion_has_a_block_but')}</div>` : ''}
-  </section>${state.mf.adding ? mfReligionStartHtml(d) : ''}`;
+  </section>${state.mf.adding ? mfReligionStartHtml(d) : mfTemplesHtml(d)}`;
+}
+
+/* ---- temples of its own (96f) ----
+   A temple chain for this religion from nothing: the server takes the mod's
+   usual temple numbers (levels, costs, turns, town sizes, faith and happiness
+   by place in the chain), names the religion on the line, lets the factions
+   ticked build it, and draws plain cards for their cultures. It goes through
+   the Buildings screen's own new-tree save, so it has its backup and Undo. */
+function mfTemplesHtml(d){
+  const t = state.mf.temples || (state.mf.temples = {picked: new Set(), list: null});
+  if(!t.list){
+    t.list = [];
+    api.get('/api/factions?mod=' + enc(state.mf.mod)).then(r => {
+      t.list = (r.factions || []).filter(f => f.name !== 'slave');
+      mfPaintForm();
+    }).catch(() => {});
+  }
+  const mine = t.list.filter(f => f.religion === d.name);
+  return `<section class="trsec">
+    <div class="trsechead">${tt('minorfiles.temples_of_its_own_head')}</div>
+    <div class="trhint count">${tt('minorfiles.temples_of_its_own_hint',{name:esc(d.name)})}</div>
+    <div class="mftemplefac">${t.list.map(f => `<label class="chk"><input type="checkbox"
+        ${t.picked.has(f.name) ? 'checked' : ''} onchange="mfTemplePick('${q1(esc(f.name))}', this.checked)">
+        ${esc(f.label || f.name)}${f.religion === d.name ? ' ★' : ''}</label>`).join('')}</div>
+    <div style="margin-top:6px">
+      ${mine.length ? `<button onclick="mfTemplePickMine()">${tt('minorfiles.temples_pick_its_own',{n:mine.length})}</button>` : ''}
+      <button class="primary" onclick="mfTemples()">${tt('minorfiles.temples_of_its_own_button')}</button>
+    </div>
+  </section>`;
+}
+function mfTemplePick(name, on){
+  const t = state.mf.temples;
+  if(on) t.picked.add(name); else t.picked.delete(name);
+}
+function mfTemplePickMine(){
+  const t = state.mf.temples, rel = state.mf.d.name;
+  t.list.filter(f => f.religion === rel).forEach(f => t.picked.add(f.name));
+  mfPaintForm();
+}
+async function mfTemples(){
+  const f = state.mf, t = f.temples;
+  if(f.busy) return;
+  const body = {mod: f.mod, temples: {religion: f.d.name, factions: [...t.picked]}};
+  f.busy = true;
+  try{
+    const p = await api.post('/api/buildings/plan', body);
+    if((p.errors || []).length){ toast('✗ ' + p.errors.join('; '), 6000); return; }
+    const found = (p.warnings || []).map(x => '⚠ ' + x);
+    if(!confirm(tt('minorfiles.write_confirm',{what: tt('minorfiles.temples_what',{name: f.d.name}),
+        details: (p.changes || []).join('\n') + (found.length ? '\n\n' + found.join('\n') : '')}))) return;
+    const res = await api.post('/api/buildings/apply', Object.assign(body, {clear_strings_bin: clearBinOn()}));
+    if(res.error){ toast('✗ ' + res.error, 6000); return; }
+    toast(tt('minorfiles.temples_done',{line: res.plan.line, n: (res.plan.changes || []).length}), 5000);
+  }catch(e){ toast('✗ ' + errText(e), 6000); }
+  finally{ f.busy = false; }
 }
 
 /* ---- where a new religion starts (60) ----

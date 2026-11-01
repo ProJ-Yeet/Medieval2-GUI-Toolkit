@@ -8,14 +8,22 @@ levels, the usual costs, turns and town sizes, a growing ``religion_level``,
 the ``religion`` line naming the new faith, built by the factions picked, and a
 plan with no errors. A mod with no temple lines gets three steps of faith.
 """
+import shutil
 import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from tests import _realmod  # noqa: E402
+from tests import _realmod, _tmp  # noqa: E402
+from unittransfer import config, transfer  # noqa: E402
 from unittransfer import buildings as B  # noqa: E402
 from unittransfer.mod import Mod  # noqa: E402
+
+cfg = Path(_tmp.mkdtemp(prefix="ut_cfg_"))
+if config.SETTINGS_PATH.is_file():
+    shutil.copy2(config.SETTINGS_PATH, cfg / "settings.json")
+config.CONFIG_DIR = cfg; config.BACKUP_DIR = cfg / "backups"
+config.SETTINGS_PATH = cfg / "settings.json"; config.LOG_PATH = cfg / "transfers.json"
 
 ok = []
 
@@ -64,6 +72,31 @@ else:
     check(f"the plan is clean ({p.errors})", not p.errors)
     block = B.new_tree_text(B.new_tree_spec(mod, s))
     check("it names the new faith", "\treligion valar\n" in block and "building temple_valar" in block)
+    p = B.plan_edit(mod, {"temples": {"religion": "valar", "factions": ["sicily"]}})
+    cult = B.faction_cultures(mod).get("sicily")
+    check(f"plain cards drawn for the picked faction's culture only ({cult}, {len(p.drawn)})",
+          len(p.drawn) == 6 and all(f"/{cult}/" in r for r, _ in p.drawn))
+
+    print("\n4) written and undone, on a temp mod built from DaC's files")
+    root = Path(_tmp.mkdtemp(prefix="ut_temple_")) / "TempleMod"
+    for rel in ("export_descr_buildings.txt", "text/export_buildings.txt", "descr_sm_factions.txt",
+                "descr_cultures.txt"):
+        if (DAC / "data" / rel).is_file():
+            (root / "data" / rel).parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(DAC / "data" / rel, root / "data" / rel)
+    (root / "data" / "ui" / cult / "buildings").mkdir(parents=True)
+    snap = {f.relative_to(root).as_posix(): f.read_bytes() for f in root.rglob("*") if f.is_file()}
+    tm = Mod(root)
+    p = B.plan_edit(tm, {"temples": {"religion": "valar", "factions": ["sicily"]}})
+    check(f"the plan is clean ({p.errors})", not p.errors and p.drawn)
+    rec = B.apply_edit(p)
+    card = root / "data" / p.drawn[0][0]
+    check("the line and its first card are written",
+          "building temple_valar" in (root / "data/export_descr_buildings.txt").read_text(encoding="latin-1")
+          and card.is_file())
+    transfer.undo(rec["id"])
+    now = {f.relative_to(root).as_posix(): f.read_bytes() for f in root.rglob("*") if f.is_file()}
+    check("one undo puts the files back and takes the cards away", now == snap)
 
 print(f"\n{sum(ok)}/{len(ok)} checks passed")
 sys.exit(0 if all(ok) else 1)

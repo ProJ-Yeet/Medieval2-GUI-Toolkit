@@ -1708,6 +1708,8 @@ class BuildingPlan:
     #: For a create: the building-card files the new levels will want. Reported,
     #: never written - see :func:`icon_slots`.
     slots: List[dict] = field(default_factory=list)
+    #: 96f: plain building cards drawn for a create, ``(rel under data/, tga bytes)``
+    drawn: List[Tuple[str, bytes]] = field(default_factory=list)
     #: For an edit of the hidden_resources line: what each removal would
     #: darken, and the count against the ceiling - see :func:`plan_hidden`.
     impact: Dict = field(default_factory=dict)
@@ -1753,6 +1755,10 @@ def plan_edit(mod, body: dict) -> BuildingPlan:
     # two files it writes have to fail together
     if body.get("create"):
         return plan_new_tree(mod, body["create"])
+    if body.get("temples"):
+        t = body["temples"]
+        return plan_new_tree(mod, temple_spec(mod, str(t.get("religion") or ""),
+                                              list(t.get("factions") or [])))
 
     plan = BuildingPlan(mod=mod, line=str(body.get("line") or ""))
     edb = mod.edb
@@ -2154,8 +2160,10 @@ def temple_spec(mod, religion: str, factions: List[str]) -> dict:
         levels.append(lv)
     picked = [f.strip() for f in factions or [] if f.strip()]
     requires = ("factions { " + "".join(f"{f}, " for f in picked) + "}") if picked else ""
+    fc = faction_cultures(mod) if picked else {}
     return {"name": f"temple_{religion}", "religion": religion, "settlement": "city",
-            "requires": requires, "levels": levels, "from_temples": len(city)}
+            "requires": requires, "levels": levels, "from_temples": len(city),
+            "draw_cards": True, "card_cultures": sorted({fc[f] for f in picked if f in fc})}
 
 
 def _default_requires(mod) -> str:
@@ -2327,10 +2335,83 @@ def plan_new_tree(mod, spec: dict) -> BuildingPlan:
     plan.loc_text = _plan_new_localisation(mod, spec, plan)
     plan.slots = icon_slots(mod, spec)
     missing = [s for s in plan.slots if not s["found"]]
+    if missing and spec.get("draw_cards"):
+        _plan_cards(mod, spec, plan, missing)
+        missing = [s for s in missing if not s.get("drawn")]
     if missing:
         plan.warnings.append(
             _i18n.msg("eng.buildings.of_building_cards_have_no_picture", "{missing_n} of {slots_n} building cards have no picture yet - those levels show a blank card until you draw them. The paths are listed below; this is art, not a fault.", missing_n=len(missing), slots_n=len(plan.slots)))
     return plan
+
+
+def card_sizes(mod) -> Dict[str, Tuple[int, int]]:
+    """The size most of this mod's loose building cards are, small and large;
+    vanilla's 78x62 and 300x245 when it has none."""
+    from collections import Counter
+    sizes = {"small": Counter(), "large": Counter()}
+    try:
+        from PIL import Image
+        files = sorted(Path(mod.data, "ui").glob("*/buildings/#*.tga"))[:400]
+        for f in files:
+            try:
+                with Image.open(f) as im:
+                    sizes["large" if f.stem.endswith("_constructed") else "small"][im.size] += 1
+            except (OSError, ValueError):
+                continue
+    except ImportError:
+        pass
+    out = {"small": (78, 62), "large": (300, 245)}
+    for k, c in sizes.items():
+        if c:
+            out[k] = c.most_common(1)[0][0]
+    return out
+
+
+def draw_card(label: str, size: Tuple[int, int]) -> bytes:
+    """96f: a plain building card: the level's shown name on a dark panel with a
+    gold edge, ``size`` pixels, as TGA. A placeholder that reads, until real art
+    is drawn."""
+    import io
+    import textwrap
+    from PIL import Image, ImageDraw, ImageFont
+    w, h = size
+    im = Image.new("RGBA", (w, h), (46, 38, 30, 255))
+    d = ImageDraw.Draw(im)
+    edge = max(1, min(w, h) // 30)
+    d.rectangle((0, 0, w - 1, h - 1), outline=(176, 146, 82, 255), width=edge)
+    px = max(8, h // 6)
+    font = ImageFont.load_default(size=px)
+    chars = max(4, int((w - 4 * edge) / (px * 0.55)))
+    lines = textwrap.wrap(label, chars)[:3] or [""]
+    d.multiline_text((w / 2, h / 2), "\n".join(lines), fill=(232, 220, 190, 255), font=font,
+                     anchor="mm", align="center", spacing=max(1, px // 5))
+    buf = io.BytesIO()
+    im.save(buf, "TGA")
+    return buf.getvalue()
+
+
+def _plan_cards(mod, spec: dict, plan: BuildingPlan, missing: List[dict]) -> None:
+    """96f: draw the cards a new tree has no picture for, in the cultures
+    ``spec['card_cultures']`` names (every culture when it names none)."""
+    want = set(spec.get("card_cultures") or [])
+    labels = {lv["name"]: lv.get("label") or lv["name"] for lv in spec.get("levels") or []}
+    try:
+        sizes = card_sizes(mod)
+        for s in missing:
+            if want and s["culture"] not in want:
+                continue
+            for kind in ("small", "large"):
+                if s.get(kind + "_found"):
+                    continue
+                rel = s[kind][5:] if s[kind].lower().startswith("data/") else s[kind]
+                plan.drawn.append((rel, draw_card(labels.get(s["level"], s["level"]), sizes[kind])))
+            s["drawn"] = True
+    except ImportError:
+        plan.warnings.append(_i18n.msg("eng.buildings.drawing_cards_needs_pillow", "drawing building cards needs Pillow, which this Python lacks"))
+        return
+    if plan.drawn:
+        plan.changes.append(f"+ {len(plan.drawn)} plain building cards drawn, "
+                            f"{sizes['small'][0]}x{sizes['small'][1]} and {sizes['large'][0]}x{sizes['large'][1]}")
 
 
 def _plan_new_localisation(mod, spec: dict, plan: BuildingPlan) -> str:
@@ -2751,6 +2832,14 @@ def apply_edit(plan: BuildingPlan) -> Dict:
     if plan.modeldb_text:
         write_text("unit_models/battle_models.modeldb", plan.modeldb_text,
                    modeldb_mod.ENCODING)
+    for rel, blob in plan.drawn:
+        target = mod.data / rel
+        if target.exists():                 # never: only missing cards are drawn
+            continue
+        manifest["created"].append(rel)
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_bytes(blob)
+        file_op("WRITE", target, f"{len(blob)} bytes, drawn")
 
     rec = {
         "id": tid,
