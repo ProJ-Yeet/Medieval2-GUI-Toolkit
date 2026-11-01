@@ -3420,6 +3420,8 @@
 "editor.and_for": "…and for <b>{unit}</b>:",
 "editor.and_for_recruitment_export_descr_buildings": "…and for <b>recruitment</b> (<code>export_descr_buildings.txt</code>):",
 "editor.appended_after_the_tiers_this_unit": "Appended after the tiers this unit already has",
+"editor.armour_step": "Armour {n}/{of} · level {level}",
+"editor.armour_step_title": "Step through this unit's armour upgrades (armour_ug_models), each as the game draws it at its armour level",
 "editor.armour_ug_levels": " · armour_ug_levels: {levels}",
 "editor.armour_ug_models_add_as_a": "armour_ug_models#{tiers} (add as a new tier)",
 "editor.armour_ug_models_replace": "armour_ug_models#{x} (replace {x2})",

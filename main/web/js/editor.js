@@ -327,6 +327,7 @@ function edPrevBar(){
            onchange="edPrevPick(this.value)">${list.map(n =>
            `<option value="${esc(n)}"${n===cur?' selected':''}>${esc(n)}</option>`).join('')}</select>`
       : `<span class="count" title="${esc(cur)}">${esc(cur || tt('editor.no_entry'))}</span>`}
+    ${edPrevArmourHtml(cur)}
     <span class="sp"></span>
     <button onclick="edPrevFull()" title="${ttA('editor.full_screen_esc_comes_back')}">&#10530;</button>
     <button onclick="edPrevMin()" title="${min?tt('editor.unfold_the_preview'):tt('editor.fold_the_preview_away')}"
@@ -348,6 +349,29 @@ async function edPrevMount(){
   await v3Mount(ED_PREV_HOST, state.ed.mod || state.src, entry);
 }
 
+/* 96f: an Armour button that steps through the unit's armour_ug_models in
+   order, saying which tier and which armour level the game draws it at. Kept
+   by index, since one entry often fills two tiers (Uruk-hai Bodyguards). */
+function edPrevArmourAt(cur){
+  const tiers = csv(edFieldVal('armour_ug_models')), i = state.ed && state.ed.prevArmour;
+  return {tiers, at: (i >= 0 && tiers[i] === cur) ? i : tiers.indexOf(cur)};
+}
+function edPrevArmourHtml(cur){
+  if(!state.ed || !state.ed.d) return '';
+  const {tiers, at} = edPrevArmourAt(cur);
+  if(tiers.length < 2) return '';
+  const lv = csv(edFieldVal('armour_ug_levels'));
+  return `<button onclick="edPrevArmour()" title="${ttA('editor.armour_step_title')}">${
+    tt('editor.armour_step',{n: at >= 0 ? at + 1 : '-', of: tiers.length, level: at >= 0 && lv[at] !== undefined ? lv[at] : '?'})}</button>`;
+}
+function edPrevArmour(){
+  if(!state.ed) return;
+  const {tiers, at} = edPrevArmourAt(edPrevEntry());
+  if(tiers.length < 2) return;
+  state.ed.prevArmour = (at + 1) % tiers.length;
+  edPrevPick(tiers[state.ed.prevArmour]);
+  edPrevBar();
+}
 function edPrevPick(name){
   if(!state.ed) return;
   state.ed.prevEntry = name;

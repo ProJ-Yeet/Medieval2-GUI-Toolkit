@@ -11920,5 +11920,7 @@
  "factions.title_not_written": "noch nicht im Text, das Spiel zeigt den Schlüssel, bis einer geschrieben ist",
  "factions.titles_head": "Titel <span class=\"count\">Der Titel des Anführers ('König %S'), des Erben und des früheren Anführers sowie Stärken und Schwächen auf dem Fraktionsbildschirm, gespeichert in text/expanded.txt</span>",
  "stratchar.no_surname": "kein Nachname",
- "stratchar.surname_title": "Ein Nachname aus der eigenen Liste dieser Fraktion in descr_names.txt; ein anderer ersetzt ihn"
+ "stratchar.surname_title": "Ein Nachname aus der eigenen Liste dieser Fraktion in descr_names.txt; ein anderer ersetzt ihn",
+ "editor.armour_step": "Rüstung {n}/{of} · Stufe {level}",
+ "editor.armour_step_title": "Die Rüstungs-Aufrüstungen dieser Einheit durchgehen (armour_ug_models), jede so, wie das Spiel sie auf ihrer Rüstungsstufe zeigt"
 }

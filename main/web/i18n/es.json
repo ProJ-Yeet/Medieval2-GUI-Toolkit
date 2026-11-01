@@ -12400,5 +12400,7 @@
  "factions.title_not_written": "aún no está en el texto; el juego muestra la clave hasta que se escriba uno",
  "factions.titles_head": "Títulos <span class=\"count\">El título del líder ('Rey %S'), el del heredero, el del líder anterior, y las fortalezas y debilidades en la pantalla de facción, guardados en text/expanded.txt</span>",
  "stratchar.no_surname": "sin apellido",
- "stratchar.surname_title": "Un apellido de la propia lista de esta facción en descr_names.txt; elegir otro lo sustituye"
+ "stratchar.surname_title": "Un apellido de la propia lista de esta facción en descr_names.txt; elegir otro lo sustituye",
+ "editor.armour_step": "Armadura {n}/{of} · nivel {level}",
+ "editor.armour_step_title": "Recorrer las mejoras de armadura de esta unidad (armour_ug_models), cada una como el juego la muestra en su nivel de armadura"
 }
