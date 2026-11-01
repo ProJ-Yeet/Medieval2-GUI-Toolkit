@@ -627,6 +627,9 @@ that say what happens without anybody doing it, and the first customers for
 The names a new record needs (19a, see :mod:`unittransfer.namekeys`). Both of
 these are "a record was written and the words the player reads for it were not",
 and one of them closes a finding the validator reports against our own output.
+  GET  /api/namekeys/pool?mod=&faction=
+                                 -> 96f: that faction's first names and surnames,
+                                    each with the words names.txt shows
   POST /api/namekeys/plan|/apply -> `what`: region_names writes the province and
                                     settlement lines of
                                     imperial_campaign_regions_and_settlement_names.txt;
@@ -2312,6 +2315,13 @@ class Handler(BaseHTTPRequestHandler):
                 for r in rows:
                     r["frame"] = factionbring.frame_for(mod, r["culture"])
                 return self._json({"factions": rows})
+            if u.path == "/api/namekeys/pool":
+                # 96f: a faction's first names and surnames, for the pickers
+                name = (q.get("mod") or [None])[0]
+                if not name or name not in self.registry.names():
+                    return self._err(404, "unknown mod")
+                return self._json(namekeys.faction_pool(
+                    self.registry.get(name), (q.get("faction") or [""])[0]))
             if u.path == "/api/factions/culture_preview":
                 # 96f: the units gained and lost, and the buildings in its towns
                 # no longer buildable, if this faction's culture changes

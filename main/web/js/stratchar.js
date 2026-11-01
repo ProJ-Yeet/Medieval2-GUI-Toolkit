@@ -63,6 +63,7 @@ async function cxOpen(faction){
   if(d.error){ k.err = d.error; cxPaint(); return; }
   k.d = d;
   cxPaint();
+  cxPoolLoad(c.mod, faction).then(() => { if(state.cx === k) cxPaint(); });
 }
 
 function cxToggle(){
@@ -422,7 +423,8 @@ function cxFormHtml(){
     </div>
     <div class="csrow2">
       <div class="cmfield"><label>${tt('common.name')}</label>
-        <input value="${esc(w.name)}" oninput="cxSet('name', this.value)"></div>
+        <input value="${esc(w.name)}" list="cxl-first" oninput="cxSet('name', this.value)">
+        ${cxNamePickHtml('cxl-first', w.gender, w.name, 'cxSurname')}</div>
       <div class="cmfield"><label>${tt('common.type')}</label>
         <select onchange="cxSet('type', this.value)">
           ${v.types.map(t => `<option value="${esc(t)}"${
@@ -610,6 +612,58 @@ function cxNear(x, y){
    It writes descr_names.txt and text/names.txt together and it is its own save:
    nothing about the character block is touched, and the 🕑 Log entry names the
    two files it put there. */
+/* ---- 96f: names from the faction's own list ----
+   A first name out of the faction's characters or women and a surname out of
+   its surnames, offered rather than typed: the game makes names only out of
+   the faction's own descr_names.txt, and a name outside it is what char.pool
+   warns about. The box stays free for a name of one's own (Add to pool still
+   puts it in); picking a surname swaps the one of the list the name already
+   ends in, so a name never carries two. Used by the character form and the
+   family tree, both on the same faction. */
+const cxPools = {};
+async function cxPoolLoad(mod, faction){
+  const key = mod + '|' + faction;
+  if(cxPools[key]) return cxPools[key];
+  let p;
+  try{ p = await api.get(`/api/namekeys/pool?mod=${enc(mod)}&faction=${enc(faction)}`); }
+  catch(e){ p = {have: false, problem: errText(e)}; }
+  return (cxPools[key] = p);
+}
+function cxPoolOf(){
+  const k = state.cx;
+  return k ? cxPools[k.mod + '|' + k.faction] || null : null;
+}
+function cxSurnameOf(name, pool){
+  const w = String(name || '').trim().split(/\s+/);
+  const last = w.length > 1 ? w[w.length - 1] : '';
+  return last && pool.surnames.some(s => s[0] === last) ? last : '';
+}
+function cxWithSurname(name, surname, pool){
+  const w = String(name || '').trim().split(/\s+/).filter(Boolean);
+  if(w.length > 1 && cxSurnameOf(name, pool)) w.pop();
+  if(surname) w.push(surname);
+  return w.join(' ');
+}
+/* The first names as a datalist for the box (`id`), and the surnames as a
+   select calling `onpick(value)`. `gender` '' offers both lists. */
+function cxNamePickHtml(id, gender, name, onpick){
+  const pool = cxPoolOf();
+  if(!pool || !pool.have) return '';
+  const firsts = gender === 'female' ? pool.women
+    : gender === 'male' ? pool.characters : pool.characters.concat(pool.women);
+  const sur = cxSurnameOf(name, pool);
+  return `<datalist id="${id}">${firsts.map(([t, shown]) =>
+      `<option value="${esc(t)}">${shown && shown !== t ? esc(shown) : ''}</option>`).join('')}</datalist>${
+    pool.surnames.length ? `<select title="${ttA('stratchar.surname_title')}" onchange="${onpick}(this.value)">
+      <option value="">${tt('stratchar.no_surname')}</option>${pool.surnames.map(([t, shown]) =>
+        `<option value="${esc(t)}"${t === sur ? ' selected' : ''}>${esc(shown || t)}</option>`).join('')}</select>` : ''}`;
+}
+function cxSurname(value){
+  const k = state.cx, pool = cxPoolOf();
+  if(!k || !k.w || !pool) return;
+  cxSet('name', cxWithSurname(k.w.name, value, pool));
+}
+
 function cxPoolFixHtml(f){
   if(f.code !== 'char.pool' && f.code !== 'char.name_key') return '';
   if(!f.part) return '';

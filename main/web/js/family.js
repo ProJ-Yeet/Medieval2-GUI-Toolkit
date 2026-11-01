@@ -140,6 +140,14 @@ function fmAdd(kind){
   f.form = null;
 }
 
+/* 96f: a surname out of the faction's list, swapped onto the name being typed */
+function fmSurname(value){
+  const f = state.cx.fam, pool = cxPoolOf();
+  if(!f.form || !pool) return;
+  f.form.name = cxWithSurname(f.form.name, value, pool);
+  cxPaint();
+}
+
 function fmPanelHtml(){
   const f = state.cx.fam, P = f.pick && fmPerson(f.pick) || (fmStaged().people.find(p => p.name === f.pick));
   if(!P) return `<div class="count">${tt('family.pick_someone')}</div>`;
@@ -148,7 +156,8 @@ function fmPanelHtml(){
   const btn = (k, label) => `<button onclick="fmAdd('${k}')">${label}</button>`;
   return `<div class="fmpanel"><div class="k">${esc(P.name)} · ${P.source === 'record' ? tt('family.off_map_short') : tt('family.on_map_short')}</div>
     <div class="fmform">
-      <input placeholder="${ttA('family.new_name')}" value="${esc(form.name)}" oninput="state.cx.fam.form.name=this.value">
+      <input placeholder="${ttA('family.new_name')}" value="${esc(form.name)}" list="fml-first" oninput="state.cx.fam.form.name=this.value">
+      ${cxNamePickHtml('fml-first', '', form.name, 'fmSurname')}
       <input type="number" min="0" max="120" value="${esc(form.age)}" title="${ttA('family.age_title')}" oninput="state.cx.fam.form.age=this.value" style="width:64px">
       <label class="chk"><input type="checkbox" ${form.dead ? 'checked' : ''} onchange="state.cx.fam.form.dead=this.checked"> ${tt('family.dead')}</label>
     </div>

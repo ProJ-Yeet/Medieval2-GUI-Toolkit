@@ -330,6 +330,34 @@ def pool_view(mod, faction: str, name: str = "", gender: str = "male") -> Dict:
     return out
 
 
+def faction_pool(mod, faction: str) -> Dict:
+    """96f: the names a faction may take, for a picker rather than a free box.
+
+    Each section as ``[token, shown]`` pairs, the shown words out of
+    ``text/names.txt`` (empty where it has none). A name is a first name out of
+    ``characters`` or ``women`` and, optionally, a surname out of ``surnames``,
+    joined by a space the way ``descr_strat`` writes it (see :func:`name_parts`).
+    """
+    out: Dict = {"faction": faction, "file": POOL_REL, "have": False,
+                 "characters": [], "women": [], "surnames": []}
+    try:
+        nf, _ = read_pool(mod)
+    except NameKeyError as exc:
+        out["problem"] = str(exc)
+        return out
+    fac = nf.get(faction)
+    if fac is None:
+        out["problem"] = (f"{POOL_REL} has no `faction: {faction}` block, so this "
+                          f"faction can generate no names at all")
+        return out
+    out["have"] = True
+    pairs = loc_pairs(mod, POOL_LOC_REL)
+    for name in ("characters", "women", "surnames"):
+        sec = fac.section(name)
+        out[name] = [[e.value, pairs.get(e.value, "")] for e in (sec.entries if sec else [])]
+    return out
+
+
 def _add_to_section(nf: minorfiles.NameFile, fac: minorfiles.NameFaction,
                     section: str, part: str) -> str:
     """One name into one section of one faction, as the whole file's new text.

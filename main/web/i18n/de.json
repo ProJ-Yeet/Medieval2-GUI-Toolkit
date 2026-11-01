@@ -11918,5 +11918,7 @@
  "factions.cult_prev_reading": "Ermittle, was die neue Kultur ändert…",
  "factions.cult_prev_trained_at": "ausgebildet in {levels}",
  "factions.title_not_written": "noch nicht im Text, das Spiel zeigt den Schlüssel, bis einer geschrieben ist",
- "factions.titles_head": "Titel <span class=\"count\">Der Titel des Anführers ('König %S'), des Erben und des früheren Anführers sowie Stärken und Schwächen auf dem Fraktionsbildschirm, gespeichert in text/expanded.txt</span>"
+ "factions.titles_head": "Titel <span class=\"count\">Der Titel des Anführers ('König %S'), des Erben und des früheren Anführers sowie Stärken und Schwächen auf dem Fraktionsbildschirm, gespeichert in text/expanded.txt</span>",
+ "stratchar.no_surname": "kein Nachname",
+ "stratchar.surname_title": "Ein Nachname aus der eigenen Liste dieser Fraktion in descr_names.txt; ein anderer ersetzt ihn"
 }
