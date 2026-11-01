@@ -631,8 +631,10 @@ function bmImpModelsHtml(){
     const files = Object.entries(counts).map(([st, n]) => `${n} ${bmImpFileNote({state: st})}`).join(', ');
     const fileTitle = r.files.map(f => `${f.rel} (${bmImpFileNote(f)})`).join('\n');
     const acts = ['new', ...(r.bmdb && r.clash ? ['replace'] : []), 'rename', 'skip'];
+    const actText = {new: tt('bmdb.imp_act_new'), replace: tt('bmdb.imp_act_replace'),
+                     rename: tt('bmdb.imp_act_rename'), skip: tt('bmdb.imp_act_skip')};
     const act = `<select onchange="bmImpSet('${id}','action',this.value)">${acts.map(a =>
-      `<option value="${a}"${s.action === a ? ' selected' : ''}>${tt('bmdb.imp_act_' + a)}</option>`).join('')}</select>`;
+      `<option value="${a}"${s.action === a ? ' selected' : ''}>${actText[a]}</option>`).join('')}</select>`;
     const extra = [
       s.action === 'rename' ? `<input value="${esc(s.name)}" oninput="bmImpSet('${id}','name',this.value,true)" title="${ttA('bmdb.imp_new_name')}">` : '',
       r.bmdb ? '' : `<input list="bmImpEntries" value="${esc(s.clone_from)}" placeholder="${ttA('bmdb.imp_clone_from')}"
