@@ -248,6 +248,38 @@ def _modeldb_spaces(mod) -> List[Finding]:
     return out
 
 
+@rule("guild.two_in_town", "Two guild buildings in one town", "warn",
+      "the Oogway campaign editor's checks (96f): a settlement holds one guild, and a "
+      "campaign that starts a town with two is refused by the game's guild system",
+      "campaign", "campmap")
+def _two_guilds(mod) -> List[Finding]:
+    """A town that starts with two buildings of guild lines (``guild_*``).
+
+    Measured 2026-11-01: none in either of Divide and Conquer's campaigns, which
+    play, so it finds nothing on a working mod.
+    """
+    from . import campstrat
+    from .guilds import BUILDING_PREFIX
+    out = []
+    for camp in campstrat.campaign_paths(mod):
+        try:
+            sf = campstrat.read_strat(mod, camp)
+        except (OSError, ValueError):
+            continue
+        rel = campstrat.strat_path(mod, camp).relative_to(Path(mod.data)).as_posix()
+        for town in sf.of_kind("settlement"):
+            gs = [b.name for b in sf.children_of(town, "building")
+                  if (b.name or "").lower().startswith(BUILDING_PREFIX)]
+            if len(gs) > 1:
+                region = str(town.get("region") or "")
+                out.append(Finding(
+                    "guild.two_in_town", "warn",
+                    _i18n.msg("eng.crashrules.two_guilds_in_town", "{region} starts {camp} with two guild buildings ({guilds}). A settlement holds one guild; keep one.", region=region, camp=camp, guilds=", ".join(gs)),
+                    file=rel, line=town.start + 1, what=f"{camp}|{region}", when="campaign",
+                    name=region))
+    return out
+
+
 #: Stated by a guide, measured, and not a rule. Kept so the next reader of the
 #: guide finds the answer instead of the question.
 REFUSED: Tuple[dict, ...] = (

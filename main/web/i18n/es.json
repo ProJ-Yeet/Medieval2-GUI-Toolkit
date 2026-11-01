@@ -12428,5 +12428,6 @@
  "eng.campscript.close_without_open": "línea {line}: {word} cierra un bloque que nunca se abrió, así que las piezas de después no se ofrecen",
  "eng.campscript.never_closed": "línea {line}: un bloque {word} nunca se cierra, así que ni él ni lo que sigue se ofrecen",
  "eng.campscript.took_out": "quitadas {n} pieza(s) de {name}: {heads}",
- "scripts.cs_head": "<code>data/{rel}</code>, {lines} líneas, en sus piezas: cada monitor, bucle, bloque if, contador y orden fuera de todo bloque, con el comentario de encima. Las líneas script, wait_monitors y end_script se quedan siempre."
+ "scripts.cs_head": "<code>data/{rel}</code>, {lines} líneas, en sus piezas: cada monitor, bucle, bloque if, contador y orden fuera de todo bloque, con el comentario de encima. Las líneas script, wait_monitors y end_script se quedan siempre.",
+ "eng.crashrules.two_guilds_in_town": "{region} empieza {camp} con dos edificios de gremio ({guilds}). Un asentamiento tiene un gremio; deja uno."
 }
