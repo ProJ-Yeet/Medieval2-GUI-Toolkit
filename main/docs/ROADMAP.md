@@ -1108,7 +1108,8 @@ split by area, each built from the behaviour described in the checklist:
   maker lacks it; the new-unit wizard's steps; the editor's own look (a layout editor for the toolkit's pages); the
   game's menu screens page by page; the art browser by kind; drawing pictures from the campaign map; own logos and
   the area recolour; the Scratch-style blocks view of the module builder; the thin mod; keep-for-Apply where change
-  sets lack it; hover cards; a religion's temples from nothing (its pip is drawn since 2026-11-01, `tests/test_religion_pip`; a building
+  sets lack it; hover cards; a religion's temples from nothing: the button on the religion form and plain building cards (its pip is
+  drawn and `buildings.temple_spec` makes the chain since 2026-11-01, `tests/test_religion_pip`, `tests/test_temple_spec`; a building
   from nothing is `buildings.plan_new_tree` already).
 
 **Left in major III**: 96f, round two's major III items. Porting the editor's current files already brought its control blocks (ELSE, all / any / none, for each), its newer WHENs and the Recruitment Order, One Recruitment Grid and Upkeep x N add-ons; the Scratch-style blocks view and the campaign script by pieces are still to do. The thin mod needs every editor to copy a game file in

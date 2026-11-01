@@ -2078,7 +2078,10 @@ def new_tree_text(spec: dict, indent: str = "\t") -> str:
         if requires:
             head += " requires " + requires
         out.append(f"{i2}{head}\n{i2}{{\n")
-        out.append(f"{i3}capability\n{i3}{{\n{i3}}}\n")
+        out.append(f"{i3}capability\n{i3}{{\n")
+        for cap in lv.get("capabilities") or []:
+            out.append(f"{i4}{str(cap).strip()}\n")
+        out.append(f"{i3}}}\n")
         for key in ("material", "construction", "cost", "settlement_min"):
             val = str(lv.get(key, "")).strip()
             if val:
@@ -2092,6 +2095,67 @@ def new_tree_text(spec: dict, indent: str = "\t") -> str:
     out.append(f"{i1}plugins\n{i1}{{\n{i1}}}\n")
     out.append("}\n")
     return "".join(out)
+
+
+def _median(vals: List[float]) -> float:
+    vals = sorted(vals)
+    return vals[len(vals) // 2] if vals else 0
+
+
+def temple_spec(mod, religion: str, factions: List[str]) -> dict:
+    """96f: a temple chain for ``religion`` from nothing, as a new-tree spec.
+
+    The numbers are this mod's usual temple numbers: the lines that carry a
+    ``religion`` give the usual number of levels, and each level, by its place
+    in the chain, the median cost and turns, the usual town size, and the
+    median of its plain (unconditional) ``religion_level`` and
+    ``happiness_bonus``. A mod with no temple lines gets three levels at the
+    new-tree defaults, each one a step of faith. Built by ``factions`` (all
+    of the mod's cultures when none are picked). City levels, the way every
+    temple line in the installed mods is."""
+    religion = (religion or "").strip()
+    temples = [b for b in mod.edb.buildings if b.religion and b.blocks]
+    city = [b for b in temples if all(lb.settlement != "castle" for lb in b.blocks)] or temples
+    count = int(_median([len(b.blocks) for b in city])) if city else 3
+    count = max(1, min(count, VANILLA_MAX_LEVELS))
+
+    def plain(lb, key):
+        return [float((c.args.split() or ["0"])[-1]) for c in lb.capabilities
+                if c.keyword == key and not c.requires.strip()
+                and re.fullmatch(r"(bonus\s+)?-?\d+(\.\d+)?", c.args.strip())]
+
+    from collections import Counter
+    levels = []
+    for pos in range(count):
+        at = [b.blocks[pos] for b in city if len(b.blocks) > pos]
+        lv: Dict = {"name": f"{religion}_temple_{pos + 1}",
+                    "label": f"{religion.replace('_', ' ').title()} Temple {pos + 1}"}
+        caps = []
+        if at:
+            for key in ("cost", "construction"):
+                nums = [float(lb.scalars[key]) for lb in at
+                        if re.fullmatch(r"\d+(\.\d+)?", lb.scalars.get(key, ""))]
+                if nums:
+                    lv[key] = str(int(_median(nums)))
+            sizes = Counter(lb.scalars.get("settlement_min") for lb in at if lb.scalars.get("settlement_min"))
+            if sizes:
+                lv["settlement_min"] = sizes.most_common(1)[0][0]
+            mats = Counter(lb.scalars.get("material") for lb in at if lb.scalars.get("material"))
+            if mats:
+                lv["material"] = mats.most_common(1)[0][0]
+            for key in ("religion_level", "happiness_bonus"):
+                vals = [v for lb in at for v in plain(lb, key)[:1]]
+                # said only when most of the temples at this place say it
+                if len(vals) * 2 > len(at):
+                    caps.append(f"{key} bonus {int(_median(vals))}")
+        else:
+            caps.append(f"religion_level bonus {pos + 1}")
+        lv["capabilities"] = caps
+        levels.append(lv)
+    picked = [f.strip() for f in factions or [] if f.strip()]
+    requires = ("factions { " + "".join(f"{f}, " for f in picked) + "}") if picked else ""
+    return {"name": f"temple_{religion}", "religion": religion, "settlement": "city",
+            "requires": requires, "levels": levels, "from_temples": len(city)}
 
 
 def _default_requires(mod) -> str:
