@@ -182,6 +182,8 @@ function cvwPlan(man, preset){
     //: 97b. A preset saved before it opens without faction names, which is
     //: what that view looked like when it was saved.
     factionNames: !!p.faction_names,
+    //: 97c. A preset saved before it had every icon showing.
+    icons: p.icons !== false,
     /* 28a: the strip is part of the reading. A preset saved before it names no
        tab and opens on the one that is up, which is the least surprising thing
        a view with nothing to say about the strip can do - unlike the layers,
@@ -240,6 +242,9 @@ function cvwLoad(i){
   const lb = document.getElementById('cmLabBtn');
   if(lb) lb.classList.toggle('on', !!c.labels);
   c.fnOn = plan.factionNames;                                        // 97b
+  c.icons = plan.icons;                                              // 97c
+  const ib = document.getElementById('cmIcoBtn');
+  if(ib) ib.classList.toggle('on', !!c.icons);
   const fb = document.getElementById('cmFacBtn');
   if(fb) fb.classList.toggle('on', !!c.fnOn);
   // 28a: the tab, the collapse and the width. The width goes back through the

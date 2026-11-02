@@ -151,7 +151,8 @@ function clnItems(regions){
 
 function clnObjectItems(){
   const k = state.cmk, c = state.cmap;
-  if(!k || !k.on || !c) return [];
+  // 97c: a character's name is a label on its icon, and goes with it
+  if(!k || !k.on || !c || !cmapIconsOn()) return [];
   const out = [];
   for(const g of k.groups) for(const it of cmkShown(g)){
     if(it.kind === 'character') out.push({key:tt('maplabels.character',{line:it.line}),tx:g.tx,ty:g.ty,
@@ -229,7 +230,7 @@ function clnDraw(x, s0, t0, s1, t1){
   const v = c.view, z = v.zoom;
   const R = [cmapX(s0) - 1, cmapY(t0) - 1, cmapX(s1) + 1, cmapY(t1) + 1];
   x.save();
-  if(clnDotted(z)){
+  if(clnDotted(z) && cmapIconsOn()){
     x.fillStyle = 'rgba(245,240,228,.95)';
     x.strokeStyle = 'rgba(8,10,14,.9)';
     x.lineWidth = 1.5;

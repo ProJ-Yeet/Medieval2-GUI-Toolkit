@@ -151,6 +151,7 @@ function cmapObjectMode(){
 // characters. This also works for an admiral standing on an unowned sea tile.
 function cmapObjectPick(tile){
   if(!state.cmap || state.cmap.selectMode) return false;
+  if(!cmapIconsOn()) return false;              // 97c: nothing drawn, nothing to click
   const items = cmkAt(tile[0],tile[1]).filter(it =>
     ['character','fort','watchtower','resource'].includes(it.kind));
   const item = items[items.length - 1];

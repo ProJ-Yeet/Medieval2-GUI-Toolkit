@@ -1208,6 +1208,11 @@ name is a sprite squared to the camera rather than only turned about the
 vertical, since an upright sprite seen from above at the default tilt was too
 squashed to read. Names may overhang a thin land by 30% of its thickness.
 `tests/test_mapfactions`.
+**97c** (2026-11-02): `cmapIconsOn` / `cmapIconsToggle` in `campmap.js`. The
+category ticks under the markers layer are left as they are underneath, so
+turning the icons back on gives back exactly what was showing. Settlement and
+faction names are not icons and stay. `cm3Icons` is the 3D hook, for 97d's
+models. `tests/test_mapicons`.
 
 # Phase 99p - SimpleBake's two ideas for the packer, scheduled 2026-10-15
 

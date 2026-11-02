@@ -549,6 +549,7 @@ function cmkCanDrag(it){ return !!it && CMK_DRAGGABLE.indexOf(it.kind) >= 0; }
 //: The character under the pointer, if the drag should start here rather than a
 //: pan. Topmost first, which is the order they are drawn in.
 function cmkPickAt(tx, ty){
+  if(typeof cmapIconsOn === 'function' && !cmapIconsOn()) return null;   // 97c
   const on = cmkAt(tx, ty).filter(cmkCanDrag);
   return on.length ? on[on.length - 1] : null;
 }

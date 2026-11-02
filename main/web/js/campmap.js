@@ -602,6 +602,7 @@ function cmapLayerState(){
   // 20c, T4: settlement names are a way of looking at the map, not a place
   m.labels = !!c.labels;
   m.faction_names = !!c.fnOn;                 // 97b
+  m.icons = c.icons !== false;                // 97c
   /* 28a: the strip's three habits. "The Validate tab, the column this wide"
      is as much a way of reading a map as which layers are ticked, so they ride
      here and are therefore in every named view for nothing.
@@ -676,6 +677,7 @@ function cmapResetView(){
   c.rivers = false; c.riverRgb = CMAP_RIVER_RGB.slice();
   c.heightAlpha = false; c.tip = true; c.labels = true; c.lab = null;
   c.fnOn = true;                              // 97b: the faction names, back on
+  c.icons = true;                             // 97c: and the icons
   // 28a: the strip's three habits are habits like the rest, so the one way
   // back puts them back - first tab, column open, default width
   c.tab = CMAP_TABS[0].id; c.sub = {};
@@ -836,6 +838,8 @@ function cmapNew(mod, man){
     // 97b: each faction's name over its land, the default look - see
     // mapfactions.js. On with nothing saved, a habit like the names above.
     fnOn: saved.faction_names === undefined ? true : !!saved.faction_names, fn: null,
+    // 97c: one switch over every icon on the map, on with nothing saved
+    icons: saved.icons !== false,
     view: {zoom: 1, ox: 0, oy: 0, fitted: false},
     hover: null, sel: null, outline: null, outlineKey: -1,
     // 17e's tooltip: where the pointer is in the stage, whether the panel is
@@ -1151,6 +1155,9 @@ function renderCampmap(){
           <!-- 97b: each faction's name lettered over its land. See mapfactions.js. -->
           <button id="cmFacBtn" class="${c.fnOn ? 'on' : ''}" onclick="cfnToggle()"
             title="${ttA('campmap.each_factions_name_lettered_over_its')}">${tt('campmap.factions')}</button>
+          <!-- 97c: every icon on the map at once. See cmapIconsToggle. -->
+          <button id="cmIcoBtn" class="${c.icons !== false ? 'on' : ''}" onclick="cmapIconsToggle()"
+            title="${ttA('campmap.show_or_hide_every_icon_on')}">${tt('campmap.icons')}</button>
           <!-- M18: the same map, as a mesh. A MODE and not a screen - the layers, the opacities, the season and the colouring are the ones already set here. See map3d.js. -->
           <button id="cm3Btn" class="${cmap3d() ? 'on' : ''}" aria-pressed="${cmap3d()}"
             onclick="cm3Toggle()"
@@ -2263,7 +2270,8 @@ function cmapOverlay(x, s0, t0, s1, t1){
     x.globalAlpha = 1;
   }
 
-  if(v.zoom >= CMAP_GLYPH_ZOOM){
+  const icons = cmapIconsOn();
+  if(icons && v.zoom >= CMAP_GLYPH_ZOOM){
     // A glyph is drawn ON the tile, from the same two lines as everything else,
     // so it cannot drift off the pixel it is about however far you zoom in.
     // 17d: with the markers layer drawing settlements, this glyph is the same
@@ -2299,8 +2307,8 @@ function cmapOverlay(x, s0, t0, s1, t1){
   // 97b: the faction names are lettering on the land, so they go under every
   // marker and every settlement name that stands on it
   if(typeof cfnDraw === 'function') cfnDraw(x, s0, t0, s1, t1);
-  if(typeof cmkSightDraw === 'function') cmkSightDraw(x, s0, t0, s1, t1);
-  if(typeof cmkDraw === 'function') cmkDraw(x, s0, t0, s1, t1);
+  if(icons && typeof cmkSightDraw === 'function') cmkSightDraw(x, s0, t0, s1, t1);
+  if(icons && typeof cmkDraw === 'function') cmkDraw(x, s0, t0, s1, t1);
   // 20c's names go over the markers they are beside, and under the hover cell
   if(typeof clnDraw === 'function') clnDraw(x, s0, t0, s1, t1);
 
@@ -2467,6 +2475,31 @@ function cmapMarkClick(tile){
   if(state.cmk) state.cmk.drag = null;
   cmapPaint();
   if(!cmapObjectPick(tile)) cmapPick(tile);
+}
+
+/* 97c: whether the map's icons are drawn. One switch over all of them - the
+   markers layer with every category it has, 16c's settlement and port glyphs,
+   the dot 20c draws under a name, a watchtower's sight - so a map can be read
+   for its land and its names alone without unticking nine boxes and
+   remembering which they were. The boxes stay as they are underneath, and an
+   icon that is not drawn cannot be clicked or dragged either: a press goes to
+   the tile, as it would anywhere with nothing on it. */
+function cmapIconsOn(){
+  const c = state.cmap;
+  return !c || c.icons !== false;
+}
+
+function cmapIconsToggle(){
+  const c = state.cmap;
+  if(!c) return;
+  c.icons = !cmapIconsOn();
+  const b = document.getElementById('cmIcoBtn');
+  if(b) b.classList.toggle('on', c.icons);
+  activity(tt('campmap.map_icons'), c.icons ? tt('campmap.showed_the_map_icons') : tt('campmap.hid_the_map_icons'));
+  c.lab = null; c.saidZoom = null;
+  if(typeof cm3Icons === 'function') cm3Icons();
+  cmapPaint();
+  cmapSaveLayers();
 }
 
 //: The pointer left the map, in either view.

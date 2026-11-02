@@ -12134,5 +12134,9 @@
  "campmap.factions": "⚑ Fraktionen",
  "mapfactions.hid_faction_names": "Fraktionsnamen ausgeblendet",
  "mapfactions.showed_faction_names": "Fraktionsnamen eingeblendet",
- "campmap.each_factions_name_lettered_over_its": "Der Name jeder Fraktion über ihrem größten zusammenhängenden Landgebiet, in ihrer eigenen Farbe"
+ "campmap.each_factions_name_lettered_over_its": "Der Name jeder Fraktion über ihrem größten zusammenhängenden Landgebiet, in ihrer eigenen Farbe",
+ "campmap.hid_the_map_icons": "Kartensymbole ausgeblendet",
+ "campmap.icons": "◆ Symbole",
+ "campmap.show_or_hide_every_icon_on": "Jedes Symbol auf der Karte ein- oder ausblenden: Siedlungen, Häfen, Charaktere, Forts, Wachtürme, Ressourcen und der Rest",
+ "campmap.showed_the_map_icons": "Kartensymbole eingeblendet"
 }
