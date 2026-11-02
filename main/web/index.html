@@ -3177,7 +3177,19 @@
   .trsechead{font-size:11px;text-transform:uppercase;letter-spacing:.5px;
     color:var(--dim);font-weight:600;margin-bottom:8px}
   .trsechead .count{text-transform:none;letter-spacing:0;font-weight:400;margin-left:8px}
-  .facrecarea{cursor:crosshair}
+  .artbrowse{display:flex;gap:14px;align-items:flex-start}
+.artkinds{display:flex;flex-direction:column;gap:2px;flex:0 0 190px}
+.artkind{text-align:left;display:flex;justify-content:space-between;gap:8px}
+.artkind.on{border-color:var(--accent,#c9a227)}
+.artmain{flex:1;min-width:0}
+.artgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(112px,1fr));gap:8px;margin-top:8px}
+.artcell{margin:0;padding:4px;border:1px solid var(--line,#444);border-radius:4px;text-align:center}
+.artcell img{max-width:100%;height:84px;object-fit:contain}
+.artcell img.gone{visibility:hidden}
+.artcell figcaption{font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.artmore{grid-column:1/-1;text-align:center}
+@media (max-width:700px){.artbrowse{flex-direction:column}.artkinds{flex:none;flex-direction:row;flex-wrap:wrap}}
+.facrecarea{cursor:crosshair}
 .facmapdraw{max-width:min(100%,384px);border:1px solid var(--line,#444);margin:6px 0}
 .mftemplefac{display:flex;flex-wrap:wrap;gap:2px 14px;margin-top:6px}
 .mftemplefac .chk{flex:0 0 auto}
@@ -3868,6 +3880,7 @@
 <script src="js/healthx.js"></script>
 <script src="js/viewer3d.js"></script>
 <script src="js/gallery.js"></script>
+<script src="js/artbrowse.js"></script>
 <script src="js/armory.js"></script>
 <script src="js/armobj.js"></script>
 <script src="js/armnormal.js"></script>

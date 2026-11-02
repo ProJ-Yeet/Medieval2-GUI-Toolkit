@@ -11985,5 +11985,37 @@
   "other": "{count} Flächen"
  },
  "factions.recol_area_clear": "Leeren",
- "eng.artrecolour.not_its_picture": "{rel} ist keines der Bilder von {faction}"
+ "eng.artrecolour.not_its_picture": "{rel} ist keines der Bilder von {faction}",
+ "artbrowse.kind_unit_cards": "Einheitenkarten",
+ "artbrowse.kind_unit_info": "Einheiten-Infobilder",
+ "artbrowse.kind_buildings": "Gebäudebilder",
+ "artbrowse.kind_portraits": "Porträts",
+ "artbrowse.kind_ancillaries": "Gefolge",
+ "artbrowse.kind_events": "Ereignisbilder",
+ "artbrowse.kind_pips": "Religions-Pips",
+ "artbrowse.kind_resources": "Ressourcen",
+ "artbrowse.kind_settlements": "Siedlungen",
+ "artbrowse.kind_interface_pages": "Oberflächenseiten nach Kultur",
+ "artbrowse.kind_campaign": "Kampagnenbilder",
+ "artbrowse.kind_map": "Kartenebenen",
+ "artbrowse.kind_loading": "Ladebildschirme",
+ "artbrowse.kind_symbols": "Symbole und Banner",
+ "artbrowse.kind_menu": "Menübildschirme",
+ "artbrowse.kind_interface": "Weitere Oberfläche",
+ "artbrowse.kind_other": "Sonstige",
+ "cards.sub_art": "Alle Bilder",
+ "artbrowse.note": "jedes lose Bild unter data/, nach Art",
+ "artbrowse.reading": "Die Bilder der Mod werden gelesen (eine große Mod braucht beim ersten Mal ein paar Sekunden)…",
+ "artbrowse.pictures": {
+  "one": "{count} Bild",
+  "other": "{count} Bilder"
+ },
+ "artbrowse.refresh": "Neu lesen",
+ "artbrowse.filter": "Nach Pfad filtern…",
+ "artbrowse.hint": "Rechtsklick auf ein Bild, um es zu ersetzen oder seinen Ordner zu öffnen. Bilder, die das Spiel aus seinen Packs liest, stehen nicht in der Liste.",
+ "artbrowse.shown": {
+  "one": "{count} von {total}",
+  "other": "{count} von {total}"
+ },
+ "artbrowse.more": "{n} weitere"
 }

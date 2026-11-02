@@ -174,6 +174,9 @@ Factions mode (descr_sm_factions.txt, see :mod:`unittransfer.factions`)
   GET  /api/i18n/words?lang=       -> 96f: every ID with its words in that language
                                     (English where none), for a community
                                     translation dropped into config/translations/
+  GET  /api/artbrowse?mod=[&refresh=1] -> 96f: every loose picture in data/ by kind
+  GET  /api/artbrowse/files?mod=&kind=&q=&offset=&limit=
+                                 -> one kind's pictures, filtered, a page at a time
   GET  /api/mapdraw?mod=&campaign=&faction= and /api/mapdraw/png?...&colour=
                                  -> 96f: a faction's select-screen map drawn from
                                     the campaign map (relief, rivers, its land)
@@ -743,7 +746,7 @@ from typing import Dict, List, Optional
 
 from . import (bmdb, buildings, cards, cleaner, codeview, config, dupes, edit,
                modflags, modfiles, sounds, stratmap)
-from . import mapgen, mapnew, mapresize, modfork, vanilla, gamelog, modreport, rehearse, voices, emblem, mapdraw, bannermaker, artrecolour, stratfamily, scripts
+from . import mapgen, mapnew, mapresize, modfork, vanilla, gamelog, modreport, rehearse, voices, emblem, mapdraw, artbrowse, bannermaker, artrecolour, stratfamily, scripts
 from . import armory, armbake, armlib, armunit, folderimport, loosemesh, meshfolder, modeldb, modeltext
 from . import report, vegtext, culturechange, campscript
 from . import ancillaries, areaeffects, campimport, edbimport, mapbundle, osmmap, osmsites, settlemodel, heroabilities, hordestart, walls, characters, projectzip, campaint, campdb, campevents, campfiles, campmap, campnew, campstrat, cas, casanim, animedit, animpack, animslot, animview, modelexport, launchcheck, packhouse, settlemech, fileswap, factionsites, sidefiles, banners, changesets, health, climatenew, guilds, mapcheck, mapfe, mapquery, mapterrain, mercpools, regiondel, edusort, factionaudit, factionbring, factionclone, factions, images, mesh, minorfiles, namekeys, portrecords, rawtext, rebelpools, renames, soundbanks, soundscripts, spawns, sprites, stratcamp, stratchar, stratedit, stratobj, strings, traits, triggers, winconds
@@ -2358,6 +2361,22 @@ class Handler(BaseHTTPRequestHandler):
                     return self._err(404, "unknown mod")
                 return self._json(namekeys.faction_pool(
                     self.registry.get(name), (q.get("faction") or [""])[0]))
+            if u.path in ("/api/artbrowse", "/api/artbrowse/files"):
+                # 96f: every picture in the mod, kind by kind
+                name = (q.get("mod") or [None])[0]
+                if not name or name not in self.registry.names():
+                    return self._err(404, "unknown mod")
+                mod = self.registry.get(name)
+                if u.path.endswith("/files"):
+                    try:
+                        off, lim = int((q.get("offset") or ["0"])[0]), int((q.get("limit") or ["120"])[0])
+                    except ValueError:
+                        return self._err(400, "bad offset")
+                    return self._json(artbrowse.files(mod, (q.get("kind") or [""])[0],
+                                                      (q.get("q") or [""])[0], off, lim))
+                if (q.get("refresh") or [""])[0]:
+                    artbrowse.forget(mod)
+                return self._json(artbrowse.overview(mod))
             if u.path in ("/api/mapdraw", "/api/mapdraw/png"):
                 # 96f: a faction's select-screen map drawn from the campaign map
                 name = (q.get("mod") or [None])[0]

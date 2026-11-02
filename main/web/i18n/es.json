@@ -12468,5 +12468,39 @@
   "other": "{count} áreas"
  },
  "factions.recol_area_clear": "Borrar",
- "eng.artrecolour.not_its_picture": "{rel} no es una de las imágenes de {faction}"
+ "eng.artrecolour.not_its_picture": "{rel} no es una de las imágenes de {faction}",
+ "artbrowse.kind_unit_cards": "Tarjetas de unidad",
+ "artbrowse.kind_unit_info": "Imágenes de información de unidad",
+ "artbrowse.kind_buildings": "Imágenes de edificios",
+ "artbrowse.kind_portraits": "Retratos",
+ "artbrowse.kind_ancillaries": "Séquito",
+ "artbrowse.kind_events": "Imágenes de eventos",
+ "artbrowse.kind_pips": "Pips de religión",
+ "artbrowse.kind_resources": "Recursos",
+ "artbrowse.kind_settlements": "Asentamientos",
+ "artbrowse.kind_interface_pages": "Páginas de interfaz por cultura",
+ "artbrowse.kind_campaign": "Imágenes de campaña",
+ "artbrowse.kind_map": "Capas del mapa",
+ "artbrowse.kind_loading": "Pantallas de carga",
+ "artbrowse.kind_symbols": "Símbolos y estandartes",
+ "artbrowse.kind_menu": "Pantallas de menú",
+ "artbrowse.kind_interface": "Otra interfaz",
+ "artbrowse.kind_other": "Otras",
+ "cards.sub_art": "Todas las imágenes",
+ "artbrowse.note": "cada imagen suelta bajo data/, por tipo",
+ "artbrowse.reading": "Leyendo las imágenes del mod (un mod grande tarda unos segundos la primera vez)…",
+ "artbrowse.pictures": {
+  "one": "{count} imagen",
+  "many": "{count} imágenes",
+  "other": "{count} imágenes"
+ },
+ "artbrowse.refresh": "Leer de nuevo",
+ "artbrowse.filter": "Filtrar por ruta…",
+ "artbrowse.hint": "Clic derecho en una imagen para sustituirla o abrir su carpeta. No se listan las imágenes que el juego lee de sus packs.",
+ "artbrowse.shown": {
+  "one": "{count} de {total}",
+  "many": "{count} de {total}",
+  "other": "{count} de {total}"
+ },
+ "artbrowse.more": "{n} más"
 }
