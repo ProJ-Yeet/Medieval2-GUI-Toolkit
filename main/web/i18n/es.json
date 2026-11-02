@@ -12571,5 +12571,10 @@
  "settings.nu_middle": "Centro",
  "settings.nu_range": "Mínimo - máximo",
  "settings.nu_start": "Empezar por ella",
- "settings.nu_defence": "Habilidad de defensa"
+ "settings.nu_defence": "Habilidad de defensa",
+ "home.fork_game": "Nueva carpeta de mod desde el juego sin mods…",
+ "home.fork_game_title": "Un mod propio sobre el juego mismo: los archivos de texto de su carpeta data copiados y cada otro archivo un enlace duro, así apenas ocupa espacio y los archivos propios del juego nunca se escriben.",
+ "home.fork_the_game": "este juego sin mods",
+ "eng.modfork.no_game_data": "{base} no tiene carpeta data - ¿es la carpeta del juego?",
+ "eng.server.no_game_root": "la carpeta del juego no está indicada en Ajustes"
 }

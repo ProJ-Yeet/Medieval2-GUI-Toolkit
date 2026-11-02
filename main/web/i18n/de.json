@@ -12085,5 +12085,10 @@
  "settings.nu_range": "Niedrigste - höchste",
  "settings.nu_start": "Damit beginnen",
  "settings.nu_charge": "Ansturm",
- "settings.nu_horse_charge": "Reiter im Ansturm"
+ "settings.nu_horse_charge": "Reiter im Ansturm",
+ "home.fork_game": "Neuer Mod-Ordner aus dem reinen Spiel…",
+ "home.fork_game_title": "Eine eigene Mod auf dem Spiel selbst: die Textdateien seines data-Ordners kopiert und jede andere Datei ein Hardlink, sodass sie kaum Speicherplatz kostet und die eigenen Dateien des Spiels nie geschrieben werden.",
+ "home.fork_the_game": "dem reinen Spiel",
+ "eng.modfork.no_game_data": "{base} hat keinen data-Ordner - ist es der Ordner des Spiels?",
+ "eng.server.no_game_root": "der Ordner des Spiels ist in den Einstellungen nicht gesetzt"
 }

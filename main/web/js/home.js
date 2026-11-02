@@ -43,6 +43,7 @@ function renderHome(){
     </div>
     ${homeResumeHtml()}
     <div class="homegrid">${mods.map(homeCardHtml).join('')}</div>
+    <div class="hcfork" style="margin:8px 0"><button onclick="homeFork('', true)" title="${ttA('home.fork_game_title')}">${tt('home.fork_game')}</button></div>
     ${homePrefsHtml()}
     <div class="homefoot">${kofiLink()}</div>
   </div>`;
@@ -268,17 +269,18 @@ async function homeSetM2ex(name, on){
 /* 96e7: a new mod folder from this one, its unchanged files hard links (the
    Pfadfinder-Adam campaign editor's New mod folder). The plan comes first so
    the confirm can say how much is linked and how much copied. */
-async function homeFork(base){
-  const name = (prompt(tt('home.fork_name_prompt',{base}), base + '_new') || '').trim();
+async function homeFork(base, game){
+  const shown = game ? tt('home.fork_the_game') : base;
+  const name = (prompt(tt('home.fork_name_prompt',{base:shown}), game ? 'my_mod' : base + '_new') || '').trim();
   if(!name) return;
-  const r = await api.post('/api/modfork/plan', {mod:base, name});
+  const r = await api.post('/api/modfork/plan', {mod:base, name, game:!!game});
   if(r.error){ toast('✗ ' + r.error, 6000); return; }
   const p = r.plan || {};
   if((p.errors || []).length){ toast('✗ ' + p.errors.join('; '), 7000); return; }
   if(!confirm(tt('home.fork_confirm',{target:p.target, nl:p.linked_files, lsize:MB(p.linked_bytes),
       nc:p.copied_files, csize:MB(p.copied_bytes)}))) return;
   toast(tt('home.fork_working'), 60000);
-  const out = await api.post('/api/modfork', {mod:base, name});
+  const out = await api.post('/api/modfork', {mod:base, name, game:!!game});
   if(out.error){ toast('✗ ' + out.error, 8000); return; }
   toast(tt(out.hard_links ? 'home.fork_done' : 'home.fork_done_copied',{name:out.name,
     nl:out.linked, nc:out.copied, skipped:(out.skipped||[]).length}), 9000);

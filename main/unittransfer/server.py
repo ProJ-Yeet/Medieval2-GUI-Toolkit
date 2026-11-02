@@ -5750,6 +5750,19 @@ class Handler(BaseHTTPRequestHandler):
                 "m2ex": modflags.is_m2ex(mod)}
 
     def _modfork(self, body, dry: bool):
+        if body.get("game"):
+            # 96f: a mod of one's own on the plain game, its data hard links
+            root = config.get_med2_root()
+            if not root:
+                return {"error": _i18n.msg("eng.server.no_game_root", "the game's folder is not set in Settings")}
+            if dry:
+                return {"plan": modfork.plan(root, body.get("name") or "", game=True)}
+            try:
+                out = modfork.create(root, body.get("name") or "", copy_all=bool(body.get("copy_all")), game=True)
+            except (modfork.ForkError, OSError) as e:
+                return {"error": getattr(e, "message", None) or str(e)}
+            log.info("FORK   the game -> %s: %d linked, %d copied", out["name"], out["linked"], out["copied"])
+            return out
         name = body.get("mod") or ""
         if name not in self.registry.names() or self.registry.is_pack(name):
             return {"error": _i18n.msg("eng.server.unknown_mod_2", "unknown mod {name}", name=repr(name))}

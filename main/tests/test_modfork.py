@@ -102,6 +102,25 @@ check("reading a linked file leaves the link alone",
 check("no stray working file is left beside it",
       not list((base / "data").glob("*.unlinking")))
 
+print("\n96f: from the plain game")
+(game / "data" / "textures").mkdir(parents=True)
+(game / "data" / "export_descr_unit.txt").write_text("type Vanilla\n", encoding="latin-1")
+(game / "data" / "textures" / "v.texture").write_bytes(b"DDS game")
+(game / "game.cfg").write_text("[x]\n", encoding="latin-1")
+g = modfork.plan(game, "MyMod", game=True)
+check(f"it plans into mods/<new> ({g['target']})", g["ok"] and g["target"].endswith(os.path.join("mods", "MyMod"))
+      and g["linked_files"] == 1 and g["copied_files"] == 1)
+out = modfork.create(game, "MyMod", game=True)
+mine = game / "mods" / "MyMod"
+check("the game's data is under the new mod's data, the texture a link, the EDU a copy",
+      same(mine / "data" / "textures" / "v.texture", game / "data" / "textures" / "v.texture")
+      and (mine / "data" / "export_descr_unit.txt").read_text(encoding="latin-1") == "type Vanilla\n"
+      and not same(mine / "data" / "export_descr_unit.txt", game / "data" / "export_descr_unit.txt"))
+check("only data/ is carried, and the start files are written",
+      not (mine / "game.cfg").exists() and "mods/MyMod" in (mine / "MyMod.cfg").read_text(encoding="latin-1")
+      and (mine / "Start_MyMod.bat").is_file())
+check("a folder with no data/ is refused", not modfork.plan(game / "mods", "X", game=True)["ok"])
+
 print("\nthe vanilla values")
 from unittransfer import campdb, settlemech, vanilla
 root = config.get_med2_root()

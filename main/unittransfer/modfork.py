@@ -20,6 +20,14 @@ the toolkit gets no such guard, which the page says.
 The start files are written for the new name: ``<new>.cfg`` from the base's
 own with its ``mods/<base>`` turned into ``mods/<new>``, and a ``.bat`` that
 starts the game with it.
+
+**From the plain game (96f, the thin mod).** The base can also be the game
+itself: ``<game>/data`` becomes ``mods/<new>/data`` by the same rules, so a
+mod of one's own on the plain game costs the text files and nothing more,
+and every screen of the toolkit reads it as it reads any mod - there is no
+second place to look a file up in. The editor's thin mod leaves the files
+out altogether and reads the game's in their place; a hard link is the same
+saving without teaching a hundred readers about a fallback.
 """
 from __future__ import annotations
 
@@ -81,27 +89,45 @@ def _starts(game: Path, base_dir: Path, base: str, name: str) -> Dict[str, str]:
             "Start_%s.bat" % name: 'cd /d "%%~dp0..\\.."\r\nstart "" %s %s\r\n' % (exe, how)}
 
 
-def plan(base_root, name: str) -> Dict:
+#: what a fork from the plain game is called where a base mod's name would be
+GAME = "the game"
+
+
+def _where(base_root, name: str, game: bool):
+    """(the folder walked, the folder it lands in, the new mod's root, the
+    game folder). From a mod, the mod folder; from the game, its data/."""
+    base_dir = Path(base_root)
+    if game:
+        root = base_dir / "mods" / name
+        return base_dir / "data", root / "data", root, base_dir
+    root = base_dir.parent / name
+    return base_dir, root, root, base_dir.parent.parent
+
+
+def plan(base_root, name: str, game: bool = False) -> Dict:
     """What a fork would make, without making it: the target, the file counts,
-    the bytes linked and copied, and whether the target is free."""
+    the bytes linked and copied, and whether the target is free. ``game``: the
+    base is the game's own folder, not a mod."""
     base_dir = Path(base_root)
     name = (name or "").strip()
-    out: Dict = {"base": base_dir.name, "name": name, "errors": []}
+    out: Dict = {"base": GAME if game else base_dir.name, "name": name, "errors": [], "game": game}
     if not RE_NAME.match(name):
         out["errors"].append(_i18n.msg("eng.modfork.bad_name", "a mod folder name may use letters, digits, _ and - only"))
-    if base_dir.parent.name.lower() != "mods":
+    if game and not (base_dir / "data").is_dir():
+        out["errors"].append(_i18n.msg("eng.modfork.no_game_data", "{base} has no data folder - is it the game's folder?", base=str(base_dir)))
+    elif not game and base_dir.parent.name.lower() != "mods":
         out["errors"].append(_i18n.msg("eng.modfork.not_in_mods", "{base} is not in a mods folder", base=str(base_dir)))
-    target = base_dir.parent / name
+    walk_root, _land, target, _g = _where(base_root, name, game)
     out["target"] = str(target)
     if name and name.lower() == base_dir.name.lower():
         out["errors"].append(_i18n.msg("eng.modfork.same_name", "the new mod needs a name other than its base"))
     elif name and target.exists():
         out["errors"].append(_i18n.msg("eng.modfork.exists", "{target} already exists - pick another name", target=str(target)))
     linked = copied = nl = nc = 0
-    if base_dir.is_dir():
-        for dirpath, dirnames, files in os.walk(base_dir):
+    if walk_root.is_dir():
+        for dirpath, dirnames, files in os.walk(walk_root):
             dirnames[:] = [d for d in dirnames if d.lower() not in SKIP_DIRS]
-            at_top = os.path.normpath(dirpath) == os.path.normpath(base_dir)
+            at_top = not game and os.path.normpath(dirpath) == os.path.normpath(walk_root)
             for f in files:
                 if f == MARKER or (at_top and f.lower().endswith((".bat", ".cmd", ".cfg"))):
                     continue                  # written fresh for the new name
@@ -119,26 +145,26 @@ def plan(base_root, name: str) -> Dict:
 
 
 def create(base_root, name: str, copy_all: bool = False,
-           progress: Optional[Callable[[int], None]] = None) -> Dict:
-    """Make ``mods/<name>`` from ``base_root``. Returns a summary."""
-    p = plan(base_root, name)
+           progress: Optional[Callable[[int], None]] = None, game: bool = False) -> Dict:
+    """Make ``mods/<name>`` from ``base_root`` (a mod, or with ``game`` the
+    game's own folder). Returns a summary."""
+    p = plan(base_root, name, game)
     if p["errors"]:
         raise ForkError("; ".join(p["errors"]))
     base_dir = Path(base_root)
-    base = base_dir.name
-    target = Path(p["target"])
-    game = base_dir.parent.parent
+    base = GAME if game else base_dir.name
+    walk_root, land, target, game_dir = _where(base_root, name, game)
     stats: Dict = {"linked": 0, "copied": 0, "renamed": 0, "bytes_copied": 0,
                    "bytes_linked": 0, "skipped": []}
     link_ok = [not copy_all]
     target.mkdir(parents=True)
     try:
-        for dirpath, dirnames, files in os.walk(base_dir):
+        for dirpath, dirnames, files in os.walk(walk_root):
             dirnames[:] = [d for d in dirnames if d.lower() not in SKIP_DIRS]
-            rel = os.path.relpath(dirpath, base_dir)
-            out_dir = os.path.normpath(os.path.join(target, rel))
+            rel = os.path.relpath(dirpath, walk_root)
+            out_dir = os.path.normpath(os.path.join(land, rel))
             os.makedirs(out_dir, exist_ok=True)
-            at_top = os.path.normpath(dirpath) == os.path.normpath(base_dir)
+            at_top = not game and os.path.normpath(dirpath) == os.path.normpath(walk_root)
             for n in files:
                 low = n.lower()
                 if n == MARKER or (at_top and low.endswith((".bat", ".cmd", ".cfg"))):
@@ -146,21 +172,21 @@ def create(base_root, name: str, copy_all: bool = False,
                 src = os.path.join(dirpath, n)
                 names = [n]
                 # a file named after the base mod (HLR.idx): also under the new name
-                if re.match(r"^%s\." % re.escape(base), n, re.I):
+                if not game and re.match(r"^%s\." % re.escape(base), n, re.I):
                     names.append(name + n[len(base):])
                 for dn in names:
                     try:
                         _put(src, os.path.join(out_dir, dn), link_ok, stats)
                     except OSError as e:
                         stats["skipped"].append(
-                            [os.path.relpath(src, base_dir).replace("\\", "/"), e.strerror or str(e)])
+                            [os.path.relpath(src, walk_root).replace("\\", "/"), e.strerror or str(e)])
                         continue
                     if dn != n:
                         stats["renamed"] += 1
                 done = stats["linked"] + stats["copied"]
                 if progress and done % 500 == 0:
                     progress(done)
-        for n, text in _starts(game, base_dir, base, name).items():
+        for n, text in _starts(game_dir, target if game else base_dir, base, name).items():
             (target / n).write_bytes(text.encode("latin-1"))
         (target / MARKER).write_text(json.dumps(
             {"base": base, "linked": link_ok[0]}, indent=2), encoding="utf-8")
