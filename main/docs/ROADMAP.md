@@ -1104,11 +1104,10 @@ split by area, each built from the behaviour described in the checklist:
   rules already; more campaign rules needed nothing (recruitment slots are campdb fields, chains past 9 levels warn,
   climates on the sea are major II's map work).
 * **Left in 96f**, each a port of behaviour from the editor's CHANGELOG (its code is gone, see `STATE.md`): the 3D
-  viewer's animations, riders and crews where Armory Studio lacks them; a card from the 3D model where the card
-  maker lacks it; the new-unit wizard's steps; the editor's own look (a layout editor for the toolkit's pages); the
+  viewer's animations, riders and crews where Armory Studio lacks them; the new-unit wizard's steps; the editor's own look (a layout editor for the toolkit's pages); the
   game's menu screens page by page; own logos (M2EX's
-  `sprite_format xml`); the Scratch-style blocks view of the module builder; the thin mod; keep-for-Apply where change
-  sets lack it; (hover cards are done 2026-11-02, `web/js/hovercard.js`; drawing a faction's select-screen map from the campaign map, the area recolour and the art browser by kind
+  `sprite_format xml`); the Scratch-style blocks view of the module builder; the thin mod; (keep-for-Apply is not ported:
+  writes stay per Save with an Undo, see STATE.md; hover cards and the card maker's Bigger and Painted look are done 2026-11-02, `web/js/hovercard.js`; drawing a faction's select-screen map from the campaign map, the area recolour and the art browser by kind
   are done 2026-11-02, `tests/test_mapdraw`, `tests/test_recolour_area`, `tests/test_artbrowse`; a religion from nothing is done 2026-11-01: its pip drawn, its temples from the mod's usual numbers with plain
   cards, `tests/test_religion_pip`, `tests/test_temple_spec`; a building from nothing is `buildings.plan_new_tree`).
 

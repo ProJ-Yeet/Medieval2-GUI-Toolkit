@@ -12508,5 +12508,9 @@
  "hovercard.small": "Pequeña",
  "hovercard.constructed": "Construido",
  "hovercard.from_game": "de los datos propios del juego",
- "hovercard.none": "no se encontró ninguna"
+ "hovercard.none": "no se encontró ninguna",
+ "cards.gen_bigger": "Más grande:",
+ "cards.gen_mod_size": "el tamaño propio del mod",
+ "cards.gen_painted": "Aspecto pintado",
+ "cards.gen_painted_hint": "áreas planas de pincel con una línea oscura fina donde se encuentran, para que la tarjeta parezca pintada, no 3D"
 }

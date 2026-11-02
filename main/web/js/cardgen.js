@@ -41,15 +41,18 @@ const CG_POSES = [
 
 function cg(){
   return state.cg = state.cg || {
-    size: 'card', w: 48, h: 64, ss: 10, oneEach: true, pose: 'guard', name: '', unit: '', err: '', saved: null,
+    size: 'card', mult: 1, w: 48, h: 64, ss: 10, oneEach: true, pose: 'guard', name: '', unit: '', err: '', saved: null,
     cam: {yaw: 20, pitch: 4, scale: 1.2, height: 0, pan: 0},
     xf: {t: [0, 0, 0], r: [0, 0, 0]},
     rig: {type: 'auto', basis: {}, handles: true, cat: '', pick: '', part: 'whole'},
     light: {type: 'sun', azimuth: 35, elevation: 40, amount: 0.95, level: 1.0, ambient: 0.38},
-    post: {blur: 0.5, exposure: 0, brightness: 0, contrast: 1.0, gamma: 1.0, saturation: 1.0, hue: 0, sharpen: 0.2, outline: 0.3},
+    post: {blur: 0.5, exposure: 0, brightness: 0, contrast: 1.0, gamma: 1.0, saturation: 1.0, hue: 0, sharpen: 0.2, outline: 0.3,
+           painted: false},
   };
 }
-function cgDims(){ const c = cg(); return c.size === 'custom' ? [Math.max(8, c.w | 0), Math.max(8, c.h | 0)] : CG_SIZES[c.size]; }
+// 96f: a standard size can be made two to four times bigger, for sharper cards
+function cgDims(){ const c = cg(); return c.size === 'custom' ? [Math.max(8, c.w | 0), Math.max(8, c.h | 0)]
+  : CG_SIZES[c.size].map(v => v * (c.mult || 1)); }
 
 /* What is drawn: the model's visible objects, one of each group type (the
    first, as the game would choose one variant per soldier) unless all. */
@@ -97,6 +100,8 @@ async function renderCardGen(){
         <fieldset><legend>${tt('cards.gen_size')}</legend>
           <div class="armexprow">${['card', 'large', 'info', 'custom'].map(s => `<label class="armcheck"><input type="radio" name="cgSize"${c.size === s ? ' checked' : ''}
               onchange="cg().size='${s}';cgRepaint()"> ${cgSizeLabel(s)}${s !== 'custom' ? ` <span class="count">${CG_SIZES[s].join('×')}</span>` : ''}</label>`).join('')}</div>
+          ${c.size !== 'custom' ? `<div class="armexprow"><label>${tt('cards.gen_bigger')} <select onchange="cg().mult=+this.value;cgRepaint()">${
+            [1, 2, 3, 4].map(m => `<option value="${m}"${(c.mult || 1) === m ? ' selected' : ''}>${m === 1 ? tt('cards.gen_mod_size') : m + '×'}</option>`).join('')}</select></label></div>` : ''}
           ${c.size === 'custom' ? `<div class="armexprow"><input type="number" class="armnum" value="${c.w}" onchange="cg().w=+this.value;cgRepaint()"> ×
             <input type="number" class="armnum" value="${c.h}" onchange="cg().h=+this.value;cgRepaint()"></div>` : ''}
           <label class="cgrange">${tt('cards.gen_render_at')}<input type="range" min="10" max="40" step="5" value="${c.ss}" onchange="cg().ss=+this.value;cgRepaint()"><span class="count">${c.ss}×</span></label>
@@ -133,6 +138,9 @@ async function renderCardGen(){
           ${sl('post', 'gamma', 0.3, 3, 0.01, tt('cards.gen_gamma'))}${sl('post', 'saturation', 0, 2, 0.01, tt('cards.gen_saturation'))}
           ${sl('post', 'hue', -180, 180, 1, tt('cards.gen_hue'))}${sl('post', 'sharpen', 0, 1, 0.01, tt('cards.gen_sharpen'))}
           ${sl('post', 'outline', 0, 1.5, 0.05, tt('cards.gen_outline'))}
+          <label class="armcheck"><input type="checkbox"${c.post.painted ? ' checked' : ''}
+            onchange="cg().post.painted=this.checked;cgRender()"> ${tt('cards.gen_painted')}</label>
+          <div class="count">${tt('cards.gen_painted_hint')}</div>
         </fieldset>
       </div>
       <div class="cgout">
@@ -284,6 +292,7 @@ function cgRender(){
     if(mask[i]){ hi.data[i*4] = col.data[i*4]; hi.data[i*4+1] = col.data[i*4+1]; hi.data[i*4+2] = col.data[i*4+2]; hi.data[i*4+3] = 255; }
     else if(grown[i]) hi.data[i*4+3] = 255;
   }
+  if(c.post.painted) cgPainted(hi.data, mask, W, H, ss);
   // the HD render: no blur, no scaling
   hdCv.width = W; hdCv.height = H;
   hdCv.getContext('2d').putImageData(hi, 0, 0);
@@ -303,6 +312,54 @@ function cgRender(){
   const im = cx.getImageData(0, 0, w, h);
   cgFinish(im.data, w, h, c.post);
   cx.putImageData(im, 0, 0);
+}
+
+/* 96f: the painted look, on the HD render before it is scaled down: the
+   colours evened out over about a card pixel, flattened to a few steps each
+   (flat brush areas), and a thin dark line where two areas meet, about a
+   fifth of a card pixel wide. Only inside the model; the outline is left. */
+const CG_PAINT_LEVELS = 6;
+function cgPainted(d, mask, W, H, ss){
+  const r = Math.max(1, Math.round(ss / 2)), n = W * H;
+  // even out: a box average over the model's own pixels, rows then columns
+  const tmp = new Float32Array(n * 3), out = new Float32Array(n * 3);
+  for(let pass = 0; pass < 2; pass++){
+    const src = pass ? tmp : null, dst = pass ? out : tmp;
+    for(let y = 0; y < H; y++) for(let x = 0; x < W; x++){
+      const i = y * W + x;
+      if(!mask[i]) continue;
+      let s0 = 0, s1 = 0, s2 = 0, k = 0;
+      for(let t = -r; t <= r; t++){
+        const xx = pass ? x : x + t, yy = pass ? y + t : y;
+        if(xx < 0 || yy < 0 || xx >= W || yy >= H) continue;
+        const j = yy * W + xx;
+        if(!mask[j]) continue;
+        if(src){ s0 += src[j*3]; s1 += src[j*3+1]; s2 += src[j*3+2]; }
+        else { s0 += d[j*4]; s1 += d[j*4+1]; s2 += d[j*4+2]; }
+        k++;
+      }
+      dst[i*3] = s0 / k; dst[i*3+1] = s1 / k; dst[i*3+2] = s2 / k;
+    }
+  }
+  // flatten to a few steps a channel
+  const step = 255 / (CG_PAINT_LEVELS - 1), q = new Int32Array(n);
+  for(let i = 0; i < n; i++){
+    if(!mask[i]) continue;
+    const a = Math.round(out[i*3] / step), b = Math.round(out[i*3+1] / step), c = Math.round(out[i*3+2] / step);
+    q[i] = (a * 8 + b) * 8 + c + 1;
+    d[i*4] = Math.round(a * step); d[i*4+1] = Math.round(b * step); d[i*4+2] = Math.round(c * step);
+  }
+  // the line where two areas meet, grown to its width
+  const edge = new Uint8Array(n);
+  for(let y = 0; y < H; y++) for(let x = 0; x < W; x++){
+    const i = y * W + x;
+    if(!mask[i]) continue;
+    if((x + 1 < W && mask[i+1] && q[i+1] !== q[i]) || (y + 1 < H && mask[i+W] && q[i+W] !== q[i])) edge[i] = 1;
+  }
+  const line = cgDilate(edge, W, H, Math.max(0, Math.round(ss * 0.1)));
+  for(let i = 0; i < n; i++) if(line[i] && mask[i]){
+    d[i*4] = Math.round(d[i*4] * 0.3); d[i*4+1] = Math.round(d[i*4+1] * 0.3); d[i*4+2] = Math.round(d[i*4+2] * 0.3);
+  }
 }
 
 /* The colour and sharpen steps, on the card's own pixels. */

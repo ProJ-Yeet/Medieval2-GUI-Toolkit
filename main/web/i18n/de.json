@@ -12023,5 +12023,9 @@
  "hovercard.small": "Klein",
  "hovercard.constructed": "Gebaut",
  "hovercard.from_game": "aus den eigenen Daten des Spiels",
- "hovercard.none": "keines gefunden"
+ "hovercard.none": "keines gefunden",
+ "cards.gen_bigger": "Größer:",
+ "cards.gen_mod_size": "die eigene Größe der Mod",
+ "cards.gen_painted": "Gemalter Look",
+ "cards.gen_painted_hint": "flache Pinselflächen mit einer dünnen dunklen Linie, wo sie sich treffen, damit die Karte gemalt aussieht, nicht 3D"
 }
