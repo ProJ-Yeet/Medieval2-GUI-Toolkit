@@ -1103,16 +1103,25 @@ split by area, each built from the behaviour described in the checklist:
   Settings (`tests/test_i18n_community`). Renaming a slot everywhere was 19b's already; the other new checks were
   rules already; more campaign rules needed nothing (recruitment slots are campdb fields, chains past 9 levels warn,
   climates on the sea are major II's map work).
-* **Left in 96f**, each a port of behaviour from the editor's CHANGELOG (its code is gone, see `STATE.md`): the 3D
-  viewer's animations, riders and crews where Armory Studio lacks them; the
-  game's menu screens page by page; own logos (M2EX's
-  `sprite_format xml`); (keep-for-Apply is not ported:
-  writes stay per Save with an Undo, see STATE.md; hover cards, the card maker's Bigger and Painted look and the toolkit's own look and the module builder's blocks view and a new unit from the usual of its kind and the thin mod (a hard-linked mod on the plain game) are done 2026-11-02, `web/js/hovercard.js`; drawing a faction's select-screen map from the campaign map, the area recolour and the art browser by kind
-  are done 2026-11-02, `tests/test_mapdraw`, `tests/test_recolour_area`, `tests/test_artbrowse`; a religion from nothing is done 2026-11-01: its pip drawn, its temples from the mod's usual numbers with plain
-  cards, `tests/test_religion_pip`, `tests/test_temple_spec`; a building from nothing is `buildings.plan_new_tree`).
+* **96f done, 2026-11-02** (the user: "finish up major III", then "Build all of it"): hover cards, the card
+  maker's Bigger and Painted look, the toolkit's own look, the module builder's blocks view, a new unit from the
+  usual of its kind and the thin mod (a hard-linked mod on the plain game); drawing a faction's select-screen map
+  from the campaign map, the area recolour and the art browser by kind (`tests/test_mapdraw`,
+  `tests/test_recolour_area`, `tests/test_artbrowse`); a religion from nothing, its pip drawn and its temples from
+  the mod's usual numbers with plain cards (`tests/test_religion_pip`, `tests/test_temple_spec`); a building from
+  nothing is `buildings.plan_new_tree`. Last, the same day: **the viewer's crews**, the unit preview's *With its
+  engine* laying the siege engine's model in front of its crew (`engines.crew_scene`, `tests/test_engine_crew`);
+  the viewer's animations and riders were the Models viewer's already (`v3anim.js`). **The game's menu screens page
+  by page** as Unit cards > *Menu sheets*: the four sprite sheets in `ui/`, each page for one culture with every
+  sprite's box and name, Find, Save as PNG, and Replace into the box, stretched, kept in shape or filling it, backed
+  up and undoable (`menusheets.py`, `tests/test_menusheets`). The menus' layout is compiled into the game, not a
+  data file it reads, so the editor's moving and sizing of pieces has nothing to write here; the click mask is left
+  as it was. This moves the out-of-scope line for `.sd` skinning: the pictures are in, the layout is not.
+  **Not built**: own logos (M2EX's `sprite_format xml`), since no installed mod runs on M2EX to try them against;
+  keep-for-Apply, on purpose (writes stay per Save with an Undo, see `STATE.md`).
 
-**Left in major III**: 96f, round two's major III items. Porting the editor's current files already brought its control blocks (ELSE, all / any / none, for each), its newer WHENs and the Recruitment Order, One Recruitment Grid and Upkeep x N add-ons; the Scratch-style blocks view and the campaign script by pieces are still to do. The thin mod needs every editor to copy a game file in
-on its first write (the editor's `ModData.under`), so it is a piece of its own, not a flag on 96e7.
+**Major III is done.** Left of the five: major II (the campaign map, with round two's map items above) and major V
+(the languages not started yet).
 
 **Round two, 2026-10-20** (the user: "check the oogway editor ... for new commits since our old roadmap"): 513
 commits, 0.31.0 to 0.35.1, read; 42 new features went to the user as a second checklist,
@@ -1255,6 +1264,8 @@ documents between them and a dedicated editor already in the archive
 (`m2_sd_editor`). It was left unrated and it is the one row on the ballot that
 argued against itself: this is GUI skinning rather than mod data. It stays here
 so the decision is recorded rather than rediscovered.
+**2026-11-02**: the pictures came in with 96f's *Menu sheets* (see major III); the layout stays out, since
+it is compiled into the game rather than read from a file.
 
 ---
 
