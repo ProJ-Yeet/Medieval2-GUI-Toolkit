@@ -12539,5 +12539,14 @@
  "look.unhide": "Mostrar de nuevo",
  "look.restore": "Como estaba",
  "look.show_all_confirm": "¿Devolver las {n} piezas renombradas u ocultas a como las tiene la herramienta?",
- "look.rename": "Cambiar nombre"
+ "look.rename": "Cambiar nombre",
+ "scripts.view_form": "Formulario",
+ "scripts.view_blocks": "Bloques",
+ "scripts.blocks_palette_hint": "Arrastra un bloque al script, o haz doble clic para añadirlo al final.",
+ "scripts.blocks_conditions": "Condiciones",
+ "scripts.blocks_actions": "Acciones",
+ "scripts.blocks_bin": "Suelta aquí para quitar un bloque",
+ "scripts.blocks_drop_cond": "suelta condiciones aquí",
+ "scripts.blocks_drop_act": "suelta acciones aquí",
+ "scripts.blocks_wrong_mouth": "Una condición va en IF, una acción en DO o ELSE."
 }

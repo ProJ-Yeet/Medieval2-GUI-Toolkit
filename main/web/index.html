@@ -3177,7 +3177,31 @@
   .trsechead{font-size:11px;text-transform:uppercase;letter-spacing:.5px;
     color:var(--dim);font-weight:600;margin-bottom:8px}
   .trsechead .count{text-transform:none;letter-spacing:0;font-weight:400;margin-left:8px}
-  .look-hidden{display:none!important}
+  .sxview{margin-left:auto}
+.sxblocks{display:flex;gap:14px;align-items:flex-start;margin-top:10px}
+.sxbpalette{flex:0 0 220px;max-height:70vh;overflow:auto;display:flex;flex-direction:column;gap:4px}
+.sxbpalette h4{margin:8px 0 2px}
+.sxbscript{flex:1;min-width:0}
+.sxb{border-radius:6px;padding:6px 8px;margin:3px 0;display:flex;flex-wrap:wrap;gap:6px;align-items:center;
+  color:#fff;border:1px solid rgba(0,0,0,.35);box-shadow:0 2px 0 rgba(0,0,0,.25)}
+.sxb select,.sxb input,.sxb textarea{color:var(--ink)}
+.sxb .count{color:rgba(255,255,255,.8)}
+.sxb[draggable=true]{cursor:grab}
+.sxbpal{font-size:12px;padding:4px 8px}
+.sxb-hat{background:#b8860b;border-radius:16px 16px 6px 6px;padding-top:10px}
+.sxb-cond{background:#3f8f4f;border-radius:14px}
+.sxb-act{background:#6a4fb3}
+.sxbc{background:#c46a1c;border-radius:6px;padding:4px 6px;margin:4px 0;color:#fff}
+.sxbjaw{display:flex;gap:6px;align-items:center;padding:4px 2px}
+.sxbjaw select,.sxbjaw input{color:var(--ink)}
+.sxbmouth{margin-left:18px;min-height:30px;background:rgba(0,0,0,.18);border-radius:4px;padding:3px 6px}
+.sxbslot{padding:4px;color:rgba(255,255,255,.75)}
+.sxbfoot{min-height:6px}
+.sxbname{font-weight:600}
+.sxbtools{margin-left:auto;display:flex;gap:2px}
+.sxbbin{margin-top:10px;padding:10px;border:1px dashed var(--bad);border-radius:6px;text-align:center}
+@container page (max-width:760px){.sxblocks{flex-direction:column}.sxbpalette{flex:none;max-height:none;width:100%}}
+.look-hidden{display:none!important}
 body.look-editing .look-hidden{display:revert!important;opacity:.35;outline:1px dashed var(--bad)}
 body.look-editing :is(button,label,legend,h1,h2,h3,.trsechead,.mftab):hover{outline:2px solid var(--accent);cursor:context-menu}
 .lookbar{position:fixed;left:50%;transform:translateX(-50%);bottom:12px;z-index:9500;background:var(--panel2);
@@ -3899,6 +3923,7 @@ body.look-editing :is(button,label,legend,h1,h2,h3,.trsechead,.mftab):hover{outl
 <script src="js/artbrowse.js"></script>
 <script src="js/hovercard.js"></script>
 <script src="js/look.js"></script>
+<script src="js/scriptblocks.js"></script>
 <script src="js/armory.js"></script>
 <script src="js/armobj.js"></script>
 <script src="js/armnormal.js"></script>

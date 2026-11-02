@@ -12053,5 +12053,14 @@
  "look.unhide": "Wieder zeigen",
  "look.restore": "Wie es war",
  "look.show_all_confirm": "Alle {n} umbenannten oder ausgeblendeten Teile so zurücksetzen, wie das Werkzeug sie hat?",
- "look.colour_panel": "Bereiche"
+ "look.colour_panel": "Bereiche",
+ "scripts.view_form": "Formular",
+ "scripts.view_blocks": "Blöcke",
+ "scripts.blocks_palette_hint": "Einen Block ins Skript ziehen oder doppelklicken, um ihn am Ende anzufügen.",
+ "scripts.blocks_conditions": "Bedingungen",
+ "scripts.blocks_actions": "Aktionen",
+ "scripts.blocks_bin": "Hier ablegen, um einen Block zu entfernen",
+ "scripts.blocks_drop_cond": "Bedingungen hier ablegen",
+ "scripts.blocks_drop_act": "Aktionen hier ablegen",
+ "scripts.blocks_wrong_mouth": "Eine Bedingung gehört in IF, eine Aktion in DO oder ELSE."
 }

@@ -140,7 +140,10 @@ function sxBuilderHtml(){
     <div class="sxrow"><span class="count">${tt('scripts.start_from')}</span>
       <select onchange="sxExample(this.value)"><option value="">${tt('scripts.blank')}</option>${voc.examples.map(x =>
         `<option value="${esc(x.title)}">${esc(x.label)}</option>`).join('')}</select>
-      <input value="${esc(r.title)}" oninput="state.sx.recipe.title=this.value;state.sx.pv=null" style="min-width:240px"></div>
+      <input value="${esc(r.title)}" oninput="state.sx.recipe.title=this.value;state.sx.pv=null" style="min-width:240px">
+      <span class="hxtabs sxview">${['form', 'blocks'].map(v => `<button class="${(s.view || 'form') === v ? 'on' : ''}"
+        onclick="state.sx.view='${v}';renderScripts()">${v === 'form' ? tt('scripts.view_form') : tt('scripts.view_blocks')}</button>`).join('')}</span></div>
+    ${s.view === 'blocks' ? sxBlocksHtml() : `
     <h4>${tt('scripts.when')}</h4>
     <div class="sxrow"><select onchange="state.sx.recipe.when=this.value;state.sx.pv=null;renderScripts()">${voc.events.map(e =>
       `<option value="${esc(e.key)}" ${e.key === r.when ? 'selected' : ''}>${esc(e.label)}</option>`).join('')}</select>
@@ -153,7 +156,7 @@ function sxBuilderHtml(){
         ${r.each_of === 'named' ? `<input value="${esc(r.each_faction || '')}" oninput="state.sx.recipe.each_faction=this.value">` : ''}` : ''}</h4>
     ${sxItemsHtml('dos', voc.actions, r.dos)}
     <h4>${tt('scripts.else')}</h4>
-    ${sxItemsHtml('else', voc.actions, r.else || [])}
+    ${sxItemsHtml('else', voc.actions, r.else || [])}`}
     <div class="sxbtns"><button onclick="sxPreview()">${tt('scripts.read_back')}</button>
       ${pv && !(pv.problems || []).length ? `<button class="primary" onclick="sxSave()">${tt('scripts.save')}</button>` : ''}</div>
     ${pv ? `<div class="sxwords"><b>${esc(pv.words)}</b></div>
