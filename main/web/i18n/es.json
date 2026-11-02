@@ -12502,5 +12502,11 @@
   "many": "{count} de {total}",
   "other": "{count} de {total}"
  },
- "artbrowse.more": "{n} más"
+ "artbrowse.more": "{n} más",
+ "hovercard.card": "Tarjeta",
+ "hovercard.info": "Imagen de información",
+ "hovercard.small": "Pequeña",
+ "hovercard.constructed": "Construido",
+ "hovercard.from_game": "de los datos propios del juego",
+ "hovercard.none": "no se encontró ninguna"
 }

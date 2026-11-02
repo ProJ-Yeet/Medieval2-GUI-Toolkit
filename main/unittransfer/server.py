@@ -6675,6 +6675,17 @@ class Handler(BaseHTTPRequestHandler):
                         # and the game falls back to its own), and the log has to
                         # tell that apart from a conversion that failed.
                         log.debug("ICON   %s has no %s art in %s", utype, kind, name)
+                    # 96f: whose picture this is, for the hover card - the path
+                    # under the mod's data/, `game` for one the game's own data
+                    # supplies, or nothing when there is none
+                    where = ""
+                    if src is not None:
+                        try:
+                            where = Path(src).resolve().relative_to(Path(m.data).resolve()).as_posix()
+                        except (ValueError, OSError):
+                            where = "game"
+                    return self._send(200, self.registry.icons.png_bytes(src), "image/png",
+                                      {"X-Picture": where})
             self._send(200, self.registry.icons.png_bytes(src), "image/png")
         except Exception:
             try:

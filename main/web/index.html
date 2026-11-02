@@ -3177,7 +3177,14 @@
   .trsechead{font-size:11px;text-transform:uppercase;letter-spacing:.5px;
     color:var(--dim);font-weight:600;margin-bottom:8px}
   .trsechead .count{text-transform:none;letter-spacing:0;font-weight:400;margin-left:8px}
-  .artbrowse{display:flex;gap:14px;align-items:flex-start}
+  .hovercard{position:fixed;z-index:9000;display:none;pointer-events:none;background:var(--panel,#222);
+  border:1px solid var(--line,#555);border-radius:6px;padding:8px;box-shadow:0 6px 24px rgba(0,0,0,.45);max-width:520px}
+.hovercard .hctitle{font-weight:600;margin-bottom:6px}
+.hovercard .hcrow{display:flex;gap:10px;align-items:flex-end}
+.hovercard figure{margin:0;text-align:center}
+.hovercard img{max-height:260px;max-width:240px;image-rendering:auto}
+.hovercard figcaption{font-size:11px}
+.artbrowse{display:flex;gap:14px;align-items:flex-start}
 .artkinds{display:flex;flex-direction:column;gap:2px;flex:0 0 190px}
 .artkind{text-align:left;display:flex;justify-content:space-between;gap:8px}
 .artkind.on{border-color:var(--accent,#c9a227)}
@@ -3881,6 +3888,7 @@
 <script src="js/viewer3d.js"></script>
 <script src="js/gallery.js"></script>
 <script src="js/artbrowse.js"></script>
+<script src="js/hovercard.js"></script>
 <script src="js/armory.js"></script>
 <script src="js/armobj.js"></script>
 <script src="js/armnormal.js"></script>

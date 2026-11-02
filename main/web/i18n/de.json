@@ -12017,5 +12017,11 @@
   "one": "{count} von {total}",
   "other": "{count} von {total}"
  },
- "artbrowse.more": "{n} weitere"
+ "artbrowse.more": "{n} weitere",
+ "hovercard.card": "Karte",
+ "hovercard.info": "Infobild",
+ "hovercard.small": "Klein",
+ "hovercard.constructed": "Gebaut",
+ "hovercard.from_game": "aus den eigenen Daten des Spiels",
+ "hovercard.none": "keines gefunden"
 }

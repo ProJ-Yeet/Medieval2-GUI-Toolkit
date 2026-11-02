@@ -1108,7 +1108,7 @@ split by area, each built from the behaviour described in the checklist:
   maker lacks it; the new-unit wizard's steps; the editor's own look (a layout editor for the toolkit's pages); the
   game's menu screens page by page; own logos (M2EX's
   `sprite_format xml`); the Scratch-style blocks view of the module builder; the thin mod; keep-for-Apply where change
-  sets lack it; hover cards; (drawing a faction's select-screen map from the campaign map, the area recolour and the art browser by kind
+  sets lack it; (hover cards are done 2026-11-02, `web/js/hovercard.js`; drawing a faction's select-screen map from the campaign map, the area recolour and the art browser by kind
   are done 2026-11-02, `tests/test_mapdraw`, `tests/test_recolour_area`, `tests/test_artbrowse`; a religion from nothing is done 2026-11-01: its pip drawn, its temples from the mod's usual numbers with plain
   cards, `tests/test_religion_pip`, `tests/test_temple_spec`; a building from nothing is `buildings.plan_new_tree`).
 
