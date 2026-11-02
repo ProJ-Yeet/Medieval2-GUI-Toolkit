@@ -1195,6 +1195,13 @@ level's and culture's strat model (`settlemodel.py`), on its tile. Placing an
 agent and moving one work in 3D (97a). Many models at once, so share one
 loaded model per kind and drop detail with distance.
 
+**Done so far.** **97a** (2026-11-02): a click in 3D picks the tile with a ray
+along the mesh's own heights (`cm3Ray`; on the water surface when it is drawn)
+and goes through the flat map's own `cmapClickTile`, `cmapMarkClick`,
+`cmapHover`, brush and marker drag. The selected outline, the hovered province
+and the hover cell are a marks texture over the mesh (`cm3Remark`). With the
+brush armed, the middle button orbits. `tests/test_map3d` section 5.
+
 # Phase 99p - SimpleBake's two ideas for the packer, scheduled 2026-10-15
 
 The rest of Phase 99 is done and archived (`ROADMAP_ARCHIVE.md`, under Phase 99).

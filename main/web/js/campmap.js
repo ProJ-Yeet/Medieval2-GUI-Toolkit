@@ -2368,22 +2368,11 @@ function cmapPointers(cv){
       // a press on a character that never travelled is still a pick, exactly as
       // it is anywhere else on the map - taking the click away from the tile
       // because something is standing on it is how 17c happened
-      if(last && moved < CMAP_DRAG_SLOP){
-        if(state.cmk) state.cmk.drag = null;
-        cmapPaint();
-        const tile = cmapEventTile(cv, e);
-        if(!cmapObjectPick(tile)) cmapPick(tile);
-      }else cmkDrop();
+      if(last && moved < CMAP_DRAG_SLOP) cmapMarkClick(cmapEventTile(cv, e));
+      else cmkDrop();
     }
-    else if(last && moved < CMAP_DRAG_SLOP && state.cmap){
-      // 20c, M8: the pin takes the click, and nothing is selected by it. A
-      // press that travelled is still a pan while the pin waits.
-      const tile = cmapEventTile(cv, e);
-      if(!(e.button === 0 && typeof cpinTake === 'function' && cpinTake(tile))){
-        if(e.button !== 0 || !cmapObjectPick(tile)) cmapPick(tile);
-        if(e.button === 2) cpaintPickRegion(state.cmap.sel);
-      }
-    }
+    else if(last && moved < CMAP_DRAG_SLOP && state.cmap)
+      cmapClickTile(cmapEventTile(cv, e), e.button);
     last = null; mode = '';
     if(state.cmap){ state.cmap.tipHold = false; cmapTipPaint(); }
     try{ cv.releasePointerCapture(e.pointerId); }catch(err){}
@@ -2394,16 +2383,7 @@ function cmapPointers(cv){
     if(mode === 'mark' && state.cmk){ state.cmk.drag = null; cmapPaint(); }
     last = null; mode = '';
   });
-  cv.addEventListener('pointerleave', () => {
-    const c = state.cmap;
-    if(!c) return;
-    c.ptr = null;
-    if(!c.hover){ cmapTipPaint(); return; }
-    const was = cmapCellRect(...c.hover);
-    c.hover = null;
-    cmapPaint(was);
-    cmapTipPaint();
-  });
+  cv.addEventListener('pointerleave', cmapHoverOff);
   cv.addEventListener('pointermove', e => {
     const c = state.cmap;
     if(!c) return;
@@ -2456,6 +2436,38 @@ function cmapPointers(cv){
     cmapZoomAbout(state.cmap.view.zoom * (e.deltaY > 0 ? 1 / 1.15 : 1.15),
                   e.clientX - r.left, e.clientY - r.top);
   }, {passive: false});
+}
+
+/* A click that landed on a tile, whichever view it landed in.
+
+   97a: the 3D view picks a tile with a ray and then hands it here, so a click
+   there and a click on the flat map are one piece of code and cannot drift.
+   20c, M8: the pin takes the click, and nothing is selected by it. */
+function cmapClickTile(tile, button){
+  if(button === 0 && typeof cpinTake === 'function' && cpinTake(tile)) return;
+  if(button !== 0 || !cmapObjectPick(tile)) cmapPick(tile);
+  if(button === 2) cpaintPickRegion(state.cmap.sel);
+}
+
+//: A press on a character that never travelled. Still a pick, exactly as it is
+//: anywhere else on the map: taking the click away from the tile because
+//: something is standing on it is how 17c happened.
+function cmapMarkClick(tile){
+  if(state.cmk) state.cmk.drag = null;
+  cmapPaint();
+  if(!cmapObjectPick(tile)) cmapPick(tile);
+}
+
+//: The pointer left the map, in either view.
+function cmapHoverOff(){
+  const c = state.cmap;
+  if(!c) return;
+  c.ptr = null;
+  if(!c.hover){ cmapTipPaint(); return; }
+  const was = cmapCellRect(...c.hover);
+  c.hover = null;
+  cmapPaint(was);
+  cmapTipPaint();
 }
 
 function cmapEventTile(cv, e){

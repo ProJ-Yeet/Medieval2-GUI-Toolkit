@@ -384,6 +384,7 @@ uniform float uTextured;  // 1 land, 0 water
 uniform float uAlpha;
 uniform float uFog;       // density, scaled to the map's diagonal
 uniform vec3 uFogColour;
+uniform sampler2D uMark;  // 97a: the pick and the hover, one pixel a tile
 void main(){
   vec3 base = uTextured > 0.5 ? texture2D(uTex, vUv).rgb : uFlat;
   vec3 n = normalize(vNormal);
@@ -393,6 +394,10 @@ void main(){
             + 1.05 * max(dot(n, key), 0.0)
             + 0.34 * max(dot(n, fill), 0.0);
   vec3 c = base * lit * vec3(1.0, 0.975, 0.93);
+  // over the lighting, so the outline reads the same on a lit slope and a
+  // shaded one; under the fog, so it fades with the land it is on
+  vec4 mk = texture2D(uMark, vUv);
+  c = mix(c, mk.rgb, mk.a * uTextured);
   float f = 1.0 - exp(-pow(vDepth * uFog, 2.0));
   c = mix(c, uFogColour, clamp(f, 0.0, 1.0));
   gl_FragColor = vec4(c, uAlpha);
@@ -504,8 +509,20 @@ function cm3Begin(c, d, raw0){
   if(aniso) gl.texParameteri(gl.TEXTURE_2D, aniso.TEXTURE_MAX_ANISOTROPY_EXT,
     Math.min(8, gl.getParameter(aniso.MAX_TEXTURE_MAX_ANISOTROPY_EXT)));
 
+  // 97a: the marks picture. Not a power of two, so no mipmaps and clamped,
+  // which is all WebGL 1 asks of such a texture; NEAREST up close for the
+  // flat map's reason above
+  const mark = gl.createTexture();
+  gl.bindTexture(gl.TEXTURE_2D, mark);
+  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE,
+                new Uint8Array(4));
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+
   cm3 = {
-    gl, prog, tex, mesh, thinned,
+    gl, prog, tex, mark, markKey: '', markCv: null, fill: null, mesh, thinned,
     bPos: buf(mesh.pos, AB), bNrm: buf(mesh.nrm, AB), bUv: buf(mesh.uv, AB),
     bIdx: buf(mesh.idx, EB),
     wPos: buf(cm3WaterVerts(c, d), AB),
@@ -526,8 +543,10 @@ function cm3Begin(c, d, raw0){
       uAlpha: gl.getUniformLocation(prog, 'uAlpha'),
       uFog: gl.getUniformLocation(prog, 'uFog'),
       uFogColour: gl.getUniformLocation(prog, 'uFogColour'),
+      uMark: gl.getUniformLocation(prog, 'uMark'),
     },
   };
+  cm3Remark();
   cm3Pointers(cv);
   cm3Loop();
 }
@@ -586,6 +605,169 @@ function cm3Eye(d){
           d.tz + d.dist * Math.cos(p) * Math.cos(d.yaw)];
 }
 
+/* ---------- 97a: the tile under the pointer ---------- */
+
+/* The map tile a point on the canvas is looking at, or [-1, -1] for the sky.
+
+   A ray out of the eye, through the pixel, marched along the height field
+   that is on the card: the same heights `cm3Build` put in the mesh, read out
+   of its positions, so the tile picked is the tile drawn and never a second
+   reading of the layer. The march is half a tile a step inside the box the
+   map occupies, then halved eight times between the last step above the
+   ground and the first below it, which is a sixtieth of a tile.
+
+   With the water drawn, a ray that meets the surface first stops there: the
+   sea floor under it is not what anybody is pointing at. Off the edge of the
+   map is [-1, -1], which `cmapHover` and `cmapPick` already read as nothing,
+   the same as a press beside the flat map. */
+function cm3Ray(px, py){
+  if(!cm3 || !cm3.gl) return [-1, -1];
+  const d = cm3State(), m = cm3.mesh, cv = cm3.gl.canvas;
+  const W = cv.clientWidth || 1, H = cv.clientHeight || 1;
+  const eye = cm3Eye(d);
+  const f = v3Norm([d.tx - eye[0], -eye[1], d.tz - eye[2]]);
+  const r = v3Norm(v3Cross(f, [0, 1, 0]));
+  const u = v3Cross(r, f);
+  const k = Math.tan(0.96 / 2);                 // cm3Draw's field of view
+  const nx = (2 * px / W - 1) * k * (W / H), ny = (1 - 2 * py / H) * k;
+  const dir = v3Norm([f[0] + r[0] * nx + u[0] * ny,
+                      f[1] + r[1] * nx + u[1] * ny,
+                      f[2] + r[2] * nx + u[2] * ny]);
+  const hw = (m.w - 1) / 2, hh = (m.h - 1) / 2;
+  const at = (x, z) => {
+    const gx = Math.max(0, Math.min(m.w - 1, x + hw));
+    const gz = Math.max(0, Math.min(m.h - 1, z + hh));
+    const x0 = Math.floor(gx), z0 = Math.floor(gz);
+    const x1 = Math.min(m.w - 1, x0 + 1), z1 = Math.min(m.h - 1, z0 + 1);
+    const fx = gx - x0, fz = gz - z0, P = m.pos, Y = (i, j) => P[(j * m.w + i) * 3 + 1];
+    return (Y(x0, z0) * (1 - fx) + Y(x1, z0) * fx) * (1 - fz)
+         + (Y(x0, z1) * (1 - fx) + Y(x1, z1) * fx) * fz;
+  };
+  // the box the map is in: half a tile past the outer vertices, from the sea
+  // floor up to the highest land
+  if(m.top === undefined){
+    let t = -Infinity;
+    for(let i = 1; i < m.pos.length; i += 3) if(m.pos[i] > t) t = m.pos[i];
+    m.top = t;
+  }
+  const lo = [-hw - 0.5, Math.min(d.height * CM3_FLOOR, 0) - 0.01, -hh - 0.5];
+  const hi = [hw + 0.5, Math.max(m.top, 0) + 0.01, hh + 0.5];
+  let t0 = 0, t1 = Infinity;
+  for(let a = 0; a < 3; a++){
+    if(Math.abs(dir[a]) < 1e-9){
+      if(eye[a] < lo[a] || eye[a] > hi[a]) return [-1, -1];
+      continue;
+    }
+    let ta = (lo[a] - eye[a]) / dir[a], tb = (hi[a] - eye[a]) / dir[a];
+    if(ta > tb){ const s = ta; ta = tb; tb = s; }
+    t0 = Math.max(t0, ta); t1 = Math.min(t1, tb);
+  }
+  let hit = -1;
+  if(t0 <= t1){
+    const step = 0.5;
+    let prev = t0;
+    for(let t = t0; t <= t1 + step; t += step){
+      const tt = Math.min(t, t1);
+      const y = eye[1] + dir[1] * tt;
+      if(y <= at(eye[0] + dir[0] * tt, eye[2] + dir[2] * tt)){
+        let a = prev, b = tt;
+        for(let i = 0; i < 8; i++){
+          const mid = (a + b) / 2;
+          if(eye[1] + dir[1] * mid <= at(eye[0] + dir[0] * mid, eye[2] + dir[2] * mid)) b = mid;
+          else a = mid;
+        }
+        hit = b;
+        break;
+      }
+      prev = tt;
+      if(tt >= t1) break;
+    }
+  }
+  if(d.water && dir[1] < 0){
+    const tw = (d.height * CM3_WATER - eye[1]) / dir[1];
+    if(tw > 0 && (hit < 0 || tw < hit)){
+      const x = eye[0] + dir[0] * tw, z = eye[2] + dir[2] * tw;
+      if(x >= -hw - 0.5 && x <= hw + 0.5 && z >= -hh - 0.5 && z <= hh + 0.5) hit = tw;
+    }
+  }
+  if(hit < 0) return [-1, -1];
+  // the vertex is the tile's centre, so the nearest vertex is the tile; a
+  // thinned mesh stands every `thinned` tiles
+  const sx = cm3.thinned || 1;
+  const gx = Math.round(eye[0] + dir[0] * hit + hw);
+  const gz = Math.round(eye[2] + dir[2] * hit + hh);
+  if(gx < 0 || gz < 0 || gx >= m.w || gz >= m.h) return [-1, -1];
+  return [gx * sx, gz * sx];
+}
+
+/* ---------- 97a: what is picked and what is under the pointer ---------- */
+
+/* The selected region's outline, the hovered region and the hover cell, as a
+   second picture over the mesh, one pixel a tile.
+
+   The same three things the flat map draws over itself (`cmapOutline`'s
+   outline, `cmapPaint`'s hover cell) in the same colours, plus the whole
+   hovered region lightly filled, which the flat map does not need: there the
+   cell is enough, but a province seen at an angle from a long way off is
+   hard to tell from its neighbours by one tile. Kept apart from the terrain
+   texture so a hover costs a quarter-megapixel upload rather than the
+   four-megapixel one, and keyed so a pointer that stays on one tile costs a
+   string compare. The fill of a region is kept by its key, so the scan of the
+   regions layer is paid once per province the pointer enters. */
+function cm3Remark(){
+  const c = state.cmap;
+  if(!cm3 || !cm3.gl || !c) return;
+  if(c.sel) cmapOutline(c.sel);
+  const hv = c.hover;
+  let hr = hv ? cmapRegionAt(hv[0], hv[1]) : null;
+  if(hr === 'settlement' || hr === 'port'){
+    const own = cmapMarkerOwner(hv[0], hv[1]);
+    hr = own ? own.region : null;
+  }
+  const hk = hr && typeof hr === 'object' ? hr.key : -1;
+  const pin = !!state.cpin;
+  const key = [c.outline ? c.outlineKey : -1, hk, hv ? hv.join(',') : '',
+               c.compKey, pin ? 1 : 0].join('|');
+  if(key === cm3.markKey) return;
+  cm3.markKey = key;
+  const W = c.man.width, H = c.man.height;
+  let cv = cm3.markCv;
+  if(!cv || cv.width !== W || cv.height !== H){
+    cv = cm3.markCv = document.createElement('canvas');
+    cv.width = W; cv.height = H;
+  }
+  const x = cv.getContext('2d');
+  x.clearRect(0, 0, W, H);
+  if(hk >= 0){
+    const fk = `${hk}|${c.compKey}`;
+    if(!cm3.fill || cm3.fill.key !== fk){
+      const R = cmapRawOf(c.layers.regions);
+      const im = x.createImageData(W, H);
+      if(R && R.w === W){
+        const s = R.data, o = im.data;
+        for(let i = 0, n = W * H; i < n; i++){
+          const p = i * 4;
+          if(((s[p] << 16) | (s[p + 1] << 8) | s[p + 2]) !== hk) continue;
+          o[p] = 200; o[p + 1] = 164; o[p + 2] = 92; o[p + 3] = 84;
+        }
+      }
+      cm3.fill = {key: fk, im};
+    }
+    x.putImageData(cm3.fill.im, 0, 0);
+  }
+  if(c.outline) x.drawImage(c.outline, 0, 0);
+  if(hv){
+    x.fillStyle = pin ? 'rgba(120,220,140,.98)' : 'rgba(200,164,92,.95)';
+    x.fillRect(hv[0], hv[1], 1, 1);
+  }
+  const gl = cm3.gl;
+  gl.activeTexture(gl.TEXTURE1);
+  gl.bindTexture(gl.TEXTURE_2D, cm3.mark);
+  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, cv);
+  gl.activeTexture(gl.TEXTURE0);
+  cm3.dirty = true;
+}
+
 /* ---------- the frame ---------- */
 
 function cm3Size(){
@@ -640,6 +822,10 @@ function cm3Draw(){
   gl.activeTexture(gl.TEXTURE0);
   gl.bindTexture(gl.TEXTURE_2D, cm3.tex);
   gl.uniform1i(L.uTex, 0);
+  gl.activeTexture(gl.TEXTURE1);
+  gl.bindTexture(gl.TEXTURE_2D, cm3.mark);
+  gl.uniform1i(L.uMark, 1);
+  gl.activeTexture(gl.TEXTURE0);
 
   const bind = (b, loc, n) => {
     if(loc < 0) return;
@@ -675,20 +861,63 @@ function cm3Draw(){
 
    The same three gestures as the flat map's pan and zoom and the same three
    as the model viewer's, which is the point: this tool has one set of mouse
-   habits and a third one would be a third thing to learn. */
+   habits and a third one would be a third thing to learn.
+
+   97a: AND A PRESS THAT NEVER TRAVELLED IS A PICK, the flat map's own rule.
+   The tile under the pointer comes from `cm3Ray`, and from there on it is
+   the flat map's code and nothing else: `cmapHover` for the hover and the
+   tooltip, `cmapClickTile` for a click, the brush's `cpaintDown`/`Move`/`Up`
+   while it is armed and the marker drag's `cmkDragStart`/`Move`/`cmkDrop`.
+   The modes are decided as the flat map decides them; the one difference is
+   that the left button orbits here where it pans there, so with the brush
+   armed (which takes the left button) the middle button orbits instead. */
 function cm3Pointers(cv){
   let drag = null;
+  const tileOf = e => {
+    const r = cv.getBoundingClientRect();
+    return cm3Ray(e.clientX - r.left, e.clientY - r.top);
+  };
   cv.oncontextmenu = e => e.preventDefault();
   cv.onpointerdown = e => {
     try{ cv.setPointerCapture(e.pointerId); }catch(_){}
-    drag = {x: e.clientX, y: e.clientY, pan: e.button === 2 || e.button === 1};
+    const pin = typeof cpinArmed === 'function' && cpinArmed();
+    const brush = typeof cpaintArmed === 'function' && cpaintArmed();
+    let mode = (e.button === 0 && !pin && brush) ? 'paint' : '';
+    if(!mode && e.button === 0 && !pin && !state.cmap.selectMode
+       && typeof cmkDragStart === 'function' && cmkDragStart(tileOf(e))) mode = 'mark';
+    drag = {x: e.clientX, y: e.clientY, moved: 0, mode,
+            pan: e.button === 2 || (e.button === 1 && !brush)};
+    if(mode === 'paint') cpaintDown(tileOf(e));
     e.preventDefault();
   };
   cv.onpointermove = e => {
-    if(!drag || !cm3) return;
+    if(!cm3) return;
+    const c = state.cmap;
+    if(c){
+      // where the tooltip goes, in the stage's own pixels, as the flat map does
+      const st = document.getElementById('cmStage');
+      const s = (st || cv).getBoundingClientRect();
+      c.ptr = [e.clientX - s.left, e.clientY - s.top];
+      c.tipHold = !!(drag && drag.mode !== 'paint' && drag.mode !== 'mark' && drag.moved);
+    }
+    if(!drag){ if(c) cmapHover(tileOf(e)); return; }
     const s = cm3State();
     const dx = e.clientX - drag.x, dy = e.clientY - drag.y;
     drag.x = e.clientX; drag.y = e.clientY;
+    drag.moved += Math.abs(dx) + Math.abs(dy);
+    if(drag.mode === 'paint'){
+      const t = tileOf(e);
+      cpaintMove(t);
+      cmapHover(t);
+      return;
+    }
+    if(drag.mode === 'mark'){
+      const t = tileOf(e);
+      cmkDragMove(t);
+      cmapHover(t);
+      return;
+    }
+    if(drag.moved < CMAP_DRAG_SLOP) return;
     if(drag.pan){
       // Pan in the ground plane along the camera's own axes, scaled by how
       // far away it is, so a drag moves the map under the pointer by about
@@ -703,12 +932,27 @@ function cm3Pointers(cv){
     }
     cm3.dirty = true;
   };
-  const up = e => {
+  cv.onpointerup = e => {
+    if(!drag) return;
+    try{ cv.releasePointerCapture(e.pointerId); }catch(_){}
+    const was = drag;
+    drag = null;
+    const still = was.moved < CMAP_DRAG_SLOP;
+    if(was.mode === 'paint') cpaintUp();
+    else if(was.mode === 'mark'){
+      if(still) cmapMarkClick(tileOf(e));
+      else cmkDrop();
+    }
+    else if(still && state.cmap) cmapClickTile(tileOf(e), e.button);
+    if(state.cmap){ state.cmap.tipHold = false; cmapTipPaint(); }
+  };
+  cv.onpointercancel = e => {
     if(drag){ try{ cv.releasePointerCapture(e.pointerId); }catch(_){} }
+    if(drag && drag.mode === 'paint') cpaintCancel();
+    if(drag && drag.mode === 'mark' && state.cmk){ state.cmk.drag = null; cmapPaint(); }
     drag = null;
   };
-  cv.onpointerup = up;
-  cv.onpointercancel = up;
+  cv.onpointerleave = () => { if(!drag) cmapHoverOff(); };
   cv.onwheel = e => {
     e.preventDefault();
     if(!cm3) return;
@@ -855,6 +1099,7 @@ function cm3Stop(){
     [cm3.bPos, cm3.bNrm, cm3.bUv, cm3.bIdx, cm3.wPos, cm3.wNrm, cm3.wUv]
       .forEach(b => b && gl.deleteBuffer(b));
     if(cm3.tex) gl.deleteTexture(cm3.tex);
+    if(cm3.mark) gl.deleteTexture(cm3.mark);
     if(cm3.prog) gl.deleteProgram(cm3.prog);
     const lose = gl.getExtension('WEBGL_lose_context');
     if(lose) lose.loseContext();
@@ -918,6 +1163,9 @@ function cm3Retexture(force){
   if(!cm3 || !cm3.gl || !cm3On()) return;
   const c = state.cmap;
   if(!c) return;
+  // 97a: the hover and the pick end in a `cmapPaint` too, and they are this
+  // picture's whole key
+  cm3Remark();
   const key = cm3TexKey(c);
   if(!force && key === cm3.texKey) return;
   const cv = cm3Texture();

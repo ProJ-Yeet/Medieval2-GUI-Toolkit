@@ -7369,7 +7369,7 @@
 "other": "This writes {count} files under the mod's own data folder:"
 },
 "map3d.building_the_mesh": "Building the mesh…",
-"map3d.drag_to_orbit_right_drag_to": "Drag to orbit, right-drag to pan, wheel to zoom.",
+"map3d.drag_to_orbit_right_drag_to": "Click a tile to pick its region. Drag to orbit, right-drag to pan, wheel to zoom. With the brush armed, the left button paints and the middle button orbits.",
 "map3d.fit": "&#8676; Fit",
 "map3d.frame_the_whole_map_again": "Frame the whole map again",
 "map3d.how_tall_the_highest_land_stands": "How tall the highest land stands, in tiles. 0 is flat.",
@@ -7377,7 +7377,7 @@
 "map3d.map_view": "map view",
 "map3d.reading_the_heights": "Reading the heights…",
 "map3d.the_heights_layer_would_not_load": "The heights layer would not load.",
-"map3d.the_layers_their_opacities_the_season": "The layers, their opacities, the season and the colouring are the flat map's. Change them there and they change here. Markers, labels and the tooltip stay on the flat map.",
+"map3d.the_layers_their_opacities_the_season": "The layers, their opacities, the season and the colouring are the flat map's. Change them there and they change here. Markers and labels stay on the flat map for now.",
 "map3d.the_map_cannot_be_drawn_in": "<b>The map cannot be drawn in 3D.</b><br>{why}",
 "map3d.this_driver_has_no_32_bit": "This driver has no 32-bit index, so the mesh is every {thinned} tiles rather than every tile.",
 "map3d.this_map_has_no_map_heights": "This map has no map_heights.tga, so there is no shape to draw.",

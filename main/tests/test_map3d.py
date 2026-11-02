@@ -261,6 +261,107 @@ else:
               thin["verts"] <= 65535)
 
 # ---------------------------------------------------------------------------
+print("\n== 5) 97a: a click in 3D lands on the tile drawn under it ==")
+
+cmjs = _webtext.read((ROOT / "web" / "js" / "campmap.js"))
+check("the click goes through the flat map's own code, not a second copy",
+      "cmapClickTile(tileOf(e), e.button)" in src
+      and "function cmapClickTile" in cmjs
+      and "cmapClickTile(cmapEventTile(cv, e), e.button)" in cmjs)
+check("  and so do the hover, the marker drag and the brush",
+      "cmapHover(tileOf(e))" in src and "cmkDragStart(tileOf(e))" in src
+      and "cpaintDown(tileOf(e))" in src and "cmapMarkClick(tileOf(e))" in src)
+check("the pick and the hover are redrawn from the one paint funnel",
+      re.search(r"function cm3Retexture\(force\)\{.*?cm3Remark\(\);", src, re.S) is not None)
+
+# Every tile of a synthetic map, projected to the screen through the very
+# matrices cm3Draw uses and handed back to cm3Ray. The helpers are viewer3d's
+# own text, cut out of the file rather than written again here.
+v3src = _webtext.read(WEB / "js" / "viewer3d.js")
+helpers = "\n".join(
+    re.search(rf"function {n}\(.*?\n\}}", v3src, re.S).group(0)
+    if n in ("v3Perspective", "v3LookAt", "v3Norm")
+    else re.search(rf"function {n}\(.*?\}}\n", v3src).group(0)
+    for n in ("v3Perspective", "v3LookAt", "v3Cross", "v3Dot", "v3Norm"))
+
+RAY = r"""
+const fs = require('fs');
+const vm = require('vm');
+const ctx = {console, document: {createElement: () => ({getContext: () => ({})})},
+             state: {cmap: null}};
+vm.createContext(ctx);
+vm.runInContext(fs.readFileSync(process.argv[3], 'utf8'), ctx);
+vm.runInContext(fs.readFileSync(process.argv[2], 'utf8'), ctx);
+const W = 120, H = 90, out = {};
+// rolling land with a sea along the west edge
+const raw = {w: W, h: H, data: new Uint8ClampedArray(W * H * 4)};
+for(let y = 0; y < H; y++) for(let x = 0; x < W; x++){
+  const p = (y * W + x) * 4;
+  if(x < 14){ raw.data[p] = 0; raw.data[p + 1] = 0; raw.data[p + 2] = 255; }
+  else { const v = 60 + Math.round(50 * Math.sin(x / 9) * Math.cos(y / 11));
+         raw.data[p] = raw.data[p + 1] = raw.data[p + 2] = v; }
+  raw.data[p + 3] = 255;
+}
+const run = (water, height) => {
+  const d = {on: true, height, water, yaw: -0.6, pitch: 0.85, dist: 110, tx: 0, tz: 0};
+  ctx.state.cmap = {man: {width: W, height: H}, d3: d};
+  const mesh = ctx.cm3Build(raw, height);
+  const canvas = {clientWidth: 800, clientHeight: 600, width: 800, height: 600};
+  vm.runInContext('cm3 = __cm3', Object.assign(ctx, {__cm3: {gl: {canvas}, mesh, thinned: 0}}));
+  const span = Math.hypot(W, H);
+  const P = ctx.v3Perspective(0.96, 800 / 600, span / 500, span * 8);
+  const V = ctx.v3LookAt(ctx.cm3Eye(d), [d.tx, 0, d.tz], [0, 1, 0]);
+  const mul = (M, v) => [0, 1, 2, 3].map(i => M[i]*v[0] + M[4+i]*v[1] + M[8+i]*v[2] + M[12+i]*v[3]);
+  let n = 0, exact = 0, near = 0, seaN = 0, seaNear = 0;
+  for(let y = 2; y < H - 2; y += 3) for(let x = 2; x < W - 2; x += 3){
+    const i = y * W + x;
+    const c = mul(P, mul(V, [mesh.pos[i*3], mesh.pos[i*3+1], mesh.pos[i*3+2], 1]));
+    const sx = (c[0] / c[3] + 1) / 2 * 800, sy = (1 - c[1] / c[3]) / 2 * 600;
+    if(sx < 0 || sy < 0 || sx > 800 || sy > 600) continue;
+    const t = ctx.cm3Ray(sx, sy), off = Math.abs(t[0] - x) + Math.abs(t[1] - y);
+    if(x < 14){ seaN++; if(off <= 3) seaNear++; continue; }
+    n++; if(off === 0) exact++; if(off <= 1) near++;
+  }
+  return {n, exact, near, seaN, seaNear, sky: ctx.cm3Ray(400, 1)};
+};
+out.flat = run(false, 0);
+out.hills = run(false, 24);
+out.water = run(true, 24);
+fs.writeFileSync(process.argv[4], JSON.stringify(out));
+"""
+
+if not node:
+    print("  -- node is not on PATH, so the ray is not run")
+else:
+    with tempfile.TemporaryDirectory(prefix="ut_map3d_ray_") as tmp:
+        t = Path(tmp)
+        (t / "ray.js").write_text(RAY, encoding="utf-8")
+        (t / "v3.js").write_text(helpers, encoding="utf-8")
+        r = subprocess.run([node, str(t / "ray.js"), str(JS), str(t / "v3.js"),
+                            str(t / "out.json")], capture_output=True, text=True)
+        check("the ray harness runs", r.returncode == 0)
+        if r.returncode:
+            print(r.stdout or "", r.stderr or "")
+            ray = {}
+        else:
+            ray = json.loads((t / "out.json").read_text(encoding="utf-8"))
+    for name, label in (("flat", "a flat map"), ("hills", "hills, no water")):
+        g = ray.get(name)
+        if not g:
+            continue
+        check(f"  {label}: every one of {g['n']} land tiles picks itself "
+              f"({g['exact']} exact, {g['near']} within one)",
+              g["n"] > 200 and g["near"] == g["n"] and g["exact"] >= g["n"] * 0.97)
+        check(f"  {label}: the sky picks nothing", g["sky"] == [-1, -1])
+    g = ray.get("water")
+    if g:
+        check(f"  with the water drawn, land still picks itself ({g['near']}/{g['n']})",
+              g["near"] == g["n"])
+        check(f"  and a sea tile is picked where the ray meets the surface, "
+              f"a step or two short of the floor ({g['seaNear']}/{g['seaN']})",
+              g["seaN"] > 0 and g["seaNear"] == g["seaN"])
+
+# ---------------------------------------------------------------------------
 print(f"\n{sum(ok)}/{len(ok)} checks - "
       f"{'ALL PASSED' if all(ok) else f'{len(ok) - sum(ok)} FAILED'}")
 sys.exit(0 if all(ok) else 1)

@@ -6962,7 +6962,7 @@
   "other": "Dabei werden {count} Dateien im eigenen Datenordner der Mod geschrieben:"
  },
  "map3d.building_the_mesh": "Mesh wird aufgebaut…",
- "map3d.drag_to_orbit_right_drag_to": "Ziehen zum Umkreisen, Rechtsziehen zum Verschieben, Mausrad zum Zoomen.",
+ "map3d.drag_to_orbit_right_drag_to": "Klicken Sie auf eine Kachel, um ihre Region auszuwählen. Ziehen zum Umkreisen, Rechtsziehen zum Verschieben, Mausrad zum Zoomen. Ist der Pinsel aktiv, malt die linke Maustaste und die mittlere umkreist.",
  "map3d.fit": "&#8676; Einpassen",
  "map3d.frame_the_whole_map_again": "Die ganze Karte wieder einpassen",
  "map3d.how_tall_the_highest_land_stands": "Wie hoch das höchste Land aufragt, in Kacheln. 0 ist flach.",
@@ -6970,7 +6970,7 @@
  "map3d.map_view": "Kartenansicht",
  "map3d.reading_the_heights": "Höhenkarte wird gelesen…",
  "map3d.the_heights_layer_would_not_load": "Die Höhenkartenebene ließ sich nicht laden.",
- "map3d.the_layers_their_opacities_the_season": "Die Ebenen, ihre Deckkraft, die Jahreszeit und die Einfärbung sind die der flachen Karte. Ändern Sie sie dort, und sie ändern sich hier. Markierungen, Beschriftungen und der Tooltip bleiben auf der flachen Karte.",
+ "map3d.the_layers_their_opacities_the_season": "Die Ebenen, ihre Deckkraft, die Jahreszeit und die Einfärbung sind die der flachen Karte. Ändern Sie sie dort, und sie ändern sich hier. Markierungen und Beschriftungen bleiben vorerst auf der flachen Karte.",
  "map3d.the_map_cannot_be_drawn_in": "<b>Die Karte lässt sich nicht in 3D zeichnen.</b><br>{why}",
  "map3d.this_driver_has_no_32_bit": "Dieser Treiber hat keinen 32-Bit-Index, daher besteht das Mesh aus jeder {thinned}. Kachel statt aus jeder Kachel.",
  "map3d.this_map_has_no_map_heights": "Diese Karte hat keine map_heights.tga, daher gibt es keine Form zum Zeichnen.",

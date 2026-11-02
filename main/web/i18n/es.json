@@ -7256,7 +7256,7 @@
   "other": "Esto escribe {count} archivos en la carpeta de datos propia del mod:"
  },
  "map3d.building_the_mesh": "Construyendo la malla…",
- "map3d.drag_to_orbit_right_drag_to": "Arrastrar para orbitar, arrastrar con el botón derecho para desplazar, rueda para acercar.",
+ "map3d.drag_to_orbit_right_drag_to": "Haga clic en una casilla para seleccionar su región. Arrastrar para orbitar, arrastrar con el botón derecho para desplazar, rueda para acercar. Con el pincel activo, el botón izquierdo pinta y el central orbita.",
  "map3d.fit": "&#8676; Ajustar",
  "map3d.frame_the_whole_map_again": "Encuadrar de nuevo todo el mapa",
  "map3d.how_tall_the_highest_land_stands": "Altura de la tierra más alta, en casillas. 0 es plano.",
@@ -7264,7 +7264,7 @@
  "map3d.map_view": "vista del mapa",
  "map3d.reading_the_heights": "Leyendo las alturas…",
  "map3d.the_heights_layer_would_not_load": "La capa de alturas no se pudo cargar.",
- "map3d.the_layers_their_opacities_the_season": "Las capas, sus opacidades, la estación y la coloración son las del mapa plano. Si se cambian allí, cambian aquí. Los marcadores, las etiquetas y la descripción emergente se quedan en el mapa plano.",
+ "map3d.the_layers_their_opacities_the_season": "Las capas, sus opacidades, la estación y la coloración son las del mapa plano. Si se cambian allí, cambian aquí. Los marcadores y las etiquetas se quedan en el mapa plano por ahora.",
  "map3d.the_map_cannot_be_drawn_in": "<b>El mapa no se puede dibujar en 3D.</b><br>{why}",
  "map3d.this_driver_has_no_32_bit": "Este controlador no admite índices de 32 bits, así que la malla toma una casilla de cada {thinned} en lugar de todas.",
  "map3d.this_map_has_no_map_heights": "Este mapa no tiene map_heights.tga, así que no hay forma que dibujar.",
