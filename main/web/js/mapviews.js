@@ -179,6 +179,9 @@ function cvwPlan(man, preset){
     // 20c, T4. A preset saved before 20c has no word on it and opens without
     // names, which is what that view looked like when it was saved.
     labels: !!p.labels,
+    //: 97b. A preset saved before it opens without faction names, which is
+    //: what that view looked like when it was saved.
+    factionNames: !!p.faction_names,
     /* 28a: the strip is part of the reading. A preset saved before it names no
        tab and opens on the one that is up, which is the least surprising thing
        a view with nothing to say about the strip can do - unlike the layers,
@@ -236,6 +239,9 @@ function cvwLoad(i){
   c.labels = plan.labels; c.lab = null; c.saidZoom = null;
   const lb = document.getElementById('cmLabBtn');
   if(lb) lb.classList.toggle('on', !!c.labels);
+  c.fnOn = plan.factionNames;                                        // 97b
+  const fb = document.getElementById('cmFacBtn');
+  if(fb) fb.classList.toggle('on', !!c.fnOn);
   // 28a: the tab, the collapse and the width. The width goes back through the
   // settings key `splitInstall` owns rather than onto the element, so the next
   // drag starts from it and the next screen opens at it.

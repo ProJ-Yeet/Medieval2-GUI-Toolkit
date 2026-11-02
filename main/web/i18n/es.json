@@ -12618,5 +12618,9 @@
  },
  "menusheets.from_game": "El mod no tiene copia de esta página: es la del juego, {w} por {h}. Reemplazar escribe una copia propia del mod",
  "eng.menusheets.no_sheet": "{rel} no es ninguna hoja de sprites del juego",
- "menusheets.note": "las imágenes de los menús: cada hoja de sprites de ui/, página a página y cultura a cultura"
+ "menusheets.note": "las imágenes de los menús: cada hoja de sprites de ui/, página a página y cultura a cultura",
+ "campmap.factions": "⚑ Facciones",
+ "mapfactions.hid_faction_names": "ocultó los nombres de las facciones",
+ "mapfactions.showed_faction_names": "mostró los nombres de las facciones",
+ "campmap.each_factions_name_lettered_over_its": "El nombre de cada facción rotulado sobre su mayor extensión de tierra continua, en su propio color"
 }

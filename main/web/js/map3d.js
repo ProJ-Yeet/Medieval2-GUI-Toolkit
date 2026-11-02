@@ -403,6 +403,32 @@ void main(){
   gl_FragColor = vec4(c, uAlpha);
 }`;
 
+/* 97b: the faction names, a sprite each. No lighting, because a name is
+   not part of the ground and a shaded name is a name you cannot read; the
+   same fog, so a far name fades with the land under it. */
+const CM3_SPRITE_VERT = `
+attribute vec3 aPos; attribute vec2 aUv;
+uniform mat4 uProj, uView;
+varying vec2 vUv; varying float vDepth;
+void main(){
+  vUv = aUv;
+  vec4 eye = uView * vec4(aPos, 1.0);
+  vDepth = -eye.z;
+  gl_Position = uProj * eye;
+}`;
+
+const CM3_SPRITE_FRAG = `
+precision mediump float;
+varying vec2 vUv; varying float vDepth;
+uniform sampler2D uTex;
+uniform float uFog;
+uniform vec3 uFogColour;
+void main(){
+  vec4 t = texture2D(uTex, vUv);
+  float f = clamp(1.0 - exp(-pow(vDepth * uFog, 2.0)), 0.0, 1.0);
+  gl_FragColor = vec4(mix(t.rgb, uFogColour, f), t.a * (1.0 - f * 0.6));
+}`;
+
 /* ---------- mounting ---------- */
 
 /* One frame, so the "Building the mesh" line is actually on screen before a
@@ -547,6 +573,7 @@ function cm3Begin(c, d, raw0){
     },
   };
   cm3Remark();
+  cm3Names();
   cm3Pointers(cv);
   cm3Loop();
 }
@@ -853,6 +880,129 @@ function cm3Draw(){
     gl.drawArrays(gl.TRIANGLES, 0, 6);
     gl.disable(gl.BLEND);
   }
+  cm3DrawNames(proj, view);
+}
+
+/* ---------- 97b: the faction names, standing off the land ---------- */
+
+/* One texture per name, drawn by `cfnDrawName` - the same lettering as the
+   flat map, with its arch kept and its tilt taken out, since a sprite that
+   turns to the camera is level by construction. Rebuilt when the layout is a
+   different object, which is when the owners or the provinces changed. */
+function cm3Names(){
+  const c = state.cmap;
+  if(!cm3 || !cm3.gl || !c) return;
+  const lay = (c.fnOn && typeof cfnCurrent === 'function') ? cfnCurrent() : null;
+  if(cm3.namesLay === lay) return;
+  const gl = cm3.gl;
+  for(const sp of cm3.names || []) gl.deleteTexture(sp.tex);
+  cm3.names = [];
+  cm3.namesLay = lay;
+  cm3.dirty = true;
+  if(!lay) return;
+  if(!cm3.sprite){
+    const prog = v3Program(gl, CM3_SPRITE_VERT, CM3_SPRITE_FRAG);
+    if(!prog) return;
+    cm3.sprite = {prog, buf: gl.createBuffer(), loc: {
+      aPos: gl.getAttribLocation(prog, 'aPos'),
+      aUv: gl.getAttribLocation(prog, 'aUv'),
+      uProj: gl.getUniformLocation(prog, 'uProj'),
+      uView: gl.getUniformLocation(prog, 'uView'),
+      uTex: gl.getUniformLocation(prog, 'uTex'),
+      uFog: gl.getUniformLocation(prog, 'uFog'),
+      uFogColour: gl.getUniformLocation(prog, 'uFogColour'),
+    }};
+  }
+  const m = cm3.mesh, sx = cm3.thinned || 1, W = c.man.width, H = c.man.height;
+  const ground = (tx, ty) => {
+    const gx = Math.max(0, Math.min(m.w - 1, Math.floor(tx / sx)));
+    const gz = Math.max(0, Math.min(m.h - 1, Math.floor(ty / sx)));
+    return m.pos[(gz * m.w + gx) * 3 + 1];
+  };
+  for(const L of lay.labels){
+    const flat = Object.assign({}, L, {mx: 0, my: 0, ux: 1, uy: 0, c0: 0, c1: 0});
+    const w = L.unitW * L.h, half = w / 2;
+    const sag = L.c2 * half * half;
+    const y0 = Math.min(0, sag) - L.h * 0.75, y1 = Math.max(0, sag) + L.h * 0.85;
+    const ww = w + L.h, hh = y1 - y0;
+    const s = Math.max(4, Math.min(48, 2048 / ww));
+    const cv = document.createElement('canvas');
+    cv.width = Math.max(1, Math.ceil(ww * s)); cv.height = Math.max(1, Math.ceil(hh * s));
+    cfnDrawName(cv.getContext('2d'), flat, (tx, ty) => [(tx + ww / 2) * s, (ty - y0) * s], s);
+    const tex = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, tex);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, cv);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    // stood clear of the highest ground under any of its letters
+    let top = 0;
+    for(const ch of cfnChars(L)){
+      const p = cfnAt(L, ch.a);
+      top = Math.max(top, ground(p.x, p.y));
+    }
+    cm3.names.push({tex, w: ww, h: hh, x: L.mx - W / 2, z: L.my - H / 2,
+                    y: top + L.h * 0.35});
+  }
+}
+
+//: How much larger a name stands in 3D than it is lettered on the flat map.
+//: Seen from an angle and through the fog, the flat map's size reads small.
+const CM3_NAME_SCALE = 1.5;
+
+/* Each name a quad turned square to the camera, so it stands off the land
+   and reads from whichever side and whatever height the camera is at. Its
+   foot is on the point over the ground and it rises along the camera's own
+   up, which for a camera looking down is up the screen. Blended over the
+   scene and tested against it, but not written into the depth, so two names
+   never cut holes in each other. */
+function cm3DrawNames(proj, view){
+  if(!cm3 || !cm3.sprite || !cm3.names || !cm3.names.length) return;
+  const gl = cm3.gl, S = cm3.sprite, L = S.loc, d = cm3State();
+  const eye = cm3Eye(d);
+  const f = v3Norm([d.tx - eye[0], -eye[1], d.tz - eye[2]]);
+  const r = [Math.cos(d.yaw), 0, -Math.sin(d.yaw)];
+  const u = v3Cross(r, f);
+  const data = new Float32Array(cm3.names.length * 30);
+  cm3.names.forEach((n, i) => {
+    const w = n.w * CM3_NAME_SCALE / 2, h = n.h * CM3_NAME_SCALE;
+    const P = (sx, sy) => [n.x + r[0] * w * sx + u[0] * h * sy,
+                           n.y + r[1] * w * sx + u[1] * h * sy,
+                           n.z + r[2] * w * sx + u[2] * h * sy];
+    const a = P(-1, 0), b = P(1, 0), c = P(1, 1), e = P(-1, 1);
+    const v = [...a, 0, 1, ...b, 1, 1, ...c, 1, 0,
+               ...a, 0, 1, ...c, 1, 0, ...e, 0, 0];
+    data.set(v, i * 30);
+  });
+  gl.useProgram(S.prog);
+  gl.uniformMatrix4fv(L.uProj, false, new Float32Array(proj));
+  gl.uniformMatrix4fv(L.uView, false, new Float32Array(view));
+  gl.uniform1f(L.uFog, 0.35 / cm3.span);
+  gl.uniform3fv(L.uFogColour, new Float32Array(CM3_SKY));
+  gl.uniform1i(L.uTex, 0);
+  gl.bindBuffer(gl.ARRAY_BUFFER, S.buf);
+  gl.bufferData(gl.ARRAY_BUFFER, data, gl.DYNAMIC_DRAW);
+  // the terrain's attributes are still switched on from the land and the
+  // water; only the two this program has are wanted
+  for(let i = 0; i < 8; i++) gl.disableVertexAttribArray(i);
+  gl.enableVertexAttribArray(L.aPos);
+  gl.vertexAttribPointer(L.aPos, 3, gl.FLOAT, false, 20, 0);
+  gl.enableVertexAttribArray(L.aUv);
+  gl.vertexAttribPointer(L.aUv, 2, gl.FLOAT, false, 20, 12);
+  gl.disable(gl.CULL_FACE);
+  gl.enable(gl.BLEND);
+  gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+  gl.depthMask(false);
+  gl.activeTexture(gl.TEXTURE0);
+  cm3.names.forEach((n, i) => {
+    gl.bindTexture(gl.TEXTURE_2D, n.tex);
+    gl.drawArrays(gl.TRIANGLES, i * 6, 6);
+  });
+  gl.depthMask(true);
+  gl.disable(gl.BLEND);
+  gl.disableVertexAttribArray(L.aPos);
+  gl.disableVertexAttribArray(L.aUv);
 }
 
 /* ---------- the pointer ---------- */
@@ -1100,6 +1250,8 @@ function cm3Stop(){
       .forEach(b => b && gl.deleteBuffer(b));
     if(cm3.tex) gl.deleteTexture(cm3.tex);
     if(cm3.mark) gl.deleteTexture(cm3.mark);
+    for(const sp of cm3.names || []) gl.deleteTexture(sp.tex);
+    if(cm3.sprite){ gl.deleteProgram(cm3.sprite.prog); gl.deleteBuffer(cm3.sprite.buf); }
     if(cm3.prog) gl.deleteProgram(cm3.prog);
     const lose = gl.getExtension('WEBGL_lose_context');
     if(lose) lose.loseContext();
@@ -1166,6 +1318,7 @@ function cm3Retexture(force){
   // 97a: the hover and the pick end in a `cmapPaint` too, and they are this
   // picture's whole key
   cm3Remark();
+  cm3Names();
   const key = cm3TexKey(c);
   if(!force && key === cm3.texKey) return;
   const cv = cm3Texture();

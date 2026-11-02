@@ -12130,5 +12130,9 @@
  "menusheets.reading": "Die Sprite-Sheets werden gelesen...",
  "menusheets.none": "Kein Sprite-Sheet in dieser Mod oder im Spiel",
  "menusheets.from_game": "Die Mod hat keine Kopie dieser Seite: Das ist die des Spiels, {w} mal {h}. Ersetzen schreibt eine eigene Kopie der Mod",
- "eng.menusheets.no_sheet": "{rel} ist keines der Sprite-Sheets des Spiels"
+ "eng.menusheets.no_sheet": "{rel} ist keines der Sprite-Sheets des Spiels",
+ "campmap.factions": "⚑ Fraktionen",
+ "mapfactions.hid_faction_names": "Fraktionsnamen ausgeblendet",
+ "mapfactions.showed_faction_names": "Fraktionsnamen eingeblendet",
+ "campmap.each_factions_name_lettered_over_its": "Der Name jeder Fraktion über ihrem größten zusammenhängenden Landgebiet, in ihrer eigenen Farbe"
 }

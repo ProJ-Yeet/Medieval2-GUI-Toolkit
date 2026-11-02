@@ -601,6 +601,7 @@ function cmapLayerState(){
   m.tip = c.tip !== false;
   // 20c, T4: settlement names are a way of looking at the map, not a place
   m.labels = !!c.labels;
+  m.faction_names = !!c.fnOn;                 // 97b
   /* 28a: the strip's three habits. "The Validate tab, the column this wide"
      is as much a way of reading a map as which layers are ticked, so they ride
      here and are therefore in every named view for nothing.
@@ -674,6 +675,7 @@ function cmapResetView(){
   c.order = cmapOrder(c.man, []);
   c.rivers = false; c.riverRgb = CMAP_RIVER_RGB.slice();
   c.heightAlpha = false; c.tip = true; c.labels = true; c.lab = null;
+  c.fnOn = true;                              // 97b: the faction names, back on
   // 28a: the strip's three habits are habits like the rest, so the one way
   // back puts them back - first tab, column open, default width
   c.tab = CMAP_TABS[0].id; c.sub = {};
@@ -831,6 +833,9 @@ function cmapNew(mod, man){
     // zoom's and not two hundred at once. `undefined` and not falsy - somebody
     // who turned them off saved that, and it is a habit like the rest.
     labels: saved.labels === undefined ? true : !!saved.labels, lab: null,
+    // 97b: each faction's name over its land, the default look - see
+    // mapfactions.js. On with nothing saved, a habit like the names above.
+    fnOn: saved.faction_names === undefined ? true : !!saved.faction_names, fn: null,
     view: {zoom: 1, ox: 0, oy: 0, fitted: false},
     hover: null, sel: null, outline: null, outlineKey: -1,
     // 17e's tooltip: where the pointer is in the stage, whether the panel is
@@ -1143,6 +1148,9 @@ function renderCampmap(){
             title="${ttA('campmap.show_region_names_and_coordinates_under')}">${tt('campmap.names')}</button>
           <button id="cmLabBtn" class="${c.labels ? 'on' : ''}" onclick="clnToggle()"
             title="${ttA('campmap.settlement_character_and_port_names_beside')}">${tt('campmap.aa_labels')}</button>
+          <!-- 97b: each faction's name lettered over its land. See mapfactions.js. -->
+          <button id="cmFacBtn" class="${c.fnOn ? 'on' : ''}" onclick="cfnToggle()"
+            title="${ttA('campmap.each_factions_name_lettered_over_its')}">${tt('campmap.factions')}</button>
           <!-- M18: the same map, as a mesh. A MODE and not a screen - the layers, the opacities, the season and the colouring are the ones already set here. See map3d.js. -->
           <button id="cm3Btn" class="${cmap3d() ? 'on' : ''}" aria-pressed="${cmap3d()}"
             onclick="cm3Toggle()"
@@ -2288,6 +2296,9 @@ function cmapOverlay(x, s0, t0, s1, t1){
   // 17d's markers sit above the layers and below the hover cell, so the cell
   // the pointer is on is never hidden by what is standing on it
   // 89c: a watchtower's line of sight goes under the markers it is about
+  // 97b: the faction names are lettering on the land, so they go under every
+  // marker and every settlement name that stands on it
+  if(typeof cfnDraw === 'function') cfnDraw(x, s0, t0, s1, t1);
   if(typeof cmkSightDraw === 'function') cmkSightDraw(x, s0, t0, s1, t1);
   if(typeof cmkDraw === 'function') cmkDraw(x, s0, t0, s1, t1);
   // 20c's names go over the markers they are beside, and under the hover cell
@@ -3168,6 +3179,8 @@ function cmapAfterPaint(codes){
   c.compKey = '';
   if(codes.indexOf('regions') >= 0){
     c.outline = null; c.outlineKey = -1;
+    // 97b: the provinces moved under the names, so they are laid out again
+    if(typeof cfnRelayout === 'function') cfnRelayout();
     // A colouring is a recolour of THIS layer, so a stroke on it makes the one
     // on screen a picture of pixels that have moved. It is dropped rather than
     // rebuilt: rebuilding would need the table for a province the server has

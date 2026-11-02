@@ -1201,6 +1201,13 @@ and goes through the flat map's own `cmapClickTile`, `cmapMarkClick`,
 `cmapHover`, brush and marker drag. The selected outline, the hovered province
 and the hover cell are a marks texture over the mesh (`cm3Remark`). With the
 brush armed, the middle button orbits. `tests/test_map3d` section 5.
+**97b** (2026-11-02): `web/js/mapfactions.js`. The words, colours and owners
+are the Factions colouring's (`/api/map/colouring?code=faction`), so the
+names cannot disagree with that panel; the rebels are left unnamed. In 3D a
+name is a sprite squared to the camera rather than only turned about the
+vertical, since an upright sprite seen from above at the default tilt was too
+squashed to read. Names may overhang a thin land by 30% of its thickness.
+`tests/test_mapfactions`.
 
 # Phase 99p - SimpleBake's two ideas for the packer, scheduled 2026-10-15
 

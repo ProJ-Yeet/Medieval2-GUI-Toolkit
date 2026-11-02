@@ -131,6 +131,10 @@ async function cmkLoad(){
   k.loading = false;
   if(d.error){ k.err = d.error; cmkPaint(); return; }
   k.d = d;
+  // 97b: a second read is a read after an edit, and an edit to the campaign
+  // file can hand a settlement to another faction
+  k.loads = (k.loads || 0) + 1;
+  if(k.loads > 1 && typeof cfnStale === 'function') cfnStale();
   cmkIndex();
   cmkArt();
   cmkPaint();
