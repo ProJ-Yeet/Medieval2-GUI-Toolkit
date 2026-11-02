@@ -48,6 +48,8 @@ function mgnOpen(){
                        landuse: {tags: {}}, landcover: {mapping: null},
                        koppen: {mapping: null, source: ''},
                        features: {detail: 'major', mode: 'replace'}},
+                 //: one rectangle for every generator, image tiles inclusive
+                 rect: {on: false, l: 0, t: 0, r: 0, b: 0, feather: 8, note: ''},
                  plan: {}, busy: ''};
   mgnPaint();
 }
@@ -94,6 +96,33 @@ function mgnSet(kind, field, value){
   mgnPaint();
 }
 
+//: a change to the rectangle makes every plan on the panel stale
+function mgnRect(field, value){
+  const k = state.mgn;
+  k.rect[field] = field === 'on' ? !!value : Math.max(0, parseInt(value, 10) || 0);
+  k.rect.note = '';
+  k.plan = {};
+  mgnPaint();
+}
+
+async function mgnRectFind(){
+  const k = state.mgn, c = state.cmap;
+  if(!k || k.busy) return;
+  k.busy = 'rect'; mgnPaint();
+  let r;
+  try{ r = await api.post('/api/map/gen_area', {mod: c.mod, campaign: c.campaign || ''},
+                          {label: tt('mapgen.rect_find')}); }
+  catch(e){ r = {error: errText(e)}; }
+  finally{ k.busy = ''; }
+  if(r && r.rect){
+    const [l, t, rr, b] = r.rect;
+    Object.assign(k.rect, {on: true, l, t, r: rr, b,
+      note: tt('mapgen.rect_found', {tiles: r.tiles, l, r: rr, t, b})});
+    k.plan = {};
+  }else k.rect.note = (r && r.error) || tt('mapgen.rect_none');
+  mgnPaint();
+}
+
 function mgnBand(i, field, value){
   const k = state.mgn;
   const b = k.opt.ground.bands[i];
@@ -112,6 +141,8 @@ function mgnClimate(g, value){
 function mgnBody(kind){
   const k = state.mgn, c = state.cmap;
   const body = {mod: c.mod, campaign: c.campaign || '', kind};
+  const q = k.rect;
+  if(q.on){ body.rect = [q.l, q.t, q.r, q.b]; body.feather = q.feather; }
   if(kind === 'heights') Object.assign(body, k.opt.heights);
   if(kind === 'ground') body.bands = k.opt.ground.bands;
   if(kind === 'climates'){
@@ -293,9 +324,24 @@ function mgnHtml(){
       <label class="mszbox">${tt('mapgen.rivers',{sel:sel('features', 'detail', [['major', tt('mapgen.rivers_only')], ['medium', tt('mapgen.rivers_and_canals')], ['all', tt('mapgen.rivers_canals_and_streams')]])})}</label>
       <label class="mszbox">${tt('mapgen.the_old_ones',{sel:sel('features', 'mode', [['replace', tt('mapgen.cleared_first')], ['add', tt('mapgen.kept_and_joined')]])})}</label>
     </div>`;
+  const q = k.rect;
+  const side = {l: tt('mapgen.rect_left'), t: tt('mapgen.rect_top'),
+                r: tt('mapgen.rect_right'), b: tt('mapgen.rect_bottom')};
+  const num = f => `<label class="mszbox">${side[f]}
+      <input type="number" min="0" style="width:5em" value="${q[f]}" onchange="mgnRect('${f}',this.value)"></label>`;
+  const rect = `<div class="bsec mgncard">
+      <label class="chk"><input type="checkbox" ${q.on ? 'checked' : ''}
+        onchange="mgnRect('on',this.checked)"> <b>${tt('mapgen.rect_only')}</b></label>
+      <div class="count">${tt('mapgen.rect_hint')}</div>
+      ${q.on ? `<div class="brow" style="flex-wrap:wrap;gap:6px">${num('l')}${num('t')}${num('r')}${num('b')}</div>
+      <label class="mszbox">${tt('mapgen.rect_feather', {n: `<input type="number" min="0" max="64" style="width:4em" value="${q.feather}" onchange="mgnRect('feather',this.value)">`})}</label>` : ''}
+      <div class="cmbar2"><button onclick="mgnRectFind()" ${k.busy ? 'disabled' : ''}>${k.busy === 'rect' ? tt('common.working') : tt('mapgen.rect_find')}</button></div>
+      ${q.note ? `<div class="count">${esc(q.note)}</div>` : ''}
+    </div>`;
   return `${head}
     ${k.err ? `<div class="w-bad">${esc(k.err)}</div>` : ''}
     <div class="count">${tt('mapgen.the_box_is_the_real_world')}</div>
+    ${rect}
     ${mgnCard('heights', heights, true)}
     ${mgnCard('adjust', adjust, false)}
     ${mgnCard('ground', ground, false)}

@@ -431,7 +431,9 @@ than "does what is on disk load?".
   POST /api/map/gen_plan|gen_apply
                                  -> 27: heights, ground types, climates or
                                     rivers made for the map, previewed, then
-                                    written with one Undo
+                                    written with one Undo; ``rect`` keeps one
+                                    inside a rectangle of tiles
+  POST /api/map/gen_area         -> the box around the land no region claims
   POST /api/map/resize_plan|resize_apply
                                  -> 26a: grow or shrink the map by four margins,
                                     every coordinate in the mod moved with it
@@ -3432,6 +3434,13 @@ class Handler(BaseHTTPRequestHandler):
                 return self._json(self._mapcheck(u.path.rsplit("/", 1)[-1], body))
             if u.path in ("/api/map/resize_plan", "/api/map/resize_apply"):
                 return self._json(self._mapresize(u.path.rsplit("_", 1)[-1], body))
+            if u.path == "/api/map/gen_area":
+                # the land no region claims, for the generators' rectangle
+                try:
+                    cm = self.registry.map_for(body["mod"], body.get("campaign") or "")
+                    return self._json(mapgen.unclaimed_rect(cm))
+                except (KeyError, campmap.MapError, OSError) as e:
+                    return self._json({"error": str(e)})
             if u.path in ("/api/map/gen_plan", "/api/map/gen_apply"):
                 return self._json(self._mapgen(u.path.rsplit("_", 1)[-1], body))
             if u.path in ("/api/edu/sort/plan", "/api/edu/sort/apply"):

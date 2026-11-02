@@ -44,6 +44,16 @@ reference, and each is the engine's own rule:
 also moves the coastline, and the regions and ground types do not follow. So
 the default writes land where the map already has land and leaves the sea as
 it is; *the whole map* is a choice, and the plan says what it leaves behind.
+
+**A rectangle, if one is given.** ``rect`` (left, top, right, bottom, image
+tiles, inclusive, the numbers the map's hover panel shows in bold) keeps every
+generator inside it: the layer is made as usual and only the rectangle of it is
+written, so a mod whose map was grown can have the new part made without the
+hand-made rest being touched. The heights are blended into what was there over
+``feather`` tiles inside each edge that is not the map's own edge, so the seam
+does not show as a cliff. Rivers are clipped to it before they are drawn, so
+each piece inside keeps a source of its own, and one that runs up to an old
+river at the edge joins it as a tributary.
 """
 from __future__ import annotations
 
@@ -52,7 +62,7 @@ import math
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Dict, List, Sequence, Tuple
+from typing import Dict, List, Optional, Sequence, Tuple
 
 from array import array
 
@@ -102,6 +112,8 @@ MIN_RIVER = 4
 #: How far a river may run out into the sea, which the tutorial asks for: two
 #: tiles past the coast make a mouth.
 MOUTH = 2
+#: Tiles over which generated heights fade into the old ones inside a rectangle.
+FEATHER = 8
 
 
 class GenError(ValueError):
@@ -125,9 +137,15 @@ class GenPlan:
     changes: List[str] = field(default_factory=list)
     warnings: List[str] = field(default_factory=list)
     errors: List[str] = field(default_factory=list)
+    #: (left, top, right, bottom) in image tiles, inclusive; None is the map
+    rect: Optional[Tuple[int, int, int, int]] = None
+    feather: int = FEATHER
 
     def summary(self) -> str:
         head = f"generate {self.kind} for {getattr(self.mod, 'name', '?')}"
+        if self.rect:
+            head += " inside tiles x {}-{}, y {}-{}".format(
+                self.rect[0], self.rect[2], self.rect[1], self.rect[3])
         return "\n".join([head] + [f"  {c}" for c in self.changes])
 
     def payload(self) -> dict:
@@ -158,8 +176,129 @@ def _layer(cm, code: str) -> Tuple[Image.Image, object, str]:
 
 
 def _put(p: GenPlan, cm, code: str, img: Image.Image, info, rel: str) -> None:
+    if p.rect is not None and code != "features":      # rivers clip themselves
+        img = _inside(p, cm, code, img.convert("RGB"))
     p.data[rel] = encode(img.convert(info.mode), info)
     p.preview = _png(img)
+
+
+def _rect(cm, body: dict) -> Optional[Tuple[int, int, int, int]]:
+    """``body['rect']`` checked against the map: four whole tiles, in order."""
+    got = body.get("rect")
+    if not got:
+        return None
+    try:
+        l, t, r, b = (int(v) for v in got)
+    except (TypeError, ValueError):
+        raise GenError(_i18n.msg("eng.mapgen.rect_four_numbers", "the rectangle is four whole numbers: left, top, right, bottom")) from None
+    w, h = cm.terrain.width, cm.terrain.height
+    l, r = sorted((l, r))
+    t, b = sorted((t, b))
+    if r < 0 or b < 0 or l >= w or t >= h:
+        raise GenError(_i18n.msg("eng.mapgen.rect_off_the_map", "the rectangle is off the map, which is {w} x {h} tiles", w=w, h=h))
+    return max(0, l), max(0, t), min(w - 1, r), min(h - 1, b)
+
+
+def _rect_masks(p: GenPlan, cm, size: Tuple[int, int]) -> Tuple[Image.Image, Image.Image]:
+    """``(hard, soft)`` 'L' masks of the rectangle on a layer of ``size``:
+    hard is 255 inside, soft rises from the edges over ``p.feather`` tiles
+    (an edge on the map's own border does not fade)."""
+    w, h = cm.terrain.width, cm.terrain.height
+    l, t, r, b = p.rect
+    if size == (w, h):
+        k, x0, x1, y0, y1 = 1, l, r, t, b
+    elif size == (2 * w + 1, 2 * h + 1):
+        # corner c belongs to tile (c - 1) // 2, corner 0 to tile 0 (corner_view)
+        k = 2
+        x0, x1 = (0 if l == 0 else 2 * l + 1), 2 * r + 2
+        y0, y1 = (0 if t == 0 else 2 * t + 1), 2 * b + 2
+    else:
+        raise GenError(_i18n.msg("eng.mapgen.rect_layer_size", "a layer of {sw} x {sh} is neither the tile grid nor the corner grid, so the rectangle cannot be placed on it", sw=size[0], sh=size[1]))
+    span = max(1, p.feather * k)
+
+    def ramp(n, a, z, fade_lo, fade_hi):
+        out = []
+        for i in range(n):
+            if i < a or i > z:
+                out.append(0)
+                continue
+            d = min(i - a if fade_lo else span, z - i if fade_hi else span)
+            out.append(min(255, round(255 * (d + 1) / (span + 1))))
+        return out
+
+    cols = Image.new("L", (size[0], 1))
+    cols.putdata(ramp(size[0], x0, x1, l > 0, r < w - 1))
+    rows = Image.new("L", (1, size[1]))
+    rows.putdata(ramp(size[1], y0, y1, t > 0, b < h - 1))
+    soft = ImageChops.darker(cols.resize(size, Image.NEAREST), rows.resize(size, Image.NEAREST))
+    hard = soft.point(lambda v: 255 if v else 0)
+    return hard, soft
+
+
+def unclaimed_rect(cm) -> dict:
+    """The box around the part of a grown map nobody has drawn provinces on:
+    land painted in a colour no region claims, or a region with no settlement
+    (a placeholder such as a mod's "hinterland"). Colours that are mostly sea
+    are skipped. The colour with the most land is taken, and of it the
+    largest four-connected patch, so stray pixels elsewhere do not widen it.
+    ``{"rect": [l, t, r, b], "tiles": n, "rgb": [...], "name": ...}``, or
+    ``{"rect": None}``."""
+    idx = cm.index
+    sea = cm.sea
+    w, h = idx.width, idx.height
+    unclaimed = {mapvocab.key(c) for c in idx.unclaimed}
+    empty = {mapvocab.key(r.rgb) for r in idx.regions
+             if r.record is not None and r.settlement is None}
+    wanted = unclaimed | empty
+    land: Dict[int, int] = {}
+    wet: Dict[int, int] = {}
+    labels = idx.labels
+    for i in range(w * h):
+        lab = labels[i]
+        if sea[i]:
+            wet[lab] = wet.get(lab, 0) + 1
+        else:
+            land[lab] = land.get(lab, 0) + 1
+    picks = [lab for lab, n in land.items()
+             if mapvocab.key(idx.colours[lab]) in wanted and n > wet.get(lab, 0)]
+    if not picks:
+        return {"rect": None, "tiles": 0}
+    best = max(picks, key=land.get)
+    seen = bytearray(w * h)
+    top = (0, None)
+    for i in range(w * h):
+        if seen[i] or labels[i] != best or sea[i]:
+            continue
+        seen[i] = 1
+        stack, n = [i], 0
+        l, t, r, b = w, h, -1, -1
+        while stack:
+            j = stack.pop()
+            n += 1
+            x, y = j % w, j // w
+            l, t, r, b = min(l, x), min(t, y), max(r, x), max(b, y)
+            for k in ((j - 1) if x > 0 else -1, (j + 1) if x < w - 1 else -1,
+                      j - w, j + w):
+                if 0 <= k < w * h and not seen[k] and labels[k] == best and not sea[k]:
+                    seen[k] = 1
+                    stack.append(k)
+        if n > top[0]:
+            top = (n, [l, t, r, b])
+    reg = idx.by_key.get(mapvocab.key(idx.colours[best]))
+    return {"rect": top[1], "tiles": top[0], "rgb": list(idx.colours[best]),
+            "name": reg.name if reg is not None else ""}
+
+
+def _inside(p: GenPlan, cm, code: str, new: Image.Image) -> Image.Image:
+    """The old layer with ``new`` put in only inside the rectangle; heights
+    fade in where both the old and the new corner are land."""
+    old = _layer(cm, code)[0]
+    hard, soft = _rect_masks(p, cm, new.size)
+    out = Image.composite(new, old, hard)
+    if code in ("heights", "adjust") and p.feather > 0:
+        both = ImageChops.multiply(ImageChops.multiply(_land_corners(old), _land_corners(new)), hard)
+        out.paste(Image.composite(new, old, soft), mask=both)
+    return out
 
 
 def _sea_corners(cm) -> Image.Image:
@@ -188,6 +327,9 @@ def plan(mod, cm, body: dict) -> GenPlan:
         p.errors.append(_i18n.msg("eng.mapgen.no_generator_called_there_are", "no generator called {kind}; there are {KINDS}", kind=repr(kind), KINDS=', '.join(KINDS)))
         return p
     try:
+        p.rect = _rect(cm, body)
+        if p.rect is not None:
+            p.feather = int(_num(body, "feather", FEATHER, 0, 64))
         if kind in ("landuse", "landcover", "koppen"):
             from . import mapreal          # 87d, which builds on this module
             mapreal.plan(p, cm, body)
@@ -196,6 +338,12 @@ def plan(mod, cm, body: dict) -> GenPlan:
              "climates": _plan_climates, "features": _plan_features}[kind](p, cm, body)
     except (GenError, osmmap.OsmError, MapError) as exc:
         p.errors.append(str(exc))
+    if p.rect is not None and not p.errors:
+        l, t, r, b = p.rect
+        p.changes.append(f"only inside tiles x {l}-{r}, y {t}-{b} (image, from the top-left); "
+                         "everything outside is left exactly as it was"
+                         + (f"; the heights fade in over {p.feather} tile(s) at each inner edge"
+                            if p.kind in ("heights", "adjust") and p.feather else ""))
     return p
 
 
@@ -476,6 +624,8 @@ def _plan_ground(p: GenPlan, cm, body: dict) -> None:
     heights = cm.layer("heights").convert("RGB")
     img, info, rel = _layer(cm, "ground_types")
     land = _land_corners(heights)
+    if p.rect is not None:
+        land = ImageChops.multiply(land, _rect_masks(p, cm, land.size)[0])
     table = [(0, 0, 0)] * 256
     lo = 0
     for code, top in bands:
@@ -526,6 +676,7 @@ def _plan_climates(p: GenPlan, cm, body: dict) -> None:
         raise GenError(_i18n.msg("eng.mapgen.map_climates_tga_and_map_ground", "map_climates.tga and map_ground_types.tga are not the same size"))
     out = img.copy()
     done, missing = {}, []
+    inner = _rect_masks(p, cm, ground.size)[0] if p.rect is not None else None
     for gcode, ccode in mapping.items():
         gt = mapvocab.ground(gcode)
         if gt is None or ccode in ("", "-"):
@@ -535,6 +686,8 @@ def _plan_climates(p: GenPlan, cm, body: dict) -> None:
             missing.append(f"{gcode} -> {ccode}")
             continue
         mask = _equal(ground, gt["rgb"])
+        if inner is not None:
+            mask = ImageChops.multiply(mask, inner)
         out.paste(tuple(clim["rgb"]), mask=mask)
         done[gcode] = _count(mask)
     if not done:
@@ -737,12 +890,17 @@ def _plan_features(p: GenPlan, cm, body: dict) -> None:
     drop = rivers | ({tuple(f("cliff")["rgb"]), tuple(f("volcano")["rgb"])}
                      if replace else set())
     none = tuple(f("none")["rgb"])
+    rect = p.rect
+
+    def inside(x: int, y: int) -> bool:
+        return rect is None or (rect[0] <= x <= rect[2] and rect[1] <= y <= rect[3])
+
     old: List[Tuple[int, int]] = []
     for y in range(h):
         for x in range(w):
             c = px[x, y]
             if c in drop:
-                if replace:
+                if replace and inside(x, y):
                     px[x, y] = none
                 elif c in rivers:
                     old.append((x, y))
@@ -755,7 +913,25 @@ def _plan_features(p: GenPlan, cm, body: dict) -> None:
     for t in old:
         for n in net._around(t):
             net.parent[net._find(n)] = net._find(t)
-    drawn, tiles, cliffs, volc, short = draw_features(px, got, proj, w, h, sea, blocked, net)
+    seeded = set(net.parent)
+    drawn, tiles, cliffs, volc, short = draw_features(
+        px, got, proj, w, h, sea, blocked, net, None if rect is None else inside)
+    if rect is not None:
+        # outside the rectangle every pixel is what it was, but a source that a
+        # new river now runs into is the middle of a river, not its start
+        src = tuple(f("river_source")["rgb"])
+        river = tuple(f("river")["rgb"])
+        new = set(net.parent) - seeded
+        before = img.load()
+        for y in range(h):
+            for x in range(w):
+                if inside(x, y):
+                    continue
+                c = before[x, y]
+                if c == src and any((x + dx, y + dy) in new for dx, dy in
+                                    ((0, 1), (0, -1), (1, 0), (-1, 0))):
+                    c = river
+                px[x, y] = c
     _put(p, cm, "features", out, info, rel)
     p.changes.append(
         f"{rel}: {drawn} river course(s), {tiles:,} tiles, one source each, from "
@@ -770,11 +946,14 @@ def _plan_features(p: GenPlan, cm, body: dict) -> None:
         p.warnings.append(_i18n.msg("eng.mapgen.osm_course_s_were_too_short", "{short} OSM course(s) were too short to draw at this map's scale (under {MIN_RIVER} tiles of land)", short=short, MIN_RIVER=MIN_RIVER))
 
 
-def draw_features(px, got: dict, proj, w: int, h: int, sea, blocked, net) -> Tuple[int, int, int, int, int]:
+def draw_features(px, got: dict, proj, w: int, h: int, sea, blocked, net,
+                  inside=None) -> Tuple[int, int, int, int, int]:
     """OSM's rivers, cliffs and volcanoes onto ``px`` (a features picture's
     pixels) through the river network ``net``. Returns ``(courses drawn, river
     tiles, cliff tiles, volcanoes, courses too short)``. The new campaign from
-    the real world (87e) draws its first rivers with this too."""
+    the real world (87e) draws its first rivers with this too. ``inside``, a
+    ``(x, y) -> bool``, cuts every course where it leaves an area, as a city
+    does, and keeps cliffs and volcanoes in it."""
     f = mapvocab.feature
     # a settlement or a port on a river's line cuts it in two: the water above
     # the city is one river, the water below it another with its own source
@@ -782,7 +961,7 @@ def draw_features(px, got: dict, proj, w: int, h: int, sea, blocked, net) -> Tup
     for line in chain(list(got["rivers"].values())):
         piece: List[Tuple[int, int]] = []
         for t in cardinal([proj.to_tile(lat, lon) for lat, lon in line]):
-            if t in blocked:
+            if t in blocked or (inside is not None and not inside(*t)):
                 if piece:
                     courses.append(piece)
                 piece = []
@@ -805,7 +984,8 @@ def draw_features(px, got: dict, proj, w: int, h: int, sea, blocked, net) -> Tup
 
     def free(x: int, y: int) -> bool:
         return (0 <= x < w and 0 <= y < h and not sea[y * w + x]
-                and (x, y) not in net.parent and (x, y) not in blocked)
+                and (x, y) not in net.parent and (x, y) not in blocked
+                and (inside is None or inside(x, y)))
 
     cliffs = 0
     for line in got["cliffs"].values():
