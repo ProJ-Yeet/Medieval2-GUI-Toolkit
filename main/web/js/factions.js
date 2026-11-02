@@ -350,6 +350,7 @@ function facArtSection(d){
     ${facPictures(d)}
     ${facEmblemHtml(d)}
     ${facBannerHtml(d)}
+    ${facMapHtml(d)}
     ${facRecolourHtml(d)}
     <div class="trgrid">
       ${(v.art_keys||[]).map(k => facArt(d, k)).join('')}
@@ -509,6 +510,58 @@ function facEmblemHtml(d){
     </label>`).join('')}</div>
     <button class="primary" onclick="facEmblemApply()">${tt('factions.emblem_apply',{n:e.rows.length - e.skip.size})}</button>
     <button onclick="state.fac.d.emblem=null;facPaint()">${tt('common.cancel')}</button></div>`;
+}
+/* ---- 96f: the select-screen map, drawn from the campaign map ----
+   The faction-select screen shows the campaign's map_<faction>.tga, and the
+   base map_FE.tga when there is none. Drawn by the server
+   (unittransfer/mapdraw.py): relief and rivers, no signs, the faction's
+   starting land one patch in its primary colour, a line round the outside.
+   Drawn on a click, not on open: it reads the whole map. */
+function facMapColour(d){
+  const row = ((state.fac || {}).factions || []).find(r => r.name === d.name);
+  return (row && row.primary) || '#b03030';
+}
+function facMapHtml(d){
+  const m = d.mapdraw;
+  const go = `<button onclick="facMapDraw()">${tt('factions.mapdraw_button')}</button>`;
+  if(!m) return `<div class="facemblem">${go} <span class="count">${tt('factions.mapdraw_hint')}</span></div>`;
+  if(m.busy) return `<div class="facemblem"><span class="count">${tt('common.reading')}</span></div>`;
+  if(m.error) return `<div class="facemblem">${go} <span class="w-bad">✗ ${esc(m.error)}</span></div>`;
+  const camps = (m.campaigns || []).length > 1 ? `<select onchange="facMapDraw(this.value)">${m.campaigns.map(c =>
+    `<option value="${esc(c)}" ${c === m.campaign ? 'selected' : ''}>${esc(c)}</option>`).join('')}</select>` : '';
+  return `<div class="facemblem">${camps}
+    <div><img class="facmapdraw" src="${esc(m.png)}" alt=""></div>
+    <div class="count">${ttN('factions.mapdraw_regions', m.regions.length)} · <code>${esc(m.write_rel)}</code>${
+      m.write_exists ? ` · ${tt('factions.mapdraw_replaces')}` : ''}</div>
+    <button class="primary" onclick="facMapApply()">${tt('factions.mapdraw_apply')}</button>
+    <button onclick="state.fac.d.mapdraw=null;facPaint()">${tt('common.cancel')}</button></div>`;
+}
+async function facMapDraw(campaign){
+  const d = state.fac.d;
+  if(!d) return;
+  const camp = campaign || (d.mapdraw && d.mapdraw.campaign) || '';
+  d.mapdraw = {busy: true};
+  facPaint();
+  const q = `mod=${enc(state.fac.mod)}&faction=${enc(d.name)}${camp ? `&campaign=${enc(camp)}` : ''}`;
+  let r;
+  try{ r = await api.get('/api/mapdraw?' + q); }
+  catch(e){ r = {error: errText(e)}; }
+  if(state.fac.d !== d) return;
+  if(!r.error) r.png = `/api/mapdraw/png?${q}&campaign=${enc(r.campaign)}&colour=${enc(facMapColour(d))}&t=${Date.now()}`;
+  d.mapdraw = r;
+  facPaint();
+}
+async function facMapApply(){
+  const d = state.fac.d, m = d && d.mapdraw;
+  if(!m || m.busy) return;
+  let r;
+  try{ r = await api.post('/api/mapdraw/apply', {mod: state.fac.mod, campaign: m.campaign,
+                                                   faction: d.name, colour: facMapColour(d)}); }
+  catch(e){ r = {error: errText(e)}; }
+  if(r.error){ toast('✗ ' + r.error, 6000); return; }
+  toast(tt('factions.mapdraw_done', {rel: m.write_rel}), 5000);
+  d.mapdraw = null;
+  facPaint();
 }
 async function facEmblemPick(file){
   const d = state.fac.d;

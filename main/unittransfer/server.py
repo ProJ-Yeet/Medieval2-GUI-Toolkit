@@ -174,6 +174,11 @@ Factions mode (descr_sm_factions.txt, see :mod:`unittransfer.factions`)
   GET  /api/i18n/words?lang=       -> 96f: every ID with its words in that language
                                     (English where none), for a community
                                     translation dropped into config/translations/
+  GET  /api/mapdraw?mod=&campaign=&faction= and /api/mapdraw/png?...&colour=
+                                 -> 96f: a faction's select-screen map drawn from
+                                    the campaign map (relief, rivers, its land)
+  POST /api/mapdraw/apply        -> write it as the campaign's map_<faction>.tga
+                                    (backup + undo)
   GET  /api/factions/culture_preview?mod=&name=&culture=
                                  -> 96f: the units it gains and loses, and the
                                     buildings in its towns it could no longer
@@ -734,7 +739,7 @@ from typing import Dict, List, Optional
 
 from . import (bmdb, buildings, cards, cleaner, codeview, config, dupes, edit,
                modflags, modfiles, sounds, stratmap)
-from . import mapgen, mapnew, mapresize, modfork, vanilla, gamelog, modreport, rehearse, voices, emblem, bannermaker, artrecolour, stratfamily, scripts
+from . import mapgen, mapnew, mapresize, modfork, vanilla, gamelog, modreport, rehearse, voices, emblem, mapdraw, bannermaker, artrecolour, stratfamily, scripts
 from . import armory, armbake, armlib, armunit, folderimport, loosemesh, meshfolder, modeldb, modeltext
 from . import report, vegtext, culturechange, campscript
 from . import ancillaries, areaeffects, campimport, edbimport, mapbundle, osmmap, osmsites, settlemodel, heroabilities, hordestart, walls, characters, projectzip, campaint, campdb, campevents, campfiles, campmap, campnew, campstrat, cas, casanim, animedit, animpack, animslot, animview, modelexport, launchcheck, packhouse, settlemech, fileswap, factionsites, sidefiles, banners, changesets, health, climatenew, guilds, mapcheck, mapfe, mapquery, mapterrain, mercpools, regiondel, edusort, factionaudit, factionbring, factionclone, factions, images, mesh, minorfiles, namekeys, portrecords, rawtext, rebelpools, renames, soundbanks, soundscripts, spawns, sprites, stratcamp, stratchar, stratedit, stratobj, strings, traits, triggers, winconds
@@ -2349,6 +2354,25 @@ class Handler(BaseHTTPRequestHandler):
                     return self._err(404, "unknown mod")
                 return self._json(namekeys.faction_pool(
                     self.registry.get(name), (q.get("faction") or [""])[0]))
+            if u.path in ("/api/mapdraw", "/api/mapdraw/png"):
+                # 96f: a faction's select-screen map drawn from the campaign map
+                name = (q.get("mod") or [None])[0]
+                if not name or name not in self.registry.names():
+                    return self._err(404, "unknown mod")
+                mod = self.registry.get(name)
+                camp = (q.get("campaign") or [campstrat.DEFAULT_CAMPAIGN])[0]
+                fac = (q.get("faction") or [""])[0]
+                try:
+                    if u.path.endswith("/png"):
+                        img = mapdraw.draw(mod, camp, fac, (q.get("colour") or [""])[0])
+                        return self._send(200, mapdraw.png(img), "image/png")
+                    out = mapdraw.view(mod, camp, fac)
+                    out["write_rel"] = mapdraw.rel_for(camp, fac) if fac else ""
+                    out["write_exists"] = bool(fac) and (Path(mod.data) / out["write_rel"]).is_file()
+                    out["campaigns"] = campstrat.campaigns(mod)
+                    return self._json(out)
+                except (mapfe.FeError, campmap.MapError, OSError, ValueError) as e:
+                    return self._json({"error": getattr(e, "message", None) or str(e)})
             if u.path == "/api/factions/culture_preview":
                 # 96f: the units gained and lost, and the buildings in its towns
                 # no longer buildable, if this faction's culture changes
@@ -2907,6 +2931,17 @@ class Handler(BaseHTTPRequestHandler):
                 rec = voices.apply_name_call(mod, p)
                 self.registry.invalidate(name)
                 return self._json({"ok": True, "id": rec["id"], "changes": p["changes"]})
+            if u.path == "/api/mapdraw/apply":
+                name = body.get("mod") or ""
+                if name not in self.registry.names():
+                    return self._err(404, "unknown mod")
+                try:
+                    rec = mapdraw.apply(self.registry.get(name),
+                                        str(body.get("campaign") or campstrat.DEFAULT_CAMPAIGN),
+                                        str(body.get("faction") or ""), str(body.get("colour") or ""))
+                    return self._json({"ok": True, "id": rec["id"], "rel": rec["manifest"]})
+                except (mapfe.FeError, campmap.MapError, OSError, ValueError) as e:
+                    return self._json({"error": getattr(e, "message", None) or str(e)})
             if u.path in ("/api/emblem/plan", "/api/emblem/apply"):
                 # 96e6: a faction's whole emblem set from one picture
                 name = body.get("mod") or ""

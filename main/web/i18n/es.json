@@ -12443,5 +12443,17 @@
  "minorfiles.temples_of_its_own_button": "Crear sus templos…",
  "minorfiles.temples_what": "templos de {name}",
  "minorfiles.temples_done": "{line} creado, {n} cambios. Está en la pantalla de Edificios.",
- "eng.buildings.drawing_cards_needs_pillow": "dibujar tarjetas de edificio necesita Pillow, que este Python no tiene"
+ "eng.buildings.drawing_cards_needs_pillow": "dibujar tarjetas de edificio necesita Pillow, que este Python no tiene",
+ "factions.mapdraw_button": "Dibujar desde el mapa",
+ "factions.mapdraw_hint": "el mapa de la pantalla de selección de facción para esta facción, dibujado desde el mapa de campaña: relieve y ríos, sin signos, su territorio inicial en su color",
+ "factions.mapdraw_regions": {
+  "one": "{count} región al inicio",
+  "many": "{count} regiones al inicio",
+  "other": "{count} regiones al inicio"
+ },
+ "factions.mapdraw_replaces": "sustituye al que hay (antes una copia de seguridad)",
+ "factions.mapdraw_apply": "Escribirlo",
+ "factions.mapdraw_done": "Escrito: {rel}. Deshacer está en el Registro.",
+ "eng.mapdraw.no_faction": "hace falta una facción para dibujar su mapa",
+ "eng.mapdraw.summary": "mapa de selección de {faction} dibujado desde el mapa de campaña: {rel}"
 }

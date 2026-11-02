@@ -11962,5 +11962,16 @@
  "minorfiles.temples_of_its_own_button": "Ihre Tempel anlegen…",
  "minorfiles.temples_what": "Tempel von {name}",
  "minorfiles.temples_done": "{line} angelegt, {n} Änderungen. Es steht im Gebäude-Bildschirm.",
- "eng.buildings.drawing_cards_needs_pillow": "zum Zeichnen von Gebäudekarten braucht es Pillow, das diesem Python fehlt"
+ "eng.buildings.drawing_cards_needs_pillow": "zum Zeichnen von Gebäudekarten braucht es Pillow, das diesem Python fehlt",
+ "factions.mapdraw_button": "Aus der Karte zeichnen",
+ "factions.mapdraw_hint": "die Karte des Fraktionsauswahl-Bildschirms für diese Fraktion, aus der Kampagnenkarte gezeichnet: Relief und Flüsse, keine Zeichen, ihr Startgebiet in ihrer Farbe",
+ "factions.mapdraw_regions": {
+  "one": "{count} Region zu Beginn",
+  "other": "{count} Regionen zu Beginn"
+ },
+ "factions.mapdraw_replaces": "ersetzt die vorhandene (vorher eine Sicherung)",
+ "factions.mapdraw_apply": "Schreiben",
+ "factions.mapdraw_done": "Geschrieben: {rel}. Rückgängig steht im Protokoll.",
+ "eng.mapdraw.no_faction": "zum Zeichnen ihrer Karte braucht es eine Fraktion",
+ "eng.mapdraw.summary": "Auswahlkarte von {faction} aus der Kampagnenkarte gezeichnet: {rel}"
 }
