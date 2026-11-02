@@ -1213,6 +1213,16 @@ category ticks under the markers layer are left as they are underneath, so
 turning the icons back on gives back exactly what was showing. Settlement and
 faction names are not icons and stay. `cm3Icons` is the 3D hook, for 97d's
 models. `tests/test_mapicons`.
+**97d** (2026-11-02): `unittransfer/stratscene.py` (`GET /api/map/strat_scene`)
+joins descr_character.txt, descr_model_strat.txt and descr_cultures.txt; the
+browser loads each mesh once through the Strat models tab's routes and draws
+it on every tile that names it (`cm3Things`, `cm3DrawThings`). Figures are
+stood in their skeleton's first `stand` action by `v3aSkin`; the rig pose had
+them arms out. Per tile one settlement, fort or tower and the topmost
+character. Not done: a character's own `strat_model` override from
+descr_strat.txt (the markers do not carry it), ships, and a dragged figure
+following the pointer before it is dropped. `tests/test_stratscene`.
+**Phase 97 done.**
 
 # Phase 99p - SimpleBake's two ideas for the packer, scheduled 2026-10-15
 

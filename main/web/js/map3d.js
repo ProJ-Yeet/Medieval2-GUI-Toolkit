@@ -366,11 +366,12 @@ function cm3Thin(raw, stride){
 const CM3_VERT = `
 attribute vec3 aPos; attribute vec3 aNormal; attribute vec2 aUv;
 uniform mat4 uProj, uView;
+uniform mat4 uModel;      // 97d: identity for the land and the water
 varying vec3 vNormal; varying vec2 vUv; varying float vDepth;
 void main(){
-  vNormal = aNormal;
+  vNormal = mat3(uModel) * aNormal;
   vUv = aUv;
-  vec4 eye = uView * vec4(aPos, 1.0);
+  vec4 eye = uView * (uModel * vec4(aPos, 1.0));
   vDepth = -eye.z;
   gl_Position = uProj * eye;
 }`;
@@ -385,8 +386,12 @@ uniform float uAlpha;
 uniform float uFog;       // density, scaled to the map's diagonal
 uniform vec3 uFogColour;
 uniform sampler2D uMark;  // 97a: the pick and the hover, one pixel a tile
+uniform float uMarks;     // 97d: 1 on the land, 0 on a model standing on it
+uniform float uCut;       // 97d: 1 on a model, whose cloth and banners are cut out
 void main(){
-  vec3 base = uTextured > 0.5 ? texture2D(uTex, vUv).rgb : uFlat;
+  vec4 texel = texture2D(uTex, vUv);
+  if(uCut > 0.5 && uTextured > 0.5 && texel.a < 0.5) discard;
+  vec3 base = uTextured > 0.5 ? texel.rgb : uFlat;
   vec3 n = normalize(vNormal);
   vec3 key  = normalize(vec3(0.55, 0.72, 0.42));
   vec3 fill = normalize(vec3(-0.45, 0.35, -0.38));
@@ -397,7 +402,7 @@ void main(){
   // over the lighting, so the outline reads the same on a lit slope and a
   // shaded one; under the fog, so it fades with the land it is on
   vec4 mk = texture2D(uMark, vUv);
-  c = mix(c, mk.rgb, mk.a * uTextured);
+  c = mix(c, mk.rgb, mk.a * uTextured * uMarks);
   float f = 1.0 - exp(-pow(vDepth * uFog, 2.0));
   c = mix(c, uFogColour, clamp(f, 0.0, 1.0));
   gl_FragColor = vec4(c, uAlpha);
@@ -570,10 +575,14 @@ function cm3Begin(c, d, raw0){
       uFog: gl.getUniformLocation(prog, 'uFog'),
       uFogColour: gl.getUniformLocation(prog, 'uFogColour'),
       uMark: gl.getUniformLocation(prog, 'uMark'),
+      uModel: gl.getUniformLocation(prog, 'uModel'),
+      uMarks: gl.getUniformLocation(prog, 'uMarks'),
+      uCut: gl.getUniformLocation(prog, 'uCut'),
     },
   };
   cm3Remark();
   cm3Names();
+  cm3Things();
   cm3Pointers(cv);
   cm3Loop();
 }
@@ -863,11 +872,23 @@ function cm3Draw(){
 
   // the land
   gl.disable(gl.BLEND);
+  gl.uniformMatrix4fv(L.uModel, false, CM3_IDENTITY);
+  gl.uniform1f(L.uMarks, 1);
+  gl.uniform1f(L.uCut, 0);
   gl.uniform1f(L.uTextured, 1);
   gl.uniform1f(L.uAlpha, 1);
   bind(cm3.bPos, L.aPos, 3); bind(cm3.bNrm, L.aNormal, 3); bind(cm3.bUv, L.aUv, 2);
   gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, cm3.bIdx);
   gl.drawElements(gl.TRIANGLES, cm3.mesh.count, cm3.idxType, 0);
+
+  // 97d: what stands on it, before the water so a fleet at sea is under it
+  cm3DrawThings(bind);
+  gl.uniformMatrix4fv(L.uModel, false, CM3_IDENTITY);
+  gl.uniform1f(L.uMarks, 1);
+  gl.uniform1f(L.uCut, 0);
+  gl.enable(gl.CULL_FACE);
+  gl.activeTexture(gl.TEXTURE0);
+  gl.bindTexture(gl.TEXTURE_2D, cm3.tex);
 
   // the water, last and blended, so the sea floor shows through it
   if(d.water){
@@ -881,6 +902,302 @@ function cm3Draw(){
     gl.disable(gl.BLEND);
   }
   cm3DrawNames(proj, view);
+}
+
+/* ---------- 97d: characters, settlements, forts and towers as models ---------- */
+
+const CM3_IDENTITY = new Float32Array([1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1]);
+
+//: A castle in descr_strat.txt is written with the city's level words; the
+//: culture file names the castle's own. This is the engine's pairing, with
+//: both spellings of the first, since the vanilla file has "moot".
+const CM3_CASTLE_LEVEL = {village: ['moot_and_bailey', 'motte_and_bailey'],
+  town: ['wooden_castle'], large_town: ['castle'], city: ['fortress'],
+  large_city: ['citadel'], huge_city: ['citadel']};
+
+//: The two ladders of levels, smallest first. A culture that ships no model
+//: for a level (four of DaC's have no huge city on disk) gets the nearest one
+//: it has, the next one down first, rather than an empty tile.
+const CM3_CITY_LADDER = ['village', 'town', 'large_town', 'city', 'large_city', 'huge_city'];
+const CM3_CASTLE_LADDER = ['moot_and_bailey', 'wooden_castle', 'castle', 'fortress', 'citadel'];
+
+function cm3LevelModel(rows, want, castle){
+  const ladder = castle ? CM3_CASTLE_LADDER : CM3_CITY_LADDER;
+  const got = want.map(w => rows[w]).find(Boolean);
+  if(got) return got;
+  let at = ladder.indexOf(want[0]);
+  if(at < 0) at = ladder.length - 1;
+  for(let d = 1; d < ladder.length; d++){
+    const lo = rows[ladder[at - d]], hi = rows[ladder[at + d]];
+    if(lo) return lo;
+    if(hi) return hi;
+  }
+  return castle && rows.motte_and_bailey || '';
+}
+
+//: Below this many pixels tall on screen a model is not drawn: the detail it
+//: would add is a speck, and two hundred specks are most of the frame.
+const CM3_THING_MIN_PX = 3;
+
+/* Which model stands on which tile, out of the markers layer's own index.
+
+   The flat map's markers are the list: the same groups, the same categories
+   ticked or not, the same Icons switch (97c), so the two views never disagree
+   about what is on the map. Per tile, the settlement, fort or watchtower and
+   the topmost character; a stack of six generals is one figure, as the game
+   draws it. Keyed on the index itself, so it is rebuilt when the campaign is
+   read again (a character moved, a settlement changed hands) and not on a
+   hover. */
+function cm3Things(){
+  const c = state.cmap, k = state.cmk;
+  if(!cm3 || !cm3.gl || !c) return;
+  const on = !!(k && k.on && k.d && cmapIconsOn());
+  const key = on ? `${JSON.stringify(k.cats)}|${cm3.scene ? 1 : 0}` : '';
+  if(cm3.thingsGroups === (on ? k.groups : null) && cm3.thingsKey === key) return;
+  cm3.thingsGroups = on ? k.groups : null;
+  cm3.thingsKey = key;
+  cm3.things = [];
+  cm3.dirty = true;
+  if(!on) return;
+  if(!cm3.scene){ cm3SceneLoad(); return; }
+  const S = cm3.scene, W = c.man.width, H = c.man.height, m = cm3.mesh, sx = cm3.thinned || 1;
+  const water = cm3State().height * CM3_WATER;
+  const ground = (tx, ty) => {
+    const gx = Math.max(0, Math.min(m.w - 1, Math.round(tx / sx)));
+    const gz = Math.max(0, Math.min(m.h - 1, Math.round(ty / sx)));
+    return Math.max(m.pos[(gz * m.w + gx) * 3 + 1], water);
+  };
+  const culture = f => S.faction_culture[(f || '').toLowerCase()] || '';
+  for(const g of k.groups){
+    const shown = cmkShown(g);
+    const place = (rel, scale, tex, yaw) => {
+      if(!rel) return null;
+      const t = {rel, scale, tex: tex || '', yaw,
+                 x: g.tx + 0.5 - W / 2, z: g.ty + 0.5 - H / 2, y: ground(g.tx, g.ty)};
+      cm3.things.push(t);
+      return t;
+    };
+    for(const it of shown){
+      if(it.kind === 'settlement'){
+        const rows = S.cultures[culture(it.faction)] || {};
+        const lvl = (it.level || '').toLowerCase();
+        const castle = it.settlement_type === 'castle';
+        const want = castle ? (CM3_CASTLE_LEVEL[lvl] || [lvl]) : [lvl];
+        place(cm3LevelModel(rows, want, castle), 1, '', 0);
+      }else if(it.kind === 'fort' || it.kind === 'watchtower'){
+        // a fort or tower with no owner of its own takes the first culture's
+        const rows = S.cultures[culture(it.faction)] || Object.values(S.cultures)[0] || {};
+        place(rows[it.kind], 1, '', 0);
+      }
+    }
+    const ch = shown.filter(it => it.kind === 'character').pop();
+    if(!ch) continue;
+    const per = S.characters[(ch.type || '').toLowerCase()] || {};
+    const names = per[(ch.faction || '').toLowerCase()] || [];
+    // vanilla's order on a named character: the default, the heir's, the leader's
+    const i = ch.rank === 'leader' ? 2 : ch.rank === 'heir' ? 1 : 0;
+    const md = names.length ? S.models[names[Math.min(i, names.length - 1)]] : null;
+    if(!md) continue;
+    const tex = md.textures[(ch.faction || '').toLowerCase()] || Object.values(md.textures)[0] || '';
+    const t = place(md.mesh, md.scale || 1, tex, 0.6);
+    // a figure in a settlement stands at its gate rather than inside its walls
+    if(t && shown.some(it => it.kind === 'settlement')){ t.x += 0.9; t.z += 0.6; }
+  }
+  for(const t of cm3.things) cm3ModelLoad(t.rel);
+}
+
+//: The 3D hook of 97c's switch: the list is drawn again from the markers.
+function cm3Icons(){
+  if(!cm3) return;
+  cm3.thingsKey = null;
+  cm3Things();
+}
+
+//: The table of which model is whose, once a scene.
+async function cm3SceneLoad(){
+  const c = state.cmap, me = cm3;
+  if(!me || !c || me.sceneLoading) return;
+  me.sceneLoading = true;
+  let d = null;
+  try{ d = await api.get(`/api/map/strat_scene?mod=${enc(c.mod)}`); }
+  catch(e){ d = null; }
+  if(cm3 !== me) return;
+  me.scene = (d && !d.error) ? d : {characters: {}, models: {}, cultures: {}, faction_culture: {}};
+  me.thingsKey = null;
+  cm3Things();
+}
+
+/* One mesh, loaded once however many tiles name it, through the Strat models
+   tab's own two routes: the geometry, and the scene's facts for which file
+   each group's texture is. A model that will not load is remembered as
+   failed and is simply not drawn; the flat map's icon still says where it
+   stands. */
+async function cm3ModelLoad(rel){
+  const me = cm3, c = state.cmap;
+  if(!me || !c) return;
+  me.models = me.models || {};
+  if(me.models[rel]) return;
+  const M = me.models[rel] = {state: 'loading', tex: {}};
+  try{
+    const q = `mod=${enc(c.mod)}&rel=${enc(rel)}`;
+    const [buf, facts] = await Promise.all([
+      fetch(`/api/map/model/geometry?${q}`)
+        .then(r => { if(!r.ok) throw new Error(`HTTP ${r.status}`); return r.arrayBuffer(); }),
+      api.get(`/api/map/model?${q}`)]);
+    if(cm3 !== me) return;
+    const geo = v3Parse(buf);
+    // a figure is stored in the pose it was rigged in, arms out; it is stood
+    // in its skeleton's first standing frame instead, once, on the CPU
+    if(geo.skinned) await cm3Stand(geo, q);
+    if(cm3 !== me) return;
+    const gl = me.gl;
+    const mk = (data, t) => { const b = gl.createBuffer(); gl.bindBuffer(t, b); gl.bufferData(t, data, gl.STATIC_DRAW); return b; };
+    M.buf = {pos: mk(geo.positions, gl.ARRAY_BUFFER),
+             nrm: geo.normals ? mk(geo.normals, gl.ARRAY_BUFFER) : null,
+             uv: geo.uvs ? mk(geo.uvs, gl.ARRAY_BUFFER) : null,
+             idx: mk(geo.indices, gl.ELEMENT_ARRAY_BUFFER)};
+    M.height = Math.max(0.1, geo.max[1] - geo.min[1]);
+    const byName = {};
+    for(const mat of (facts && facts.materials) || [])
+      if(mat.texture && mat.rel) byName[mat.texture.toLowerCase()] = mat.rel;
+    M.groups = geo.groups.map(g => ({start: g.start, count: g.count,
+      rel: byName[(g.texture || '').toLowerCase()] || ''}));
+    M.state = 'ready';
+    for(const g of M.groups) if(g.rel) cm3TexLoad(M, g.rel);
+    me.dirty = true;
+  }catch(e){
+    M.state = 'failed';
+  }
+}
+
+/* A skinned figure, posed in place into its own positions and normals.
+
+   The animation is the Strat models tab's: the skeleton descr_model_strat.txt
+   names for this mesh, its first playable action of the `stand` family, at
+   its first frame, skinned by the viewer's own `v3aSkin`. One request per
+   skeleton however many figures share it, which on DaC is most of them. A
+   figure whose skeleton or action will not load is left as stored: arms out
+   is still the right figure on the right tile. The feet are then put at the
+   model's origin, which is where the tile's ground is. */
+async function cm3Stand(geo, q){
+  const me = cm3, c = state.cmap;
+  if(!me || !c || typeof v3aSkin !== 'function') return;
+  try{
+    const an = await api.get(`/api/map/model/anims?${q}`);
+    const set = an && an.sets && an.sets[0];
+    const skel = set && set.primary;
+    const sk = skel && an.skeletons && an.skeletons[skel];
+    if(!sk) return;
+    const acts = sk.actions || [];
+    const row = acts.find(r => r.playable && r.family === 'stand') || acts.find(r => r.playable);
+    if(!row) return;
+    me.anims = me.anims || {};
+    const key = `${skel}|${row.rel || row.path}|${row.slot}`;
+    if(!me.anims[key]){
+      const src = row.rel ? `rel=${enc(row.rel)}` : `pack=${enc(row.path)}`;
+      me.anims[key] = api.get(`/api/model/anim?mod=${enc(c.mod)}&${src}&skel=${enc(skel)}`
+                              + (row.slot != null ? `&slot=${row.slot}` : ''));
+    }
+    const anim = await me.anims[key];
+    if(!anim || anim.error || !anim.bones) return;
+    const pos = new Float32Array(geo.vertices * 3);
+    const nrm = geo.normals ? new Float32Array(geo.vertices * 3) : null;
+    v3aSkin(geo, v3aPose(anim, 0), v3aBind(anim), v3aBoneMap(geo.bones, anim).map,
+            pos, nrm, [0, 0, 0]);
+    let lo = Infinity, hi = -Infinity;
+    for(let i = 1; i < pos.length; i += 3){ if(pos[i] < lo) lo = pos[i]; if(pos[i] > hi) hi = pos[i]; }
+    if(!isFinite(lo)) return;
+    for(let i = 1; i < pos.length; i += 3) pos[i] -= lo;
+    geo.positions = pos;
+    if(nrm) geo.normals = nrm;
+    geo.min = [geo.min[0], 0, geo.min[2]];
+    geo.max = [geo.max[0], hi - lo, geo.max[2]];
+  }catch(e){
+    // left as stored
+  }
+}
+
+//: A sheet at the gallery's small size: a figure is a few dozen pixels tall.
+function cm3TexLoad(M, rel){
+  const me = cm3, c = state.cmap;
+  if(!me || !c || rel in M.tex) return;
+  M.tex[rel] = null;
+  const img = new Image();
+  img.onload = () => {
+    if(cm3 !== me) return;
+    const gl = me.gl, t = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, t);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, img);
+    const pot = n => (n & (n - 1)) === 0;
+    if(pot(img.width) && pot(img.height)){
+      gl.generateMipmap(gl.TEXTURE_2D);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
+    }else{
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    }
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    M.tex[rel] = t;
+    me.dirty = true;
+  };
+  img.src = `/model_texture?mod=${enc(c.mod)}&rel=${enc(rel)}&small=1`;
+}
+
+/* Every model worth drawing, one buffer bind per model and one draw per group
+   of it. A model too far off to be more than a speck is skipped, which on a
+   whole-map view is most of the characters: what the eye gets from them at
+   that distance is the flat map's job. Called inside `cm3Draw` with the
+   terrain's program bound, and puts back what it changed. */
+function cm3DrawThings(bind){
+  if(!cm3 || !cm3.things || !cm3.things.length) return;
+  const gl = cm3.gl, L = cm3.loc, d = cm3State(), cv = gl.canvas;
+  const eye = cm3Eye(d);
+  const pxPerUnit = (cv.height / 2) / Math.tan(0.96 / 2);
+  gl.disable(gl.CULL_FACE);
+  gl.uniform1f(L.uMarks, 0);
+  gl.uniform1f(L.uCut, 1);
+  gl.uniform1f(L.uAlpha, 1);
+  gl.activeTexture(gl.TEXTURE0);
+  const byRel = new Map();
+  let drawn = 0;
+  for(const t of cm3.things){
+    const M = cm3.models && cm3.models[t.rel];
+    if(!M || M.state !== 'ready') continue;
+    const dist = Math.hypot(t.x - eye[0], t.y - eye[1], t.z - eye[2]) || 1;
+    if(M.height * t.scale / dist * pxPerUnit < CM3_THING_MIN_PX) continue;
+    let a = byRel.get(t.rel);
+    if(!a) byRel.set(t.rel, a = []);
+    a.push(t);
+  }
+  for(const [rel, list] of byRel){
+    const M = cm3.models[rel];
+    bind(M.buf.pos, L.aPos, 3);
+    if(M.buf.nrm) bind(M.buf.nrm, L.aNormal, 3);
+    else if(L.aNormal >= 0){ gl.disableVertexAttribArray(L.aNormal); gl.vertexAttrib3f(L.aNormal, 0, 1, 0); }
+    if(M.buf.uv) bind(M.buf.uv, L.aUv, 2);
+    else if(L.aUv >= 0){ gl.disableVertexAttribArray(L.aUv); gl.vertexAttrib2f(L.aUv, 0, 0); }
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, M.buf.idx);
+    for(const t of list){
+      const s = t.scale, cs = Math.cos(t.yaw) * s, sn = Math.sin(t.yaw) * s;
+      gl.uniformMatrix4fv(L.uModel, false, new Float32Array(
+        [cs, 0, -sn, 0,  0, s, 0, 0,  sn, 0, cs, 0,  t.x, t.y, t.z, 1]));
+      // a character's sheet is its faction's, from descr_model_strat.txt;
+      // anything else wears the sheet its own mesh names
+      if(t.tex && !(t.tex in M.tex)) cm3TexLoad(M, t.tex);
+      for(const g of M.groups){
+        const tex = (t.tex && M.tex[t.tex]) || M.tex[g.rel];
+        if(tex){ gl.bindTexture(gl.TEXTURE_2D, tex); gl.uniform1f(L.uTextured, 1); }
+        else{ gl.uniform1f(L.uTextured, 0); gl.uniform3fv(L.uFlat, new Float32Array([0.62, 0.58, 0.52])); }
+        gl.drawElements(gl.TRIANGLES, g.count, gl.UNSIGNED_SHORT, g.start * 2);
+      }
+      drawn++;
+    }
+  }
+  cm3.thingsDrawn = drawn;
+  if(L.aNormal >= 0) gl.enableVertexAttribArray(L.aNormal);
+  if(L.aUv >= 0) gl.enableVertexAttribArray(L.aUv);
+  gl.uniform1f(L.uTextured, 1);
 }
 
 /* ---------- 97b: the faction names, standing off the land ---------- */
@@ -1251,6 +1568,10 @@ function cm3Stop(){
     if(cm3.tex) gl.deleteTexture(cm3.tex);
     if(cm3.mark) gl.deleteTexture(cm3.mark);
     for(const sp of cm3.names || []) gl.deleteTexture(sp.tex);
+    for(const m of Object.values(cm3.models || {})){
+      if(m.buf) [m.buf.pos, m.buf.nrm, m.buf.uv, m.buf.idx].forEach(b => b && gl.deleteBuffer(b));
+      for(const t of Object.values(m.tex || {})) if(t) gl.deleteTexture(t);
+    }
     if(cm3.sprite){ gl.deleteProgram(cm3.sprite.prog); gl.deleteBuffer(cm3.sprite.buf); }
     if(cm3.prog) gl.deleteProgram(cm3.prog);
     const lose = gl.getExtension('WEBGL_lose_context');
@@ -1319,6 +1640,7 @@ function cm3Retexture(force){
   // picture's whole key
   cm3Remark();
   cm3Names();
+  cm3Things();
   const key = cm3TexKey(c);
   if(!force && key === cm3.texKey) return;
   const cv = cm3Texture();

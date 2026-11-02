@@ -386,6 +386,9 @@ show the unsaved map rather than the one on disk.
                                     religion and rebel type this mod lacks
                                     substituted, mapped or left out and named.
                                     One backup, one Undo
+  GET  /api/map/strat_scene?mod= -> 97d. The strat model of every character type
+                                    per faction, each settlement level, fort and
+                                    watchtower per culture, for the 3D campaign map
   GET  /api/settlemodel?mod=     -> 74. Every culture's model lines, each with
                                     whether its model is on disk
   GET  /api/settlemodel/models?mod=
@@ -760,6 +763,7 @@ from . import armory, armbake, armlib, armunit, folderimport, loosemesh, meshfol
 from . import report, vegtext, culturechange, campscript
 from . import engines as engines_mod
 from . import menusheets
+from . import stratscene
 from . import ancillaries, areaeffects, campimport, edbimport, mapbundle, osmmap, osmsites, settlemodel, heroabilities, hordestart, walls, characters, projectzip, campaint, campdb, campevents, campfiles, campmap, campnew, campstrat, cas, casanim, animedit, animpack, animslot, animview, modelexport, launchcheck, packhouse, settlemech, fileswap, factionsites, sidefiles, banners, changesets, health, climatenew, guilds, mapcheck, mapfe, mapquery, mapterrain, mercpools, regiondel, edusort, factionaudit, factionbring, factionclone, factions, images, mesh, minorfiles, namekeys, portrecords, rawtext, rebelpools, renames, soundbanks, soundscripts, spawns, sprites, stratcamp, stratchar, stratedit, stratobj, strings, traits, triggers, winconds
 from . import eop as _eop
 from . import logutil
@@ -2721,6 +2725,13 @@ class Handler(BaseHTTPRequestHandler):
                 if not name or name not in self.registry.names():
                     return self._err(404, "unknown mod")
                 return self._strat_model_route(u.path, name, q)
+            if u.path == "/api/map/strat_scene":
+                # 97d: which strat model stands for each character, settlement,
+                # fort and watchtower, for the 3D campaign map. No mesh is read
+                name = (q.get("mod") or [None])[0]
+                if not name or name not in self.registry.names():
+                    return self._err(404, "unknown mod")
+                return self._json(stratscene.scene(self.registry.get(name)))
             if u.path in ("/api/settlemodel", "/api/settlemodel/models"):
                 # 74. Files and one text file; no map read
                 name = (q.get("mod") or [None])[0]
