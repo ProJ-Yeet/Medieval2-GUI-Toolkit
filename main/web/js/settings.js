@@ -14,6 +14,9 @@ function openNewUnitPicker(){
   modal.innerHTML=`<h2>${tt('settings.new_unit_pick_the_unit_to')}</h2>
     <div class="mbody">
       <div class="count" style="margin-bottom:8px">${tt('settings.the_new_unit_copies_the_one')}</div>
+      <div class="barrow" style="margin-bottom:6px"><span class="count">${tt('settings.nu_usual')}</span>
+        ${NU_KINDS().map(([k, l]) => `<button class="mini" onclick="nuTypical('${k}')">${esc(l)}</button>`).join('')}</div>
+      <div id="nuTypical"></div>
       <input id="nuSearch" placeholder="${ttA('settings.filter_units')}" style="width:100%" oninput="renderNewUnitList()">
       <div class="barrow" style="margin-bottom:6px">
         <select id="nuFac" onchange="renderNewUnitList()">${
@@ -36,6 +39,33 @@ function openNewUnitPicker(){
 const opts=(allLabel,values,label,sel)=>`<option value="">${allLabel}</option>`+
   (label?[...values].sort((a,b)=>label(a).localeCompare(label(b))):values)
     .map(v=>`<option value="${esc(v)}"${v===sel?' selected':''}>${esc(label?label(v):v)}</option>`).join('');
+/* 96f: a unit from nothing - start from what is usual for a kind in this
+   mod (unittransfer/unittypical.py): its numbers' middles, lowest and highest,
+   and the unit closest to all the middles, which New unit then copies. */
+const NU_KINDS = () => [['foot_melee', tt('settings.nu_foot_melee')], ['foot_spear', tt('settings.nu_foot_spear')],
+  ['foot_missile', tt('settings.nu_foot_missile')], ['horse_charge', tt('settings.nu_horse_charge')],
+  ['horse_missile', tt('settings.nu_horse_missile')]];
+const NU_STAT_LABEL = () => ({men: tt('settings.nu_men'), attack: tt('settings.nu_attack'), charge: tt('settings.nu_charge'),
+  missile: tt('settings.nu_missile'), armour: tt('settings.nu_armour'), defence: tt('settings.nu_defence'),
+  shield: tt('settings.nu_shield'), morale: tt('settings.nu_morale'), cost: tt('settings.nu_cost'),
+  upkeep: tt('settings.nu_upkeep'), turns: tt('settings.nu_turns')});
+async function nuTypical(kind){
+  const el = document.getElementById('nuTypical');
+  if(!el) return;
+  el.innerHTML = `<div class="count">${tt('common.reading')}</div>`;
+  let r;
+  try{ r = await api.get(`/api/units/typical?mod=${enc(state.src)}&kind=${enc(kind)}`); }
+  catch(e){ el.innerHTML = `<div class="w-bad">✗ ${esc(errText(e))}</div>`; return; }
+  if(!r.type){ el.innerHTML = `<div class="count">${tt('settings.nu_none')}</div>`; return; }
+  const u = (state.data.units || []).find(x => x.type === r.type) || {name: r.type};
+  const names = NU_STAT_LABEL(), fmt = v => String(Math.round(v * 10) / 10);
+  el.innerHTML = `<div class="nutyp">
+    <div>${tt('settings.nu_closest', {name: esc(u.name), type: esc(r.type), n: r.count})}</div>
+    <table class="nutab"><tr><th></th><th>${tt('settings.nu_this')}</th><th>${tt('settings.nu_middle')}</th><th>${tt('settings.nu_range')}</th></tr>
+      ${r.stats.map(s => `<tr><td>${esc(names[s.key] || s.key)}</td><td>${r.values[s.key] != null ? fmt(r.values[s.key]) : '-'}</td>
+        <td>${fmt(s.middle)}</td><td class="count">${fmt(s.low)} - ${fmt(s.high)}</td></tr>`).join('')}</table>
+    <button class="primary" onclick="startNewUnit('${q1(esc(r.type))}')">${tt('settings.nu_start')}</button></div>`;
+}
 function renderNewUnitList(){
   const g=id=>(document.getElementById(id)||{}).value||'';
   const qq=g('nuSearch').trim().toLowerCase();

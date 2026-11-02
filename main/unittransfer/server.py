@@ -174,6 +174,9 @@ Factions mode (descr_sm_factions.txt, see :mod:`unittransfer.factions`)
   GET  /api/i18n/words?lang=       -> 96f: every ID with its words in that language
                                     (English where none), for a community
                                     translation dropped into config/translations/
+  GET  /api/units/typical?mod=&kind= -> 96f: foot_melee / foot_spear / foot_missile /
+                                    horse_charge / horse_missile: each main number's
+                                    middle, lowest and highest, and the unit closest
   GET  /api/artbrowse?mod=[&refresh=1] -> 96f: every loose picture in data/ by kind
   GET  /api/artbrowse/files?mod=&kind=&q=&offset=&limit=
                                  -> one kind's pictures, filtered, a page at a time
@@ -746,7 +749,7 @@ from typing import Dict, List, Optional
 
 from . import (bmdb, buildings, cards, cleaner, codeview, config, dupes, edit,
                modflags, modfiles, sounds, stratmap)
-from . import mapgen, mapnew, mapresize, modfork, vanilla, gamelog, modreport, rehearse, voices, emblem, mapdraw, artbrowse, bannermaker, artrecolour, stratfamily, scripts
+from . import mapgen, mapnew, mapresize, modfork, vanilla, gamelog, modreport, rehearse, voices, emblem, mapdraw, artbrowse, unittypical, bannermaker, artrecolour, stratfamily, scripts
 from . import armory, armbake, armlib, armunit, folderimport, loosemesh, meshfolder, modeldb, modeltext
 from . import report, vegtext, culturechange, campscript
 from . import ancillaries, areaeffects, campimport, edbimport, mapbundle, osmmap, osmsites, settlemodel, heroabilities, hordestart, walls, characters, projectzip, campaint, campdb, campevents, campfiles, campmap, campnew, campstrat, cas, casanim, animedit, animpack, animslot, animview, modelexport, launchcheck, packhouse, settlemech, fileswap, factionsites, sidefiles, banners, changesets, health, climatenew, guilds, mapcheck, mapfe, mapquery, mapterrain, mercpools, regiondel, edusort, factionaudit, factionbring, factionclone, factions, images, mesh, minorfiles, namekeys, portrecords, rawtext, rebelpools, renames, soundbanks, soundscripts, spawns, sprites, stratcamp, stratchar, stratedit, stratobj, strings, traits, triggers, winconds
@@ -2361,6 +2364,15 @@ class Handler(BaseHTTPRequestHandler):
                     return self._err(404, "unknown mod")
                 return self._json(namekeys.faction_pool(
                     self.registry.get(name), (q.get("faction") or [""])[0]))
+            if u.path == "/api/units/typical":
+                # 96f: the usual unit of a kind, to start a new unit from
+                name = (q.get("mod") or [None])[0]
+                if not name or name not in self.registry.names():
+                    return self._err(404, "unknown mod")
+                try:
+                    return self._json(unittypical.typical(self.registry.get(name), (q.get("kind") or [""])[0]))
+                except KeyError:
+                    return self._err(400, "unknown kind")
             if u.path in ("/api/artbrowse", "/api/artbrowse/files"):
                 # 96f: every picture in the mod, kind by kind
                 name = (q.get("mod") or [None])[0]
