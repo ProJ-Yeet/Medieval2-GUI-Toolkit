@@ -3177,7 +3177,16 @@
   .trsechead{font-size:11px;text-transform:uppercase;letter-spacing:.5px;
     color:var(--dim);font-weight:600;margin-bottom:8px}
   .trsechead .count{text-transform:none;letter-spacing:0;font-weight:400;margin-left:8px}
-  .hovercard{position:fixed;z-index:9000;display:none;pointer-events:none;background:var(--panel,#222);
+  .look-hidden{display:none!important}
+body.look-editing .look-hidden{display:revert!important;opacity:.35;outline:1px dashed var(--bad)}
+body.look-editing :is(button,label,legend,h1,h2,h3,.trsechead,.mftab):hover{outline:2px solid var(--accent);cursor:context-menu}
+.lookbar{position:fixed;left:50%;transform:translateX(-50%);bottom:12px;z-index:9500;background:var(--panel2);
+  border:1px solid var(--accent);border-radius:6px;padding:8px 12px;display:flex;gap:10px;align-items:center;max-width:calc(100vw - 32px)}
+.lookpop{position:fixed;z-index:9600;background:var(--panel2);border:1px solid var(--edge);border-radius:6px;padding:8px;width:270px}
+.lookpop input{width:100%}
+.lookcols{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:6px}
+.lookcol{display:flex;gap:6px;align-items:center}
+.hovercard{position:fixed;z-index:9000;display:none;pointer-events:none;background:var(--panel,#222);
   border:1px solid var(--line,#555);border-radius:6px;padding:8px;box-shadow:0 6px 24px rgba(0,0,0,.45);max-width:520px}
 .hovercard .hctitle{font-weight:600;margin-bottom:6px}
 .hovercard .hcrow{display:flex;gap:10px;align-items:flex-end}
@@ -3889,6 +3898,7 @@
 <script src="js/gallery.js"></script>
 <script src="js/artbrowse.js"></script>
 <script src="js/hovercard.js"></script>
+<script src="js/look.js"></script>
 <script src="js/armory.js"></script>
 <script src="js/armobj.js"></script>
 <script src="js/armnormal.js"></script>

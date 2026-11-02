@@ -88,6 +88,7 @@ async function openSettings(){
           <b>${tt('settings.beta_opt_in')}</b></label>
         <div class="count" style="margin-top:6px">${tt('settings.beta_hint')}</div>
       </fieldset>
+      <div id="lookSettings">${lookSettingsHtml()}</div>
       <fieldset><legend>${tt('settings.display')}</legend>
         <label>${tt('settings.interface_size')}
           <select onchange="uiScaleSet(this.value)" style="margin-left:6px">${UI_SCALES.map(p=>

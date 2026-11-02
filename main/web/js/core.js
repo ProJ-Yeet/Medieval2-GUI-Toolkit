@@ -464,6 +464,7 @@ async function init(){
     paintBuildTag();                       // not awaited: a tag, not a dependency
     const s=await api.get('/api/settings');state.settings=s;
     uiScaleApply();
+    lookApply();
     topFoldApply();
     facSort.value=facBy();                 // remembered across runs like the rest
     restoreFilters();                      // …and so are the filters themselves

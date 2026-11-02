@@ -12027,5 +12027,31 @@
  "cards.gen_bigger": "Größer:",
  "cards.gen_mod_size": "die eigene Größe der Mod",
  "cards.gen_painted": "Gemalter Look",
- "cards.gen_painted_hint": "flache Pinselflächen mit einer dünnen dunklen Linie, wo sie sich treffen, damit die Karte gemalt aussieht, nicht 3D"
+ "cards.gen_painted_hint": "flache Pinselflächen mit einer dünnen dunklen Linie, wo sie sich treffen, damit die Karte gemalt aussieht, nicht 3D",
+ "look.appearance": "Das eigene Aussehen des Werkzeugs",
+ "look.colour_bg": "Hintergrund",
+ "look.colour_panel2": "Felder",
+ "look.colour_edge": "Ränder",
+ "look.colour_ink": "Schrift",
+ "look.colour_dim": "Leise Schrift",
+ "look.colour_accent": "Akzent",
+ "look.colour_accent2": "Zweiter Akzent",
+ "look.reset": "Zurück zum eigenen Wert des Werkzeugs",
+ "look.font": "Schriftart für jeden Bildschirm:",
+ "look.size": "Ihre Größe in Pixeln:",
+ "look.edit_in_place": "Teile des Werkzeugs umbenennen oder ausblenden…",
+ "look.all_back": "Farben und Schrift zurück zum Werkzeug",
+ "look.hint": {
+  "one": "{count} Teil des Werkzeugs umbenannt oder ausgeblendet. Ein Klick auf eine Schaltfläche, einen Reiter, eine Beschriftung oder Überschrift in diesem Modus benennt sie um oder blendet sie aus; bleibt bei jedem Start.",
+  "other": "{count} Teile des Werkzeugs umbenannt oder ausgeblendet. Ein Klick auf eine Schaltfläche, einen Reiter, eine Beschriftung oder Überschrift in diesem Modus benennt sie um oder blendet sie aus; bleibt bei jedem Start."
+ },
+ "look.editing_bar": "Auf eine Schaltfläche, einen Reiter, eine Beschriftung oder Überschrift klicken, um sie umzubenennen oder auszublenden. Ausgeblendete erscheinen blass, solange dies an ist.",
+ "look.show_all": "Alles wieder zeigen",
+ "look.done": "Fertig",
+ "look.rename": "Umbenennen",
+ "look.hide": "Ausblenden",
+ "look.unhide": "Wieder zeigen",
+ "look.restore": "Wie es war",
+ "look.show_all_confirm": "Alle {n} umbenannten oder ausgeblendeten Teile so zurücksetzen, wie das Werkzeug sie hat?",
+ "look.colour_panel": "Bereiche"
 }
