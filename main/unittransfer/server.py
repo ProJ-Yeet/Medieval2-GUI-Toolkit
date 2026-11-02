@@ -764,6 +764,7 @@ from . import report, vegtext, culturechange, campscript
 from . import engines as engines_mod
 from . import menusheets
 from . import stratscene
+from . import manytowns
 from . import ancillaries, areaeffects, campimport, edbimport, mapbundle, osmmap, osmsites, settlemodel, heroabilities, hordestart, walls, characters, projectzip, campaint, campdb, campevents, campfiles, campmap, campnew, campstrat, cas, casanim, animedit, animpack, animslot, animview, modelexport, launchcheck, packhouse, settlemech, fileswap, factionsites, sidefiles, banners, changesets, health, climatenew, guilds, mapcheck, mapfe, mapquery, mapterrain, mercpools, regiondel, edusort, factionaudit, factionbring, factionclone, factions, images, mesh, minorfiles, namekeys, portrecords, rawtext, rebelpools, renames, soundbanks, soundscripts, spawns, sprites, stratcamp, stratchar, stratedit, stratobj, strings, traits, triggers, winconds
 from . import eop as _eop
 from . import logutil
@@ -5215,6 +5216,8 @@ class Handler(BaseHTTPRequestHandler):
                 plan = stratedit.plan_delete_settlement(mod, facts, body)
             elif what == "create":
                 plan = stratedit.plan_create_settlement(mod, facts, body)
+            elif what == "towns":                 # 96e4: many at once, garrisoned
+                plan = manytowns.plan_towns(mod, facts, body)
             elif what == "copy":
                 # from this mod's campaign into another mod's: the write is there
                 dest = str(body.get("to_mod") or "")

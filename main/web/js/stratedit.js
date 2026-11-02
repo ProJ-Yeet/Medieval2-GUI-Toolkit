@@ -278,7 +278,7 @@ function csHtml(){
     <div class="csown">
       <select id="csNewOwner">${(d.factions || []).map(f => `<option value="${esc(f.name)}">${tt('stratedit.held',{x:esc(f.label || f.name),settlements:f.settlements})}</option>`).join('')}</select>
       <button class="primary" onclick="csCreate()">${tt('stratedit.create_a_village_here')}</button>
-    </div></div>`;
+    </div>${csTownsHtml()}</div>`;
   return head + `<div class="cspanel">
     <div class="cshead">
       <b>${esc(d.shown_settlement || d.settlement || d.region)}</b>
@@ -295,6 +295,7 @@ function csHtml(){
       <button onclick="csDelete()" title="${ttA('stratedit.take_this_settlement_out_of_descr')}">${tt('stratedit.delete')}</button>
     </div>
     ${csCopyHtml()}
+    ${csTownsHtml()}
   </div>`;
 }
 
@@ -569,6 +570,76 @@ async function csGarrisonAdd(){
   cxPaint();
   cxPlanSoon();
   setTimeout(() => cxSection('cxArmyEditor'), 250);
+}
+
+/* ---------- 96e4: many towns at once ----------
+
+   Every province on the map with no settlement in this campaign, ticked, and
+   one faction to hold them all: a village in each, and (with a cost limit)
+   a general of theirs standing in it with regiments bought up to that cost.
+   The server chains the one-village writer and the character writer
+   (`manytowns.py`) and writes the file once, so it is one Undo in the Log. */
+
+//: The provinces with a settlement pixel and no settlement in the campaign.
+function csEmptyProvinces(){
+  const c = state.cmap, m = state.cmk;
+  if(!c || !m || !m.d) return null;
+  const held = new Set(m.d.items.filter(it => it.kind === 'settlement')
+    .map(it => (it.region || '').toLowerCase()));
+  return c.man.regions.filter(r => r.name && r.settlement && !held.has(r.name.toLowerCase()));
+}
+
+function csTownsHtml(){
+  const k = state.cset;
+  if(!k || !k.d) return '';
+  const facs = k.d.factions || [];
+  const t = k.towns || (k.towns = {owner: k.d.owner || (facs[0] && facs[0].name) || '',
+                                   cost: '1500', picks: new Set()});
+  const list = csEmptyProvinces();
+  const body = list === null
+    ? `<button onclick="csGarrisonRead()">${tt('stratedit.read_which_provinces_have_no_settlement')}</button>`
+    : !list.length ? `<div class="count">${tt('stratedit.every_province_on_this_map_already')}</div>`
+    : `<div class="csrow2">
+        <select onchange="csTownsSet('owner', this.value)">${facs.map(f => `<option value="${esc(f.name)}"${
+          f.name === t.owner ? ' selected' : ''}>${esc(f.label || f.name)}</option>`).join('')}</select>
+        <input type="number" min="0" step="50" value="${esc(t.cost)}"
+          oninput="csTownsSet('cost', this.value)"
+          title="${ttA('stratedit.what_each_towns_garrison_may_cost')}">
+      </div>
+      <div class="csblds">${list.map(r => `<label class="csbld"><input type="checkbox"${
+        t.picks.has(r.name) ? ' checked' : ''} onchange="csTownsPick('${esc(r.name)}', this.checked)">
+        ${esc(r.shown || r.name)}</label>`).join('')}</div>
+      <button class="primary" onclick="csTownsAdd()" ${t.picks.size ? '' : 'disabled'}
+        >${tt('stratedit.add_town_s',{picks_n:t.picks.size})}</button>`;
+  return `<details class="cscopy"${t.open ? ' open' : ''} ontoggle="state.cset.towns.open = this.open">
+    <summary class="count">${tt('stratedit.many_towns_at_once_with_a')}</summary>
+    <div class="csown">${body}</div></details>`;
+}
+
+function csTownsSet(slot, value){
+  const k = state.cset;
+  if(k && k.towns) k.towns[slot] = value;
+}
+
+function csTownsPick(name, on){
+  const k = state.cset;
+  if(!k || !k.towns) return;
+  if(on) k.towns.picks.add(name); else k.towns.picks.delete(name);
+  csPaint();
+}
+
+async function csTownsAdd(){
+  const k = state.cset, c = state.cmap;
+  if(!k || !k.towns || !c || !k.towns.picks.size) return;
+  const t = k.towns;
+  // the general stands on the settlement pixel, in game coordinates
+  const towns = c.man.regions.filter(r => t.picks.has(r.name) && r.settlement)
+    .map(r => ({region: r.name, x: r.settlement[0], y: c.man.height - 1 - r.settlement[1]}));
+  const ok = await csAction({mod: k.mod, campaign: k.d.campaign, action: 'towns',
+                             owner: t.owner, cost: +t.cost || 0, towns},
+                            tt('stratedit.add_town_s_for',{towns_n:towns.length,owner:t.owner}),
+                            tt('stratedit.town_s_added',{towns_n:towns.length}));
+  if(ok) await csReload();
 }
 
 /* Who holds it, and where in their block it sits.

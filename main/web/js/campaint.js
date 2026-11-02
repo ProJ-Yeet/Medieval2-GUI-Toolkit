@@ -458,7 +458,9 @@ async function cpaintWizOpen(){
   p.wiz = {name: '', settlement: '', shown: '', settlement_shown: '',
            rgb: cpaintFreeColour(), faction: '',
            owner: p.voc.owner_default || '', music: '',
-           rebels: '', resources: '', religions: '', port: true};
+           rebels: '', resources: '', religions: '', port: true,
+           // 96e4: the two numbers the record carries, at Geomod's usual
+           triumph: '5', farming: '4'};
   p.wizOpen = true;
   cpaintPaint();
 }
@@ -498,7 +500,10 @@ async function cpaintWizStart(){
     faction: w.faction.trim(), rebels: w.rebels.trim(),
     owner: (w.owner || '').trim(), music: (w.music || '').trim(),
     resources: (w.resources || '').split(',').map(s => s.trim()).filter(Boolean),
-    religions: rel, port: !!w.port});
+    religions: rel, port: !!w.port,
+    // 96e4: every field of the record in the one form
+    triumph: (w.triumph === '' || w.triumph == null) ? undefined : w.triumph,
+    farming: (w.farming === '' || w.farming == null) ? undefined : w.farming});
   if(!r) return;
   if(r.error){ toast('✗ ' + r.error, 8000); cpaintPaint(); return; }
   // so the hover readout names the new province from its first painted tile
@@ -869,6 +874,10 @@ function cpaintWizHtml(){
       ${box('rebels', tt('campaint.rebel_type'), 'brigands')}
       ${box('resources', tt('common.resources'), tt('campaint.gold_wine'), tt('campaint.comma_separated'))}
       ${box('religions', tt('common.religions'), tt('campaint.catholic_100'), tt('campaint.religions_hint'))}
+      <div class="cprow">
+        ${box('triumph', tt('campaint.triumph_value'), '5', tt('campaint.what_a_triumph_here_is_worth'))}
+        ${box('farming', tt('campaint.farming_level'), '4', tt('campaint.how_fertile_the_land_is_4'))}
+      </div>
       <div class="cprow">
         <button class="primary" onclick="cpaintWizStart()">${tt('campaint.open_it_and_paint')}</button>
         <button onclick="cpaintWizCancel()">${tt('common.cancel')}</button></div>

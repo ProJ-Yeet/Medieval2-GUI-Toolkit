@@ -982,6 +982,14 @@ the controls and the one-port rule.
 options gain the garrison: the units `descr_strat.txt` places in or with the
 settlement, added, removed and changed there.
 
+**96e4 done 2026-11-02:** the wizard's form gains the triumph value and
+farming level, the two record fields it left at their defaults; *Many towns
+at once* in the settlement editor (`manytowns.py`) adds a village in each
+ticked province for one owner and, with a cost limit, a general from the
+owner's pool on each with regiments bought dearest-first among those under a
+quarter of the limit (dearest-first over everything spent DaC's 1500 on one
+regiment of knights). One write, one Undo. **Major II done.**
+
 **96c done 2026-11-02:** nothing in the toolkit took a marker pixel off
 before (every stroke protects them, and the toolbar's "move" placed a second);
 `erase_marker` in the paint session does, for one tile that is that marker

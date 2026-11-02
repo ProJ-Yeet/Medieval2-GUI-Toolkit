@@ -1156,6 +1156,25 @@ def _vocab(sess: "PaintSession") -> dict:
     return sess.vocab
 
 
+def _whole(body: dict, slot: str) -> int:
+    """96e4: one of the record's two numbers, from the wizard's form.
+
+    Its usual value when the box is left empty, and a sentence naming the box
+    rather than a ``ValueError`` when what is in it is not a whole number of
+    nought or more - the record writes it bare, and the game reads it as one.
+    """
+    raw = body.get(slot)
+    if raw is None or str(raw).strip() == "":
+        return NEW_REGION_DEFAULTS[slot]
+    try:
+        n = int(str(raw).strip())
+    except ValueError:
+        n = -1
+    if n < 0:
+        raise MapError(_i18n.msg("eng.campaint.the_is_a_whole_number_of", "the {slot} value is a whole number of 0 or more, not {raw}", slot=slot, raw=repr(raw)))
+    return n
+
+
 def start_region(sess: PaintSession, body: dict) -> dict:
     """Open the wizard: the record the painting is going to be for.
 
@@ -1199,8 +1218,8 @@ def start_region(sess: PaintSession, body: dict) -> dict:
         "faction": str(body.get("faction") or "").strip(),
         "rebels": str(body.get("rebels") or "").strip(),
         "resources": [r.strip() for r in (body.get("resources") or []) if str(r).strip()],
-        "triumph": int(body.get("triumph", NEW_REGION_DEFAULTS["triumph"])),
-        "farming": int(body.get("farming", NEW_REGION_DEFAULTS["farming"])),
+        "triumph": _whole(body, "triumph"),
+        "farming": _whole(body, "farming"),
         "religions": {str(a): int(b) for a, b in (body.get("religions") or {}).items()},
         "port": bool(body.get("port")),
         # B1. Who starts holding it, and what plays over it. Both are decided
