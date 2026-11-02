@@ -490,7 +490,54 @@ def _colours(body: dict, mod, key: str):
     raise RecolourError(_i18n.msg("eng.artrecolour.no_colours", "say which colours the pictures are in now and which they should take"))
 
 
-def _one(mod, row: Dict, source, target, cols):
+#: 96f: how far a colour may lie from the clicked one and still be the same
+#: area, the difference summed over red, green and blue - the touch-up's *alike*
+ALIKE = 32
+#: what a click does to the area it takes
+AREA_MODES = ("p", "s", "keep")
+
+
+def area_mask(im, fx: float, fy: float, alike: int = ALIKE):
+    """96f: the patch of like colour joined to the point ``(fx, fy)`` (0..1 of
+    the picture's width and height), as an 'L' mask: a hood, a shield's
+    field. Taken from the original picture, so the same click finds the same
+    area whatever colours are being painted."""
+    from PIL import ImageChops, ImageDraw
+    rgb = im.convert("RGB")
+    w, h = rgb.size
+    x = min(w - 1, max(0, int(fx * w)))
+    y = min(h - 1, max(0, int(fy * h)))
+    seed = rgb.getpixel((x, y))
+    # filled with a colour unlike the seed's, then read back as what changed
+    mark = tuple(255 - c if abs(255 - 2 * c) > 60 else (c + 128) % 256 for c in seed)
+    filled = rgb.copy()
+    ImageDraw.floodfill(filled, (x, y), mark, thresh=max(0, min(255, int(alike))))
+    diff = ImageChops.difference(filled, rgb).convert("L")
+    m = diff.point(lambda v: 255 if v else 0)
+    if im.mode in ("RGBA", "LA", "P"):
+        clear = im.convert("RGBA").split()[3].point(lambda v: 255 if v >= 16 else 0)
+        m = ImageChops.darker(m, clear)
+    return m
+
+
+def touch_edits(im, clicks) -> Optional[Dict]:
+    """The touch-ups ``recolour`` takes, from a picture's clicks, in order: a
+    later click wins over an earlier one where their areas meet."""
+    from PIL import Image, ImageChops
+    if not clicks:
+        return None
+    out = {k: Image.new("L", im.size, 0) for k in AREA_MODES}
+    for c in clicks:
+        mode = str(c.get("mode") or "p")
+        if mode not in AREA_MODES:
+            continue
+        m = area_mask(im, float(c.get("x", 0)), float(c.get("y", 0)), int(c.get("alike", ALIKE)))
+        for k in AREA_MODES:
+            out[k] = ImageChops.lighter(out[k], m) if k == mode else ImageChops.subtract(out[k], m)
+    return out
+
+
+def _one(mod, row: Dict, source, target, cols, clicks=None):
     data = Path(mod.data)
     im = _read(data / row["rel"])
     others = []
@@ -499,7 +546,25 @@ def _one(mod, row: Dict, source, target, cols):
             others.append((_read(data / rel), cols.get(f)))
         except Exception:  # noqa: BLE001 - a copy that will not read is simply not compared against
             continue
-    return recolour(im, source, target, others, plain=row["kind"] != "symbol")
+    return recolour(im, source, target, others, edits=touch_edits(im, clicks),
+                    plain=row["kind"] != "symbol")
+
+
+def _touches(body: dict) -> Dict[str, list]:
+    t = body.get("touch") or {}
+    return {str(k).lower(): list(v) for k, v in t.items() if isinstance(v, list)} if isinstance(t, dict) else {}
+
+
+def sample(mod, body: dict) -> Dict:
+    """96f: one picture again, with its touch-ups, for the preview."""
+    slot = str(body.get("faction") or "").strip()
+    rel = str(body.get("rel") or "")
+    row = next((r for r in targets(mod, slot) if r["rel"].lower() == rel.lower()), None)
+    if row is None:
+        raise RecolourError(_i18n.msg("eng.artrecolour.not_its_picture", "{rel} is not one of {faction}'s pictures", rel=rel, faction=slot))
+    source, target = _colours(body, mod, "source"), _colours(body, mod, "target")
+    new, share = _one(mod, row, source, target, faction_colours(mod), _touches(body).get(rel.lower()))
+    return {"rel": row["rel"], "share": round(share, 3), "new": _png(new)}
 
 
 def _png(im, side=128) -> str:
@@ -594,9 +659,10 @@ def apply(mod, body: dict) -> Dict:
         raise RecolourError(_i18n.msg("eng.artrecolour.no_space", "the faction's own copies of the textures it shares need about {need} MB and the drive has {free} MB free; free some space first", need=f"{need / 1e6:.0f}", free=f"{free / 1e6:.0f}"))
     repoint: Dict[str, str] = {}
     changed = skipped = 0
+    touches = _touches(body)
     for r in rows:
         try:
-            new, share = _one(mod, r, source, target, cols)
+            new, share = _one(mod, r, source, target, cols, touches.get(r["rel"].lower()))
         except Exception:  # noqa: BLE001 - a picture that will not read is left as it is
             skipped += 1
             continue

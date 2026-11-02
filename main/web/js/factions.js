@@ -681,9 +681,12 @@ function facRecolourHtml(d){
     </div>
     ${r.busy ? `<div class="count">${tt('factions.recol_busy')}</div>` : ''}
     ${r.error ? `<div class="w-bad">✗ ${esc(r.error)}</div>` : ''}
-    ${p ? `<div class="facemrows">${p.samples.map(x => x.error ? `<div class="count w-warn">${esc(x.rel)}: ${esc(x.error)}</div>`
+    ${p ? `${facRecolAreaBar(r)}<div class="facemrows">${p.samples.map((x, i) => x.error ? `<div class="count w-warn">${esc(x.rel)}: ${esc(x.error)}</div>`
         : `<div class="facemrow"><span class="facemimg"><img src="${x.old}" alt=""></span> →
-           <span class="facemimg"><img src="${x['new']}" alt=""></span><span class="count">${esc(x.rel)}</span></div>`).join('')}</div>
+           <span class="facemimg"><img class="facrecarea" src="${x['new']}" alt="" title="${ttA('factions.recol_area_click')}"
+             onclick="facRecolArea(${i}, event)"></span><span class="count">${esc(x.rel)}${
+             (r.touch[x.rel.toLowerCase()] || []).length ? ` · ${ttN('factions.recol_area_n', r.touch[x.rel.toLowerCase()].length)}
+             <button onclick="facRecolAreaClear(${i})">${tt('factions.recol_area_clear')}</button>` : ''}</span></div>`).join('')}</div>
       <div class="count">${tt('factions.recol_counts',{cards:(p.counts.card || 0) + (p.counts.info || 0),
         textures:p.counts.texture || 0, symbols:p.counts.symbol || 0, shared:p.shared, mb:(p.new_bytes / 1e6).toFixed(0)})}</div>
       <button class="primary" onclick="facRecolApply()" ${r.busy ? 'disabled' : ''}>${tt('factions.recol_write')}</button>` : ''}
@@ -691,7 +694,47 @@ function facRecolourHtml(d){
 }
 function facRecolBody(){
   const d = state.fac.d, r = d.recol;
-  return {mod: state.fac.mod, faction: d.slot, source: r.source, target: r.target};
+  return {mod: state.fac.mod, faction: d.slot, source: r.source, target: r.target, touch: r.touch || {}};
+}
+/* 96f: an area of like colour in one click. A click on an "after" picture
+   takes the patch of the picture's own colour joined to that point (a hood, a
+   shield's field) and paints it the new primary or secondary, or keeps it as
+   it was; Alike says how far a colour may differ and still belong. The clicks
+   ride along with Write, so they are written as previewed. */
+function facRecolAreaBar(r){
+  r.touch = r.touch || {};
+  r.area = r.area || {mode: 'p', alike: 32};
+  const opt = (v, label) => `<label class="chk"><input type="radio" name="facrecarea" ${r.area.mode === v ? 'checked' : ''}
+    onchange="state.fac.d.recol.area.mode='${v}'">${label}</label>`;
+  return `<div class="facbanrow"><span class="count">${tt('factions.recol_area_head')}</span>
+    ${opt('p', tt('factions.recol_area_primary'))}${opt('s', tt('factions.recol_area_secondary'))}${opt('keep', tt('factions.recol_area_keep'))}
+    <span class="count">${tt('factions.recol_area_alike')}</span>
+    <input type="range" min="4" max="96" value="${r.area.alike}" style="width:110px"
+      oninput="state.fac.d.recol.area.alike=+this.value"></div>`;
+}
+async function facRecolArea(i, ev){
+  const d = state.fac.d, r = d.recol, x = r.plan && r.plan.samples[i];
+  if(!x || r.busy) return;
+  const img = ev.target, box = img.getBoundingClientRect();
+  const key = x.rel.toLowerCase();
+  (r.touch[key] = r.touch[key] || []).push({x: (ev.clientX - box.left) / box.width,
+    y: (ev.clientY - box.top) / box.height, mode: r.area.mode, alike: r.area.alike});
+  await facRecolSample(i);
+}
+async function facRecolAreaClear(i){
+  const r = state.fac.d.recol, x = r.plan.samples[i];
+  delete r.touch[x.rel.toLowerCase()];
+  await facRecolSample(i);
+}
+async function facRecolSample(i){
+  const d = state.fac.d, r = d.recol, x = r.plan.samples[i];
+  let y;
+  try{ y = await api.post('/api/artrecolour/sample', Object.assign(facRecolBody(), {rel: x.rel})); }
+  catch(e){ y = {error: errText(e)}; }
+  if(state.fac.d !== d) return;
+  if(y.error){ toast('✗ ' + y.error, 5000); return; }
+  x['new'] = y['new']; x.share = y.share;
+  facPaint();
 }
 async function facRecolPlan(){
   const d = state.fac.d, r = d.recol;

@@ -177,6 +177,10 @@ Factions mode (descr_sm_factions.txt, see :mod:`unittransfer.factions`)
   GET  /api/mapdraw?mod=&campaign=&faction= and /api/mapdraw/png?...&colour=
                                  -> 96f: a faction's select-screen map drawn from
                                     the campaign map (relief, rivers, its land)
+  POST /api/artrecolour/sample  -> 96f: one picture recoloured again with its
+                                    touch-ups, `touch: {rel: [{x, y, mode, alike}]}`
+                                    (an area of like colour per click; apply takes
+                                    the same `touch`)
   POST /api/mapdraw/apply        -> write it as the campaign's map_<faction>.tga
                                     (backup + undo)
   GET  /api/factions/culture_preview?mod=&name=&culture=
@@ -2969,7 +2973,7 @@ class Handler(BaseHTTPRequestHandler):
                     return self._json({"ok": True, "id": rec["id"]})
                 except (bannermaker.BannerError, OSError) as e:
                     return self._json({"error": getattr(e, "message", None) or str(e)})
-            if u.path in ("/api/artrecolour/plan", "/api/artrecolour/apply"):
+            if u.path in ("/api/artrecolour/plan", "/api/artrecolour/apply", "/api/artrecolour/sample"):
                 # 96e6: a faction's pictures moved from one pair of colours to another
                 name = body.get("mod") or ""
                 if name not in self.registry.names():
@@ -2978,6 +2982,9 @@ class Handler(BaseHTTPRequestHandler):
                 try:
                     if u.path.endswith("/plan"):
                         return self._json(artrecolour.plan(mod, body))
+                    if u.path.endswith("/sample"):
+                        # 96f: one picture again with its touch-ups (an area clicked)
+                        return self._json(artrecolour.sample(mod, body))
                     rec = artrecolour.apply(mod, body)
                     self.registry.invalidate(name)
                     return self._json({"ok": True, "id": rec["id"], "changed": rec["changed"],

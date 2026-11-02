@@ -11973,5 +11973,17 @@
  "factions.mapdraw_apply": "Schreiben",
  "factions.mapdraw_done": "Geschrieben: {rel}. Rückgängig steht im Protokoll.",
  "eng.mapdraw.no_faction": "zum Zeichnen ihrer Karte braucht es eine Fraktion",
- "eng.mapdraw.summary": "Auswahlkarte von {faction} aus der Kampagnenkarte gezeichnet: {rel}"
+ "eng.mapdraw.summary": "Auswahlkarte von {faction} aus der Kampagnenkarte gezeichnet: {rel}",
+ "factions.recol_area_head": "Ein Klick auf ein Nachher-Bild nimmt eine Fläche ähnlicher Farbe, gemalt in:",
+ "factions.recol_area_primary": "der neuen Hauptfarbe",
+ "factions.recol_area_secondary": "der neuen Zweitfarbe",
+ "factions.recol_area_keep": "wie sie war",
+ "factions.recol_area_alike": "Ähnlich",
+ "factions.recol_area_click": "Klick: die Fläche ähnlicher Farbe, die an diesem Punkt hängt",
+ "factions.recol_area_n": {
+  "one": "{count} Fläche",
+  "other": "{count} Flächen"
+ },
+ "factions.recol_area_clear": "Leeren",
+ "eng.artrecolour.not_its_picture": "{rel} ist keines der Bilder von {faction}"
 }

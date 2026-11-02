@@ -12455,5 +12455,18 @@
  "factions.mapdraw_apply": "Escribirlo",
  "factions.mapdraw_done": "Escrito: {rel}. Deshacer está en el Registro.",
  "eng.mapdraw.no_faction": "hace falta una facción para dibujar su mapa",
- "eng.mapdraw.summary": "mapa de selección de {faction} dibujado desde el mapa de campaña: {rel}"
+ "eng.mapdraw.summary": "mapa de selección de {faction} dibujado desde el mapa de campaña: {rel}",
+ "factions.recol_area_head": "Un clic en una imagen de después toma un área de color parecido, pintada:",
+ "factions.recol_area_primary": "del nuevo primario",
+ "factions.recol_area_secondary": "del nuevo secundario",
+ "factions.recol_area_keep": "como estaba",
+ "factions.recol_area_alike": "Parecido",
+ "factions.recol_area_click": "Clic: el área de color parecido unida a este punto",
+ "factions.recol_area_n": {
+  "one": "{count} área",
+  "many": "{count} áreas",
+  "other": "{count} áreas"
+ },
+ "factions.recol_area_clear": "Borrar",
+ "eng.artrecolour.not_its_picture": "{rel} no es una de las imágenes de {faction}"
 }
