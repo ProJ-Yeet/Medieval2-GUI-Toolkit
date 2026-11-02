@@ -12090,5 +12090,11 @@
  "home.fork_game_title": "Eine eigene Mod auf dem Spiel selbst: die Textdateien seines data-Ordners kopiert und jede andere Datei ein Hardlink, sodass sie kaum Speicherplatz kostet und die eigenen Dateien des Spiels nie geschrieben werden.",
  "home.fork_the_game": "dem reinen Spiel",
  "eng.modfork.no_game_data": "{base} hat keinen data-Ordner - ist es der Ordner des Spiels?",
- "eng.server.no_game_root": "der Ordner des Spiels ist in den Einstellungen nicht gesetzt"
+ "eng.server.no_game_root": "der Ordner des Spiels ist in den Einstellungen nicht gesetzt",
+ "editor.engine_with": "Mit ihrer Belagerungsmaschine",
+ "editor.engine_with_title": "Die Belagerungsmaschine, die diese Mannschaft bedient (die engine-Zeile der Einheit), unbewegt vor ihr zeichnen",
+ "editor.engine_mounted": "{name} ist eine berittene Maschine: Sie ist das Modell ihres Reittiers und wird in der Reiteransicht gezeigt",
+ "editor.engine_no_model": "{name} nennt in descr_engines.txt kein Modell",
+ "editor.engine_mesh_missing": "{rel} ist weder in der Mod noch im Spiel",
+ "editor.engine_shown": "{name}: {rel}"
 }

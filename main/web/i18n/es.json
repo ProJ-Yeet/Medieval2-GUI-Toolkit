@@ -12576,5 +12576,11 @@
  "home.fork_game_title": "Un mod propio sobre el juego mismo: los archivos de texto de su carpeta data copiados y cada otro archivo un enlace duro, así apenas ocupa espacio y los archivos propios del juego nunca se escriben.",
  "home.fork_the_game": "este juego sin mods",
  "eng.modfork.no_game_data": "{base} no tiene carpeta data - ¿es la carpeta del juego?",
- "eng.server.no_game_root": "la carpeta del juego no está indicada en Ajustes"
+ "eng.server.no_game_root": "la carpeta del juego no está indicada en Ajustes",
+ "editor.engine_with": "Con su máquina de asedio",
+ "editor.engine_with_title": "Dibujar delante de la dotación, quieta, la máquina de asedio que maneja (la línea engine de la unidad)",
+ "editor.engine_mounted": "{name} es una máquina montada: es el modelo de su montura y se ve en la vista del jinete",
+ "editor.engine_no_model": "{name} no nombra ningún modelo en descr_engines.txt",
+ "editor.engine_mesh_missing": "{rel} no está ni en el mod ni en el juego",
+ "editor.engine_shown": "{name}: {rel}"
 }

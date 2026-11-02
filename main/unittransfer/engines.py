@@ -533,3 +533,41 @@ def textures_in_blob(blob: bytes) -> List[str]:
                 continue
         i += 1
     return out
+
+
+def crew_scene(mod, name: str) -> dict:
+    """96f: the siege engine a crew works, as the unit preview draws it with them.
+
+    ``name`` is the unit's EDU ``engine``. The block drawn is the first one for
+    that type (a type may have one per culture, counted in ``blocks``), its
+    ``normal`` model group (else its first) and that group's first mesh, which
+    is LOD 0. The textures are the ones baked into the mesh (:func:`mesh_textures`),
+    each said found or not. A ``mounted_engine`` has no model of its own - it is
+    the mount's - so it comes back ``mounted`` and the rider's own view shows it.
+    Files are looked for in the mod and then the game it leans on, for reading.
+    """
+    from .factions import read_path
+    out = {"engine": name or "", "blocks": 0, "culture": "", "group": "",
+           "mesh": "", "mesh_exists": False, "textures": [], "main": "", "mounted": False}
+    blocks = mod.engine_defs(name) if name else []
+    if not blocks:
+        out["mounted"] = bool(name and mod.mounted_engine_defs(name))
+        return out
+    e = blocks[0]
+    out["blocks"], out["culture"] = len(blocks), e.culture
+    group = next((g for g in e.groups if g.name.lower() == "normal" and g.meshes),
+                 next((g for g in e.groups if g.meshes), None))
+    if group is None:
+        return out
+    rel = data_rel(group.meshes[0])
+    src = read_path(mod, rel)
+    out.update(group=group.name, mesh=rel, mesh_exists=src is not None)
+    if src is not None:
+        out["textures"] = [{"rel": t, "exists": read_path(mod, t) is not None}
+                           for t in mesh_textures(src)]
+    # the sheet to paint it with: the first found that is neither a normal map
+    # nor one of the shared dirt overlays
+    out["main"] = next((t["rel"] for t in out["textures"] if t["exists"]
+                        and not Path(t["rel"]).stem.lower().endswith("norm")
+                        and not t["rel"].lower().startswith("overlaytextures/")), "")
+    return out

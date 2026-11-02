@@ -1969,6 +1969,8 @@ function v3Draw(){
   // 80b: a second model beside the first - a rider's mount, or this model
   // played by another mod's animation. v3anim.js keeps them and skins them.
   if(typeof v3AnimExtras === 'function') v3AnimExtras().forEach(v3DrawExtra);
+  // 96f: a crew's siege engine, laid beside them by the unit preview
+  if(v3.crewEngine) v3DrawExtra(v3.crewEngine);
 }
 
 /* --- a second model (80b) -------------------------------------------------

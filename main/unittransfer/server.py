@@ -177,6 +177,9 @@ Factions mode (descr_sm_factions.txt, see :mod:`unittransfer.factions`)
   GET  /api/units/typical?mod=&kind= -> 96f: foot_melee / foot_spear / foot_missile /
                                     horse_charge / horse_missile: each main number's
                                     middle, lowest and highest, and the unit closest
+  GET  /api/model/engine?mod=&engine= -> 96f: a crew's siege engine: its mesh and
+                                    the textures baked in it, said found or not
+  GET  /api/model/engine_geometry?mod=&rel= -> that mesh's geometry
   GET  /api/artbrowse?mod=[&refresh=1] -> 96f: every loose picture in data/ by kind
   GET  /api/artbrowse/files?mod=&kind=&q=&offset=&limit=
                                  -> one kind's pictures, filtered, a page at a time
@@ -752,6 +755,7 @@ from . import (bmdb, buildings, cards, cleaner, codeview, config, dupes, edit,
 from . import mapgen, mapnew, mapresize, modfork, vanilla, gamelog, modreport, rehearse, voices, emblem, mapdraw, artbrowse, unittypical, bannermaker, artrecolour, stratfamily, scripts
 from . import armory, armbake, armlib, armunit, folderimport, loosemesh, meshfolder, modeldb, modeltext
 from . import report, vegtext, culturechange, campscript
+from . import engines as engines_mod
 from . import ancillaries, areaeffects, campimport, edbimport, mapbundle, osmmap, osmsites, settlemodel, heroabilities, hordestart, walls, characters, projectzip, campaint, campdb, campevents, campfiles, campmap, campnew, campstrat, cas, casanim, animedit, animpack, animslot, animview, modelexport, launchcheck, packhouse, settlemech, fileswap, factionsites, sidefiles, banners, changesets, health, climatenew, guilds, mapcheck, mapfe, mapquery, mapterrain, mercpools, regiondel, edusort, factionaudit, factionbring, factionclone, factions, images, mesh, minorfiles, namekeys, portrecords, rawtext, rebelpools, renames, soundbanks, soundscripts, spawns, sprites, stratcamp, stratchar, stratedit, stratobj, strings, traits, triggers, winconds
 from . import eop as _eop
 from . import logutil
@@ -2788,7 +2792,8 @@ class Handler(BaseHTTPRequestHandler):
                           "/api/model/anims", "/api/model/anim", "/api/model/export",
                           "/api/model/mounts", "/api/model/compare",
                           "/api/model/loose", "/api/model/loose/textures",
-                          "/api/model/folder"):
+                          "/api/model/folder", "/api/model/engine",
+                          "/api/model/engine_geometry"):
                 return self._model_route(u.path, q)
             if u.path.startswith("/api/armory/"):
                 return self._armory_get(u.path, q)
@@ -6105,6 +6110,20 @@ class Handler(BaseHTTPRequestHandler):
             return self._json({"mod": name, "meshes": loosemesh.loose_meshes(mod)})
         if path == "/api/model/loose/textures":
             return self._json({"mod": name, "textures": loosemesh.texture_files(mod)})
+        if path == "/api/model/engine":
+            # 96f: the siege engine a crew works, drawn beside them in the preview
+            return self._json(engines_mod.crew_scene(mod, (q.get("engine") or [""])[0]))
+        if path == "/api/model/engine_geometry":
+            # its mesh, read from the mod or the game it leans on (never written)
+            src = factions.read_path(mod, (q.get("rel") or [""])[0])
+            if src is None or src.suffix.lower() != ".mesh":
+                return self._err(404, "no such engine mesh")
+            try:
+                decoded = mesh.read_mesh(src)
+            except mesh.MeshError as e:
+                return self._err(400, str(e))
+            return self._send(200, mesh.geometry_payload(decoded),
+                              "application/octet-stream")
         loose = (q.get("loose") or [""])[0]
         if loose and path in ("/api/model", "/api/model/geometry"):
             # held under data/ like every `rel` this server takes

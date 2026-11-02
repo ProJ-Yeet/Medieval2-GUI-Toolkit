@@ -328,6 +328,7 @@ function edPrevBar(){
            `<option value="${esc(n)}"${n===cur?' selected':''}>${esc(n)}</option>`).join('')}</select>`
       : `<span class="count" title="${esc(cur)}">${esc(cur || tt('editor.no_entry'))}</span>`}
     ${edPrevArmourHtml(cur)}
+    ${edPrevEngineHtml()}
     <span class="sp"></span>
     <button onclick="edPrevFull()" title="${ttA('editor.full_screen_esc_comes_back')}">&#10530;</button>
     <button onclick="edPrevMin()" title="${min?tt('editor.unfold_the_preview'):tt('editor.fold_the_preview_away')}"
@@ -347,6 +348,7 @@ async function edPrevMount(){
   }
   v3Pause(false);
   await v3Mount(ED_PREV_HOST, state.ed.mod || state.src, entry);
+  if(state.ed && state.ed.prevEngine && v3 && v3.host === ED_PREV_HOST && !v3.crewEngine) edPrevEngineLoad();
 }
 
 /* 96f: an Armour button that steps through the unit's armour_ug_models in
@@ -371,6 +373,58 @@ function edPrevArmour(){
   state.ed.prevArmour = (at + 1) % tiers.length;
   edPrevPick(tiers[state.ed.prevArmour]);
   edPrevBar();
+}
+/* 96f: the crew with its siege engine. A unit whose EDU names an `engine` is
+   drawn as its crew alone, so this lays the engine's model (its `normal`
+   group's first mesh, painted with the sheet baked into it) in front of them,
+   standing still: engine animations are .cas files of their own. A mounted
+   engine is its mount's model, which the rider's view already shows. */
+function edPrevEngineHtml(){
+  if(!state.ed || !state.ed.d || !edFieldVal('engine')) return '';
+  const on = !!state.ed.prevEngine, n = state.ed.prevEngineNote;
+  return `<button class="${on ? 'on' : ''}" onclick="edPrevEngine()" title="${esc(n || tt('editor.engine_with_title'))}">${
+    tt('editor.engine_with')}</button>`;
+}
+function edPrevEngine(){
+  if(!state.ed) return;
+  state.ed.prevEngine = !state.ed.prevEngine;
+  state.ed.prevEngineNote = '';
+  if(v3 && v3.host === ED_PREV_HOST){
+    if(state.ed.prevEngine) edPrevEngineLoad();
+    else{ v3.crewEngine = null; v3Frame(); }
+  }
+  edPrevBar();
+}
+async function edPrevEngineLoad(){
+  const mine = v3, mod = state.ed.mod || state.src, name = edFieldVal('engine');
+  const say = msg => { if(state.ed){ state.ed.prevEngineNote = msg; edPrevBar(); } };
+  let sc, geo;
+  try{
+    sc = await api.get(`/api/model/engine?mod=${enc(mod)}&engine=${enc(name)}`);
+    if(sc.mounted) return say(tt('editor.engine_mounted',{name}));
+    if(!sc.mesh) return say(tt('editor.engine_no_model',{name}));
+    if(!sc.mesh_exists) return say(tt('editor.engine_mesh_missing',{rel: sc.mesh}));
+    const res = await fetch(`/api/model/engine_geometry?mod=${enc(mod)}&rel=${enc(sc.mesh)}`);
+    if(!res.ok) throw new Error(tt('v3anim.the_server_answered',{status: res.status}));
+    geo = v3Parse(await res.arrayBuffer());
+  }catch(e){ return say('' + (e.message || e)); }
+  if(v3 !== mine || !v3 || !v3.geo || !state.ed || !state.ed.prevEngine) return;
+  const g = v3.geo;
+  // in front of the crew, clear of both
+  const z = g.max[2] - geo.min[2] + 0.4;
+  const x = {geo, pos: geo.positions, nrm: geo.normals || null, groups: geo.groups.map((_, i) => i),
+             world: [0, g.min[1] - geo.min[1], z], uScale: 1.0, img: null};
+  v3.crewEngine = x;
+  const tall = Math.max(g.max[1] - g.min[1], geo.max[1] - geo.min[1]);
+  v3.centre = [0, g.min[1] + tall / 2, (g.min[2] + z + geo.max[2]) / 2];
+  v3.dist = Math.max(v3.dist, (z + geo.max[2] - g.min[2]) * 1.1, tall * 1.3);
+  say(tt('editor.engine_shown',{name, rel: sc.mesh}));
+  if(sc.main){
+    const img = new Image();
+    // buffers made again on the next frame, the sheet with them
+    img.onload = () => { if(v3 === mine && !v3Degenerate(img)){ x.img = img; x.gl = null; } };
+    img.src = v3TexUrl(sc.main);
+  }
 }
 function edPrevPick(name){
   if(!state.ed) return;
