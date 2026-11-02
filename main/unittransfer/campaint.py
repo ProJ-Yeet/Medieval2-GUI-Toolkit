@@ -821,6 +821,9 @@ def paint(sess: PaintSession, body: dict) -> dict:
     tool = str(body.get("tool") or "")
     if tool not in TOOLS:
         raise MapError(_i18n.msg("eng.campaint.is_not_a_tool_it_is", "{tool} is not a tool - it is one of {TOOLS} (the pipette reads, it never writes)", tool=repr(tool), TOOLS=', '.join(TOOLS)))
+    erase = str(body.get("erase_marker") or "")
+    if erase:
+        return _erase_marker(sess, body, erase)
     colours = _resolve(cm, sess, body)
 
     if tool == "bucket":
@@ -842,6 +845,52 @@ def paint(sess: PaintSession, body: dict) -> dict:
         _check_marker(cm, sess, body, tiles)
 
     return _stroke_over(sess, tiles, colours, tool, body)
+
+
+def _erase_marker(sess: PaintSession, body: dict, kind: str) -> dict:
+    """96c: one settlement or port pixel given back to its own region's colour.
+
+    Until this, nothing took a marker off the map: every stroke protects them
+    (:func:`_stroke_over`'s guard) and "move" in the toolbar placed a second
+    one beside the first. This is the one writer that removes, and it is the
+    same undoable stroke the brush makes, with the guard lifted for this one
+    tile only because the tile is the thing being changed.
+
+    Refused unless the tile really is that marker and sits against the region
+    it is said to belong to: a marker is placed on one of its region's own
+    tiles (:func:`_check_marker`), so at least one of its four neighbours is
+    that colour, and a click that would hand another region's marker to this
+    one is the mistake this exists to stop. The region gets its colour back
+    rather than a guess at what was under the marker - that is what was under
+    it, since a marker can only be placed on its own region.
+    """
+    cm = sess.cm
+    w, h = cm.terrain.width, cm.terrain.height
+    if kind not in ("settlement", "port"):
+        raise MapError(_i18n.msg("eng.campaint.is_not_a_marker_map_regions", "{marker} is not a marker - map_regions.tga has two, the settlement and the port", marker=repr(kind)))
+    pts = body.get("points") or []
+    if len(pts) != 1:
+        raise MapError(_i18n.msg("eng.campaint.a_pixel_is_one_tile_place", "a {kind} pixel is one tile - place it with the pencil", kind=kind))
+    tx, ty = int(pts[0][0]), int(pts[0][1])
+    if not (0 <= tx < w and 0 <= ty < h):
+        raise MapError(_i18n.msg("eng.campaint.that_stroke_covered_no_tile_of", "that stroke covered no tile of the map"))
+    region = str(body.get("region") or "").strip()
+    home = _own_key(cm, sess, region)
+    data = cm.tiles("regions").tobytes()
+
+    def at(x: int, y: int) -> int:
+        p = (y * w + x) * 3
+        return (data[p] << 16) | (data[p + 1] << 8) | data[p + 2]
+
+    want = key(SETTLEMENT_RGB if kind == "settlement" else PORT_RGB)
+    if at(tx, ty) != want:
+        raise MapError(_i18n.msg("eng.campaint.is_not_a_pixel_so_there", "{tx},{ty} is not a {kind} pixel, so there is no {kind} there to take off", tx=tx, ty=ty, kind=kind))
+    if not any(0 <= x < w and 0 <= y < h and at(x, y) == home
+               for x, y in ((tx - 1, ty), (tx + 1, ty), (tx, ty - 1), (tx, ty + 1))):
+        raise MapError(_i18n.msg("eng.campaint.the_pixel_at_does_not_stand", "the {kind} pixel at {tx},{ty} does not stand against {region}, so it is not that region's to take off", kind=kind, tx=tx, ty=ty, region=region))
+    return _stroke_over(sess, [(tx, ty)], {"regions": home}, "pencil",
+                        {"marker": kind},
+                        label=_i18n.msg("eng.campaint.take_off_the_pixel", "take off the {kind} pixel", kind=kind))
 
 
 def _stroke_over(sess: PaintSession, tiles, colours: Dict[str, int],

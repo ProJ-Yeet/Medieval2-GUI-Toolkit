@@ -79,6 +79,99 @@ async function cmapCreateMarkerAt(kind, region, game, tile){
   toast(tt('campcreate.marker_placed_review_save_to_write',{kind:kind === 'port' ? tt('campcreate.port') : tt('common.settlement')}),5000);
 }
 
+/* ---------- 96c: the port and the capital, by icon ----------
+
+   Four icons in the region editor's "On the map" block: move the settlement,
+   add a port, move the port, remove the port. A move places the new pixel
+   first, through the same paint call and the same placement checks as the
+   toolbar's marker button, and only then takes the old one off (the server's
+   `erase_marker`), so a refused tile leaves the map as it was. That order is
+   also the one-port rule: a region with a port is never offered Add, and a
+   move ends with exactly one. Nothing is written to disk until Review & save,
+   and each step is a stroke Undo takes back. */
+
+//: The region the editor is open on, from the manifest, whose marker
+//: positions the server brings up to date after every stroke.
+function cmapMarkerRegion(){
+  const c = state.cmap;
+  const name = c && c.sel && c.sel.name;
+  return name ? c.man.regions.find(r => r.name === name) || null : null;
+}
+
+function cmapMarkerReady(){
+  const c = state.cmap, p = state.cpaint;
+  if(!c || !p || p.busy) return false;
+  if(c.man.campaign_map && c.man.campaign_map.paints === false){
+    toast(tt('campcreate.this_campaign_uses_its_own_map'), 6000); return false;
+  }
+  return true;
+}
+
+function cmapMarkerMove(kind){
+  const r = cmapMarkerRegion();
+  if(!r || !cmapMarkerReady()) return;
+  const old = kind === 'port' ? r.port : r.settlement;
+  cmapCreateStopPaint();
+  cpinArm(old ? tt('campcreate.the_new_place_for_s',{name:r.name,kind}) : tt('campcreate.s_new_port',{name:r.name}),
+          'cmapMarkerMoveAt', [kind, r.name, old ? old.slice() : null]);
+}
+
+async function cmapMarkerMoveAt(kind, region, old, game, tile){
+  const c = state.cmap, p = state.cpaint;
+  if(!c || !p || p.busy) return;
+  if(old && old[0] === tile[0] && old[1] === tile[1]) return;
+  const placed = await cpaintPost('paint', {tool: 'pencil', target: 'regions', size: 1,
+    shape: 'round', points: [tile], marker: kind, region, sea: false});
+  if(!placed || state.cmap !== c) return;
+  if(placed.error){ toast(placed.error, 7000); cpaintPaint(); return; }
+  cpaintApply(placed.changed);
+  if(old){
+    const gone = await cpaintPost('paint', {tool: 'pencil', target: 'regions',
+      points: [old], erase_marker: kind, region});
+    if(!gone || state.cmap !== c) return;
+    if(gone.error){
+      toast(tt('campcreate.the_new_is_placed_but_the',{kind,error:gone.error}), 8000);
+      cpaintPaint(); return;
+    }
+    cpaintApply(gone.changed);
+  }
+  cpaintPaint();
+  cmapPickPaint();          // the icons follow: Add once the port is off
+  toast(old ? tt('campcreate.s_moved_review_save_writes_it',{region,kind})
+            : tt('campcreate.has_a_port_review_save_writes',{region}), 5000);
+}
+
+async function cmapMarkerRemove(kind){
+  const r = cmapMarkerRegion();
+  if(!r || !cmapMarkerReady()) return;
+  const at = kind === 'port' ? r.port : r.settlement;
+  if(!at) return;
+  if(!confirm(tt('campcreate.take_s_off_the_map_review',{name:r.name,kind}))) return;
+  const c = state.cmap;
+  const gone = await cpaintPost('paint', {tool: 'pencil', target: 'regions',
+    points: [at], erase_marker: kind, region: r.name});
+  if(!gone || state.cmap !== c) return;
+  if(gone.error){ toast(gone.error, 7000); cpaintPaint(); return; }
+  cpaintApply(gone.changed);
+  cpaintPaint();
+  cmapPickPaint();          // the icons follow: Add once the port is off
+}
+
+//: The four icons, for the region editor's "On the map" block.
+function cmapMarkerIconsHtml(){
+  const r = cmapMarkerRegion();
+  if(!r || !state.cpaint) return '';
+  return `<div class="cmmarkicons">
+    <button onclick="cmapMarkerMove('settlement')" ${r.settlement ? '' : 'disabled'}
+      title="${ttA('campcreate.move_this_regions_settlement_click_the')}">${tt('campcreate.move_settlement')}</button>
+    ${r.port ? `<button onclick="cmapMarkerMove('port')"
+      title="${ttA('campcreate.move_this_regions_port_click_the')}">${tt('campcreate.move_port')}</button>
+    <button onclick="cmapMarkerRemove('port')" title="${ttA('campcreate.take_this_regions_port_off_the')}">${tt('campcreate.remove_port')}</button>`
+    : `<button onclick="cmapMarkerMove('port')"
+      title="${ttA('campcreate.give_this_region_a_port_click')}">${tt('campcreate.add_port')}</button>`}
+  </div>`;
+}
+
 async function cmapCreateSettlement(){
   const c = state.cmap, r = c && c.sel;
   if(!r || !r.name){ toast(tt('campcreate.select_a_region_to_edit_its'),4000); return; }

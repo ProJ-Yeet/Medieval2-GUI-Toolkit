@@ -1234,6 +1234,32 @@ check("a session with nothing in it follows a re-read silently",
 campaint.drop("Tiny89")
 shutil.rmtree(t89, ignore_errors=True)
 
+# 96c: taking a marker off. Until this nothing could: every stroke protects
+# them and a "move" only placed a second one.
+print("\n96c) taking a settlement or port pixel off")
+cm3 = sess3.cm
+at = campaint.region_progress(cm3, sess3.new_region)["settlement"]
+check(f"the settlement pixel placed above is still there to take off: {at}", at == [1, 2])
+for body, why in (({"points": [[2, 2]], "region": "D_Province"}, "a tile that is not the marker"),
+                  ({"points": [[1, 2]], "region": "A_Province"}, "a marker that is not that region's")):
+    try:
+        campaint.paint(sess3, dict({"tool": "pencil", "target": "regions",
+                                    "erase_marker": "settlement"}, **body))
+        check(f"{why} is refused", False)
+    except campmap.MapError as exc:
+        check(f"{why} is refused: {str(exc)[:50]}…", True)
+n = len(sess3.undo)
+got = campaint.paint(sess3, {"tool": "pencil", "target": "regions", "region": "D_Province",
+                             "erase_marker": "settlement", "points": [[1, 2]]})
+check(f"the settlement pixel comes off as one stroke: {got.get('label')}",
+      got["tiles"] == 1 and len(sess3.undo) == n + 1)
+check("  and the tile is the region's own colour again, not a guess",
+      campaint.region_progress(cm3, sess3.new_region)["settlement"] is None
+      and got["changed"])
+campaint.undo_stroke(sess3)
+check("Undo puts it back",
+      campaint.region_progress(cm3, sess3.new_region)["settlement"] == [1, 2])
+
 print(f"\n{sum(ok)}/{len(ok)} checks passed")
 print("ALL PASSED" if all(ok) else "SOME FAILED")
 sys.exit(0 if all(ok) else 1)

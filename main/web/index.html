@@ -1111,6 +1111,9 @@
   /* 96b: and `display:flex` above beats the UA sheet's `[hidden]`, so with no
      pin waiting this was an empty green box at the top middle of the map */
   .cmpin[hidden]{display:none}
+  /* 96c: the region's settlement and port, one click each */
+  .cmmarkicons{display:flex;gap:6px;flex-wrap:wrap}
+  .cmmarkicons button{font:inherit;font-size:11.5px;padding:3px 9px}
   .cmpin button{font:inherit;font-size:11.5px;padding:1px 7px}
   .cmstage.cpinning canvas{cursor:cell}
   .cpinbtn{padding:1px 6px;font-size:13px;line-height:1.2}

@@ -982,6 +982,13 @@ the controls and the one-port rule.
 options gain the garrison: the units `descr_strat.txt` places in or with the
 settlement, added, removed and changed there.
 
+**96c done 2026-11-02:** nothing in the toolkit took a marker pixel off
+before (every stroke protects them, and the toolbar's "move" placed a second);
+`erase_marker` in the paint session does, for one tile that is that marker
+beside its own region. The region editor's four icons use it after the
+placement, so the one-port rule is a move that ends with one. The marker
+rules in `mapcheck` still warn on a second port drawn by hand.
+
 **96d done 2026-11-02:** a *Garrison* section in the settlement editor lists
 the characters on the settlement's tile and their regiments, and reaches the
 character editor for every change (edit the army, remove, add a general on

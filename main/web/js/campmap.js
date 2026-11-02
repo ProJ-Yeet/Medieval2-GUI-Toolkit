@@ -3890,6 +3890,7 @@ function cmapPixelHtml(){
       ${tt('campmap.region_id_tiles_settlement_at_game',{x:px.region_id >= 0 ? px.region_id : '-',count:px.count.toLocaleString(),x2:px.sea
         ? ` <span class="count">${tt('campmap.of_them_sea',{sea:px.sea.toLocaleString()})}</span>` : '',x3:g(px.settlement_game),x4:g(px.settlement),x5:px.port_game ? tt('campmap.game_image',{x:g(px.port_game),x2:g(px.port)}) : tt('common.none'),x6:px.dock_game ? tt('campmap.dock_at_game_image',{x:g(px.dock_game),x2:g(px.dock)}) : '',x7:px.bbox.join(', ')})}
     </div>
+    ${typeof cmapMarkerIconsHtml === 'function' ? cmapMarkerIconsHtml() : ''}
     <div class="k">${tt('campmap.neighbours_sharing_an_edge_on_map',{neighbours_n:px.neighbours.length})}</div>
     <div class="cmnb">${px.neighbours.map(n => `<button class="cmchip n"
       onclick="cmapGoRegion(${n.key})"

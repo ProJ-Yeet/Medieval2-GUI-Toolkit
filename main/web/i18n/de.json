@@ -945,6 +945,30 @@
   ],
   "eng.server.model_file_missing": [
    "ship"
+  ],
+  "campcreate.add_port": [
+   "port_verb"
+  ],
+  "campcreate.give_this_region_a_port_click": [
+   "port_verb"
+  ],
+  "campcreate.has_a_port_review_save_writes": [
+   "port_verb"
+  ],
+  "campcreate.move_port": [
+   "port_verb"
+  ],
+  "campcreate.move_this_regions_port_click_the": [
+   "port_verb"
+  ],
+  "campcreate.remove_port": [
+   "port_verb"
+  ],
+  "campcreate.s_new_port": [
+   "port_verb"
+  ],
+  "campcreate.take_this_regions_port_off_the": [
+   "port_verb"
   ]
  },
  "ancillaries.a_character_holds_one_ancillary_per": "Ein Charakter hat pro Typ ein Gefolgsmitglied; das ist also das, was ein neues ersetzt",
@@ -12151,5 +12175,22 @@
  "stratedit.remove": "Entfernen",
  "stratedit.take_this_character_and_the_army": "Diesen Charakter und die Armee, die er führt, aus descr_strat.txt entfernen",
  "stratedit.units": "{type} · {faction} · {n} Einheiten",
- "stratedit.open_this_army_in_the_character": "Diese Armee im Charakter-Editor öffnen, wo Regimenter hinzugefügt, entfernt und geordnet werden und ihre Aufrüstung gesetzt wird"
+ "stratedit.open_this_army_in_the_character": "Diese Armee im Charakter-Editor öffnen, wo Regimenter hinzugefügt, entfernt und geordnet werden und ihre Aufrüstung gesetzt wird",
+ "campcreate.move_settlement": "⌂ Siedlung versetzen",
+ "campcreate.move_this_regions_settlement_click_the": "Die Siedlung dieser Region versetzen: klicken Sie die Kachel an, auf der sie stehen soll",
+ "campcreate.s_moved_review_save_writes_it": "{kind} von {region} versetzt. „Prüfen & speichern“ schreibt es in die Karte.",
+ "campcreate.take_s_off_the_map_review": "{kind} von {name} von der Karte nehmen? „Prüfen & speichern“ schreibt es, Rückgängig nimmt es zurück.",
+ "campcreate.the_new_is_placed_but_the": "Das neue {kind} ist gesetzt, aber das alte bleibt: {error}",
+ "campcreate.the_new_place_for_s": "den neuen Platz für {kind} von {name}",
+ "eng.campaint.is_not_a_pixel_so_there": "{tx},{ty} ist kein {kind}-Pixel, also gibt es dort kein {kind} zu entfernen",
+ "eng.campaint.the_pixel_at_does_not_stand": "das {kind}-Pixel bei {tx},{ty} grenzt nicht an {region}, also kann es dieser Region nicht genommen werden",
+ "eng.campaint.take_off_the_pixel": "das {kind}-Pixel entfernen",
+ "campcreate.add_port": "⚓ Hafen hinzufügen",
+ "campcreate.give_this_region_a_port_click": "Dieser Region einen Hafen geben: klicken Sie eine eigene Küstenkachel an",
+ "campcreate.has_a_port_review_save_writes": "{region} hat einen Hafen. „Prüfen & speichern“ schreibt ihn in die Karte.",
+ "campcreate.move_port": "⚓ Hafen versetzen",
+ "campcreate.move_this_regions_port_click_the": "Den Hafen dieser Region versetzen: klicken Sie die Küstenkachel an, auf der er stehen soll. Eine Region hat einen Hafen, also wird der alte entfernt",
+ "campcreate.remove_port": "⚓ ✕ Hafen entfernen",
+ "campcreate.s_new_port": "den neuen Hafen von {name}",
+ "campcreate.take_this_regions_port_off_the": "Den Hafen dieser Region von der Karte nehmen"
 }

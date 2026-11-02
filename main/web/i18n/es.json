@@ -1038,6 +1038,30 @@
   ],
   "eng.server.model_file_missing": [
    "ship"
+  ],
+  "campcreate.add_port": [
+   "port_verb"
+  ],
+  "campcreate.give_this_region_a_port_click": [
+   "port_verb"
+  ],
+  "campcreate.has_a_port_review_save_writes": [
+   "port_verb"
+  ],
+  "campcreate.move_port": [
+   "port_verb"
+  ],
+  "campcreate.move_this_regions_port_click_the": [
+   "port_verb"
+  ],
+  "campcreate.remove_port": [
+   "port_verb"
+  ],
+  "campcreate.s_new_port": [
+   "port_verb"
+  ],
+  "campcreate.take_this_regions_port_off_the": [
+   "port_verb"
   ]
  },
  "ancillaries.a_character_holds_one_ancillary_per": "Un personaje solo puede tener un séquito de cada tipo, así que este es el que sustituiría uno nuevo",
@@ -12639,5 +12663,22 @@
  "stratedit.read_the_armies_in_this_settlement": "Leer los ejércitos de este asentamiento",
  "stratedit.remove": "Quitar",
  "stratedit.take_this_character_and_the_army": "Quitar a este personaje y al ejército que dirige de descr_strat.txt",
- "stratedit.units": "{type} · {faction} · {n} unidades"
+ "stratedit.units": "{type} · {faction} · {n} unidades",
+ "campcreate.move_settlement": "⌂ Mover asentamiento",
+ "campcreate.move_this_regions_settlement_click_the": "Mover el asentamiento de esta región: haga clic en la casilla donde debe estar",
+ "campcreate.s_moved_review_save_writes_it": "{kind} de {region} movido. «Revisar y guardar» lo escribe en el mapa.",
+ "campcreate.take_s_off_the_map_review": "¿Quitar {kind} de {name} del mapa? «Revisar y guardar» lo escribe; Deshacer lo recupera.",
+ "campcreate.the_new_is_placed_but_the": "El nuevo {kind} está colocado, pero el antiguo sigue: {error}",
+ "campcreate.the_new_place_for_s": "el nuevo lugar para {kind} de {name}",
+ "eng.campaint.is_not_a_pixel_so_there": "{tx},{ty} no es un píxel de tipo {kind}, así que ahí no hay {kind} que quitar",
+ "eng.campaint.the_pixel_at_does_not_stand": "el píxel de tipo {kind} en {tx},{ty} no linda con {region}, así que no es de esa región",
+ "eng.campaint.take_off_the_pixel": "quitar el píxel de tipo {kind}",
+ "campcreate.add_port": "⚓ Añadir puerto",
+ "campcreate.give_this_region_a_port_click": "Dar un puerto a esta región: haga clic en una casilla costera propia",
+ "campcreate.has_a_port_review_save_writes": "{region} tiene un puerto. «Revisar y guardar» lo escribe en el mapa.",
+ "campcreate.move_port": "⚓ Mover puerto",
+ "campcreate.move_this_regions_port_click_the": "Mover el puerto de esta región: haga clic en la casilla costera donde debe estar. Una región tiene un puerto, así que el antiguo se quita",
+ "campcreate.remove_port": "⚓ ✕ Quitar puerto",
+ "campcreate.s_new_port": "el nuevo puerto de {name}",
+ "campcreate.take_this_regions_port_off_the": "Quitar del mapa el puerto de esta región"
 }
