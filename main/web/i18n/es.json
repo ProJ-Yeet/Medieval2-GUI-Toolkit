@@ -12582,5 +12582,41 @@
  "editor.engine_mounted": "{name} es una máquina montada: es el modelo de su montura y se ve en la vista del jinete",
  "editor.engine_no_model": "{name} no nombra ningún modelo en descr_engines.txt",
  "editor.engine_mesh_missing": "{rel} no está ni en el mod ni en el juego",
- "editor.engine_shown": "{name}: {rel}"
+ "editor.engine_shown": "{name}: {rel}",
+ "cards.sub_sheets": "Hojas de menú",
+ "menusheets.none": "No hay ninguna hoja de sprites en este mod ni en el juego",
+ "menusheets.culture_title": "Cada cultura tiene sus propias páginas en ui/<culture>/interface/; los recuadros de la hoja son los mismos para todas",
+ "menusheets.find": "Buscar un sprite en todas las hojas",
+ "menusheets.hint": "Haz clic en un recuadro para elegir su sprite",
+ "menusheets.from_mod": "Esta página es del mod, {w} por {h}",
+ "menusheets.box": "Desde {left}, {top}, {w} por {h}",
+ "menusheets.save_png": "Guardar como PNG",
+ "menusheets.fit_title": "Cómo entra en el recuadro una imagen de otra forma",
+ "menusheets.fit_stretch": "Estirada",
+ "menusheets.fit_keep": "Con su forma",
+ "menusheets.fit_fill": "Llenando el recuadro",
+ "menusheets.replace": "Reemplazar...",
+ "menusheets.replace_note": "Reemplazar pinta solo en la página de {culture}, con copia de seguridad y deshacer desde el Registro. Donde se puede hacer clic en el botón sigue igual",
+ "menusheets.replace_confirm": "¿Pintar la imagen en {name} en la página {page} de {culture}?",
+ "menusheets.replaced": "Imagen de menú reemplazada",
+ "eng.menusheets.sheet_missing": "{rel} no está ni en el mod ni en el juego",
+ "eng.menusheets.page_missing": "{rel} no está ni en el mod ni en el juego",
+ "eng.menusheets.no_culture": "el mod no tiene páginas de interfaz para {culture}",
+ "eng.menusheets.no_sprite": "{name} no está en {rel}",
+ "eng.menusheets.not_a_picture": "ese archivo no es una imagen",
+ "eng.menusheets.summary": "la imagen de {name} en la página {page} de {culture}",
+ "menusheets.reading": "Leyendo cada hoja de sprites...",
+ "menusheets.sprites": {
+  "one": "{count} sprite",
+  "many": "{count} sprites",
+  "other": "{count} sprites"
+ },
+ "menusheets.found": {
+  "one": "{count} sprite encontrado",
+  "many": "{count} sprites encontrados",
+  "other": "{count} sprites encontrados"
+ },
+ "menusheets.from_game": "El mod no tiene copia de esta página: es la del juego, {w} por {h}. Reemplazar escribe una copia propia del mod",
+ "eng.menusheets.no_sheet": "{rel} no es ninguna hoja de sprites del juego",
+ "menusheets.note": "las imágenes de los menús: cada hoja de sprites de ui/, página a página y cultura a cultura"
 }

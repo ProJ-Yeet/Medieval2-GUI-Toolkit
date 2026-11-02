@@ -97,18 +97,20 @@ const cdShownNote=(shown,all)=>shown.length===all.length?''
    when Armory Studio is (core.js, `off`): a 2.x build has Clean up alone. */
 const cardGenOn=()=>!modeOff(modeDef('armory'));
 // 96f: a third view, every picture of the mod by kind (artbrowse.js)
-const cardsSubNow=()=>state.cardsSub==='art'?'art':cardGenOn()?(state.cardsSub||'generate'):'clean';
+const cardsSubNow=()=>state.cardsSub==='art'||state.cardsSub==='sheets'?state.cardsSub:cardGenOn()?(state.cardsSub||'generate'):'clean';
 function cardsSubTabsHtml(){
   const sub=cardsSubNow();
   return `<div class="mftabs cdsub">
     ${cardGenOn()?`<button class="mftab${sub==='generate'?' on':''}" onclick="cardsSub('generate')">${tt('cards.sub_generate')}</button>`:''}
     <button class="mftab${sub==='clean'?' on':''}" onclick="cardsSub('clean')">${tt('cards.sub_clean')}</button>
-    <button class="mftab${sub==='art'?' on':''}" onclick="cardsSub('art')">${tt('cards.sub_art')}</button></div>`;
+    <button class="mftab${sub==='art'?' on':''}" onclick="cardsSub('art')">${tt('cards.sub_art')}</button>
+    <button class="mftab${sub==='sheets'?' on':''}" onclick="cardsSub('sheets')">${tt('cards.sub_sheets')}</button></div>`;
 }
-function cardsSub(s){state.cardsSub=s;s==='generate'?renderCardGen():s==='art'?renderArtBrowse():(state.cards?renderCards():loadCards());}
+function cardsSub(s){state.cardsSub=s;s==='generate'?renderCardGen():s==='art'?renderArtBrowse():s==='sheets'?renderMenuSheets():(state.cards?renderCards():loadCards());}
 function renderCards(){
   if(cardsSubNow()==='generate')return renderCardGen();
   if(cardsSubNow()==='art')return renderArtBrowse();
+  if(cardsSubNow()==='sheets')return renderMenuSheets();
   if(!state.cards||state.cards.a.mod!==state.src)return loadCards();
   const c=state.cards,a=c.a;
   count.textContent=ttN('cards.files_total',a.kinds.reduce((n,k)=>n+k.file_count,0));

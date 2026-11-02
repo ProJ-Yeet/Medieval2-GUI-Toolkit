@@ -12096,5 +12096,39 @@
  "editor.engine_mounted": "{name} ist eine berittene Maschine: Sie ist das Modell ihres Reittiers und wird in der Reiteransicht gezeigt",
  "editor.engine_no_model": "{name} nennt in descr_engines.txt kein Modell",
  "editor.engine_mesh_missing": "{rel} ist weder in der Mod noch im Spiel",
- "editor.engine_shown": "{name}: {rel}"
+ "editor.engine_shown": "{name}: {rel}",
+ "cards.sub_sheets": "Menübögen",
+ "menusheets.sprites": {
+  "one": "{count} Sprite",
+  "other": "{count} Sprites"
+ },
+ "menusheets.culture_title": "Jede Kultur hat ihre eigenen Seiten unter ui/<culture>/interface/; die Kästen des Bogens sind für alle gleich",
+ "menusheets.find": "Ein Sprite in allen Bögen suchen",
+ "menusheets.found": {
+  "one": "{count} Sprite gefunden",
+  "other": "{count} Sprites gefunden"
+ },
+ "menusheets.hint": "Einen Kasten anklicken, um sein Sprite zu wählen",
+ "menusheets.from_mod": "Diese Seite gehört der Mod, {w} mal {h}",
+ "menusheets.box": "Ab {left}, {top}, {w} mal {h}",
+ "menusheets.save_png": "Als PNG speichern",
+ "menusheets.fit_title": "Wie ein Bild anderer Form in den Kasten kommt",
+ "menusheets.fit_stretch": "Gestreckt",
+ "menusheets.fit_keep": "In Form gehalten",
+ "menusheets.fit_fill": "Den Kasten füllend",
+ "menusheets.replace": "Ersetzen...",
+ "menusheets.replace_note": "Ersetzen malt nur in die Seite von {culture}, gesichert und im Protokoll rückgängig zu machen. Wo die Schaltfläche anklickbar ist, bleibt wie es war",
+ "menusheets.replace_confirm": "Das Bild in {name} auf der Seite {page} von {culture} malen?",
+ "menusheets.replaced": "Menübild ersetzt",
+ "eng.menusheets.sheet_missing": "{rel} ist weder in der Mod noch im Spiel",
+ "eng.menusheets.page_missing": "{rel} ist weder in der Mod noch im Spiel",
+ "eng.menusheets.no_culture": "die Mod hat keine Oberflächenseiten für {culture}",
+ "eng.menusheets.no_sprite": "{name} ist nicht in {rel}",
+ "eng.menusheets.not_a_picture": "diese Datei ist kein Bild",
+ "eng.menusheets.summary": "das Bild von {name} auf der Seite {page} von {culture}",
+ "menusheets.note": "die Bilder der Menüs: die Sprite-Sheets in ui/, Seite für Seite und Kultur für Kultur",
+ "menusheets.reading": "Die Sprite-Sheets werden gelesen...",
+ "menusheets.none": "Kein Sprite-Sheet in dieser Mod oder im Spiel",
+ "menusheets.from_game": "Die Mod hat keine Kopie dieser Seite: Das ist die des Spiels, {w} mal {h}. Ersetzen schreibt eine eigene Kopie der Mod",
+ "eng.menusheets.no_sheet": "{rel} ist keines der Sprite-Sheets des Spiels"
 }

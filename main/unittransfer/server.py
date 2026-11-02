@@ -183,6 +183,9 @@ Factions mode (descr_sm_factions.txt, see :mod:`unittransfer.factions`)
   GET  /api/artbrowse?mod=[&refresh=1] -> 96f: every loose picture in data/ by kind
   GET  /api/artbrowse/files?mod=&kind=&q=&offset=&limit=
                                  -> one kind's pictures, filtered, a page at a time
+  GET  /api/menusheets?mod=          -> 96f: the menus' sprite sheets, every sprite's box
+  GET  /api/menusheets/page?mod=&culture=&page= -> one culture's page, as PNG
+  POST /api/menusheets/replace       -> a picture into one sprite's box (backup + undo)
   GET  /api/mapdraw?mod=&campaign=&faction= and /api/mapdraw/png?...&colour=
                                  -> 96f: a faction's select-screen map drawn from
                                     the campaign map (relief, rivers, its land)
@@ -756,6 +759,7 @@ from . import mapgen, mapnew, mapresize, modfork, vanilla, gamelog, modreport, r
 from . import armory, armbake, armlib, armunit, folderimport, loosemesh, meshfolder, modeldb, modeltext
 from . import report, vegtext, culturechange, campscript
 from . import engines as engines_mod
+from . import menusheets
 from . import ancillaries, areaeffects, campimport, edbimport, mapbundle, osmmap, osmsites, settlemodel, heroabilities, hordestart, walls, characters, projectzip, campaint, campdb, campevents, campfiles, campmap, campnew, campstrat, cas, casanim, animedit, animpack, animslot, animview, modelexport, launchcheck, packhouse, settlemech, fileswap, factionsites, sidefiles, banners, changesets, health, climatenew, guilds, mapcheck, mapfe, mapquery, mapterrain, mercpools, regiondel, edusort, factionaudit, factionbring, factionclone, factions, images, mesh, minorfiles, namekeys, portrecords, rawtext, rebelpools, renames, soundbanks, soundscripts, spawns, sprites, stratcamp, stratchar, stratedit, stratobj, strings, traits, triggers, winconds
 from . import eop as _eop
 from . import logutil
@@ -2393,6 +2397,20 @@ class Handler(BaseHTTPRequestHandler):
                 if (q.get("refresh") or [""])[0]:
                     artbrowse.forget(mod)
                 return self._json(artbrowse.overview(mod))
+            if u.path in ("/api/menusheets", "/api/menusheets/page"):
+                # 96f: the menus' sprite sheets, page by page and culture by culture
+                name = (q.get("mod") or [None])[0]
+                if not name or name not in self.registry.names():
+                    return self._err(404, "unknown mod")
+                mod = self.registry.get(name)
+                if u.path.endswith("/page"):
+                    try:
+                        blob, where = menusheets.page_png(mod, (q.get("culture") or [""])[0],
+                                                          (q.get("page") or [""])[0])
+                    except menusheets.MenuSheetError as e:
+                        return self._err(404, str(e))
+                    return self._send(200, blob, "image/png", {"X-Picture": where, "Cache-Control": "no-store"})
+                return self._json(menusheets.overview(mod))
             if u.path in ("/api/mapdraw", "/api/mapdraw/png"):
                 # 96f: a faction's select-screen map drawn from the campaign map
                 name = (q.get("mod") or [None])[0]
@@ -2996,6 +3014,19 @@ class Handler(BaseHTTPRequestHandler):
                     return self._json({"ok": True, "id": rec["id"]})
                 except (emblem.EmblemError, ValueError) as e:
                     return self._json({"error": getattr(e, "message", None) or str(e)})
+            if u.path == "/api/menusheets/replace":
+                # 96f: a picture painted into one sprite's box on one culture's page
+                name = body.get("mod") or ""
+                if name not in self.registry.names():
+                    return self._err(404, "unknown mod")
+                mod = self.registry.get(name)
+                try:
+                    rec = menusheets.replace(mod, str(body.get("sheet") or ""), str(body.get("culture") or ""),
+                                             str(body.get("name") or ""), _b64decode(body.get("b64") or ""),
+                                             str(body.get("fit") or "stretch"))
+                    return self._json({"ok": True, "id": rec["id"]})
+                except (menusheets.MenuSheetError, ValueError) as e:
+                    return self._json({"error": str(e)})
             if u.path in ("/api/bannermaker/plan", "/api/bannermaker/apply"):
                 # 96e6: a faction's battle banners painted new
                 name = body.get("mod") or ""
