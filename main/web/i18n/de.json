@@ -12138,5 +12138,18 @@
  "campmap.hid_the_map_icons": "Kartensymbole ausgeblendet",
  "campmap.icons": "◆ Symbole",
  "campmap.show_or_hide_every_icon_on": "Jedes Symbol auf der Karte ein- oder ausblenden: Siedlungen, Häfen, Charaktere, Forts, Wachtürme, Ressourcen und der Rest",
- "campmap.showed_the_map_icons": "Kartensymbole eingeblendet"
+ "campmap.showed_the_map_icons": "Kartensymbole eingeblendet",
+ "stratedit.a_new_general_on_this_settlements": "Ein neuer General auf der Kachel dieser Siedlung in der Liste von {owner}, mit einer leeren Armee zum Füllen",
+ "stratedit.add_a_garrison": "Garnison hinzufügen",
+ "stratedit.edit_units": "Einheiten bearbeiten",
+ "stratedit.garrison": "Garnison",
+ "stratedit.garrison_2": "Garnison: {list}",
+ "stratedit.in_this_settlement": "{list_n} in dieser Siedlung",
+ "stratedit.is_not_in_s_list_any": "{name} steht nicht mehr in der Liste von {faction}",
+ "stratedit.nobody_stands_here": "hier steht niemand",
+ "stratedit.read_the_armies_in_this_settlement": "Die Armeen in dieser Siedlung einlesen",
+ "stratedit.remove": "Entfernen",
+ "stratedit.take_this_character_and_the_army": "Diesen Charakter und die Armee, die er führt, aus descr_strat.txt entfernen",
+ "stratedit.units": "{type} · {faction} · {n} Einheiten",
+ "stratedit.open_this_army_in_the_character": "Diese Armee im Charakter-Editor öffnen, wo Regimenter hinzugefügt, entfernt und geordnet werden und ihre Aufrüstung gesetzt wird"
 }

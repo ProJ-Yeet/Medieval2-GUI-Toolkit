@@ -287,6 +287,7 @@ function csHtml(){
     ${csFormHtml()}
     ${csBuildingsHtml()}
     ${csOwnerHtml()}
+    ${csGarrisonHtml()}
     ${csFindingsHtml()}
     <div class="csbtns">
       <button class="primary" onclick="csSave()">${tt('stratedit.save_settlement')}</button>
@@ -475,6 +476,99 @@ function csBuildingsHtml(){
           .join('')}
       </select>
     </div>`;
+}
+
+/* ---------- 96d: the garrison ----------
+
+   descr_strat.txt has no garrison inside a settlement block: what defends a
+   town is the army of whoever stands on its tile. So this section lists every
+   character on the settlement's tile with their army, read off the markers
+   layer's own index (the same list the map draws), and every change goes
+   through the character editor, which already adds, drops, orders and
+   upgrades regiments with the server's checks: one editor for an army,
+   reached from here. Adding a garrison starts a new general on this tile in
+   the owner's list, with an empty army to fill. */
+
+//: The characters standing in this settlement, or null before the markers
+//: layer has been read.
+function csGarrison(){
+  const k = state.cset, c = state.cmap, m = state.cmk;
+  if(!k || !k.d || !c || !m || !m.d || !m.byTile) return null;
+  const r = c.man.regions.find(x => x.name === k.region);
+  if(!r || !r.settlement) return [];
+  const g = m.byTile.get(r.settlement.join(','));
+  return g ? g.items.filter(it => it.kind === 'character') : [];
+}
+
+function csGarrisonHtml(){
+  const k = state.cset;
+  const list = csGarrison();
+  if(list === null){
+    return `<div class="k">${tt('stratedit.garrison')}</div>
+      <div class="csadd"><button onclick="csGarrisonRead()">${tt('stratedit.read_the_armies_in_this_settlement')}</button></div>`;
+  }
+  const rows = list.map((it, i) => {
+    const units = (it.roster || []).map(u => esc(u.unit)
+      + (u.exp ? ` <span class="count">+${u.exp}</span>` : '')).join(', ');
+    return `<div class="csbld">
+      <b>${esc(it.name || it.type)}</b>
+      <span class="count">${tt('stratedit.units',{type:esc(it.type),faction:esc(it.faction),n:(it.roster || []).length})}</span>
+      <button onclick="csGarrisonEdit(${i})" title="${ttA('stratedit.open_this_army_in_the_character')}">${tt('stratedit.edit_units')}</button>
+      <button onclick="csGarrisonRemove(${i})" title="${ttA('stratedit.take_this_character_and_the_army')}">${tt('stratedit.remove')}</button>
+      ${units ? `<span class="count csnote">${units}</span>` : ''}
+    </div>`;
+  }).join('');
+  return `<div class="k">${tt('stratedit.garrison_2',{list:list.length ? tt('stratedit.in_this_settlement',{list_n:list.length}) : tt('stratedit.nobody_stands_here')})}</div>
+    <div class="csblds">${rows}</div>
+    <div class="csadd"><button onclick="csGarrisonAdd()"
+      title="${ttA('stratedit.a_new_general_on_this_settlements',{owner:esc(k.d.owner || '')})}"
+      >${tt('stratedit.add_a_garrison')}</button></div>`;
+}
+
+async function csGarrisonRead(){
+  if(!state.cmk && typeof cmkOpen === 'function') cmkOpen();
+  if(state.cmk && !state.cmk.d) await cmkLoad();
+  csPaint();
+}
+
+//: The character editor, open on one of this settlement's people, at their army.
+async function csGarrisonOpen(it){
+  cmapSub('place', 'chars');
+  await cxOpen(it.faction);
+  const x = state.cx;
+  if(!x || !x.d) return false;
+  const i = x.d.characters.findIndex(ch => ch.name === it.name);
+  if(i < 0){ toast(tt('stratedit.is_not_in_s_list_any',{name:it.name,faction:it.faction}), 5000); return false; }
+  cxPick(i);
+  setTimeout(() => cxSection('cxArmyEditor'), 250);
+  return true;
+}
+
+function csGarrisonEdit(i){
+  const it = (csGarrison() || [])[i];
+  if(it) csGarrisonOpen(it);
+}
+
+async function csGarrisonRemove(i){
+  const it = (csGarrison() || [])[i];
+  if(it && await csGarrisonOpen(it)) cxSave('delete');
+}
+
+async function csGarrisonAdd(){
+  const k = state.cset, c = state.cmap;
+  if(!k || !k.d || !c || !k.d.owner) return;
+  const r = c.man.regions.find(x => x.name === k.region);
+  if(!r || !r.settlement) return;
+  cmapSub('place', 'chars');
+  await cxOpen(k.d.owner);
+  const x = state.cx;
+  if(!x || !x.d) return;
+  cxAdd();
+  x.w.x = r.settlement[0];
+  x.w.y = c.man.height - 1 - r.settlement[1];
+  cxPaint();
+  cxPlanSoon();
+  setTimeout(() => cxSection('cxArmyEditor'), 250);
 }
 
 /* Who holds it, and where in their block it sits.

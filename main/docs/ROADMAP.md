@@ -982,6 +982,12 @@ the controls and the one-port rule.
 options gain the garrison: the units `descr_strat.txt` places in or with the
 settlement, added, removed and changed there.
 
+**96d done 2026-11-02:** a *Garrison* section in the settlement editor lists
+the characters on the settlement's tile and their regiments, and reaches the
+character editor for every change (edit the army, remove, add a general on
+the tile), since the file keeps a garrison as the army standing there and
+that editor already writes armies. `tests/test_garrison`.
+
 **96e - what another campaign editor does that this one does not.** The
 user's word: "analyze this github and see what sort of features does he
 have that we could port over. And once again give me a checklist."

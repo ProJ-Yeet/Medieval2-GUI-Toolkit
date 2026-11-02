@@ -140,6 +140,8 @@ async function cmkLoad(){
   cmkPaint();
   cmkStale();
   cmapPaint();
+  // 96d: the settlement editor's garrison is read off this index
+  if(state.cset && typeof csPaint === 'function') csPaint();
 }
 
 /* Tile to the things standing on it.

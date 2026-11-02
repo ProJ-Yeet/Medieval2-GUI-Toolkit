@@ -12626,5 +12626,18 @@
  "campmap.hid_the_map_icons": "ocultó los iconos del mapa",
  "campmap.icons": "◆ Iconos",
  "campmap.show_or_hide_every_icon_on": "Mostrar u ocultar todos los iconos del mapa: asentamientos, puertos, personajes, fuertes, atalayas, recursos y el resto",
- "campmap.showed_the_map_icons": "mostró los iconos del mapa"
+ "campmap.showed_the_map_icons": "mostró los iconos del mapa",
+ "stratedit.a_new_general_on_this_settlements": "Un nuevo general en la casilla de este asentamiento, en la lista de {owner}, con un ejército vacío por llenar",
+ "stratedit.add_a_garrison": "Añadir una guarnición",
+ "stratedit.edit_units": "Editar unidades",
+ "stratedit.garrison": "Guarnición",
+ "stratedit.garrison_2": "Guarnición: {list}",
+ "stratedit.in_this_settlement": "{list_n} en este asentamiento",
+ "stratedit.is_not_in_s_list_any": "{name} ya no está en la lista de {faction}",
+ "stratedit.nobody_stands_here": "no hay nadie aquí",
+ "stratedit.open_this_army_in_the_character": "Abrir este ejército en el editor de personajes, donde sus regimientos se añaden, quitan, ordenan y mejoran",
+ "stratedit.read_the_armies_in_this_settlement": "Leer los ejércitos de este asentamiento",
+ "stratedit.remove": "Quitar",
+ "stratedit.take_this_character_and_the_army": "Quitar a este personaje y al ejército que dirige de descr_strat.txt",
+ "stratedit.units": "{type} · {faction} · {n} unidades"
 }
