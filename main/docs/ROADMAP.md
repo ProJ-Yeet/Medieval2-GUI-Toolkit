@@ -967,6 +967,10 @@ restyle around it); and an unused gap along the bottom of the screen under
 the map. Check 90 (the layout at every interface size) before fixing, in case
 it already covers the gap.
 
+**Done 2026-11-02:** the green box was `#cmPin`, 20c's pin banner, empty and
+shown because its `display:flex` beat the UA sheet's `[hidden]`; the gap was
+12px of slack in `.cmworkspace`'s height. `tests/test_layout` section 5.
+
 **96c - ports and the capital, by icon.** In the region editor: add, remove
 and move the region's port, and move its capital (the settlement), each as
 one easy-to-click icon rather than a form. **A region has at most one port**:

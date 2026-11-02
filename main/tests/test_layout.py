@@ -68,6 +68,15 @@ check("the filters go above the list on a narrow page",
       is not None)
 check("a wide table scrolls in its own box", ".smxtab{display:block;max-width:100%;overflow-x:auto}" in css)
 
+print("\n5) 96b: the campaign map's two layout faults")
+check("the pin banner is hidden when no pin waits, not an empty green box",
+      ".cmpin[hidden]{display:none}" in css)
+# the bar (50) and the trail (30) above it, the page's 16px foot below: 96,
+# and 16 with the bar folded. 12px more was the empty band under the map.
+check("the map's workspace reaches the page's foot, with no band under it",
+      "height:calc(calc(100vh / var(--uiz)) - 96px)" in css
+      and "body.topshut .cmworkspace,body.topshut .cmwrap{height:calc(calc(100vh / var(--uiz)) - 16px)}" in css)
+
 print(f"\n{sum(ok)}/{len(ok)} checks passed")
 print("ALL PASSED" if all(ok) else "SOME FAILED")
 sys.exit(0 if all(ok) else 1)
