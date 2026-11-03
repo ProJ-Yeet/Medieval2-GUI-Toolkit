@@ -7592,7 +7592,7 @@
  "modelpicker.choose_factions_selected": "▾ Fraktionen wählen: {list_n} ausgewählt",
  "modelpicker.copy_ownership": "Besitz kopieren ({own_n})",
  "modelpicker.could_not_read_type": "{type} konnte nicht gelesen werden: {error}",
- "modelpicker.data_gfme_data_i_data_part": "data-gfme=\"{label}\" data-i=\"{x}\" data-part=\"v\" aria-label=\"Modifikator\"",
+ "modelpicker.data_gfme_data_i_data_part": "data-gfme=\"{label}\" data-i=\"{x}\" data-part=\"v\" aria-label=\"modifier\"",
  "modelpicker.disabled_title_the_engine_reads_at": "disabled title=\"Die Engine liest höchstens drei\"",
  "modelpicker.drag_to_reorder": "ziehen zum Umsortieren",
  "modelpicker.empty": "Leer",

@@ -1062,6 +1062,9 @@
   ],
   "campcreate.take_this_regions_port_off_the": [
    "port_verb"
+  ],
+  "report.state_open": [
+   "open"
   ]
  },
  "ancillaries.a_character_holds_one_ancillary_per": "Un personaje solo puede tener un séquito de cada tipo, así que este es el que sustituiría uno nuevo",

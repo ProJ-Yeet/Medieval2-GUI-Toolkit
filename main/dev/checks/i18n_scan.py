@@ -94,6 +94,8 @@ def looks_like_prose(s: str, classes: Set[str]) -> bool:
         return False                                      # a bone or catalogue of the Blender kit's rig (99n)
     if re.fullmatch(r"[a-z][a-z0-9_]*:", t):
         return False                                      # a key's prefix: 'minor:' + tab (88c)
+    if re.fullmatch(r'''(?:(?:[\w-]+|"[^"]+"|'[^']+')\s*,\s*)+(?:serif|sans-serif|monospace)''', t):
+        return False                                      # a CSS font-family list
     if re.fullmatch(r"""(\s*[\w:-]+\s*=\s*"[^"\w]*")+\s*""", t):
         return False                                      # attributes whose values are expressions (88c)
     words = t.split()
@@ -321,6 +323,8 @@ def _code_context(src: str, lit: jslex.Lit) -> bool:
         return True
     if re.search(r"\bcase\s*$", before):
         return True
+    if re.search(r"\.font\s*=\s*$", before):
+        return True                                       # a canvas font descriptor
     if re.match(r"\s*:", after) and re.search(r"[{,]\s*$", b):
         return True                                       # an object key
     if re.match(r"\s*\]", after) and b.endswith("["):

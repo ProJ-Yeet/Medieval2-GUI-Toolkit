@@ -14,7 +14,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import i18n_todo as todo
 import i18n_termbase as termbase
 
-TAG = re.compile(r"<[^>]+>")
+TAG = re.compile(r"<(?:/?[A-Za-z][\w:-]*\b|/?\{[A-Za-z_]\w*\})[^>]*>")
 CODE = re.compile(r"<code>(.*?)</code>", re.S)
 BACKTICK = re.compile(r"`[^`]+`")
 GLOB = re.compile(r"\*\.[\w*]+")

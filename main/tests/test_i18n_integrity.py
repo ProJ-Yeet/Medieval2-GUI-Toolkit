@@ -5,6 +5,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "dev" / "checks"))
 from i18n_integrity import problems
+import i18n_extract
+import i18n_scan
 
 
 class Integrity(unittest.TestCase):
@@ -19,6 +21,13 @@ class Integrity(unittest.TestCase):
 
     def test_repeated_placeholder_cannot_disappear(self):
         self.assertIn("placeholder occurrences", problems("{x} then {x}", "{x}"))
+
+    def test_angle_bracket_punctuation_is_not_markup(self):
+        self.assertEqual(problems("{a}: <, > and & cannot go in a value",
+                                  "{a}：值中不能包含 <、> 和 &"), [])
+
+    def test_dynamic_xml_tags_remain_literal(self):
+        self.assertIn("literal HTML tags/attributes", problems("no <{tag}> here", "brak < {tag} >"))
 
     def test_file_filter_cannot_lose_its_machine_half(self):
         self.assertIn("file-picker filter patterns", problems(
@@ -50,6 +59,19 @@ class Integrity(unittest.TestCase):
 
     def test_tooltip_cannot_translate_the_attribute_name(self):
         self.assertIn("title attribute syntax", problems('title="No UVs"', 'tytuł="Brak UV"'))
+
+
+class FontSyntax(unittest.TestCase):
+    def test_font_descriptors_are_not_translation_candidates(self):
+        source = '''const family = 'Georgia,"Times New Roman",serif';
+ctx.font = `700 ${size}px ${family}`;'''
+        self.assertEqual(i18n_scan.scan_source(source, 'js/example.js', set()), [])
+        self.assertEqual(i18n_extract.collect(source, 'js/example.js', 'example', set()), [])
+
+    def test_font_instructions_remain_translation_candidates(self):
+        source = "const hint = 'Choose a font for the map';"
+        self.assertTrue(i18n_scan.scan_source(source, 'js/example.js', set()))
+        self.assertTrue(i18n_extract.collect(source, 'js/example.js', 'example', set()))
 
 
 if __name__ == "__main__":
