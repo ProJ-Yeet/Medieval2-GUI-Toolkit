@@ -398,6 +398,8 @@ function edRecAddRender(){
     <div class="mbody">
       <div class="basebar"><input id="erQ" placeholder="${ttA('edrecruit.filter_s_buildings',{mod:esc(e.mod)})}"
         value="${esc(p.q)}" oninput="edRecPickFilter(this.value)"></div>
+      <label class="chk" title="${ttA('edrecruit.upward_title')}"><input type="checkbox"${edRecUpward()?' checked':''}
+        onchange="edRecSetUpward(this.checked)"> ${tt('edrecruit.upward')}</label>
       <div class="baselist" style="max-height:300px" id="erList"></div>
       <div class="bsec" style="margin-top:10px"><h4>${tt('edrecruit.numbers_each_new_pool_gets')}</h4>
         <div class="brow bpnums">
@@ -455,9 +457,26 @@ function edRecPickList(){
     :`<div class="empty">${tt('edrecruit.no_building_line_matches',{x:esc(p.q)})}</div>`;
   edRecPickCount();
 }
+/* A tier ticked takes every free tier above it in the same line, and one
+   unticked takes those above it too (Pfadfinder-Adam's roster does the same):
+   the game recruits only from the level the building stands at now, so a unit
+   given to one tier is gone again the moment the building is upgraded. The
+   switch is remembered; off, a tick is that tier alone. */
+const edRecUpward=()=>(state.settings||{}).recruit_upward!==false;
+function edRecSetUpward(on){
+  state.settings.recruit_upward=!!on;
+  api.post('/api/settings',{recruit_upward:!!on}).catch(()=>{});
+}
 function edRecPickTier(line,level){
   const p=edRecOn().pick,k=edRecPair(line,level);
-  if(p.picked[k])delete p.picked[k]; else p.picked[k]=1;
+  const on=!p.picked[k];
+  const l=edRecLines().find(x=>x.name===line);
+  const lv=(l&&l.levels)||[level], at=Math.max(0,lv.indexOf(level));
+  const taken=edRecTaken();
+  const span=edRecUpward()?lv.slice(at):[level];
+  span.forEach(t=>{const kk=edRecPair(line,t);
+    if(taken[kk])return;
+    if(on)p.picked[kk]=1; else delete p.picked[kk];});
   edRecPickList();
 }
 function edRecPickAll(line){

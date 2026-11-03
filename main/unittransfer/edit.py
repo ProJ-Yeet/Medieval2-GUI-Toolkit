@@ -135,6 +135,9 @@ class DeleteOptions:
                                       # and the unit's mount when nothing else rides it
     remove_assets: bool = False       # mesh/texture files of those entries
     remove_icons: bool = False
+    # the lines elsewhere that only name the unit: recruitment, armies and
+    # garrisons, mercenary pools, rebel lists (unitrefs.remove_refs)
+    remove_refs: bool = True
 
 
 @dataclass
@@ -288,7 +291,8 @@ def request_from_dict(d: dict) -> EditRequest:
             remove_loc=bool(dops.get("remove_loc", True)),
             remove_models=bool(dops.get("remove_models", False)),
             remove_assets=bool(dops.get("remove_assets", False)),
-            remove_icons=bool(dops.get("remove_icons", False))),
+            remove_icons=bool(dops.get("remove_icons", False)),
+            remove_refs=bool(dops.get("remove_refs", True))),
     )
 
 
@@ -1539,6 +1543,32 @@ def _plan_delete(plan: EditPlan, unit) -> EditPlan:
         f"unit '{unit.type}' removed from "
         + (f"its EOP file ({eop.rel_to_root(mod, unit.eop_file)})" if unit.is_eop
            else "export_descr_unit.txt"))
+
+    # Everything else that names it: a recruit line, an army's or a garrison's
+    # unit line, a mercenary pool's, a rebel faction's. Left in, they name a
+    # unit that no longer exists - a campaign whose starting army names one
+    # does not load. Taken out with the unit, one Undo for all of it; what
+    # cannot be cut safely (a script, the voice bank) is listed instead.
+    if opts.remove_refs:
+        gone = unitrefs.remove_refs(mod, unit.type, [u.type for u in mod.edu.units])
+        plan.ref_texts.update(gone.texts)
+        plan.ref_counts = gone.counts()
+        if gone.removed:
+            plan.changes.append(
+                f"{len(gone.removed)} line(s) naming '{unit.type}' removed from "
+                + ", ".join(f"{f} ({n})" for f, n in gone.counts()[:5])
+                + ("…" if len(gone.counts()) > 5 else ""))
+        for r in gone.alone[:5]:
+            plan.warnings.append(_i18n.msg(
+                "eng.edit.delete_left_an_army_empty",
+                "{where}: that army or garrison had only this unit, and is left with none - give it another unit, or the game may refuse the campaign",
+                where=r.label()))
+        if gone.kept:
+            plan.warnings.append(_i18n.msg(
+                "eng.edit.delete_still_named",
+                "{n} other place(s) still name '{unit}' and were left alone (a script or a list that cannot be cut safely) - check them by hand: {spots}{more}",
+                n=len(gone.kept), unit=unit.type, spots=", ".join(r.label() for r in gone.kept[:5]),
+                more="…" if len(gone.kept) > 5 else ""))
 
     others_same_dict = [u.type for u in kept if u.dictionary == unit.dictionary]
     if opts.remove_loc:

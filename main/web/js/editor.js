@@ -2381,7 +2381,7 @@ function edPlanHtml(r,stale){
     <div class="srow shead"><span class="sicon">✎</span><span class="stext">${tt('editor.pending_changes',{stale:stale?` <span class="w-warn">${tt('editor.edited_since_this_probe_press_probe')}</span>`:''})}</span></div>
     ${li('',r.changes.length?r.changes:['no changes'])}
     ${r.files_written.length?`<div class="srow"><span class="sicon">💾</span><span class="stext">${tt('editor.writes',{x:r.files_written.map(f=>`<span class="path">${esc(f)}</span>`).join(', ')})}</span></div>`:''}
-    ${(r.ref_counts||[]).length?`<div class="srow"><span class="sicon">🔗</span><span class="stext">${tt('editor.the_renamed_unit_is_followed_into',{ref_counts_n:r.ref_counts.length,ref_counts:r.ref_counts.map(x=>`<span class="path">${esc(x.file)}</span> <b>×${x.hits}</b>`).join(', ')})}</span></div>`:''}
+    ${(r.ref_counts||[]).length?`<div class="srow"><span class="sicon">🔗</span><span class="stext">${tt(r.action==='delete'?'editor.the_deleted_unit_is_taken_out_of':'editor.the_renamed_unit_is_followed_into',{ref_counts_n:r.ref_counts.length,ref_counts:r.ref_counts.map(x=>`<span class="path">${esc(x.file)}</span> <b>×${x.hits}</b>`).join(', ')})}</span></div>`:''}
     ${li('warn',r.warnings)}${li('bad',r.errors)}</div>`;
 }
 /* Everything this page remembers about a mod's battle_models.modeldb, dropped.

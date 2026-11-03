@@ -551,7 +551,8 @@ function edDeleteDialog(){
         <label class="chk"><input type="checkbox" id="dOptLoc" checked> ${tt('packs.its_text_entry_from_export_units',{dictionary:esc(e.d.dictionary)})}</label><br>
         <label class="chk"><input type="checkbox" id="dOptModels" checked> ${tt('packs.its_battle_model_entries_only_ones')}</label><br>
         <label class="chk"><input type="checkbox" id="dOptAssets"> ${tt('packs.the_mesh_texture_files_of_those')}</label><br>
-        <label class="chk"><input type="checkbox" id="dOptIcons"> ${tt('packs.its_unit_card_and_info_card')}</label>
+        <label class="chk"><input type="checkbox" id="dOptIcons"> ${tt('packs.its_unit_card_and_info_card')}</label><br>
+        <label class="chk" title="${ttA('packs.its_lines_elsewhere_title')}"><input type="checkbox" id="dOptRefs" checked onchange="edDeletePreview()"> ${tt('packs.its_lines_elsewhere')}</label>
       </fieldset>
       <div class="count">${tt('packs.everything_removed_is_backed_up_first')}</div>
       <div id="edPreview"></div>
@@ -564,7 +565,7 @@ function edDeleteDialog(){
 function edDeleteOpts(){
   const g=id=>{const el=document.getElementById(id);return !!(el&&el.checked);};
   return {delete:true,delete_options:{remove_loc:g('dOptLoc'),remove_models:g('dOptModels'),
-    remove_assets:g('dOptAssets'),remove_icons:g('dOptIcons')}};
+    remove_assets:g('dOptAssets'),remove_icons:g('dOptIcons'),remove_refs:g('dOptRefs')}};
 }
 async function edDeletePreview(){
   const box=document.getElementById('edPreview'); if(!box)return;

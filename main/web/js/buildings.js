@@ -2487,7 +2487,10 @@ function bldAddPoolDialog(){
   // they carry over to the tiers above with a per-tier step.
   b.pick={q:'',faction:'',already,picked:new Set(),
           nums:{initial:'1',per_turn:'0.5',maximum:'2',experience:'0'},
-          tiers:false,bump:Object.assign({},BLD_TIER_BUMP),mirror:false,
+          // on by default (the Recruitment tab's same remembered switch): the
+          // game recruits only from the level the building stands at, so a
+          // unit given one tier is gone once the building is upgraded
+          tiers:(state.settings||{}).recruit_upward!==false,bump:Object.assign({},BLD_TIER_BUMP),mirror:false,
           // the row whose `＋` opened this, if one did: the new rows go under it
           after:b.insertAfter||null};
   b.insertAfter=null;
@@ -2520,10 +2523,10 @@ function bldAddPoolDialog(){
         </div>
 
         ${above>0?`<label class="chk" title="${esc(bldTiersAboveNames())}">
-          <input type="checkbox" id="bpTiers" onchange="bldPickOpt('tiers',this.checked)">
+          <input type="checkbox" id="bpTiers"${b.pick.tiers?' checked':''} onchange="bldPickOpt('tiers',this.checked)">
           ${tt('buildings.add_to_the_tier_s_above',{above})}
           <span class="count">${esc(bldTiersAboveNames())}</span></label>
-        <div class="brow bpnums" id="bpBump" style="display:none">
+        <div class="brow bpnums" id="bpBump" style="display:${b.pick.tiers?'':'none'}">
           <span class="k">${tt('buildings.each_tier_up_by')}</span>
           <label>${POOL_LABEL.initial}${numBox('data-bpb="initial"',b.pick.bump.initial,'1')}</label>
           <label>${POOL_LABEL.per_turn}${numBox('data-bpb="per_turn"',b.pick.bump.per_turn,'0.05')}</label>
@@ -2556,6 +2559,7 @@ function bldAddPoolDialog(){
 }
 function bldPickOpt(key,on){
   state.bld.pick[key]=on;
+  if(key==='tiers'&&typeof edRecSetUpward==='function')edRecSetUpward(on);
   const box=document.getElementById('bpBump');
   if(box&&key==='tiers')box.style.display=on?'':'none';
   bldPickRender();

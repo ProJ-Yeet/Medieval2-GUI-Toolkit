@@ -241,6 +241,90 @@ def _scan(mod, old: str, new: str, all_types, paths, rewrite: bool) -> RenameRes
     return res
 
 
+#: A line that exists only to name the unit, so deleting the unit deletes the
+#: line (Pfadfinder-Adam's editor does the same on Delete this unit): a recruit
+#: line in a building level, a `unit <type> ...` line of a campaign's armies
+#: and garrisons or a battle's, a mercenary pool's `unit <type>, ...`, a
+#: rebel faction's `unit <type>`. Anything else naming it (a campaign script,
+#: a Lua file, the voice bank, the win conditions) is reported, never cut:
+#: taking a line out of a script can change what the script does.
+_REMOVABLE = (
+    ("export_descr_buildings.txt", re.compile(r'^\s*(recruit_pool|recruit|retrain_pool|retrain)\s+"(?P<n>[^"]+)"', re.I)),
+    ("descr_mercenaries.txt", re.compile(r"^\s*unit\s+(?P<n>[^,]+?)\s*,", re.I)),
+    ("descr_rebel_factions.txt", re.compile(r"^\s*unit\s+(?P<n>.+?)\s*(;.*)?$", re.I)),
+)
+_UNIT_LINE = re.compile(r"^\s*unit\s+(?P<n>.+?)\s+(exp|soldiers|armour|weapon_lvl)\b", re.I)
+
+
+@dataclass
+class RemoveResult:
+    """What deleting a unit takes out of the other files, and what it leaves."""
+    removed: List[Ref] = field(default_factory=list)    # lines taken out
+    kept: List[Ref] = field(default_factory=list)       # still name it: check by hand
+    alone: List[Ref] = field(default_factory=list)      # removed, and it was an army's only unit
+    texts: Dict[Path, str] = field(default_factory=dict)
+
+    def counts(self) -> List[Tuple[str, int]]:
+        per: Dict[str, int] = {}
+        for r in self.removed:
+            per[r.rel] = per.get(r.rel, 0) + 1
+        return sorted(per.items(), key=lambda kv: (-kv[1], kv[0]))
+
+
+def _removable(rel: str, line: str, unit_type: str) -> bool:
+    name = rel.rsplit("/", 1)[-1].lower()
+    want = unit_type.strip().lower()
+    for fname, pat in _REMOVABLE:
+        if name == fname:
+            m = pat.match(line)
+            return bool(m and m.group("n").strip().lower() == want)
+    if "/world/" in "/" + rel.lower() and name.startswith("descr_"):
+        m = _UNIT_LINE.match(line)
+        return bool(m and m.group("n").strip().lower() == want)
+    return False
+
+
+def remove_refs(mod, unit_type: str, all_types: Optional[Iterable[str]] = None,
+                paths: Optional[Sequence[Path]] = None) -> RemoveResult:
+    """Every line outside the EDU that exists only to name ``unit_type``, taken
+    out; the other places that name it listed in ``kept``. Each file's new text
+    is in ``texts``; nothing is written (``write_refs`` does, with its backup)."""
+    res = RemoveResult()
+    found = find_refs(mod, unit_type, all_types, paths)
+    by_path: Dict[Path, List[Ref]] = {}
+    for r in found.refs:
+        by_path.setdefault(r.path, []).append(r)
+    res.kept.extend(found.case_refs)
+    for path, refs in by_path.items():
+        text = _read(path)
+        lines = text.split("\n")
+        drop = set()
+        for r in refs:
+            raw = lines[r.line - 1] if 0 < r.line <= len(lines) else ""
+            if _removable(r.rel, raw, unit_type):
+                drop.add(r.line - 1)
+                res.removed.append(r)
+            else:
+                res.kept.append(r)
+        if not drop:
+            continue
+        # an army or garrison left with no unit: said, since the game may refuse it
+        for i in sorted(drop):
+            if not _UNIT_LINE.match(lines[i]):
+                continue
+            j, k = i - 1, i + 1
+            while j >= 0 and (j in drop or not lines[j].strip()):
+                j -= 1
+            while k < len(lines) and (k in drop or not lines[k].strip()):
+                k += 1
+            before = lines[j].strip().lower() if j >= 0 else ""
+            after = lines[k] if k < len(lines) else ""
+            if before.startswith("army") and not _UNIT_LINE.match(after):
+                res.alone.extend(r for r in refs if r.line - 1 == i)
+        res.texts[path] = "\n".join(l for i, l in enumerate(lines) if i not in drop)
+    return res
+
+
 def write_refs(texts: Dict[Path, str], backup_root: Path, manifest: dict) -> List[str]:
     """Write the rewritten files, backing each one up first.
 
