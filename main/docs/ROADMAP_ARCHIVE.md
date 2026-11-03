@@ -13234,6 +13234,48 @@ Then, the same day, three more from the user:
   `cardart.py` (`game_sprite` from `ui/*.sd.xml` through `gamepack.lookup`,
   `mod_sizes`), `/api/armory/card_art`, `/api/armory/card_sizes`.
   `tests/test_cardart` 12.
+Then, the same day, from a look at Pfadfinder-Adam's unit and building screens
+and the users' word that the toolkit is "very hard and not user friendly ...
+especially the error logs and the console":
+
+* **101r - Delete takes the unit out of every file.** Its recruit lines, its
+  `unit` lines in a campaign's or a battle's armies and garrisons, its
+  mercenary pool line and its rebel lines go with it, one Undo
+  (`unitrefs.remove_refs`, `DeleteOptions.remove_refs`, on by default); a
+  script naming it is listed and never cut; an army left with no unit is
+  warned about. Before, a starting army naming the deleted unit stopped the
+  campaign loading. `tests/test_delete_refs` 14.
+* **101s - a recruit pool given to a tier goes to the tiers above.** The
+  Recruitment tab's picker and Buildings' add-unit picker, one remembered
+  switch (`recruit_upward`, on): the game recruits only from the level a
+  building stands at, so a unit given one tier was gone after an upgrade.
+* **101t - attributes explained, and M2EX / REX's own.** Every word's
+  meaning under its box (`GF_ATTR_TEXT`); the extended engines' words (Pfad's
+  `unitattrs.py`) in a fold of their own, warned about on a mod not marked
+  M2EX; a word on `stat_mental` / `stat_ground` where it does nothing warned
+  about.
+* **101u - the game's log in plain words.** One card: did it crash, after
+  which file and line, that line as it reads now, a button to the unit /
+  building / file that holds it (`gamelog.fix_target`); problems first, the
+  usually-harmless notes folded; a grouped row names what each line was about
+  (`names`) instead of "X" and "Y"; Script Errors and unknown attributes
+  explained; the game's own words behind a fold; Copy for a bug report.
+  Health's Checks tab got the same summary card and folds its 20 filters.
+* **101v - errors anywhere.** Messages at the foot of the screen stay long
+  enough to read (about a second per eight words, to 15 s), red for a
+  failure, held under the mouse, closable. A fault in a screen's own code
+  shows one bar (Draw the screen again / Report it) instead of nothing. A
+  server fault replies in plain words, the exception as `detail`
+  (`Handler._fault`); a missing name says what was not found (`_not_found`).
+* **101w - the console window.** Only what a player needs: the version, one
+  line for the startup checks (each failure on its own), "Starting…", the
+  card conversion's progress, warnings and errors with a mark, and one
+  "✓ Ready" line. The environment block and every passing check go to
+  server.log only (`logutil.FILE_ONLY`, `startup.console_line`).
+* **101x - wording.** "Probe" is "Preview" in every English string the page
+  shows (the engine's own messages keep theirs); the Unit Editor's tabs are
+  "Stats & fields" and "Battle models"; a tick box in its form no longer
+  floats above its label.
 
 ## Phase 100 - Armory Studio's second round, and faction cards in the Unit Editor, scheduled 2026-10-19, done 2026-10-20
 
