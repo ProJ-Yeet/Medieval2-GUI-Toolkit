@@ -10,6 +10,11 @@ Rules:
   (`D:/College/Coding 2/Unit Transfer`), never from `main/`. There is one graph
   and it lives at the root; running it from `main/` builds a second copy of the
   same tree. AST-only, no API cost.
+- The `post-commit` and `post-checkout` hooks start the rebuild with
+  `CREATE_NO_WINDOW`, not graphify's own `DETACHED_PROCESS`, so its worker
+  processes open no console windows. `graphify hook install` writes the old
+  flag back: after it, change `0x00000008` (DETACHED_PROCESS) to `0x08000000`
+  (CREATE_NO_WINDOW) in both hooks again.
 
 ## Which document to open
 
