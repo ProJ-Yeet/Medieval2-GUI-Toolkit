@@ -6729,7 +6729,6 @@
  "health.could_not_run": "✕ {label} konnte nicht ausgeführt werden: {error}",
  "health.couldnt_run_the_checks": "Die Prüfungen konnten nicht ausgeführt werden.",
  "health.every_check_came_back_clean": "Jede Prüfung ist sauber durchgelaufen.",
- "health.every_check_the_toolkit_has_over": "Jede Prüfung, die das Toolkit hat, für diese Mod in einer Liste. Jede Zeile öffnet die Ansicht, zu der sie gehört und in der sie behoben wird. Gruppiert danach, wann sie zuschlägt, wie es die beiden Absturz-Leitfäden im Archiv tun.",
  "health.fatal": "{fatal} schwerwiegend",
  "health.fatal_and_warnings": "<span class=\"hlc w-bad\">✕ {fatal} schwerwiegend</span> <span class=\"hlc w-warn\">! {warnings}</span>",
  "health.fatal_the_game_crashes_or_refuses": "Schwerwiegend: Das Spiel stürzt ab oder lehnt die Datei ab",
@@ -11126,18 +11125,12 @@
  "healthx.just_now": "gerade eben",
  "healthx.no_log": "Kein Spielprotokoll für diese Mod gefunden",
  "healthx.looked_in": "Gesucht in:",
- "healthx.log_head": "Der letzte Lauf des Spiels: {errors} Fehler, {warnings} Warnungen",
  "healthx.log_cut": "ein langes Protokoll, seine neuesten 40 MB gelesen",
- "healthx.line_now": "{file} Zeile {line} lautet jetzt:",
  "healthx.serious": "Schwerwiegend, und das Spiel lief weiter: {w}",
  "healthx.the_lines": "Die Protokollzeilen, auf denen das beruht",
  "healthx.log_clean": "Keine Fehler oder Warnungen: Das Spiel hat alles gelesen, was es bekam.",
  "healthx.at_line": "Zeile {line}:",
  "healthx.reads_now": "lautet jetzt:",
- "healthx.more_like_it": {
-  "one": "und {count} weitere dieser Art",
-  "other": "und {count} weitere dieser Art"
- },
  "healthx.more_kinds": {
   "one": "und {count} weitere Art von Meldung",
   "other": "und {count} weitere Arten von Meldungen"

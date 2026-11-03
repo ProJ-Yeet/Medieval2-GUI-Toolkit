@@ -7289,7 +7289,6 @@
  "health.could_not_run": "✕ 无法运行{label}：{error}",
  "health.couldnt_run_the_checks": "无法运行检查。",
  "health.every_check_came_back_clean": "所有检查均未发现问题。",
- "health.every_check_the_toolkit_has_over": "在同一列表中对此模组运行工具的所有检查。每行打开对应功能界面，以便修复。按问题发生的时机分组，与归档中两份崩溃指南的分类一致。",
  "health.fatal": "{fatal} 项致命问题",
  "health.fatal_and_warnings": "<span class=\"hlc w-bad\">✕ {fatal} 项致命问题</span> <span class=\"hlc w-warn\">! {warnings}</span>",
  "health.fatal_the_game_crashes_or_refuses": "致命：游戏崩溃或拒绝读取文件",
@@ -7358,19 +7357,14 @@
  },
  "healthx.just_now": "刚刚",
  "healthx.levels": "{n} 个等级",
- "healthx.line_now": "{file} 第 {line} 行当前内容：",
  "healthx.log_clean": "无错误或警告，游戏已读取提供的所有内容。",
  "healthx.log_cut": "日志较长，已读取最新的 40 MB",
- "healthx.log_head": "游戏上次运行：{errors} 个错误，{warnings} 条警告",
  "healthx.looked_in": "已查找：",
  "healthx.minutes_ago": {
   "other": "{count} 分钟前"
  },
  "healthx.more_kinds": {
   "other": "另有 {count} 类消息"
- },
- "healthx.more_like_it": {
-  "other": "另有 {count} 条同类消息"
  },
  "healthx.no_log": "未找到此模组的游戏日志",
  "healthx.part_failed": "无法读取{part}：{why}",

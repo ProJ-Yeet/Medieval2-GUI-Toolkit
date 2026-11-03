@@ -29,7 +29,8 @@ function appLog(kind, what, extra){
       const size = name === 'post' && b ? (() => { try{ return JSON.stringify(b).length; }catch(e){ return -1; } })() : undefined;
       try{
         const out = await real.apply(this, arguments);
-        appLog(name, u, {ms: Math.round(performance.now() - t0), size, error: out && out.error ? String(out.error).slice(0, 300) : undefined});
+        appLog(name, u, {ms: Math.round(performance.now() - t0), size, error: out && out.error ? String(out.error).slice(0, 300) : undefined,
+          detail: out && out.detail ? String(out.detail).slice(0, 300) : undefined});
         return out;
       }catch(e){
         appLog(name, u, {ms: Math.round(performance.now() - t0), size, failed: String(e && e.message || e).slice(0, 300)});
@@ -40,9 +41,39 @@ function appLog(kind, what, extra){
   wrap('get'); wrap('post');
   const realToast = toast;
   toast = function(m, ms){ appLog('toast', m); return realToast.apply(this, arguments); };
-  window.addEventListener('error', e => { if(e.message) appLog('error', e.message, {at: `${(e.filename || '').split('/').pop()}:${e.lineno}`}); });
-  window.addEventListener('unhandledrejection', e => appLog('error', (e.reason && (e.reason.stack || e.reason.message)) || e.reason));
+  window.addEventListener('error', e => { if(e.message){ appLog('error', e.message, {at: `${(e.filename || '').split('/').pop()}:${e.lineno}`}); uiBugBar(e.message); } });
+  window.addEventListener('unhandledrejection', e => {
+    appLog('error', (e.reason && (e.reason.stack || e.reason.message)) || e.reason);
+    // a request that failed has its own message where it was asked; a page
+    // being left mid-request is not a fault
+    const r = e.reason;
+    if(r && (r.apiFailure || r === (typeof ABORTED !== 'undefined' ? ABORTED : null))) return;
+    uiBugBar((r && r.message) || String(r));
+  });
 })();
+
+/* A fault in the page's own code used to show nothing: a button did nothing,
+   a panel stayed half drawn, and only the diagnostic log knew. Now one bar
+   says so, offers to draw the screen again and to report it (with this log),
+   and keeps quiet for a while after, so one fault is one bar. */
+let uiBugAt = 0;
+function uiBugBar(msg){
+  const now = Date.now();
+  if(now - uiBugAt < 20000) return;
+  uiBugAt = now;
+  let bar = document.getElementById('uibug');
+  if(!bar){ bar = document.createElement('div'); bar.id = 'uibug'; bar.className = 'uibug'; document.body.appendChild(bar); }
+  bar.innerHTML = `<span style="flex:1"><b>${tt('report.bug_head')}</b> ${tt('report.bug_body')}
+      <details><summary class="count">${tt('report.bug_details')}</summary><code class="count">${esc(String(msg || '').slice(0, 300))}</code></details></span>
+    <button onclick="uiBugRedraw()">${tt('report.bug_redraw')}</button>
+    <button onclick="document.getElementById('uibug').classList.remove('on');reportOpen(state.mode)">${tt('report.bug_report')}</button>
+    <button class="toastx" title="${ttA('common.close')}" onclick="document.getElementById('uibug').classList.remove('on')">✕</button>`;
+  bar.classList.add('on');
+}
+function uiBugRedraw(){
+  const bar = document.getElementById('uibug'); if(bar) bar.classList.remove('on');
+  try{ if(typeof render === 'function') render(); }catch(e){ location.reload(); }
+}
 
 /* --- the dialog -------------------------------------------------------------- */
 

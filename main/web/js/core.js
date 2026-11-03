@@ -353,7 +353,30 @@ function caretKeep(id, paint){
 // written this way. .count, .bnote, .sprnote and .gfdoc all style the list.
 const docPoints=(lead,points)=>{const ps=points.filter(Boolean);
   return ps.length?lead+'<ul>'+ps.map(p=>'<li>'+p+'</li>').join('')+'</ul>':lead;};
-function toast(m,ms=2800){const t=document.getElementById('toast');t.textContent=m;t.classList.add('show');clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('show'),ms);}
+/* A message at the bottom of the screen. Users found them gone before they
+   could be read, so a message stays longer the longer it is (about a second
+   per eight words, up to 15 s), never shorter than asked; one that reports a
+   failure is red; the mouse over it holds it; ✕ closes it; the text can be
+   selected and copied. */
+const TOAST_BAD=/(^\s*[✗✕]|\b(failed|could not|couldn't|cannot|can't|error|refused|not found|went wrong)\b)/i;
+function toast(m,ms=2800){
+  const t=document.getElementById('toast'); if(!t)return;
+  const text=String(m==null?'':m);
+  const words=text.split(/\s+/).length;
+  const life=Math.max(ms,Math.min(15000,1800+words*130));
+  t.innerHTML='';
+  const span=document.createElement('span'); span.className='toasttext'; span.textContent=text;
+  const x=document.createElement('button'); x.className='toastx'; x.textContent='✕';
+  x.title=tt('common.close'); x.onclick=()=>{clearTimeout(t._t); t.classList.remove('show');};
+  t.appendChild(span); t.appendChild(x);
+  t.classList.toggle('bad',TOAST_BAD.test(text));
+  t.classList.add('show');
+  clearTimeout(t._t);
+  const arm=()=>{clearTimeout(t._t); t._t=setTimeout(()=>t.classList.remove('show'),life);};
+  t.onmouseenter=()=>clearTimeout(t._t);
+  t.onmouseleave=arm;
+  arm();
+}
 /* The mend a refused read offered.
 
    A modeldb a hand edit has knocked out of step stops every screen that needs

@@ -7712,7 +7712,6 @@
  "health.could_not_run": "✕ Impossible d’exécuter {label} : {error}",
  "health.couldnt_run_the_checks": "Impossible d’exécuter les vérifications.",
  "health.every_check_came_back_clean": "Toutes les vérifications sont satisfaisantes.",
- "health.every_check_the_toolkit_has_over": "Toutes les vérifications de l’outil sur ce mod, dans une seule liste. Chaque ligne ouvre l’écran permettant de corriger le problème. Regroupement selon le moment où le problème apparaît, comme dans les deux guides de plantages de l’archive.",
  "health.fatal": "{fatal} fatals",
  "health.fatal_and_warnings": "<span class=\"hlc w-bad\">✕ {fatal} fatals</span> <span class=\"hlc w-warn\">! {warnings}</span>",
  "health.fatal_the_game_crashes_or_refuses": "Fatal : le jeu plante ou refuse le fichier",
@@ -7789,10 +7788,8 @@
  },
  "healthx.just_now": "à l’instant",
  "healthx.levels": "{n} niveaux",
- "healthx.line_now": "{file}, ligne {line}, contient maintenant :",
  "healthx.log_clean": "Aucune erreur ni avertissement : le jeu a lu tout ce qui lui a été fourni.",
  "healthx.log_cut": "journal volumineux, lecture des 40 Mo les plus récents",
- "healthx.log_head": "Dernière exécution du jeu : {errors} erreurs, {warnings} avertissements",
  "healthx.looked_in": "Recherche dans :",
  "healthx.minutes_ago": {
   "one": "il y a {count} minute",
@@ -7803,11 +7800,6 @@
   "one": "et {count} autre type de message",
   "many": "et {count} autres types de messages",
   "other": "et {count} autres types de messages"
- },
- "healthx.more_like_it": {
-  "one": "et {count} autre similaire",
-  "many": "et {count} autres similaires",
-  "other": "et {count} autres similaires"
  },
  "healthx.no_log": "Aucun journal de jeu trouvé pour ce mod",
  "healthx.part_failed": "Lecture impossible de {part} : {why}",

@@ -512,9 +512,6 @@
   "eng.sprites.truncated_texture_file": [
    "texture"
   ],
-  "health.every_check_the_toolkit_has_over": [
-   "archive"
-  ],
   "eng.stratcamp.is_not_a_word_the_engine": [
    "ship"
   ],
@@ -7018,7 +7015,6 @@
  "health.could_not_run": "✕ {label} no se pudo ejecutar: {error}",
  "health.couldnt_run_the_checks": "No se pudieron ejecutar las comprobaciones.",
  "health.every_check_came_back_clean": "Todas las comprobaciones salieron limpias.",
- "health.every_check_the_toolkit_has_over": "Todas las comprobaciones de la herramienta sobre este mod, en una sola lista. Cada fila abre la pantalla a la que pertenece, que es donde se corrige. Agrupadas según cuándo causan problemas, como lo plantean las dos guías de cierres inesperados del archivo.",
  "health.fatal": "{fatal} fatales",
  "health.fatal_and_warnings": "<span class=\"hlc w-bad\">✕ {fatal} fatales</span> <span class=\"hlc w-warn\">! {warnings}</span>",
  "health.fatal_the_game_crashes_or_refuses": "Fatal: el juego se cierra o rechaza el archivo",
@@ -11583,9 +11579,7 @@
  "healthx.just_now": "ahora mismo",
  "healthx.no_log": "No se encontró ningún registro del juego para este mod",
  "healthx.looked_in": "Se buscó en:",
- "healthx.log_head": "La última partida: {errors} errores, {warnings} avisos",
  "healthx.log_cut": "un registro largo, se leyeron sus 40 MB más recientes",
- "healthx.line_now": "{file} línea {line} dice ahora:",
  "healthx.serious": "Grave, y el juego siguió: {w}",
  "healthx.the_lines": "Las líneas del registro en que se basa",
  "healthx.log_clean": "Ni errores ni avisos: el juego leyó todo lo que se le dio.",
@@ -11636,11 +11630,6 @@
   "one": "hace {count} minuto",
   "other": "hace {count} minutos",
   "many": "hace {count} minutos"
- },
- "healthx.more_like_it": {
-  "one": "y {count} más como este",
-  "other": "y {count} más como este",
-  "many": "y {count} más como este"
  },
  "healthx.more_kinds": {
   "one": "y {count} tipo más de mensaje",

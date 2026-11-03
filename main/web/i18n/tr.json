@@ -7328,7 +7328,6 @@
  "health.could_not_run": "✕ {label} çalıştırılamadı: {error}",
  "health.couldnt_run_the_checks": "Kontroller gerçekleştirilemedi.",
  "health.every_check_came_back_clean": "Her çek temiz çıktı.",
- "health.every_check_the_toolkit_has_over": "Araç setindeki her kontrol, bu mod üzerinden tek bir listede yer alır. Her satır, kendisine ait olan ve sabitlendiği ekranı açar. Arşivdeki iki çarpışma kılavuzunun belirttiği şekilde, ısırdığı zamana göre gruplandırılmıştır.",
  "health.fatal": "{fatal} ölümcül",
  "health.fatal_and_warnings": "<span class=\"hlc w-bad\">✕ {fatal} ölümcül</span> <span class=\"hlc w-warn\">!  {warnings} </span>",
  "health.fatal_the_game_crashes_or_refuses": "Ölümcül: oyun çöküyor veya dosyayı reddediyor",
@@ -7401,10 +7400,8 @@
  },
  "healthx.just_now": "şimdi",
  "healthx.levels": "{n} seviyeleri",
- "healthx.line_now": "{file} satırı {line} şimdi okuyor:",
  "healthx.log_clean": "Hata veya uyarı yok: Oyun kendisine verilen her şeyi okudu.",
  "healthx.log_cut": "uzun bir günlük, en yenisi 40 MB okundu",
- "healthx.log_head": "Oyunun son çalıştırması: {errors} hataları, {warnings} uyarıları",
  "healthx.looked_in": "Bakıldı:",
  "healthx.minutes_ago": {
   "one": "{count} dakika önce",
@@ -7413,10 +7410,6 @@
  "healthx.more_kinds": {
   "one": "ve {count} daha fazla mesaj türü",
   "other": "ve {count} daha fazla mesaj çeşidi"
- },
- "healthx.more_like_it": {
-  "one": "ve {count} buna daha çok benziyor",
-  "other": "ve {count} buna daha çok benziyor"
  },
  "healthx.no_log": "Bu mod için oyun günlüğü bulunamadı",
  "healthx.part_failed": "{part} okunamadı: {why}",

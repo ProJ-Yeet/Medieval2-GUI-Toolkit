@@ -1809,6 +1809,29 @@ class Handler(BaseHTTPRequestHandler):
     def _err(self, code, msg, **extra):
         self._json({"error": msg, **extra}, code)
 
+    def _not_found(self, e: KeyError):
+        """A 404 for a name that is not there: ``KeyError('Spearmen')`` says
+        ``'Spearmen'`` in quotes and nothing else, which read as a code error."""
+        what = e.args[0] if e.args else ""
+        what = str(what).strip("'\"")
+        if not what or " " in what and len(what) > 60:
+            return self._err(404, str(what) or "not found")
+        return self._err(404, _i18n.msg("eng.server.not_found", "“{what}” was not found in this mod - it may have been renamed or removed since this screen was opened. Reload the screen to see it as it is now.", what=what))
+
+    def _fault(self, e: Exception):
+        """A fault in the toolkit's own code, said as a person would: what it
+        means for them (anything a save had already written is in the Log, with
+        its Undo), and how to get it fixed. The exception's
+        own line goes along as ``detail`` for a bug report; the traceback is
+        in server.log already (log.exception)."""
+        return self._err(500, _i18n.msg(
+            "eng.server.fault",
+            "Something went wrong inside the toolkit and it stopped. If you were saving, "
+            "anything already written is listed in Log and can be undone there. Try again; "
+            "if it happens again, use Log > Save diagnostic log and send it to us "
+            "(Discord or GitHub) with what you were doing."),
+            detail=f"{type(e).__name__}: {e}")
+
     def _mod_data_err(self, e: ModDataError):
         """409 with the sentence - and, when the parser knows the mend, the offer
         of it, which the page turns into a Repair button (core.js)."""
@@ -1966,7 +1989,7 @@ class Handler(BaseHTTPRequestHandler):
                 try:
                     models = unit_model_index(self.registry.get(name), utype)
                 except KeyError as e:
-                    return self._err(404, str(e))
+                    return self._not_found(e)
                 return self._json({"mod": name, "type": utype, "models": models})
             if u.path == "/api/unit_fields":
                 name = (q.get("mod") or [None])[0]
@@ -2148,7 +2171,7 @@ class Handler(BaseHTTPRequestHandler):
                     return self._json(
                         ancillaries.detail(mod, (q.get("name") or [""])[0]))
                 except KeyError as e:
-                    return self._err(404, str(e))
+                    return self._not_found(e)
             if u.path == "/api/health":
                 # Phase 54: every fast validator, one list. `map=1` only when the
                 # build offers the map screen, so a 2.x build never pays for it.
@@ -2332,7 +2355,7 @@ class Handler(BaseHTTPRequestHandler):
                 try:
                     return self._json(factions.detail(mod, (q.get("name") or [""])[0]))
                 except KeyError as e:
-                    return self._err(404, str(e))
+                    return self._not_found(e)
             if u.path == "/api/edu/order":
                 name = (q.get("mod") or [None])[0]
                 if not name or name not in self.registry.names():
@@ -2350,7 +2373,7 @@ class Handler(BaseHTTPRequestHandler):
                     return self._json(minorfiles.detail(
                         mod, which, (q.get("name") or [""])[0]))
                 except KeyError as e:
-                    return self._err(404, str(e))
+                    return self._not_found(e)
             if u.path in ("/api/traits", "/api/trait", "/api/traits/grep"):
                 name = (q.get("mod") or [None])[0]
                 if not name or name not in self.registry.names():
@@ -2363,7 +2386,7 @@ class Handler(BaseHTTPRequestHandler):
                 try:
                     return self._json(traits.detail(mod, (q.get("name") or [""])[0]))
                 except KeyError as e:
-                    return self._err(404, str(e))
+                    return self._not_found(e)
             if u.path in ("/api/guilds", "/api/guild"):
                 # 18a. One file, both halves: the definitions and the triggers
                 # that feed them, because the two cross-checks that matter -
@@ -2687,10 +2710,10 @@ class Handler(BaseHTTPRequestHandler):
         except KeyError as e:
             # an unknown mod / unit / model entry is a 404, not a server fault
             log.warning("GET %s: not found: %s", u.path, e)
-            return self._err(404, str(e))
+            return self._not_found(e)
         except Exception as e:
             log.exception("GET %s failed: %s", u.path, e)
-            return self._err(500, f"{type(e).__name__}: {e}")
+            return self._fault(e)
 
     # `_send` already withholds the body for HEAD, so the same routing serves both
     # - without this, BaseHTTPRequestHandler answers every HEAD with a 501.
@@ -3479,10 +3502,10 @@ class Handler(BaseHTTPRequestHandler):
             return self._mod_data_err(e)
         except KeyError as e:
             log.warning("POST %s: not found: %s", u.path, e)
-            return self._err(404, str(e))
+            return self._not_found(e)
         except Exception as e:
             log.exception("POST %s failed: %s", u.path, e)
-            return self._err(500, f"{type(e).__name__}: {e}")
+            return self._fault(e)
 
     def _plan(self, body):
         src = self.registry.get(body["source"])
@@ -6561,10 +6584,12 @@ def serve(cache_dir: Path, host="127.0.0.1", port=8756, on_ready=None, verbose=F
     # 96e7: a save into a hard-linked mod file stays in that mod
     modfork.install_write_guard()
     httpd = _Server((host, port), Handler)     # socket is bound + listening here
-    log.info("Unit Transfer UI  ->  http://%s:%d/", host, port)
-    log.info("MED2 root: %s", config.get_med2_root() or "(not set - choose it in the UI)")
-    log.info("Mods found: %s", ", ".join(Handler.registry.names()) or "(none yet)")
-    log.info("Ctrl+C to stop (or use Quit in the UI's settings, or close the browser tab).")
+    log.info("✓ The toolkit is running at http://%s:%d/", host, port)
+    names = Handler.registry.names()
+    log.info("  Mods found: %s", (", ".join(names[:8]) + (f" and {len(names) - 8} more" if len(names) > 8 else "")) if names
+             else "none yet - pick your Medieval II folder on the Home page")
+    log.info("  To stop it: Quit in the toolkit's menu, or Ctrl+C here.")
+    log.info("MED2 root: %s", config.get_med2_root() or "(not set)", extra=logutil.FILE_ONLY)
     threading.Thread(target=_liveness_watchdog, args=(httpd,), daemon=True).start()
     if on_ready:                               # e.g. open the browser now that we're up
         try:

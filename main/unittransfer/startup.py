@@ -23,6 +23,7 @@ With "Show console window" ON the server instead runs in the foreground of that
 console, so its output keeps streaming and Ctrl+C still stops it.
 """
 from __future__ import annotations
+import re
 
 import os
 import socket
@@ -214,17 +215,25 @@ def preflight(port: int, web_dir: Path) -> List[Check]:
 
 def report(checks: List[Check]) -> bool:
     """Log every check; return True when nothing fatal failed."""
-    log.info("Startup checks:")
+    from .logutil import FILE_ONLY
+    # every check in the file; on screen only the ones that did not pass, and
+    # one line saying the rest did
+    log.info("Startup checks:", extra=FILE_ONLY)
     for c in checks:
-        (log.info if c.ok else (log.error if c.fatal else log.warning))("%s", c.line())
+        if c.ok:
+            log.info("%s", c.line(), extra=FILE_ONLY)
+        else:
+            (log.error if c.fatal else log.warning)("%s%s", c.name, f": {c.detail}" if c.detail else "")
+    passed = sum(1 for c in checks if c.ok)
     bad = [c for c in checks if c.blocking]
     if bad:
         log.error("")
-        log.error("STARTUP FAILED - %d check(s) did not pass:", len(bad))
-        for c in bad:
-            log.error("   * %s%s", c.name, f": {c.detail}" if c.detail else "")
-        log.error("Full log: %s", config.CONFIG_DIR / "server.log")
+        log.error("The toolkit cannot start - %d thing(s) above need fixing first.", len(bad))
+        log.error("The whole story is in %s (send it along if you ask for help).",
+                  config.CONFIG_DIR / "server.log")
         return False
+    if passed == len(checks):
+        log.info("✓ Everything it needs is in place (%d checks).", passed)
     return True
 
 
@@ -389,6 +398,26 @@ def spawn_server(app_path: Path, args: List[str],
         stdin=subprocess.DEVNULL, stdout=io, stderr=io)
 
 
+_FILE_LINE = re.compile(r"^\d{4}-\d\d-\d\d (\d\d:\d\d:\d\d)\s+(DEBUG|INFO|WARNING|ERROR|CRITICAL)\s+(.*)$")
+
+
+def console_line(line: str) -> str:
+    """A line of server.log as the launcher's window shows it while the server
+    starts, or "" to leave it out. The server writes everything to the file;
+    the window only needs what is wrong and what it is busy with: warnings and
+    errors (with a mark, not the level's name) and the card conversion's
+    progress. The launcher's own lines say when it is ready."""
+    m = _FILE_LINE.match(line.rstrip())
+    if not m:
+        return line.rstrip() if line.strip() and not line.startswith(" ") else ""
+    when, level, msg = m.groups()
+    if level in ("WARNING", "ERROR", "CRITICAL"):
+        return f"{when}  {'⚠' if level == 'WARNING' else '✗'} {msg}"
+    if level == "INFO" and msg.startswith("icons:") and "no remembered mods" not in msg:
+        return f"{when}  {msg[len('icons:'):].strip()}"
+    return ""
+
+
 def follow_until_ready(proc: subprocess.Popen, offset: int,
                        timeout: float = 300.0) -> Tuple[bool, str, bool]:
     """Mirror the server's log to this console until it reports ready.
@@ -409,10 +438,11 @@ def follow_until_ready(proc: subprocess.Popen, offset: int,
 
     def emit(line: str) -> None:
         nonlocal browser_ok
-        if line.strip():
-            print(line, flush=True)
         if BROWSER_FAILED_MARKER in line:
             browser_ok = False
+        shown = console_line(line)
+        if shown:
+            print(shown, flush=True)
 
     while True:
         try:

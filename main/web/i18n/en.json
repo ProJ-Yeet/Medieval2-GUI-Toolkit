@@ -6867,9 +6867,8 @@
 "health.could_not_run": "✕ {label} could not run: {error}",
 "health.couldnt_run_the_checks": "Couldn't run the checks.",
 "health.every_check_came_back_clean": "Every check came back clean.",
-"health.every_check_the_toolkit_has_over": "Every check the toolkit has, over this mod, in one list. Each row opens the screen that owns it, which is where it is fixed. Grouped by when it bites, the way the two crash guides in the archive put it.",
 "health.fatal": "{fatal} fatal",
-"health.fatal_and_warnings": "<span class=\"hlc w-bad\">✕ {fatal} fatal</span> <span class=\"hlc w-warn\">! {warnings}</span>",
+"health.fatal_and_warnings": "<span class=\"hlc w-bad\">✕ {fatal} stop the game</span> <span class=\"hlc w-warn\">! {warnings}</span>",
 "health.fatal_the_game_crashes_or_refuses": "Fatal: the game crashes or refuses the file",
 "health.health_of_checks_ran_in_s": "Health of {mod} <span class=\"count\">{n} checks ran in {ms}s</span>",
 "health.hide_that_were_already_there": "Hide {base} that were already there",
@@ -6893,8 +6892,8 @@
 "health.these_look_for_what_a_mod": "These look for what a mod carries and never uses: unused models, orphan files, duplicate cards. None of it stops a mod starting, and each takes from seconds to over a minute on a big mod, so each runs on its own screen when you ask.",
 "health.this_check_could_not_run": "This check could not run: {error}",
 "health.warning_count": {
-"one": "{count} warning",
-"other": "{count} warnings"
+"one": "{count} worth fixing",
+"other": "{count} worth fixing"
 },
 "health.warning_it_loads_but_something_will": "Warning: it loads, but something will not work as meant",
 "health.what_the_guides_say_that_is": "What the guides say that is not checked",
@@ -6940,10 +6939,8 @@
 },
 "healthx.just_now": "just now",
 "healthx.levels": "{n} levels",
-"healthx.line_now": "{file} line {line} reads now:",
 "healthx.log_clean": "No errors or warnings: the game read everything it was given.",
 "healthx.log_cut": "a long log, its newest 40 MB read",
-"healthx.log_head": "The game's last run: {errors} errors, {warnings} warnings",
 "healthx.looked_in": "Looked in:",
 "healthx.minutes_ago": {
 "one": "{count} minute ago",
@@ -6952,10 +6949,6 @@
 "healthx.more_kinds": {
 "one": "and {count} more kind of message",
 "other": "and {count} more kinds of message"
-},
-"healthx.more_like_it": {
-"one": "and {count} more like it",
-"other": "and {count} more like it"
 },
 "healthx.no_log": "No game log found for this mod",
 "healthx.part_failed": "{part} could not be read: {why}",
@@ -10932,5 +10925,36 @@
 "modelpicker.ex_attrs_on": "M2EX / REX only ({n} on)",
 "modelpicker.ex_attrs_note_on": "Words the extended engines added. This mod is marked M2EX, so they work.",
 "modelpicker.ex_attrs_note_off": "Words the extended engines added. This mod is not marked M2EX: the plain game does not know them, so only tick one for a mod that runs on M2EX.",
-"modelpicker.ex_tag": "M2EX / REX only"
+"modelpicker.ex_tag": "M2EX / REX only",
+"eng.gamelog.known_script_error": "The game could not read line {b} of {a} (at character {c}): a word or a number there is not what the game expects. The line is shown below as the file has it now.",
+"eng.gamelog.known_unknown_attribute": "A unit's attributes line has a word the game does not know: {a}. Check its spelling in the Unit Editor's Attributes, or take it out.",
+"healthx.fix_unit": "Open “{name}” in the Unit Editor",
+"healthx.fix_building": "Open the building “{name}”",
+"healthx.fix_file": "Open {file} as text",
+"healthx.same_for": "The same for: {list}",
+"healthx.times": {"one": "seen once", "other": "seen {count} times"},
+"healthx.the_games_words": "What the game wrote",
+"healthx.crashed": "The game crashed on its last run",
+"healthx.crash_after_line": "It stopped right after it could not read {file}, line {line}{col}. Fix that line and start the game again.",
+"healthx.at_col": " (character {col})",
+"healthx.no_crash": "No crash on the last run",
+"healthx.problems_to_look_at": {"one": "{count} problem worth fixing is listed below.", "other": "{count} problems worth fixing are listed below, the most frequent first."},
+"healthx.read_from": "The game's own log, written {age}",
+"healthx.copy_log": "Copy for a bug report",
+"healthx.copy_log_title": "Copy what the game said, in plain words and its own, to paste into a message or a bug report",
+"healthx.sect_problems": "Problems",
+"healthx.sect_notes": "Usually harmless",
+"healthx.sect_notes_hint": "the game noticed these and carried on - look only if something looks wrong in game",
+"eng.server.fault": "Something went wrong inside the toolkit and it stopped. If you were saving, anything already written is listed in Log and can be undone there. Try again; if it happens again, use Log > Save diagnostic log and send it to us (Discord or GitHub) with what you were doing.",
+"eng.server.not_found": "“{what}” was not found in this mod - it may have been renamed or removed since this screen was opened. Reload the screen to see it as it is now.",
+"report.bug_head": "Something on this screen went wrong.",
+"report.bug_body": "It is a fault in the screen itself, not in your mod. Drawing the screen again usually clears it; if it keeps happening, report it and we will fix it.",
+"report.bug_details": "Technical details",
+"report.bug_redraw": "Draw the screen again",
+"report.bug_report": "Report it…",
+"health.card_fatal": {"one": "{count} problem will stop the game", "other": "{count} problems will stop the game"},
+"health.card_warn": {"one": "Nothing stops the game, but {count} thing is worth fixing", "other": "Nothing stops the game, but {count} things are worth fixing"},
+"health.card_ok": "Nothing found that stops the game",
+"health.card_how": "Each row below has an Open button that takes you to the screen where it is fixed. Run again after fixing to check.",
+"health.filter_by_check": "Show only one kind of check ({n})"
 }
