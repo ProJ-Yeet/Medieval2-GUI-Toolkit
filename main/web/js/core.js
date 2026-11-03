@@ -727,7 +727,20 @@ function buildFilter(id,values,key,useLabel){
     state.sel[key].has(v)?'checked':''}>${esc(useLabel?facLabel(v):v)}</label>`).join('')
     ||`<span class="count">${tt('common.none_2')}</span>`;
   box.querySelectorAll('input').forEach(cb=>cb.onchange=()=>{const s=state.sel[key];cb.checked?s.add(cb.value):s.delete(cb.value);filtersChanged();paintFilterFolds();});
+  if(id==='factionFilter'){const f=document.getElementById('facFind'); if(f&&f.value)facFindApply(id,f.value);}
   paintFilterFolds();
+}
+/* The Find box over a sidebar's faction checklist: hides the factions whose
+   shown name (or code name) does not contain what was typed. A ticked faction
+   stays visible, so a filter in force is never hidden by the search. */
+function facFindApply(id,q){
+  const box=document.getElementById(id); if(!box)return;
+  const s=(q||'').trim().toLowerCase();
+  box.querySelectorAll('label.opt').forEach(l=>{
+    const cb=l.querySelector('input');
+    const hay=(l.textContent+' '+(cb?cb.value:'')).toLowerCase();
+    l.style.display=(!s||hay.includes(s)||(cb&&cb.checked))?'':'none';
+  });
 }
 /* ---------- burger menu ----------
    The single registry of modules. Everything the menu shows - and the header
@@ -1549,6 +1562,34 @@ const navCan=d=>{const t=state.trail, j=t.i+d; return j>=0&&j<t.list.length;};
 //: Where you are IN the screen you are leaving. Its own filters look after
 //: themselves; the scroll is what a repaint throws away.
 const navPlace=()=>({scroll:(typeof main!=='undefined'&&main&&main.scrollTop)||0});
+
+/* Repaint a dialog or panel without losing where any list inside it was
+   scrolled to. Every scrolled element under `root` (and `root` itself) is
+   remembered by its id, or by its class and position among elements with the
+   same class, and put back once `paint` has rebuilt the markup. Used where a
+   tick box redraws the whole dialog (Unit Transfer's battle-model entries). */
+function holdScroll(root, paint){
+  if(!root) return paint();
+  const keyOf = el => el.id ? '#' + el.id : (el.className ? '.' + String(el.className) : '');
+  const seen = {}, saved = [];
+  const walk = el => {
+    const k = keyOf(el);
+    if(k){ const n = seen[k] = (seen[k] || 0) + 1; if(el.scrollTop > 0) saved.push([k, n, el.scrollTop]); }
+  };
+  walk(root); root.querySelectorAll('*').forEach(walk);
+  const page = document.scrollingElement ? document.scrollingElement.scrollTop : 0;
+  const out = paint();
+  const put = () => {
+    const now = {}, at = {};
+    const scan = el => { const k = keyOf(el); if(k){ const n = now[k] = (now[k] || 0) + 1; at[k + '|' + n] = el; } };
+    scan(root); root.querySelectorAll('*').forEach(scan);
+    for(const [k, n, top] of saved){ const el = at[k + '|' + n]; if(el) el.scrollTop = top; }
+    if(document.scrollingElement && document.scrollingElement.scrollTop !== page) document.scrollingElement.scrollTop = page;
+  };
+  put();
+  if(out && typeof out.then === 'function') out.then(put, put);
+  return out;
+}
 
 /* Put a place back, once there is a screen tall enough to hold it. The repaint
    can be a fetch away, so this keeps trying for a few seconds and then lets go:

@@ -1015,6 +1015,7 @@ def entry_detail(mod: Mod, name: str) -> dict:
         "mod": mod.name,
         "model": payload,
         "model_names": sorted(mod.modeldb.by_name().keys()),
+        "skeleton_names": sorted(mod.modeldb.all_skeletons()),
         "all_factions": all_factions,
         "faction_names": {f: mod.faction_names.get(f.lower(), "") for f in all_factions},
         # tokens the roster does not define: still offered (they are in the file)

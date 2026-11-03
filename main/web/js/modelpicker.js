@@ -165,23 +165,131 @@ function gfWidget(host,label,spec,cur){
   if(spec.w==='factions')return gfFactionWidget(host,label,cur);
   if(spec.w==='meffect')return gfMountEffectWidget(host,label,cur);
   if(spec.w==='ugmodels')return host.richArmour?`<div class="gfrow">${edArmourField(label,cur)}</div>`
-    :gfListWidget(host,label,cur,'model');
-  if(spec.w==='uglevels')return host.richArmour
-    ?`<div class="gfrow"><div class="gfpart grow"><span class="pl">${tt('modelpicker.smith_level_per_tier')}</span>
-        <input data-gfraw="${esc(label)}" value="${esc(cur)}" spellcheck="false"></div></div>`
-    :gfListWidget(host,label,cur,'');
+    :gfUgModelsWidget(host,label,cur);
+  // the same levels box on both screens: chips kept in ascending order, an Add
+  // that goes one past the highest level when nothing is typed, no dragging
+  if(spec.w==='uglevels')return gfUgLevelsWidget(host,label,cur);
   return '';
 }
-// A generic reorderable list of names (armour tiers in the composer).
-function gfListWidget(host,label,cur,vocabName){
-  const items=csv(cur);
+
+/* ---- armour upgrade levels and models, the same on both screens ----------
+   armour_ug_levels is read by the game as "this tier from this smith level
+   up", so it only makes sense ascending: every change sorts it, and there is
+   nothing to drag. armour_ug_models is positional and keeps its drag. Adding a
+   model when there are fewer levels than models tops the levels up, one past
+   the highest each time. */
+const ugHost=()=>state.ed?gfHostEditor():gfHostComposer();
+function ugRefresh(){
+  if(state.ed){ edFieldsRefresh(); return; }      // either view of the editor
+  gfRerenderBody();
+}
+const ugNums=list=>list.map(x=>parseInt(x,10)).filter(x=>!isNaN(x));
+function ugSortLevels(list){
+  const nums=list.filter(x=>!isNaN(parseInt(x,10))).sort((a,b)=>parseInt(a,10)-parseInt(b,10));
+  return nums.concat(list.filter(x=>isNaN(parseInt(x,10))));
+}
+function ugNextLevel(levels){
+  const n=ugNums(levels);
+  return n.length?Math.max(...n)+1:1;
+}
+// fewer levels than models: one more level per model, each one past the highest
+function ugTopUpLevels(host,modelCount){
+  const levels=csv(host.get('armour_ug_levels')||'');
+  if(levels.length>=modelCount)return false;
+  while(levels.length<modelCount)levels.push(String(ugNextLevel(levels)));
+  host.set('armour_ug_levels',ugSortLevels(levels).join(', '));
+  return true;
+}
+function gfUgLevelsWidget(host,label,cur){
+  const items=ugSortLevels(csv(cur));
+  const was=gfListWas(host,label);
+  const id=gfAddId(label);
   return `<div class="gfrow"><div style="flex:1;min-width:0">
-    ${gfChips(host,label,items)}
+    <div class="chips">${items.map((v,i)=>`<span class="chipd${was.has(v)?'':' added'}">
+        <span class="${i===0?'first':''}">${esc(v)}</span>
+        <button class="x" title="${ttA('modelpicker.remove',{x:esc(v)})}" onclick="ugLevelRemove('${q1(esc(label))}',${i})">✕</button></span>`).join('')
+      ||`<span class="count">${tt('modelpicker.empty')}</span>`}</div>
     <div class="barrow">
-      <input id="${gfAddId(label)}" placeholder="${ttA('modelpicker.add')}" style="width:190px;font-size:12px;padding:3px 7px"
-        ${vocabName?tt('modelpicker.list_gfdl',{vocabName:esc(vocabName)}):''}>
-      <button onclick="gfListAdd('${q1(esc(label))}')">${tt('common.add_2')}</button>
+      <input id="${id}" type="number" min="0" step="1" placeholder="${ttA('modelpicker.ug_level_next',{n:ugNextLevel(items)})}"
+        style="width:120px;font-size:12px;padding:3px 7px"
+        onkeydown="if(event.key==='Enter'){event.preventDefault();ugLevelAdd('${q1(esc(label))}');}">
+      <button onclick="ugLevelAdd('${q1(esc(label))}')" title="${ttA('modelpicker.ug_level_add_title')}">${tt('common.add_2')}</button>
+      <span class="count">${tt('modelpicker.smith_level_per_tier')}</span>
     </div></div></div>`;
+}
+function ugLevelAdd(label){
+  const host=ugHost(), el=document.getElementById(gfAddId(label));
+  const levels=csv(host.get(label)||'');
+  const typed=parseInt(((el&&el.value)||'').trim(),10);
+  levels.push(String(isNaN(typed)?ugNextLevel(levels):typed));
+  host.set(label,ugSortLevels(levels).join(', ')); host.stale(); ugRefresh();
+  const again=document.getElementById(gfAddId(label)); if(again)again.focus();
+}
+function ugLevelRemove(label,i){
+  const host=ugHost(), levels=ugSortLevels(csv(host.get(label)||''));
+  levels.splice(i,1);
+  host.set(label,levels.join(', ')); host.stale(); ugRefresh();
+}
+
+/* The Unit Creator's armour models, drawn the way the Unit Editor draws them:
+   tier chips with the ✕ above (dropping a tier drops its level too), drag to
+   reorder, and a ＋ that repeats the last tier or names an existing entry. The
+   editor's two other modes (another unit's tiers, a new entry) need the
+   editor's own staging and stay there. */
+function gfUgModelsWidget(host,label,cur){
+  const items=csv(cur), levels=ugSortLevels(csv(host.get('armour_ug_levels')||''));
+  const was=gfListWas(host,label);
+  const open=!!(state.gf&&state.gf.ugOpen);
+  const id=gfAddId(label);
+  return `<div class="gfrow"><div style="flex:1;min-width:0">
+    <div class="chips ug">${items.map((v,i)=>`<span class="chipd ug${was.has(v)?'':' added'}" draggable="true"
+        ondragstart="gfDragStart(event,'${q1(esc(label))}',${i})"
+        ondragover="gfDragOver(event,'${q1(esc(label))}')" ondragleave="edDragLeave(event)"
+        ondragend="edDragEnd(event)" ondrop="gfDrop(event,'${q1(esc(label))}',${i})"
+        title="${was.has(v)?tt('modelpicker.drag_to_reorder'):tt('modelpicker.added_by_you_drag_to_reorder')}">
+        <span class="g">⠿</span><span class="${i===0?'first':''}">${esc(v)}</span>
+        <button class="xup" title="${ttA('modelpicker.remove',{x:esc(v)})}" onclick="ugModelRemove('${q1(esc(label))}',${i})">✕</button></span>`).join('')
+      ||`<span class="count">${tt('modelpicker.empty')}</span>`}</div>
+    <div class="barrow">
+      <button class="ugadd${open?' on':''}" onclick="ugToggle()" title="${ttA('editor.add_an_armour_upgrade_tier')}">${open?'−':'＋'}</button>
+      <span class="count">${tt('editor.position_upgrade_level',{levels:levels.length?tt('editor.armour_ug_levels',{levels:esc(levels.join(', '))}):'',x:levels.length&&levels.length<items.length
+          ? ` <span class="w-warn">${tt('editor.level_s_for_model_s',{levels_n:levels.length,models_n:items.length})}</span>`:''})}</span>
+    </div>
+    ${open?`<div class="ugpanel"><div class="ugmodes">
+        <button onclick="ugRepeatLast('${q1(esc(label))}')" title="${ttA('editor.name_the_last_entry_again_as')}">${tt('editor.1_repeat_the_last_tier')}</button>
+        <input id="${id}" list="gfdl-model" placeholder="${ttA('modelpicker.ug_pick_entry')}" style="flex:1;min-width:160px;font-size:12px;padding:3px 7px"
+          onkeydown="if(event.key==='Enter'){event.preventDefault();ugModelAdd('${q1(esc(label))}');}">
+        <button onclick="ugModelAdd('${q1(esc(label))}')">${tt('common.add_2')}</button>
+      </div></div>`:''}
+  </div></div>`;
+}
+function ugToggle(){ state.gf=state.gf||{}; state.gf.ugOpen=!state.gf.ugOpen; ugRefresh(); }
+function ugModelPush(label,name){
+  const host=ugHost(), list=csv(host.get(label)||'');
+  name=(name||'').trim().toLowerCase(); if(!name)return false;
+  list.push(name);
+  host.set(label,list.join(', '));
+  ugTopUpLevels(host,list.length);
+  host.stale(); ugRefresh();
+  return true;
+}
+function ugModelAdd(label){
+  const el=document.getElementById(gfAddId(label));
+  if(ugModelPush(label,el&&el.value)){ const again=document.getElementById(gfAddId(label)); if(again)again.focus(); }
+}
+function ugRepeatLast(label){
+  const host=ugHost(), list=csv(host.get(label)||'');
+  const last=list[list.length-1]||(host.get('soldier')||'').split(',')[0];
+  if(!(last||'').trim()){ toast(tt('editor.this_unit_has_no_model_entry')); return; }
+  ugModelPush(label,last);
+}
+// a tier and its level go together, or every level above it slides down
+function ugModelRemove(label,i){
+  const host=ugHost(), list=csv(host.get(label)||''), levels=ugSortLevels(csv(host.get('armour_ug_levels')||''));
+  if(list[i]===undefined)return;
+  list.splice(i,1);
+  if(i<levels.length&&levels.length>list.length){ levels.splice(i,1); host.set('armour_ug_levels',levels.join(', ')); }
+  host.set(label,list.join(', ')); host.stale(); ugRefresh();
 }
 function gfListAdd(label){
   const el=document.getElementById(gfAddId(label));

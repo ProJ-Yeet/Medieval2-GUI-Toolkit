@@ -634,7 +634,10 @@ function gfHostComposer(){
     get:l=>{const lk=lockFor(gfKey(l)); if(lk)return lk.val;
       return (l in c.field_overrides)?c.field_overrides[l]:c._orig[l];},
     orig:l=>c._orig[l],
-    set:(l,v)=>{if(v!==c._orig[l])c.field_overrides[l]=v; else delete c.field_overrides[l];},
+    set:(l,v)=>{const was=(l in c.field_overrides)?c.field_overrides[l]:c._orig[l];
+      if(v!==c._orig[l])c.field_overrides[l]=v; else delete c.field_overrides[l];
+      // the 3D column follows the armour tiers
+      if(l==='armour_ug_models'&&was!==v&&typeof cmpPrevFollowTiers==='function')cmpPrevFollowTiers(was,v);},
     changed:l=>(l in c.field_overrides)&&c.field_overrides[l]!==c._orig[l],
     removed:()=>false,
     canRemove:false,

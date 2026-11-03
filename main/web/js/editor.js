@@ -168,7 +168,9 @@ function edModelEdits(){
       raw_entry:name===cvName?e.cv.base:'',
       imports:(me.imports||[]).map(x=>({src:x.src,dest_dir:x.dest_dir})),
       defaults:v.defs,faction_paths,factions:me.factions||null,
-      move_dir:me.move_dir||'',move_shared:!!me.move_shared,gather:!!me.gather};
+      move_dir:me.move_dir||'',move_shared:!!me.move_shared,gather:!!me.gather,
+      // the animation records, only when one was changed
+      animations:me.animations||null};
   }).filter(Boolean);
 }
 function edPayload(extra){
@@ -277,6 +279,20 @@ const edPrevOn = () => state.settings.model_preview !== false;
    1) - an entry earns its place by any slot that is not the soldier line. */
 const edPrevEntries = () => {
   const all = ((state.ed && state.ed.d && state.ed.d.models) || []).filter(m => m && !m.missing);
+  // the armour tiers as they stand in the boxes, not as the file has them: a
+  // tier added or swapped is drawn straight away (the entry has to exist in
+  // the mod already - a staged new entry has no files yet)
+  if(state.ed && state.ed.d){
+    const d = state.ed.d, known = new Set((d.model_names || []).concat(all.map(m => m.name)));
+    const tiers = csv(edFieldVal('armour_ug_models')).map(x => x.toLowerCase()).filter(n => known.has(n));
+    const orig = csv((d.fields.find(x => x[0] === 'armour_ug_models') || ['', ''])[1]).map(x => x.toLowerCase());
+    if(tiers.join() !== orig.join()){
+      const sol = (edFieldVal('soldier').split(',')[0] || '').trim().toLowerCase();
+      const rest = all.map(m => m.name).filter(n => !orig.includes(n) && !tiers.includes(n) && !(tiers.length && n === sol));
+      const out = [...new Set(tiers.concat(rest))];
+      if(out.length) return out;
+    }
+  }
   const upgraded = all.some(m => (m.slots || []).some(x => x.indexOf('armour_ug_models') === 0));
   const keep = upgraded
     ? all.filter(m => !((m.slots || []).length && m.slots.every(x => x === 'soldier')))
@@ -509,8 +525,24 @@ function edFieldVal(label){const e=state.ed;
 function edSetField(label,val){
   const e=state.ed,f=e.d.fields.find(x=>x[0]===label);
   if(!f){e.d.fields=e.d.fields.concat([[label,'']]); e.added.add(label);}
+  const before=edFieldVal(label);
   if(val===((f||['',''])[1])&&!e.added.has(label)) delete e.ov[label]; else e.ov[label]=val;
   e.rm.delete(label); edStale();
+  if(label==='armour_ug_models'&&before!==val)edPrevFollowTiers(before,val);
+}
+/* The 3D column follows the armour tiers: the tier just added (or the one now
+   in the slot that changed) is drawn, without waiting for a save. Batched, so
+   a change that rewrites the list several times draws once. */
+let edPrevFollowT=0;
+function edPrevFollowTiers(before,after){
+  const was=csv(before).map(x=>x.toLowerCase()),now=csv(after).map(x=>x.toLowerCase());
+  const fresh=now.find((n,i)=>was[i]!==n);
+  if(state.ed&&fresh)state.ed.prevEntry=fresh;
+  clearTimeout(edPrevFollowT);
+  edPrevFollowT=setTimeout(()=>{
+    if(!state.ed||!edPrevNode)return;
+    edPrevBar(); edPrevMount();
+  },150);
 }
 // Put a field back exactly as it was - including "it wasn't there at all", which
 // setting it to "" would not do (an empty EDU line is still a line).
@@ -546,7 +578,8 @@ function edIdentity(){
           <label class="chk" style="margin-top:4px"><input type="checkbox" id="edRmIcons"
             ${e.removeOldIcons?'checked':''}> ${tt('editor.delete_the_old_icon_files')}</label></div></div>
     </div>
-    <label>${tt('editor.displayed_name')}<input id="edName" value="${esc(e.loc.name)}"></label>
+    <label>${tt('editor.displayed_name')}<span class="nmcopy"><input id="edName" value="${esc(e.loc.name)}">
+      <button type="button" onclick="edNameFromType()" title="${ttA('common.name_from_type_title')}">${tt('common.name_from_type')}</button></span></label>
     <label>${tt('editor.short_description_unit_card_tooltip')}<textarea id="edShort">${esc(e.loc.descr_short)}</textarea></label>
     <label>${tt('editor.description_info_card')}<textarea id="edDescr" style="min-height:150px">${esc(e.loc.descr)}</textarea></label>
     <div class="count" style="margin-top:4px">${tt('editor.the_description_is_stored_on_a')}</div>
@@ -920,6 +953,12 @@ function edToggleMerc(on){
   if(!on&&i>=0)attrs.splice(i,1);
   edSetField('attributes',attrs.join(', ')); edRenderTab();
 }
+// "Copy from type": the displayed name becomes what the type box says
+function edNameFromType(){
+  const e=state.ed,t=document.getElementById('edType'),n=document.getElementById('edName');
+  const v=((t&&t.value)||e.newType||e.d.type||'').trim(); if(!v)return;
+  e.loc.name=v; if(n)n.value=v; edStale();
+}
 function edWireIdentity(){
   const e=state.ed,d=e.d;
   const bind=(id,fn)=>{const el=document.getElementById(id);
@@ -1053,6 +1092,9 @@ function edRawFields(){
       return head+edFactionField(label,cur)+rmBtn(label,gone)+'</div>';
     if(label==='armour_ug_models'&&!gone)
       return head+edArmourField(label,cur)+rmBtn(label,gone)+'</div>';
+    // the levels box the Unit Creator has: sorted, Add goes one past the top
+    if(label==='armour_ug_levels'&&!gone)
+      return head+gfUgLevelsWidget(gfHostEditor(),label,cur).replace(/^<div class="gfrow">|<\/div>$/g,'')+rmBtn(label,gone)+'</div>';
     return `<div class="afrow${gone?' gone':''}" data-label="${esc(label)}">
       <label>${qm(why,label)}${esc(label)}</label>
       <input data-k="${esc(label)}" value="${esc(cur)}" ${gone?'disabled':''}
@@ -1402,8 +1444,14 @@ function edUgAppend(names,donorLevels,opt){
                        : nums.length?max+1:models.length));
   });
   if(!added.length)return added;
+  // fewer levels than models before this add: top them up too, each one past
+  // the highest, so every tier has the level it is reached at
+  while(levels.length<models.length){
+    const nums=levels.map(x=>parseInt(x,10)).filter(x=>!isNaN(x));
+    levels.push(String(nums.length?Math.max(...nums)+1:1));
+  }
   edSetField('armour_ug_models',models.join(', '));
-  edSetField('armour_ug_levels',levels.join(', '));
+  edSetField('armour_ug_levels',ugSortLevels(levels).join(', '));
   return added;
 }
 // ✕ above a tier: drop the model AND its level, or every level above it slides
@@ -1814,7 +1862,7 @@ function edModelCard(m,idx){
       </div>
       <div class="prow" style="grid-template-columns:var(--plw) 1fr"><span class="pl"></span>
         <span id="edmns${idx}" class="count">${edNameHint(m,me.new_name||m.name)}</span></div>
-      <div class="count" style="margin-top:5px">${tt('editor.skeletons',{skeletons:m.skeletons.map(esc).join(', ')||'none'})}</div>
+      ${edAnimBox(m)}
       ${edFolderBox(m)}
       <div class="psec">${tt('editor.meshes_lods')}</div>${meshes||`<div class="count">${tt('common.none')}</div>`}
       ${edDefaultTextures(m)}
@@ -2022,6 +2070,49 @@ function edFolderCancel(name){
 }
 
 function edToggle(name){const e=state.ed;e.open[name]=!e.open[name];edRenderTab();}
+/* ---- the entry's animations, changed in place ----
+   One row per animation record of the entry, in file order: the mount type it
+   applies to and the primary / secondary skeleton. That is what decides how the
+   unit moves and fights; the weapon skeletons are left as they are. A record is
+   changed, never added or removed here. Suggestions are every skeleton the
+   mod's entries already name; one outside that list is warned about in Probe. */
+const ED_MOUNTS=['none','horse','camel','elephant'];
+function edAnimRows(m){
+  const me=(state.ed.mEdits||{})[m.name];
+  return (me&&me.animations)||(m.animations||[]).map(a=>({mount_type:a.mount_type||'none',primary:a.primary||'',secondary:a.secondary||''}));
+}
+function edAnimBox(m){
+  const rows=edAnimRows(m), orig=m.animations||[];
+  if(!rows.length)return `<div class="count" style="margin-top:5px">${tt('editor.skeletons',{skeletons:m.skeletons.map(esc).join(', ')||'none'})}</div>`;
+  const n=q1(esc(m.name));
+  const dl=`edskel-dl`;
+  const names=(state.ed.d.skeleton_names||[]);
+  return `<div class="psec">${tt('editor.animations_head')}</div>
+    <datalist id="${dl}">${names.map(x=>`<option value="${esc(x)}">`).join('')}</datalist>
+    ${rows.map((a,i)=>{const o=orig[i]||{};
+      const ch=k=>((a[k]||'').toLowerCase()!==((o[k]||'')+'').toLowerCase())?' changed':'';
+      return `<div class="prow edanim" style="grid-template-columns:var(--plw) 110px 1fr 1fr">
+        <span class="pl">${tt('editor.animation_n',{n:i+1})}</span>
+        <select class="${ch('mount_type').trim()}" onchange="edAnimSet('${n}',${i},'mount_type',this.value)" title="${ttA('editor.animation_mount_title')}">${
+          ED_MOUNTS.concat(ED_MOUNTS.includes(a.mount_type)?[]:[a.mount_type]).map(t=>`<option${t===a.mount_type?' selected':''}>${esc(t)}</option>`).join('')}</select>
+        <input list="${dl}" class="${ch('primary').trim()}" value="${esc(a.primary)}" placeholder="${ttA('editor.animation_primary')}"
+          title="${ttA('editor.animation_primary_title')}" onchange="edAnimSet('${n}',${i},'primary',this.value)">
+        <input list="${dl}" class="${ch('secondary').trim()}" value="${esc(a.secondary)}" placeholder="${ttA('editor.animation_secondary')}"
+          title="${ttA('editor.animation_secondary_title')}" onchange="edAnimSet('${n}',${i},'secondary',this.value)">
+      </div>`;}).join('')}
+    <div class="count">${tt('editor.animations_note')}</div>`;
+}
+function edAnimSet(name,i,key,val){
+  const m=state.ed.d.models.find(x=>x.name===name); if(!m)return;
+  const rows=edAnimRows(m).map(r=>Object.assign({},r));
+  if(!rows[i])return;
+  rows[i][key]=(val||'').trim().toLowerCase();
+  const same=rows.every((r,j)=>{const o=(m.animations||[])[j]||{};
+    return ['mount_type','primary','secondary'].every(k=>(r[k]||'')===((o[k]||'')+'').toLowerCase());});
+  const me=edTouch(name);
+  me.animations=same?null:rows;
+  edRenderTab();
+}
 function edME(name){const e=state.ed;
   if(!e.mEdits[name])e.mEdits[name]={new_name:'',paths:{},copies:[],defaults:{},
     faction_paths:{},factions:null,move_dir:'',move_shared:false,_touched:false};

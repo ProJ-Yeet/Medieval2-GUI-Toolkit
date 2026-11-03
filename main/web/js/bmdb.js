@@ -585,7 +585,7 @@ async function openBmdbEntry(name){
   state.ed={bmdb:true,mod:state.src,unit:'',tab:'models',ov:{},rm:new Set(),added:new Set(),
     loc:{},newType:'',newDict:'',mEdits:{},newModels:[],open:{[r.model.name]:true},form:null,
     facOpen:{},folder:{},
-    d:{type:'',dictionary:'',fields:[],loc:{},models:[r.model],model_names:r.model_names,
+    d:{type:'',dictionary:'',fields:[],loc:{},models:[r.model],model_names:r.model_names,skeleton_names:r.skeleton_names||[],
        all_factions:r.all_factions,faction_names:r.faction_names,
        unknown_factions:r.unknown_factions}};
   undoReset();

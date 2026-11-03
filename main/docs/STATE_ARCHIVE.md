@@ -15,6 +15,19 @@ log, then the decisions that had built up in `STATE.md`'s append-only list.
 
 # The session log
 
+## 101 - the user's list of 2026-11-03, in a cloud session (2026-11-03)
+Fourteen items from the user. Built without a mod installed: 101a-101g (the
+entry list's scroll, Apply without a Probe and a plain preview, faction Find
+boxes, armour levels and models made the same on both screens with automatic
+levels, the 3D column following the tiers, the creator opening the new unit in
+the editor, *Copy from type*, and a unit's animation records editable). Already
+there: building lines and whole factions from another mod. Left in ROADMAP as
+101h-101m: the animation cleaner (Phase 85 may already be most of it), the strat
+model cleaner, captain / leader / faction models in the Models Editor, the
+creator's other two tier modes, which screen "Install" meant, and trying the UI
+in the real app. Tests: `test_animentry` 15/15, `test_i18n` 37/37. Strings are
+English only; the other languages fall back to it until translated.
+
 ## 30 - a missing texture without the pink, and the mod the report was about (2026-09-15)
 The fifth phase of the day. The feature landed as scoped; measuring it first
 turned the premise underneath it over.

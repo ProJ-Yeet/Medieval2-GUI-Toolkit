@@ -368,6 +368,7 @@ function bldBuildFilters(){
     if(key2==='faction'&&cb.checked&&bldFollowCulture(cb.value))return;
     render();});
   wire(bldReligionFilter,'religion'); wire(bldFactionFilter,'faction');
+  {const f=document.getElementById('bldFacFind'); if(f&&f.value)facFindApply('bldFactionFilter',f.value);}
   document.querySelectorAll('.bldset').forEach(cb=>cb.onchange=()=>{
     const b2=state.bld; if(!b2)return;
     cb.checked?b2.sel.settlement.add(cb.value):b2.sel.settlement.delete(cb.value);

@@ -13153,6 +13153,53 @@ user (see *Deferred to a later version* under *What else is open*).
 
 ---
 
+## Phase 101 - the user's list of 2026-11-03, the part built in a cloud session
+
+Fourteen items in one message. What needs the installed mods to measure is
+left in `ROADMAP.md` as 101h-101m. Built here:
+
+* **101a - the battle-model entry list kept where it was scrolled.** Unit
+  Transfer's *battle-model entries only* list redrew the whole composer on every
+  tick, which threw the list and the dialog back to the top. `holdScroll(root,
+  paint)` in `core.js` remembers every scrolled element under the dialog (by id,
+  else by class and position) and puts each back after the repaint;
+  `toggleImportModel` and `allImportModels` go through it.
+* **101b - Apply without a Probe, and a preview in plain words.** Apply no
+  longer stops the first time a unit already exists in the destination to show
+  a probe: the conflict is settled the way the dialog already says (rename with
+  its pre-filled names, unless the user chose otherwise). The preview opens with
+  `planGlanceHtml`: a green *Ready* or red *problems* line and at most five short
+  sentences (what is created, renamed, how many battle models and files); the
+  planner's full report folds under *Show full detail*, remembered as
+  `transfer_detail_open`.
+* **101c - a Find box over the sidebar's faction checklist**, in the Unit
+  Editor's filters and in Buildings' (`facFindApply`). A ticked faction stays
+  shown while it is filtering.
+* **101d - armour upgrade levels and models, the same on both screens.**
+  `gfUgLevelsWidget` is now the levels box everywhere (guided and raw view of
+  the editor, the creator): chips always in ascending order, no drag, and *Add*
+  with nothing typed goes one past the highest level. The creator's models box,
+  `gfUgModelsWidget`, is drawn like the editor's (✕ above each tier, which drops
+  its level too, drag to reorder, ＋ with *repeat the last tier* and *name an
+  existing entry*). Adding a model when there are fewer levels than models tops
+  the levels up (`ugTopUpLevels`, and `edUgAppend` in the editor).
+* **101e - the 3D column follows the tiers.** A tier added or swapped is drawn
+  straight away, in the editor (`edPrevFollowTiers` from `edSetField`;
+  `edPrevEntries` reads the tiers as typed) and in the creator
+  (`cmpPrevFollowTiers` from the guided host's `set` and the raw boxes).
+* **101f - the Unit Creator hands over to the Unit Editor.** After a new unit
+  is written in the Unit Editor's mode, the list is re-read and the new unit
+  opens in the editor. *Copy from type* sits beside the displayed name in both
+  the creator and the editor.
+* **101g - a unit's animations changed directly.** Each battle-model card
+  (Unit Editor and BMDB editor) shows the entry's animation records: mount type
+  and primary / secondary skeleton, with the mod's skeleton names suggested.
+  `ModelEdit.animations` carries them; `_plan_model_edit` writes them with
+  `modeldb.rewrite_animations` (only those three names, weapon skeletons and
+  every other byte kept); an unknown mount type, an empty primary or a changed
+  record count is an error, a skeleton neither the modeldb nor the packs know a
+  warning. `tests/test_animentry` 15 (nothing installed needed).
+
 ## Phase 100 - Armory Studio's second round, and faction cards in the Unit Editor, scheduled 2026-10-19, done 2026-10-20
 
 Sent by the user on 2026-10-19: a list of requests for Armory Studio, a bug

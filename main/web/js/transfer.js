@@ -116,12 +116,14 @@ function toggleImportModel(name,on){
   const set=new Set(importedModels(c,unitModels(state.editing)).map(s=>s.toLowerCase()));
   if(on)set.add(name.toLowerCase()); else set.delete(name.toLowerCase());
   c.models_only=[...set];
-  renderComposer();
+  // keep the entry list (and the dialog) where it was scrolled to - a tick
+  // used to throw both back to the top
+  holdScroll(document.getElementById('modal'), renderComposer);
 }
 function allImportModels(on){
   const c=cfgFor(state.editing);
   c.models_only=on?null:[];
-  renderComposer();
+  holdScroll(document.getElementById('modal'), renderComposer);
 }
 /* Nothing ticked, with the list actually loaded.
 
@@ -199,7 +201,15 @@ function cmpPrevEntries(){
     const k=mod+CMP_PREV_SEP+n;
     if(!seen[k]){ seen[k]=1; out.push({mod,entry:n,role,key:k}); }
   });
-  const u=state.data&&state.data.units.find(x=>x.type===state.editing);
+  let u=state.data&&state.data.units.find(x=>x.type===state.editing);
+  // the armour tiers as typed in the field editor, not as the file has them, so
+  // a tier added or swapped is drawn straight away
+  const fo=(cfgFor(state.editing).field_overrides||{}).armour_ug_models;
+  if(u&&fo!==undefined){
+    const ug=csv(fo);
+    u=Object.assign({},u,{armour_ug_models:ug,
+      models:[...new Set(ug.concat((u.models||[]).filter(n=>!(u.armour_ug_models||[]).includes(n))))]});
+  }
   if(u)push(state.src,state.src===state.dst?tt('transfer.this_unit'):tt('transfer.role_from_mod',{mod:state.src}),cmpPrevOwn(u));
   const c=cfgFor(state.editing),b=baseUnitOf(c);
   if(b)push(state.dst,tt(isReplace(c)?'transfer.role_replacing_type':'transfer.role_base_type',{type:b.type}),cmpPrevOwn(b));
@@ -275,6 +285,17 @@ async function cmpPrevMount(){
   }
   v3Pause(false);
   await v3Mount(CMP_PREV_HOST,e.mod,e.entry);
+}
+/* Called when the armour tiers change in the field editor: draw the tier that
+   changed, the way the Unit Editor's column does. */
+let cmpPrevFollowT=0;
+function cmpPrevFollowTiers(before,after){
+  const was=csv(before||'').map(x=>x.toLowerCase()),now=csv(after||'').map(x=>x.toLowerCase());
+  const fresh=now.find((n,i)=>was[i]!==n);
+  if(fresh){ const hit=cmpPrevEntries().find(e=>e.entry.toLowerCase()===fresh&&e.mod===state.src);
+    if(hit)cmpPrevWant[state.editing]=hit.key; }
+  clearTimeout(cmpPrevFollowT);
+  cmpPrevFollowT=setTimeout(()=>{ if(!cmpPrevNode)return; cmpPrevBar(); cmpPrevMount(); },150);
 }
 function cmpPrevPick(key){
   cmpPrevWant[state.editing]=key;
@@ -918,7 +939,9 @@ function renderAllFields(type){
   }).join('');
   box.querySelectorAll('input[data-k]').forEach(inp=>{
     inp.oninput=()=>{const k=inp.dataset.k, v=inp.value;
+      const was=(k in c.field_overrides)?c.field_overrides[k]:c._orig[k];
       if(v!==c._orig[k]) c.field_overrides[k]=v; else delete c.field_overrides[k];
+      if(k==='armour_ug_models')cmpPrevFollowTiers(was,v);
       inp.classList.toggle('changed', v!==c._orig[k]);
       // a typed value is no longer the base's, so the B has to stop claiming it is
       const b=box.querySelector(`button[data-b="${cssq(k)}"]`);
@@ -1127,6 +1150,48 @@ function optsPayload(type){const c=cfgFor(type);
     sound_mode:c.sound_mode||'base',sound_donor:c.sound_donor||null};}
 // Render the plan summary as indented rows. Each row's text sits in its own
 // column, so a long path wraps under itself and the structure stays readable.
+/* The preview in plain words: what Apply will do, in at most five short lines,
+   with a green or red line saying whether it is ready. Everything the planner
+   reports is still there, folded under "Show full detail" (remembered). */
+const trSumOpen=()=>!!(state.settings||{}).transfer_detail_open;
+function trSumKeep(on){
+  if(!state.settings)state.settings={};
+  if(!!state.settings.transfer_detail_open===!!on)return;
+  state.settings.transfer_detail_open=!!on;
+  api.post('/api/settings',{transfer_detail_open:!!on}).catch(()=>{});
+}
+function planGlanceHtml(type,r,sumText){
+  const lines=[];
+  const same=state.src===state.dst;
+  const name=r.resolved_name||'';
+  const acts=r.model_actions||[];
+  const n=k=>acts.filter(a=>a.action===k).length;
+  if(r.models_mode)
+    lines.push(ttN('transfer.glance_models_only',n('add')+n('rename'),{dst:esc(state.dst)}));
+  else if(r.replace_type)
+    lines.push(tt('transfer.glance_replace',{type:esc(type),old:esc(r.replace_type),dst:esc(state.dst)}));
+  else if(r.skipped)
+    lines.push(tt('transfer.glance_skipped',{type:esc(type),dst:esc(state.dst)}));
+  else if(same)
+    lines.push(tt('transfer.glance_new_unit',{type:esc(r.resolved_type||type),name:esc(name||type)}));
+  else
+    lines.push(tt('transfer.glance_copy',{type:esc(r.resolved_type||type),dst:esc(state.dst)}));
+  if(!r.models_mode&&r.unit_conflict&&!r.skipped&&r.on_conflict==='rename'&&r.resolved_type&&r.resolved_type!==type)
+    lines.push(tt('transfer.glance_renamed',{type:esc(r.resolved_type)}));
+  const add=n('add'),reuse=n('reuse_identical'),ren=n('rename');
+  if(add||reuse||ren)
+    lines.push(tt('transfer.glance_models',{add,reuse,ren}));
+  const files=(r.asset_count||0)+(r.icon_count||0);
+  if(files) lines.push(ttN('transfer.glance_files',files));
+  const t=(sumText||'').split('\n');
+  const bad=t.filter(l=>/ERROR/.test(l)).length;
+  const warn=t.filter(l=>!/ERROR/.test(l)&&(/^\s*!/.test(l)||/WARNING|NOT found|differ\b/.test(l))).length;
+  const ok=!bad&&!r.base_error&&!r.option_error;
+  const verdict=ok
+    ? `<div class="glance-ok">✓ ${warn?ttN('transfer.glance_ready_warn',warn):tt('transfer.glance_ready')}</div>`
+    : `<div class="glance-bad">✗ ${esc(r.base_error||r.option_error||'')||ttN('transfer.glance_problems',bad)}</div>`;
+  return `<div class="glance">${verdict}<ul>${lines.map(l=>`<li>${l}</li>`).join('')}</ul></div>`;
+}
 function renderSummary(t){
   const rows=(t||'').split('\n').map((raw,i)=>{
     const m=raw.match(/^(\s*)(.*?)\s*$/); const indent=m[1].length; let body=m[2];
@@ -1448,8 +1513,12 @@ async function doPreview(){
               paintSoldierAnim(null);return null;}
   paintSoldierAnim(r);
   // the "(soldier line)" animation line is shown beside the Soldier row instead
-  let html=renderSummary((r.summary||'').split('\n')
-    .filter(l=>!/ANIMATION WARNING \(soldier line\)/.test(l)).join('\n'));
+  const sumText=(r.summary||'').split('\n')
+    .filter(l=>!/ANIMATION WARNING \(soldier line\)/.test(l)).join('\n');
+  // a few plain sentences first; the engine's full report folds under them
+  let html=planGlanceHtml(type,r,sumText)
+    +`<details class="sumfold"${trSumOpen()?' open':''} ontoggle="trSumKeep(this.open)">
+      <summary>${tt('transfer.glance_full_detail')}</summary>${renderSummary(sumText)}</details>`;
   cfgFor(type)._conflict=r.unit_conflict;
   cfgFor(type)._dictOwner=(r.unit_conflict&&!r.type_conflict)?(r.dict_conflict||''):'';
   // Having rendered the conflict fieldset (with its pre-filled rename defaults, editable
@@ -1674,7 +1743,8 @@ function conflictUI(type){const c=cfgFor(type);const u=state.data.units.find(x=>
   if(!c.new_type)c.new_type=dictOnly?type:type+' (copy)'; if(!c.new_dictionary)c.new_dictionary=u.dictionary+'_copy';
   if(c.new_name==null)c.new_name=u.name||'';
   const nameRow=`<label>${tt('transfer.displayed_name_what_the_player_reads')}
-      <input id="nn" value="${esc(c.new_name)}"></label>`;
+      <span class="nmcopy"><input id="nn" value="${esc(c.new_name)}">
+      <button type="button" onclick="trNameFromType()" title="${ttA('common.name_from_type_title')}">${tt('common.name_from_type')}</button></span></label>`;
   // Same mod = the "new unit" flow: the clash with the original is the whole point,
   // so ask for the new unit's names instead of warning about a conflict.
   const sameMod=state.src===state.dst;
@@ -1701,6 +1771,12 @@ function conflictUI(type){const c=cfgFor(type);const u=state.data.units.find(x=>
       <label>${tt('transfer.new_dictionary')}<input id="nd" value="${esc(c.new_dictionary)}"></label>
       ${nameRow}
     </div></fieldset>`;
+}
+// "Copy from type": the displayed name becomes what the New type box says
+function trNameFromType(){
+  const c=cfgFor(state.editing),nt=document.getElementById('nt'),nn=document.getElementById('nn');
+  const v=((nt&&nt.value)||c.new_type||'').trim(); if(!v)return;
+  c.new_name=v; if(nn)nn.value=v;
 }
 function wireConflict(type){const c=cfgFor(type);
   document.querySelectorAll('input[name=cf]').forEach(r=>r.onchange=()=>{c.on_conflict=r.value;document.getElementById('rf').style.display=r.value==='rename'?'':'none';});
@@ -1779,11 +1855,14 @@ async function doApply(){
     if(r.error){toast(`${t}: ${r.error}`);state.editing=t;renderComposer();await doPreview();return;}
     if(r.base_error){toast(`${t}: ${r.base_error}`);state.editing=t;renderComposer();return;}
     if(r.option_error){toast(`${t}: ${r.option_error}`);state.editing=t;renderComposer();return;}
-    if(r.unit_conflict && !cfgFor(t)._resolved){ state.editing=t;renderComposer();await doPreview();
-      toast(tt('transfer.already_exists_in_the_destination_choose',{x:t}));
-      cfgFor(t)._resolved=true; return; }
+    // A unit that already exists no longer stops the first Apply to show a
+    // probe: the conflict is settled the way the dialog already says (rename,
+    // with its pre-filled names, unless another choice was made), and the
+    // toast at the end names what was written.
+    if(r.unit_conflict) cfgFor(t)._resolved=true;
   }
   let ok=0,skip=0,last=null;
+  const made=[];                 // the unit types this run wrote, in order
   const status=types.map(()=>'pending');
   for(let i=0;i<types.length;i++){
     const t=types[i];
@@ -1795,7 +1874,8 @@ async function doApply(){
       clear_strings_bin:clearBinOn()&&i===types.length-1});
     if(res.error){status[i]='error';renderProgress(types,status);toast(`${t}: ${res.error}`);return;}
     if(res.strings_bin)last=res;
-    if(res.plan&&res.plan.skipped){skip++;status[i]='skipped';} else {ok++;status[i]='done';}
+    if(res.plan&&res.plan.skipped){skip++;status[i]='skipped';} else {ok++;status[i]='done';
+      if(res.plan&&res.plan.resolved_type&&!isModels(cfgFor(t)))made.push(res.plan.resolved_type);}
     renderProgress(types,status);
   }
   closeModal();
@@ -1808,7 +1888,13 @@ async function doApply(){
   // these ones are done - leaving them ticked invites transferring them twice
   clearSelection();
   state.cfg={};
-  if(state.dst===state.src)loadSource();
+  if(state.dst===state.src){
+    // The Unit Creator: the unit just made opens in the Unit Editor, so the
+    // next thing done to it does not start with finding it in the list.
+    const fresh=state.mode==='edit'&&made.length===1?made[0]:'';
+    try{ await loadSource(); }catch(e){}
+    if(fresh&&state.mode==='edit'&&typeof openEditor==='function')await openEditor(fresh);
+  }
 }
 
 /* ---------- batch open ---------- */

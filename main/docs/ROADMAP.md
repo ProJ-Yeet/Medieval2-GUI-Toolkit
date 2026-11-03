@@ -1183,6 +1183,53 @@ rows, which became Phases 56-73 and 25-27. Their write-ups are in
 `ROADMAP_ARCHIVE.md`, with how the ratings were reconciled with the 2026-09-05
 triage board.
 
+## Phase 101 - the user's list of 2026-11-03, what a local session finishes
+
+The list came in one message (fourteen items). The ones a cloud session could
+build without the mods' own files were built on `claude/vigilant-allen-ymd9dk`
+and are written up in `ROADMAP_ARCHIVE.md` under *Phase 101*. Building lines
+between mods (Buildings > *From another mod*, `bimOpen`) and a whole faction
+from another mod (96f, `factionbring.py`) were already there. What is left needs
+installed mods to read, measure or check against:
+
+* **101h - Animation cleaner and consolidation.** Phase 85 (`packhouse.py`)
+  already reports what a mod's packs hold that nothing plays and writes a
+  compacted pack with Undo. Find out from the user what "cleaner and
+  consolidation" adds to that before building: candidates are skeletons no
+  model names (85 reports them and never removes them), duplicate animations
+  under different paths, and folding loose `.cas` files back into the pack.
+  Measure each on Reforged and DaC first.
+* **101i - Strat model cleaner.** The campaign-map counterpart of the BMDB
+  cleanup: `descr_model_strat.txt` entries no character, faction or script
+  names, and the `.cas` / texture files under `data/models_strat` nothing
+  points at, moved out with one Undo. Which files name a strat model has to be
+  measured over the installed mods (descr_character.txt, descr_sm_factions.txt,
+  descr_strat.txt, campaign scripts, EOP Lua) before anything is removed.
+* **101j - Captains, leaders and each faction's unique models in the Models
+  Editor.** Editable: the general's / captain's bodyguard and the faction
+  leader / heir models (`descr_character.txt` per faction, and the
+  `strat_model` / `battle_model` lines there), plus whatever else is per
+  faction (`descr_sm_factions.txt` figures, `descr_model_strat.txt` entries).
+  Read both installed mods to list exactly which lines a faction owns before
+  drawing the UI; the Models Editor's existing card is the place to show them.
+* **101k - The Unit Creator's other two ＋ modes for armour tiers.** The
+  creator now draws armour tiers like the Unit Editor (chips, ✕ above, drag,
+  ＋ with *repeat the last tier* and *name an existing entry*). The editor's
+  *take another unit's tiers* and *new entry from a tier* need the editor's
+  own staging (`state.ed.newModels`), which the composer has not got; bring
+  them across if the user asks for them.
+* **101l - Check "Install needs Preview" with the user.** No button is called
+  Install. It was read as Unit Transfer / the Unit Creator, whose Apply stopped
+  at a probe the first time a unit already existed in the destination; that
+  stop is gone and the preview is now a few plain lines over the full report.
+  If the user meant another screen, fix that one too.
+* **101m - Try the session's UI changes in the real app.** Built and unit
+  tested without a mod installed: the faction Find boxes, the armour levels
+  and models widgets on both screens (guided and raw view), the 3D column
+  following the tiers, *Copy from type*, the new-unit hand-off to the Unit
+  Editor, the animation rows on a model card, and the scroll kept on a tick in
+  the battle-model entry list.
+
 ## Deferred to a later version, by the user
 
 **How automatic "automatic kitbashing" is** (Phase 95). Asked on 2026-10-06

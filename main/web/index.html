@@ -288,6 +288,13 @@
   .srow.shead .stext{font-weight:600;color:var(--ink)}
   .srow .path{font-family:ui-monospace,Consolas,monospace;color:var(--dim)}
   .srow .num{color:var(--accent);font-weight:600}
+  /* the plain-words preview over the full report (Unit Transfer / Unit Creator) */
+  .nmcopy{display:flex;gap:6px;align-items:center} .nmcopy input{flex:1;min-width:0}
+  .facfind{width:100%;margin-bottom:6px;box-sizing:border-box}
+  .glance{background:var(--panel2);border:1px solid var(--edge);border-radius:8px;padding:9px 12px;font-size:13px;line-height:1.55}
+  .glance ul{margin:6px 0 0;padding-left:18px}
+  .glance-ok{color:var(--good);font-weight:600} .glance-bad{color:var(--bad);font-weight:600}
+  details.sumfold{margin-top:6px} details.sumfold>summary{cursor:pointer;color:var(--dim);font-size:12px;padding:3px 0}
   .w-warn{color:var(--warn)} .w-bad{color:var(--bad)} .w-good{color:var(--good)}
   .toast{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);background:var(--panel);
     border:1px solid var(--edge);border-radius:8px;padding:10px 16px;z-index:50;box-shadow:0 6px 20px #000a;display:none}
@@ -3712,6 +3719,7 @@
       <option data-i18n="app.a_z_by_in_game_name" value="name">A→Z by in-game name</option>
       <option data-i18n="app.a_z_by_code_name" value="code">A→Z by code name</option>
     </select>
+    <input type="search" class="facfind" id="facFind" data-i18n-placeholder="app.find_a_faction" placeholder="Find a faction…" oninput="facFindApply('factionFilter',this.value)">
     <div id="factionFilter"></div>
     <h3 data-i18n="app.category">Category</h3><div id="categoryFilter"></div>
     <h3 data-i18n="app.class">Class</h3><div id="classFilter"></div>
@@ -3745,6 +3753,7 @@
       <option data-i18n="app.a_z_by_in_game_name" value="name">A→Z by in-game name</option>
       <option data-i18n="app.a_z_by_code_name" value="code">A→Z by code name</option>
     </select>
+    <input type="search" class="facfind" id="bldFacFind" data-i18n-placeholder="app.find_a_faction" placeholder="Find a faction…" oninput="facFindApply('bldFactionFilter',this.value)">
     <div id="bldFactionFilter"></div>
   </aside>
   <main id="main"><div data-i18n="app.loading" class="empty">Loading…</div></main>
