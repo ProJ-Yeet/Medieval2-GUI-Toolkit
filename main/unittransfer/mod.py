@@ -173,6 +173,19 @@ class Mod:
         except ValueError:
             return str(path)
 
+    def packed_or(self, path: Path) -> Path:
+        """``path``, or the copy this mod's own packs hold when it is not on
+        disk (a Kingdoms campaign, or the base game read only). Readers that
+        only look at the file go on seeing ``path`` missing when neither has it."""
+        if path.exists():
+            return path
+        from . import gamepack
+        try:
+            packed, _found = gamepack.own_packed(self._rel(path), self)
+        except (OSError, ValueError):
+            packed = None
+        return packed if packed is not None else path
+
     def _read_required(self, path: Path, parse, missing: str):
         """Parse a file this mod cannot be opened without, or say why not.
 
@@ -301,7 +314,14 @@ class Mod:
                 return localization.parse_file(self.export_units_path)
             except (OSError, UnicodeError):
                 pass
-        return self.loc_from_bin(self.export_units_path)
+        return self._packed_loc(self.export_units_path)
+
+    def _packed_loc(self, txt_path: Path, descr_suffix: str = "_descr") -> localization.Localization:
+        """:meth:`loc_from_bin`, the archive read out of the mod's own packs
+        when it is not on disk."""
+        from . import stringsbin
+        b = self.packed_or(stringsbin.bin_path_for(txt_path))
+        return self.loc_from_bin(stringsbin.txt_path_for(b), descr_suffix)
 
     @staticmethod
     def loc_from_bin(txt_path: Path, descr_suffix: str = "_descr"
@@ -425,7 +445,7 @@ class Mod:
     @cached_property
     def edb(self) -> "buildings_mod.EdbFile":
         """Parsed export_descr_buildings.txt (lines verbatim, edits are splices)."""
-        return buildings_mod.parse_file(self.edb_path)
+        return buildings_mod.parse_file(self.packed_or(self.edb_path))
 
     @cached_property
     def building_loc(self) -> localization.Localization:
@@ -437,7 +457,7 @@ class Mod:
                 return localization.parse_file(p, descr_suffix="_desc")
             except (OSError, UnicodeError):
                 pass
-        return self.loc_from_bin(p, descr_suffix="_desc")
+        return self._packed_loc(p, descr_suffix="_desc")
 
     @cached_property
     def edb_vocab(self) -> Dict[str, object]:
@@ -508,7 +528,7 @@ class Mod:
             # compiled expanded.txt.strings.bin, and faction names are worth having
             from . import stringsbin
             return {k.lower(): v for k, v in
-                    stringsbin.load_pairs(stringsbin.bin_path_for(p)).items()}
+                    stringsbin.load_pairs(self.packed_or(stringsbin.bin_path_for(p))).items()}
         try:
             txt = p.read_text(encoding="utf-16")
         except (OSError, UnicodeError):

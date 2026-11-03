@@ -91,6 +91,30 @@ def _starts(game: Path, base_dir: Path, base: str, name: str) -> Dict[str, str]:
 
 #: what a fork from the plain game is called where a base mod's name would be
 GAME = "the game"
+#: packed files a fork from the game takes out of the packs as well: the text
+#: and databases the toolkit edits (a Steam install keeps every one of them in
+#: packs/, so a fork of its loose data/ alone had no unit list to open)
+PACKED_EXT = (".modeldb", ".db")
+
+
+def _packed_text(game_dir: Path):
+    """``[(rel under data/, size, pack)]``: what the game's packs hold that the
+    toolkit edits and its loose ``data/`` lacks."""
+    from . import gamepack
+    out, seen = [], set()
+    data = game_dir / "data"
+    for pk in gamepack.packs(game_dir):
+        for key, entry in pk.entries.items():
+            if not key.startswith("data/") or key in seen:
+                continue
+            rel = key[5:]
+            base = rel.rsplit("/", 1)[-1]
+            if not (_copied(base) or base.endswith(PACKED_EXT)):
+                continue
+            seen.add(key)
+            if not (data / rel).is_file():
+                out.append((rel, entry[2], pk))
+    return out
 
 
 def _where(base_root, name: str, game: bool):
@@ -139,7 +163,9 @@ def plan(base_root, name: str, game: bool = False) -> Dict:
                     copied += size; nc += 1
                 else:
                     linked += size; nl += 1
+    packed = _packed_text(base_dir) if game and base_dir.is_dir() else []
     out.update(linked_files=nl, copied_files=nc, linked_bytes=linked, copied_bytes=copied,
+               packed_files=len(packed), packed_bytes=sum(s for _r, s, _p in packed),
                ok=not out["errors"])
     return out
 
@@ -186,6 +212,13 @@ def create(base_root, name: str, copy_all: bool = False,
                 done = stats["linked"] + stats["copied"]
                 if progress and done % 500 == 0:
                     progress(done)
+        if game:
+            stats["unpacked"] = 0
+            for rel, _size, pk in _packed_text(base_dir):
+                dst = Path(land) / rel
+                dst.parent.mkdir(parents=True, exist_ok=True)
+                dst.write_bytes(pk.read("data/" + rel))
+                stats["unpacked"] += 1
         for n, text in _starts(game_dir, target if game else base_dir, base, name).items():
             (target / n).write_bytes(text.encode("latin-1"))
         (target / MARKER).write_text(json.dumps(
@@ -246,6 +279,14 @@ def break_link(path) -> bool:
 _WRITE = re.compile(r"[wax+]")
 _installed = threading.Lock()
 _on = [False]
+#: folders no write may land in: the base game's own data/, which the toolkit
+#: shows read only (the registry sets it). An edit there would change the plain
+#: game under every mod that leans on it; it is made in a mod made from it.
+READ_ONLY: List[str] = []
+
+
+class ReadOnlyError(PermissionError):
+    pass
 
 
 def _guarded(path, mode) -> None:
@@ -260,6 +301,12 @@ def _guarded(path, mode) -> None:
     if isinstance(s, bytes):
         s = s.decode(errors="replace")
     low = s.replace("\\", "/").lower()
+    full = os.path.abspath(s).replace("\\", "/").lower()
+    if any(full.startswith(ro) for ro in READ_ONLY):
+        raise ReadOnlyError(_i18n.msg(
+            "eng.modfork.base_game_read_only",
+            "the base game is read only here: make a mod from it (Home > New mod folder from the plain game) and change that ({path})",
+            path=s))
     if "/mods/" not in low:
         return
     break_link(s)

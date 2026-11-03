@@ -179,10 +179,12 @@ function homeCardHtml(m){
         <div class="nm">${esc(m.name)}</div>
         <div class="sub" title="${esc(m.root)}">${esc(m.root)}</div>
       </div>
-      ${m.pack?`<span class="badge">${tt('home.mounted_pack')}</span>`:''}
+      ${m.base?`<span class="badge">${tt('home.base_game')}</span>`:m.pack?`<span class="badge">${tt('home.mounted_pack')}</span>`:''}
     </div>
-    ${homeM2exHtml(m)}${m.pack ? '' : `<div class="hcfork"><button onclick="homeFork('${q1(esc(m.name))}')"
-      title="${ttA('home.fork_title')}">${tt('home.fork')}</button></div>`}
+    ${m.base ? `<div class="count" style="margin:6px 0">${tt('home.base_game_note')}</div>
+      <div class="hcfork"><button onclick="homeFork('', true)" title="${ttA('home.fork_game_title')}">${tt('home.fork_game')}</button></div>`
+      : `${homeM2exHtml(m)}${m.pack ? '' : `<div class="hcfork"><button onclick="homeFork('${q1(esc(m.name))}')"
+      title="${ttA('home.fork_title')}">${tt('home.fork')}</button></div>`}`}
     <div class="hcmods">${homeModulesHtml(m, r)}</div>
     <div class="hcfiles">${homeLaunchHtml(m, r)}${homePacksHtml(m)}${homeFilesHtml(m, r)}</div>
   </section>`;

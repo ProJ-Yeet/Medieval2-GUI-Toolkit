@@ -1,0 +1,20 @@
+name = "m2-gui-kit-reports"
+main = "worker.js"
+compatibility_date = "2026-10-01"
+
+[vars]
+REPORTS_REPO = "ProJ-Yeet/Medieval2-GUI-Toolkit-Reports"
+
+# GITHUB_TOKEN is a secret: `npx wrangler secret put GITHUB_TOKEN`, never here.
+
+[[unsafe.bindings]]
+name = "REPORT_LIMIT"
+type = "ratelimit"
+namespace_id = "1001"
+simple = { limit = 3, period = 60 }
+
+[[unsafe.bindings]]
+name = "ANSWER_LIMIT"
+type = "ratelimit"
+namespace_id = "1002"
+simple = { limit = 10, period = 60 }

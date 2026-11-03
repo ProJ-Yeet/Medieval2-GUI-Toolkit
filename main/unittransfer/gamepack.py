@@ -346,9 +346,13 @@ def own_prefix(mod) -> str:
     lays it over the base game's.
     """
     root = Path(getattr(mod, "root", "") or "")
-    if not (root / "packs").is_dir() or root.parent.name.lower() != "mods":
+    if not (root / "packs").is_dir():
         return ""
-    return f"mods/{root.name.lower()}/data/"
+    if root.parent.name.lower() == "mods":
+        return f"mods/{root.name.lower()}/data/"
+    # the game itself, opened read only as the base game: its packs name its
+    # files as plain data/...
+    return "data/" if (root / "mods").is_dir() else ""
 
 
 def own_packed(rel: str, mod, as_path: bool = True) -> Tuple[Optional[Path], bool]:

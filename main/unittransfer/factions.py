@@ -307,6 +307,8 @@ def faction_cultures(mod) -> Dict[str, str]:
     just used to read the file with a regex of its own.
     """
     path = path_for(mod)
+    if hasattr(mod, "packed_or"):          # read only: its own packs may hold it
+        path = mod.packed_or(path)
     if not path.is_file():
         return {}
     try:

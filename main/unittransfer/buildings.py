@@ -980,10 +980,24 @@ def find_icon(mod, culture: str, level: str, kind: str = "small",
 def cultures_of(mod) -> List[str]:
     """Culture folders under ``data/ui`` that actually hold building icons."""
     ui = mod.data / "ui"
-    if not ui.is_dir():
+    if ui.is_dir():
+        found = sorted(p.name for p in ui.iterdir()
+                       if p.is_dir() and (p / "buildings").is_dir())
+        if found:
+            return found
+    # a Kingdoms campaign or the base game: the folders are inside its packs
+    from . import gamepack
+    prefix = gamepack.own_prefix(mod)
+    if not prefix:
         return []
-    return sorted(p.name for p in ui.iterdir()
-                  if p.is_dir() and (p / "buildings").is_dir())
+    found = set()
+    for pk in gamepack.packs(mod.root):
+        for key in pk.entries:
+            if key.startswith(prefix + "ui/"):
+                parts = key[len(prefix) + 3:].split("/")
+                if len(parts) > 2 and parts[1] == "buildings":
+                    found.add(parts[0])
+    return sorted(found)
 
 
 def faction_cultures(mod) -> Dict[str, str]:
@@ -3806,7 +3820,7 @@ def overview(mod, culture: str = "") -> dict:
         })
     return {
         "mod": mod.name,
-        "has_file": mod.edb_path.exists(),
+        "has_file": mod.packed_or(mod.edb_path).exists(),
         "has_loc": mod.building_loc_path.exists(),
         "lines": lines,
         "culture": culture,

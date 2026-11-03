@@ -159,8 +159,11 @@ for mod_root in (TATR, ROC, DAC):
     check(f"{mod_root.name}: index and projectiles.effect_sets name the same sets",
           set(i.sets) == projectiles.effect_sets(data))
     check(f"{mod_root.name}: no set is called '<'", "<" not in i.sets)
+    # each block against the file it was read from: the mod's own, or the base
+    # game's copy (loose, or out of its packs)
+    read_from = {r.lower(): p for r, p in i.files.paths}
     for b in [x for v in i.sets.values() for x in v] + list(i.effects.values()):
-        raw_ok = b.raw in kb.read_text(data / b.rel, effects.ENCODING)
+        raw_ok = b.raw in kb.read_text(read_from.get(b.rel.lower(), data / b.rel), effects.ENCODING)
         if not raw_ok:
             check(f"{mod_root.name}: {b.name} is a verbatim slice", False)
             break

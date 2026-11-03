@@ -535,7 +535,7 @@ async function init(){
 const realMods=()=>state.mods.filter(m=>!m.pack);
 async function refreshMods(pSrc,pDst){
   state.mods=await api.get('/api/mods');
-  const opt=m=>`<option value="${esc(m.name)}">${esc(m.pack?'📦 '+m.name:m.name)}</option>`;
+  const opt=m=>`<option value="${esc(m.name)}">${esc(m.base?tt('core.base_game_name',{name:m.name}):m.pack?'📦 '+m.name:m.name)}</option>`;
   srcSel.innerHTML=state.mods.map(opt).join('');
   // A mounted unit pack can only ever be a SOURCE: it holds a handful of units
   // and nothing else, and writing into it would go nowhere - it is deleted when
@@ -1689,6 +1689,7 @@ function wire(){
   // and openLog's first argument is the mode to filter by. That filter
   // matched nothing, so the header's own button opened an empty log.
   logBtn.onclick=()=>openLog();
+  reportBtn.onclick=()=>reportOpen(state.mode);
   selBtn.onclick=toggleSelMode; batchBtn.onclick=openBatch; clearSelBtn.onclick=clearSelection;
   packBtn.onclick=()=>packExport([...state.selected]); importPackBtn.onclick=packImport;
   cleanBtn.onclick=()=>cleanupFor(state.mode)(); unusedOnly.onchange=render;

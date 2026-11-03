@@ -1062,7 +1062,28 @@ class Registry:
         for name, root in self._packs.items():
             if (root / "data").is_dir():
                 out[name] = root
+        # The base game itself, read only: a source for transfers and a roster
+        # and buildings to look at, its files read out of its packs as the
+        # Kingdoms campaigns' are. Its data/ refuses every write (the write
+        # guard); changing it is done in a mod made from it.
+        game = self.base_root()
+        if game is not None and game.name not in out:
+            out[game.name] = game
         return out
+
+    def base_root(self) -> Optional[Path]:
+        mr = self.mods_root()
+        game = mr.parent if mr is not None and mr.name.lower() == "mods" else None
+        if game is None or not ((game / "packs").is_dir() or (game / "data").is_dir()):
+            return None
+        ro = os.path.abspath(game / "data").replace("\\", "/").lower() + "/"
+        if ro not in modfork.READ_ONLY:
+            modfork.READ_ONLY.append(ro)
+        return game
+
+    def is_base(self, name: str) -> bool:
+        game = self.base_root()
+        return game is not None and name == game.name
 
     # ---- unit packs mounted as read-only source mods ----
     def mount_pack(self, zip_path) -> dict:
@@ -1648,6 +1669,7 @@ def _options_from(d: dict) -> TransferOptions:
         eop_target=d.get("eop_target", "auto"),
         banner_mode=("swap" if d.get("banner_mode") == "swap" else "port"),
         own_skins_only=bool(d.get("own_skins_only")),
+        import_effects=bool(d.get("import_effects")),
         set_recruitment=bool(d.get("set_recruitment")),
         on_conflict=d.get("on_conflict", "rename"),
         new_type=d.get("new_type") or None,
@@ -1998,7 +2020,9 @@ class Handler(BaseHTTPRequestHandler):
                 # mod: this list is the header dropdown and it has to answer
                 # before anything is read.
                 return self._json([{"name": n, "root": str(p),
-                                    "pack": self.registry.is_pack(n),
+                                    # the base game is never a destination either
+                                    "pack": self.registry.is_pack(n) or self.registry.is_base(n),
+                                    "base": self.registry.is_base(n),
                                     "m2ex": modflags.is_m2ex(p),
                                     # 92a: reads descr_model_battle.txt, not the .modeldb
                                     "text_models": modeltext.reads_text(p),
@@ -2808,7 +2832,15 @@ class Handler(BaseHTTPRequestHandler):
                 except OSError as e:
                     return self._json({"error": str(e)})
             if u.path == "/api/report":
-                return self._json({"can_send": bool(report.webhook()), "folder": str(report.REPORTS)})
+                s = config.load_settings()
+                return self._json({"can_send": report.can_send(), "relay": bool(report.relay()),
+                                   "folder": str(report.REPORTS), "contact": s.get("report_contact") or "",
+                                   "hide": s.get("report_hide") or "", "sent": len(report.sent_list())})
+            if u.path == "/api/report/answers":
+                try:
+                    return self._json({"reports": report.answers()})
+                except report.ReportError as e:
+                    return self._json({"reports": report.sent_list(), "error": str(e)})
             if u.path == "/api/log":
                 return self._json(log_page(
                     mode=(q.get("mode") or [""])[0],
@@ -3191,20 +3223,60 @@ class Handler(BaseHTTPRequestHandler):
                 armory.save_presets(body.get("presets") or [])
                 return self._json({"ok": True})
             if u.path == "/api/report":
-                # the tester's notes: a problem report, saved, and sent where
-                # an address is set (report.py)
-                name, data = report.build(str(body.get("notes") or ""), body.get("log") or [],
-                                          body.get("project"), str(body.get("where") or ""))
+                # a problem report or an idea, saved, and sent where an address
+                # is set (report.py); `preview` only says what would go
+                mods = []
+                for n in body.get("mods") or []:
+                    try:
+                        mods.append(self.registry.get(n))
+                    except Exception:                    # noqa: BLE001
+                        pass
+                notes, kind = str(body.get("notes") or ""), str(body.get("kind") or "bug")
+                contact = str(body.get("contact") or "").strip()
+                hide = [w.strip() for w in str(body.get("hide") or "").split(",") if w.strip()]
+                name, data = report.build(notes, body.get("log") or [], body.get("project"),
+                                          str(body.get("where") or ""), kind=kind, contact=contact,
+                                          mods=mods, pictures=body.get("pictures") or [], hide=hide,
+                                          logs=body.get("logs", True) is not False)
+                if body.get("preview"):
+                    return self._json({"files": report.show(data), "bytes": len(data)})
+                if body.get("remember") is not None:
+                    config.save_settings(report_contact=contact if body.get("remember") else "",
+                                         report_hide=str(body.get("hide") or "") if body.get("remember") else "")
                 out = report.save(name, data)
-                sent, why = False, ""
+                sent, why, rid = False, "", ""
                 if body.get("send"):
                     try:
-                        report.send(name, data, str(body.get("notes") or ""))
+                        if report.relay():
+                            rid = report.send_relay(data, notes, kind, contact, str(body.get("where") or ""),
+                                                    [m.name for m in mods], hide).get("id", "")
+                        else:
+                            report.send(name, data, notes)
                         sent = True
                     except report.ReportError as e:
                         why = str(e)
-                return self._json({"path": str(out), "sent": sent, "error": why,
+                return self._json({"path": str(out), "sent": sent, "error": why, "id": rid,
                                    "bytes": len(data)})
+            if u.path == "/api/report/reply":
+                data = None
+                if body.get("logs") or body.get("pictures"):
+                    mods = []
+                    for n in body.get("mods") or []:
+                        try:
+                            mods.append(self.registry.get(n))
+                        except Exception:                # noqa: BLE001
+                            pass
+                    _n, data = report.build(str(body.get("message") or ""), body.get("log") or [], None,
+                                            str(body.get("where") or ""), kind="reply", mods=mods,
+                                            pictures=body.get("pictures") or [], logs=bool(body.get("logs")))
+                try:
+                    report.reply(str(body.get("id") or ""), str(body.get("message") or ""), data)
+                except report.ReportError as e:
+                    return self._json({"ok": False, "error": str(e)})
+                return self._json({"ok": True})
+            if u.path == "/api/report/seen":
+                report.mark_seen(str(body.get("id") or ""))
+                return self._json({"ok": True})
             if u.path == "/api/armory/keys":
                 armory.save_keys(body.get("keys") or {})
                 return self._json({"ok": True})

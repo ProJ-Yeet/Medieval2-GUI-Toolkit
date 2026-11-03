@@ -85,6 +85,10 @@ class TransferOptions:
     # default: a DaC unit with a dozen faction skins brings a dozen sets of
     # .texture files for a faction that wears one
     own_skins_only: bool = False
+    # Bring the projectiles' effect sets on a destination NOT marked M2EX too,
+    # the user having been told the plain engine's effect table may drop them.
+    # An M2EX destination brings them whatever this says.
+    import_effects: bool = False
     # 92b: "Let the faction recruit them" - recruit pools for the unit, through
     # the Recruitment tab's own writer (buildings.plan_edit), in the same job
     set_recruitment: bool = False
@@ -324,6 +328,12 @@ class TransferPlan:
     effect_blocks: List[Tuple[str, str]] = field(default_factory=list)
     effect_actions: List[Tuple[str, str, str]] = field(default_factory=list)
     effect_assets: List[str] = field(default_factory=list)
+    # An effect file the destination leaves to the base game is written from
+    # the base game's own copy first (file -> that copy's path), so every set
+    # the base declared there is kept; and a file its descr_effects.txt does
+    # not load is added to it (seeded from the base's manifest the same way).
+    effect_seeds: Dict[str, str] = field(default_factory=dict)
+    effect_manifest_adds: List[str] = field(default_factory=list)
     # 92d: banners the unit carries and the destination has not got.
     # (kind, name, action, detail); action "port" | "swap" | "drop" | "blocked"
     banner_actions: List[Tuple[str, str, str, str]] = field(default_factory=list)
@@ -1170,8 +1180,8 @@ def _resolve_projectiles(plan: "TransferPlan", source: Mod, dest: Mod,
     ``attack_stat`` lines fire; any ``flaming`` variant they reference is followed
     too. Each is reused when the destination already has an identical block, renamed
     on a name collision with different content, or added. Effect-set references the
-    destination doesn't define are rewritten to the placeholder (effects are never
-    ported). EDU stat lines are repointed at apply time via
+    destination doesn't define are rewritten to the placeholder unless
+    :func:`_plan_effects` brings them. EDU stat lines are repointed at apply time via
     ``plan.projectile_renames``.
     """
     wanted: List[str] = []
@@ -1317,7 +1327,8 @@ def _plan_effects(plan: "TransferPlan", source: Mod, dest: Mod, to_emit) -> set:
     Returns the set names that came across, which the caller adds to the valid
     list so their effect lines keep pointing at the real name.
     """
-    if not to_emit or not getattr(dest, "m2ex", False):
+    m2ex = getattr(dest, "m2ex", False)
+    if not to_emit or not (m2ex or plan.options.import_effects):
         return set()
     wanted = [v for sp in to_emit for v in sp.effects.values() if v]
     if not wanted:
@@ -1328,18 +1339,34 @@ def _plan_effects(plan: "TransferPlan", source: Mod, dest: Mod, to_emit) -> set:
     src_idx = source.effect_index
     dest_files = dest.effect_index.files
 
-    # A block goes into the destination's file of the same name, so that file
-    # has to be one the destination both LOADS (its descr_effects.txt lists it)
-    # and SHIPS. Appending to a file it does not ship creates it, and a mod's
-    # copy of an effect file replaces the base game's whole file - every set the
-    # base game declared there would go. A set that needs such a file stays the
-    # placeholder, and says why.
+    # A block goes into the destination's file of the same name, because which
+    # file a set lives in is what it means to the engine. That file has to be
+    # one the destination LOADS and SHIPS. One it leaves to the base game is
+    # written from the base game's own copy first - a mod's copy replaces the
+    # base's whole file, so starting from anything less would lose every set
+    # the base declared there - and one its manifest does not load is added to
+    # the manifest, seeded the same way. Only a file nothing here can read
+    # (packed, and no pack had it) still stops the set, and says why.
+    seeds: Dict[str, str] = {}
+    manifest_adds: List[str] = []
+
     def why_not(rel: str) -> str:
         if not dest_files.loads(rel):
-            return f"the destination's descr_effects.txt does not load {rel}"
-        if not dest_files.ships(rel):
-            return (f"the destination leaves {rel} to the base game, and writing "
-                    "it would replace the base game's whole file")
+            if dest_files.source == "default":
+                return (f"the destination's descr_effects.txt does not load {rel}, "
+                        "and it has no manifest to add it to")
+            if not dest_files.ships(effects_mod.MANIFEST):
+                base_manifest = _base_effect_file(dest, effects_mod.MANIFEST)
+                if base_manifest is None:
+                    return f"the destination's descr_effects.txt does not load {rel}, and the base game's cannot be read"
+                seeds[effects_mod.MANIFEST] = str(base_manifest)
+            manifest_adds.append(rel)
+        if not dest_files.ships(rel) and rel.lower() not in {m.lower() for m in manifest_adds}:
+            base = dest_files.base_path(rel)
+            if base is None:
+                return (f"the destination leaves {rel} to the base game, which is packed "
+                        "where it cannot be read, and writing it would replace the base game's whole file")
+            seeds[rel] = str(base)
         return ""
 
     placeable: List[str] = []
@@ -1351,8 +1378,12 @@ def _plan_effects(plan: "TransferPlan", source: Mod, dest: Mod, to_emit) -> set:
             eb = src_idx.effect_of(m) if m.lower() not in have_effects else None
             if eb is not None:
                 rels.add(eb.rel)
+        kept = (dict(seeds), list(manifest_adds))
         why = next((w for w in (why_not(r) for r in sorted(rels)) if w), "")
         if why:
+            # a set that cannot go leaves no seed or manifest line behind it
+            seeds.clear(); seeds.update(kept[0])
+            manifest_adds[:] = kept[1]
             plan.effect_actions.append((name, "blocked", why))
         else:
             placeable.append(name)
@@ -1367,6 +1398,13 @@ def _plan_effects(plan: "TransferPlan", source: Mod, dest: Mod, to_emit) -> set:
 
     imported = set()
     seen_assets = {rel for _, rel in plan.asset_files}
+    landed = {b.rel.lower() for b in blocks}
+    for rel, path in seeds.items():
+        if rel.lower() in landed or (rel == effects_mod.MANIFEST and manifest_adds):
+            plan.effect_seeds.setdefault(rel, path)
+    for rel in dict.fromkeys(manifest_adds):
+        if rel.lower() in landed and rel not in plan.effect_manifest_adds:
+            plan.effect_manifest_adds.append(rel)
     for b in blocks:
         plan.effect_blocks.append((b.rel, b.raw))
         if b.kind == effects_mod.SET:
@@ -1385,10 +1423,32 @@ def _plan_effects(plan: "TransferPlan", source: Mod, dest: Mod, to_emit) -> set:
                 plan.asset_files.append((src_abs, rel))
                 plan.effect_assets.append(rel)
 
-    if imported:
+    if imported and m2ex:
         plan.warnings.append(
             _i18n.msg("eng.transfer.effects_imported_effect_set_s_the", "EFFECTS IMPORTED: {imported_n} effect set(s) the destination did not have were copied into its effect files, because it is marked as M2EX. On a vanilla engine this is what the 'effects are not imported' rule protects against: the engine's effect table has a fixed size and silently drops whatever is past the end of it. Untick M2EX to go back to placeholders.", imported_n=len(imported)))
+    elif imported:
+        plan.warnings.append(_i18n.msg(
+            "eng.transfer.effects_imported_plain_engine",
+            "EFFECTS ON THE PLAIN ENGINE: {imported_n} effect set(s) were copied into the effect files of a mod not marked as M2EX, as asked. The plain game's effect table has a fixed size and drops whatever is past its end without a word, so if a projectile shows nothing in battle, take some effects out or run the mod on M2EX.",
+            imported_n=len(imported)))
+    for rel in plan.effect_manifest_adds:
+        plan.warnings.append(_i18n.msg(
+            "eng.transfer.effects_manifest_add", "{rel} added to descr_effects.txt, so the game loads the effects brought into it",
+            rel=rel))
+    for rel in plan.effect_seeds:
+        if rel != effects_mod.MANIFEST:
+            plan.warnings.append(_i18n.msg(
+                "eng.transfer.effects_seeded", "{rel} is now the mod's own, started from the base game's copy so every effect the base game declares there is kept",
+                rel=rel))
     return imported
+
+
+def _base_effect_file(mod: Mod, rel: str) -> Optional[Path]:
+    """The base game's copy of one effect file: loose, else out of its packs."""
+    base = effects_mod.base_data(mod.data)
+    if base is not None and (base / rel).is_file():
+        return base / rel
+    return effects_mod.base_packed(mod.data, rel)
 
 
 # --------------------------------------------------------------------------
@@ -3299,11 +3359,41 @@ def apply_transfer(plan: TransferPlan) -> Dict:
         config.append_log(rec)
         return rec
 
+    tid = config.new_transfer_id()
+    backup_root = config.backup_root_for(tid)
+    manifest = {"backed_up": [], "created": []}
+    # A write that fails halfway used to leave the files before it written: the
+    # EDU block with no text, models or assets behind it, which the game then
+    # crashes on. Everything written so far is put back from the backups the
+    # writes already took, and the error says so.
+    try:
+        return _apply_writes(plan, tid, backup_root, manifest)
+    except Exception as e:
+        log.error("APPLY  id=%s failed, putting back what it wrote: %s", tid, e)
+        try:
+            _put_back(plan.dest.data, backup_root, manifest)
+            from . import changesets
+            changesets.undone({"dest_root": str(plan.dest.root), "manifest": manifest})
+        except Exception as e2:                          # noqa: BLE001
+            log.error("APPLY  id=%s could not put everything back: %s (backups in %s)",
+                      tid, e2, backup_root)
+            raise RuntimeError(_i18n.msg(
+                "eng.transfer.failed_rollback_failed",
+                "the transfer failed ({e}) and putting the files back failed too ({e2}); the backups are in {path}",
+                e=e, e2=e2, path=backup_root)) from e
+        finally:
+            _invalidate(plan.dest)
+        raise RuntimeError(_i18n.msg(
+            "eng.transfer.failed_rolled_back",
+            "the transfer failed, and every file it had written was put back as it was: {e}",
+            e=e)) from e
+
+
+def _apply_writes(plan: TransferPlan, tid: str, backup_root: Path, manifest: Dict) -> Dict:
+    """:func:`apply_transfer`'s writes, each recorded in ``manifest`` as it goes."""
     dest = plan.dest
     source = plan.source
     unit = source.edu.by_type()[plan.unit_type]
-    tid = config.new_transfer_id()
-    backup_root = config.backup_root_for(tid)
 
     # Both mods, as they are on disk *before* anything is written. When a transfer
     # produces a broken destination the first question is which files these were.
@@ -3312,8 +3402,6 @@ def apply_transfer(plan: TransferPlan) -> Dict:
     log.info("APPLY  id=%s  %r  %s -> %s", tid, plan.unit_type, source.name, dest.name)
     log.info("  backups -> %s", backup_root)
     _log_plan(plan)
-
-    manifest = {"backed_up": [], "created": []}
 
     # ---- 0) Phase 83: the animations, into the packs, before anything else,
     # so a refusal (the game running, no room, the packs changed) writes
@@ -3440,7 +3528,7 @@ def apply_transfer(plan: TransferPlan) -> Dict:
     loc_entry = (None if (plan.replace_type or plan.models_mode)
                  else source.loc.get(unit.dictionary))
     if loc_entry is not None:
-        loc_text, loc_read_as = localization.read_file(dest.export_units_path)
+        loc_text, loc_read_as = localization.read_for_edit(dest.export_units_path)
         # `new_name` is what the player will see. Without it the record is a copy
         # of the source's, which is right when the same unit crosses mods and
         # wrong when the point was to make a unit of your own out of one.
@@ -3573,7 +3661,9 @@ def apply_transfer(plan: TransferPlan) -> Dict:
             by_file.setdefault(rel, []).append(raw)
         for rel, raws in by_file.items():
             current = dest.data / rel
-            etext = kb.read_text(current, effects_mod.ENCODING) if current.exists() else ""
+            seed = plan.effect_seeds.get(rel)
+            etext = (kb.read_text(current, effects_mod.ENCODING) if current.exists()
+                     else kb.read_text(Path(seed), effects_mod.ENCODING) if seed else "")
             nl = kb.newline_of(etext)     # same rule as the projectiles above
             blk = (nl + nl).join(r.strip("\r\n") for r in raws)
             etext = (etext.rstrip("\r\n") + nl + nl + blk) if etext.strip() else blk
@@ -3581,6 +3671,16 @@ def apply_transfer(plan: TransferPlan) -> Dict:
             if not etext.endswith(nl):
                 etext += nl
             write_text(rel, etext, effects_mod.ENCODING, exact=True)
+
+    # the effect files the manifest did not load yet, added to it
+    if plan.effect_manifest_adds:
+        man = dest.data / effects_mod.MANIFEST
+        seed = plan.effect_seeds.get(effects_mod.MANIFEST)
+        mtext = (kb.read_text(man, effects_mod.ENCODING) if man.exists()
+                 else kb.read_text(Path(seed), effects_mod.ENCODING) if seed else "")
+        nl = kb.newline_of(mtext)
+        mtext = mtext.rstrip("\r\n") + nl + nl.join(plan.effect_manifest_adds) + nl
+        write_text(effects_mod.MANIFEST, mtext, effects_mod.ENCODING, exact=True)
 
     # ---- 3c4) 92b: the recruit pools, through the Recruitment tab's writer ----
     if plan.recruit_text:
@@ -3822,10 +3922,22 @@ def undo(transfer_id: str) -> Dict:
         raise KeyError(_i18n.msg("eng.transfer.no_transfer_with_id", "no transfer with id {transfer_id}", transfer_id=transfer_id))
     if not rec.get("applied") or rec.get("undone"):
         return rec
-    dest_root = Path(rec["dest_root"])
-    data = dest_root / "data"
-    backup_root = Path(rec.get("backup_root", ""))
-    manifest = rec.get("manifest", {})
+    _put_back(Path(rec["dest_root"]) / "data", Path(rec.get("backup_root", "")),
+              rec.get("manifest", {}))
+    # the files just put back went round the write helpers, so the mod's
+    # change set is told directly (Phase 52)
+    from . import changesets
+    changesets.undone(rec)
+
+    config.update_log(transfer_id, undone=True)
+    rec["undone"] = True
+    return rec
+
+
+def _put_back(data: Path, backup_root: Path, manifest: Dict) -> None:
+    """Every file in ``manifest`` back as it was: :func:`undo`'s work, and a
+    failed :func:`apply_transfer`'s, which has the same manifest half filled."""
+    dest_root = data.parent
 
     # Phase 81: a port appended to the animation packs. Each .dat is truncated
     # back to the length it had, every one checked first; a .dat the game or
@@ -3882,14 +3994,6 @@ def undo(transfer_id: str) -> Dict:
             file_op("DELETE", Path(target), "created by the job undone")
         except OSError:
             pass
-    # the files just put back went round the write helpers, so the mod's
-    # change set is told directly (Phase 52)
-    from . import changesets
-    changesets.undone(rec)
-
-    config.update_log(transfer_id, undone=True)
-    rec["undone"] = True
-    return rec
 
 
 def revert_to(transfer_id: str) -> Dict:

@@ -140,6 +140,25 @@ def read_file(path: str | Path) -> Tuple[str, str]:
     return p.read_text(encoding="latin-1"), "latin-1"   # decodes any byte
 
 
+def read_for_edit(path: str | Path) -> Tuple[str, str]:
+    """:func:`read_file` for a file about to be written, which may not be there.
+
+    A released mod, and the game's own expansions, often ship only the compiled
+    ``<file>.strings.bin`` and no ``.txt``. The text is then rebuilt from that
+    archive, so the ``.txt`` written keeps every entry the game shows today;
+    with neither file the edit starts from nothing. Both come back as UTF-16,
+    which is what the game writes and reads.
+    """
+    p = Path(path)
+    if p.exists():
+        return read_file(p)
+    from . import stringsbin
+    b = stringsbin.bin_path_for(p)
+    if b.exists():
+        return stringsbin.to_txt(stringsbin.read(b)), ENCODING
+    return "", ENCODING
+
+
 def save_encoding(text: str, read_as: str) -> str:
     """What to actually write with, given what the file was read as.
 

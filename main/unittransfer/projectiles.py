@@ -18,11 +18,12 @@ dangling projectile reference. Blocks start at a line whose first token is
 ``projectile`` and run until the next one (or EOF). Each block's verbatim text is
 kept so a transfer can append it (with only the effect lines rewritten).
 
-Effects are NOT ported: the 7 ``effect``/``end_*`` lines reference effect-sets
-defined in the source mod's descr_effect_impacts / arrow-trail files, which we do
-not copy. Any effect-set the destination doesn't already define is rewritten to a
-harmless placeholder so the projectile stays valid; the user re-adds real effects
-by hand. ``;`` starts a comment.
+The 7 ``effect``/``end_*`` lines reference effect-sets defined in the effect
+files ``descr_effects.txt`` lists. A transfer brings the sets the source
+declares when the destination is marked M2EX or the user asks for them
+(``transfer._plan_effects``); otherwise any set the destination doesn't define
+is rewritten to a harmless placeholder so the projectile stays valid, and the
+user re-adds real effects by hand. ``;`` starts a comment.
 """
 from __future__ import annotations
 

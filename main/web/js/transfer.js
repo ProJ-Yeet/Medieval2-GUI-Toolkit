@@ -438,7 +438,9 @@ async function renderComposer(){
          ${hasProj?`<div class="projline">${tt('transfer.projectile',{proj:proj.map(p=>`<span class="chip">${esc(p)}</span>`).join('')})}</div>`:''}
          ${hasEng?`<div class="projline">${tt('transfer.siege_engine',{eng:esc(eng),engMounted:engMounted?'<span class="count"> (mounted)</span>':'',engGroups:engGroups.length?`<span class="count"> · ${engGroups.map(esc).join(' / ')}</span>`:'',engClass:engClass?`<span class="count"> ${tt('transfer.class',{engClass:esc(engClass)})}</span>`:''})}</div>`:''}</div>
      </div>
-     ${sameMod?'':`${projOn&&!mo?`<div class="warnbox">${tt('transfer.projectile_effects_arent_imported_the_definition',{dst:esc(state.dst)})}</div>`:''}
+     ${sameMod?'':`${projOn&&!mo?(modIsM2ex(state.dst)?`<div class="count">${tt('transfer.projectile_effects_m2ex',{dst:esc(state.dst)})}</div>`
+       :`<div class="warnbox">${tt('transfer.projectile_effects_arent_imported_the_definition',{dst:esc(state.dst)})}
+         <label class="chk" style="display:block;margin-top:6px"><input type="checkbox" id="optFx" ${c.import_effects?'checked':''}> ${tt('transfer.projectile_effects_bring_anyway',{dst:esc(state.dst)})}</label></div>`):''}
      ${mo?'':`<fieldset><legend>${tt('transfer.include_secondary_models')}</legend>
        <label class="chk${offOn?'':' off'}"><input type="checkbox" id="optOff" ${offOn&&c.include_officers?'checked':''} ${offOn?'':'disabled'}> ${tt('transfer.officers',{x:!hasOff?`(${tt('common.none')})`:offBase?kw:`(${u.officers.length})`})}</label>
        <label class="chk${mntOn?'':' off'}" style="margin-left:12px"><input type="checkbox" id="optMount" ${mntOn&&c.include_mount?'checked':''} ${mntOn?'':'disabled'}> ${tt('transfer.mount',{x:!hasMount?` (${tt('common.none')})`:mntBase?' '+kw:` (${esc(u.mount)})`})}</label>
@@ -561,6 +563,7 @@ async function renderComposer(){
   // this one changes which models are copied at all, so the whole composer is redrawn
   if(window.optCrew)optCrew.onchange=()=>{c.include_crew=optCrew.checked; renderComposer();};
   if(window.optProj)optProj.onchange=()=>{c.include_projectile=optProj.checked; doPreview();};
+  if(window.optFx)optFx.onchange=()=>{c.import_effects=optFx.checked; doPreview();};
   // re-render: the engine fieldset appears/disappears with the checkbox
   if(window.optEngine)optEngine.onchange=()=>{c.include_engine=optEngine.checked; renderComposer();};
   // re-render: the whole voice panel (locks, donor list, notes) changes with the mode
@@ -1124,6 +1127,7 @@ function optsPayload(type){const c=cfgFor(type);
     eop_target:c.eop_target||'auto',
     banner_mode:c.banner_mode==='swap'?'swap':'port',
     own_skins_only:!!c.own_skins_only,
+    import_effects:!!c.import_effects,
     set_recruitment:!!c.set_recruitment,
     asset_conflict:c.asset_conflict||'mod_folder',
     asset_reroute_dir:c.asset_reroute_dir||null,
@@ -1733,7 +1737,9 @@ function wireConflict(type){const c=cfgFor(type);
 
 const PROG_ICON={pending:'·',current:'⟳',done:'✓',error:'✗',skipped:'~'};
 const PROG_CLS={current:'w-warn',done:'w-good',error:'w-bad',skipped:''};
-function renderProgress(types,status){
+// `fail` ({unit, error}) ends a run that stopped: the reason in words, and
+// a way out of the box, which used to hold only the ✗
+function renderProgress(types,status,fail){
   const done=status.filter(s=>s==='done'||s==='error'||s==='skipped').length;
   const curIdx=status.indexOf('current');
   const pct=types.length?Math.round((done/types.length)*100):0;
@@ -1746,7 +1752,9 @@ function renderProgress(types,status){
       <div class="progress-track"><div class="progress-fill" style="width:${pct}%"></div></div>
       <div class="count" style="margin:8px 0 12px">${tt('transfer.of_done',{done,types_n:types.length,curIdx:curIdx>=0?`: <b>${esc(types[curIdx])}</b>`:''})}</div>
       <div class="proglist">${rows}</div>
-    </div>`;
+      ${fail?`<div class="w-bad" style="margin-top:10px;white-space:pre-wrap">${esc(fail.unit)}: ${esc(fail.error)}</div>`:''}
+    </div>${fail?`<div class="foot"><button onclick="closeModal()">${tt('common.close')}</button>
+      <button class="primary" onclick="reportOpen('transfer',${esc(JSON.stringify(`${state.src} -> ${state.dst}, ${fail.unit}: ${fail.error}`))})">${tt('report.report_this')}</button></div>`:''}`;
 }
 
 /* Real progress for the long BMDB jobs (the scan and the cleanup). Each is ONE
@@ -1812,7 +1820,7 @@ async function doApply(){
       // once per batch, after the last unit - clearing it earlier just lets the
       // game recompile the cache before the batch has finished writing
       clear_strings_bin:clearBinOn()&&i===types.length-1});
-    if(res.error){status[i]='error';renderProgress(types,status);toast(`${t}: ${res.error}`);return;}
+    if(res.error){status[i]='error';renderProgress(types,status,{unit:t,error:res.error});return;}
     if(res.strings_bin)last=res;
     if(res.plan&&res.plan.skipped){skip++;status[i]='skipped';} else {ok++;status[i]='done';}
     renderProgress(types,status);

@@ -234,6 +234,20 @@ def base_data(data_dir) -> Optional[Path]:
         return None
 
 
+def base_packed(data_dir, rel: str) -> Optional[Path]:
+    """The base game's ``data/<rel>`` read out of its ``packs/`` (into the
+    cache), for an install that was never unpacked; ``None`` when the mod is
+    not under an install's ``mods`` folder or no pack has the file."""
+    mods = Path(data_dir).parent.parent
+    if mods.name.lower() != "mods":
+        return None
+    from . import gamepack
+    try:
+        return gamepack.extract(rel, mods.parent)
+    except Exception:                                        # noqa: BLE001
+        return None
+
+
 def _listed(path: Path) -> List[str]:
     out: List[str] = []
     try:
@@ -271,6 +285,12 @@ class EffectFiles:
     def ships(self, rel: str) -> bool:
         return rel.lower() in {x.lower() for x in self.shipped}
 
+    def base_path(self, rel: str) -> Optional[Path]:
+        """Where the base game's copy of ``rel`` was read from, if it was."""
+        if rel.lower() not in {x.lower() for x in self.from_base}:
+            return None
+        return next((p for r, p in self.paths if r.lower() == rel.lower()), None)
+
 
 def effect_files(data_dir) -> EffectFiles:
     """The files the engine loads for this mod, each with the path it is read
@@ -284,6 +304,10 @@ def effect_files(data_dir) -> EffectFiles:
         out.listed, out.source = _listed(data / MANIFEST), "mod"
     elif base is not None and (base / MANIFEST).is_file():
         out.listed, out.source = _listed(base / MANIFEST), "base"
+    else:
+        packed = base_packed(data, MANIFEST)
+        if packed is not None:
+            out.listed, out.source = _listed(packed), "base"
     if not out.listed:
         out.listed, out.source = list(FILES), "default"
     for rel in ALWAYS:
@@ -298,7 +322,12 @@ def effect_files(data_dir) -> EffectFiles:
             out.from_base.append(rel)
             out.paths.append((rel, base / rel))
         elif out.source != "default":
-            out.unread.append(rel)
+            packed = base_packed(data, rel)
+            if packed is not None:
+                out.from_base.append(rel)
+                out.paths.append((rel, packed))
+            else:
+                out.unread.append(rel)
     return out
 
 
