@@ -436,7 +436,7 @@ async function renderComposer(){
        <img class="baseimg" src="${iconUrl(state.src,type)}">
        <div><b>${esc(u.name)}</b><div class="count">${esc(type)} · ${esc(u.kind||u.category||'?')}/${esc(u.class||'?')}</div>
          ${hasProj?`<div class="projline">${tt('transfer.projectile',{proj:proj.map(p=>`<span class="chip">${esc(p)}</span>`).join('')})}</div>`:''}
-         ${hasEng?`<div class="projline">${tt('transfer.siege_engine',{eng:esc(eng),engMounted:engMounted?'<span class="count"> (mounted)</span>':'',engGroups:engGroups.length?`<span class="count"> · ${engGroups.map(esc).join(' / ')}</span>`:'',engClass:engClass?`<span class="count"> ${tt('transfer.class',{engClass:esc(engClass)})}</span>`:''})}</div>`:''}</div>
+         ${hasEng?`<div class="projline">${tt('transfer.siege_engine',{eng:esc(eng),engMounted:engMounted?`<span class="count"> ${tt('common.mounted')}</span>`:'',engGroups:engGroups.length?`<span class="count"> · ${engGroups.map(esc).join(' / ')}</span>`:'',engClass:engClass?`<span class="count"> ${tt('transfer.class',{engClass:esc(engClass)})}</span>`:''})}</div>`:''}</div>
      </div>
      ${sameMod?'':`${projOn&&!mo?(modIsM2ex(state.dst)?`<div class="count">${tt('transfer.projectile_effects_m2ex',{dst:esc(state.dst)})}</div>`
        :`<div class="warnbox">${tt('transfer.projectile_effects_arent_imported_the_definition',{dst:esc(state.dst)})}

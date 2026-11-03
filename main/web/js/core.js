@@ -1989,7 +1989,7 @@ function openDrawer(type){
       ${row(tt('core.eras'),eras)}
       ${row(tt('core.battle_models'),u.models.map(m=>`<span class="chip">${esc(m)}</span>`).join('')||'none')}
       ${row(tt('core.officers_mount'),(u.officers.map(o=>`<span class="chip">${esc(o)}</span>`).join('')||tt('common.none'))+(u.mount?`  ${tt('core.mount')} <span class="chip">${esc(u.mount)}</span>`:''))}
-      ${(u.engine||u.mounted_engine)?row(tt('core.siege_engine'),`<span class="chip">${esc(u.engine||u.mounted_engine)}</span>${u.mounted_engine&&!u.engine?' <span class="count">(mounted)</span>':''}${(u.engine_groups||[]).length?`<span class="count"> ${tt('core.groups',{engine_groups:(u.engine_groups||[]).map(esc).join(', ')})}</span>`:''}`):''}
+      ${(u.engine||u.mounted_engine)?row(tt('core.siege_engine'),`<span class="chip">${esc(u.engine||u.mounted_engine)}</span>${u.mounted_engine&&!u.engine?` <span class="count">${tt('common.mounted')}</span>`:''}${(u.engine_groups||[]).length?`<span class="count"> ${tt('core.groups',{engine_groups:(u.engine_groups||[]).map(esc).join(', ')})}</span>`:''}`):''}
       <button class="primary" style="width:100%;margin-top:6px" onclick="drawer.classList.remove('open');openComposer(['${q1(esc(u.type))}'])">${tt('core.transfer_to',{dst:esc(state.dst)})}</button>
     </div>`;
   d.classList.add('open');

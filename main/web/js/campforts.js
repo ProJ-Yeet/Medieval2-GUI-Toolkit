@@ -505,7 +505,7 @@ function cftFormHtml(){
       </div>
       <div class="cmfield"><label>${tt('common.culture')}</label>
         ${cultures ? `<select onchange="cftSet('culture', this.value); cftPlan()">
-            <option value=""${w.culture ? '' : ' selected'}>(none)</option>
+            <option value=""${w.culture ? '' : ' selected'}>${tt('common.none_option')}</option>
             ${cultures.indexOf(w.culture) < 0 && w.culture
               ? `<option selected>${esc(w.culture)}</option>` : ''}
             ${cultures.map(c => `<option${c === w.culture ? ' selected' : ''}>${esc(c)}</option>`).join('')}

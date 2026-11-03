@@ -11788,5 +11788,10 @@
  "eng.modfiles.unit_voice_bank": "Birim seslendirme bankası",
  "scripts.blocks_palette_hint": "Bir bloğu script içine sürükleyin veya sona eklemek için çift tıklayın.",
  "scripts.tab_campscript": "Kampanya script",
- "scripts.cs_confirm": "Kampanya script içinden {n} parça çıkarılsın mı?\n\n{changes}\n{warnings}\n\nÖnce yedeklenir; 🕑 Günlük geri alabilir."
+ "scripts.cs_confirm": "Kampanya script içinden {n} parça çıkarılsın mı?\n\n{changes}\n{warnings}\n\nÖnce yedeklenir; 🕑 Günlük geri alabilir.",
+ "buildings.custom_option": "{name} (özel değer)",
+ "codeview.record_as_stored": "Dosyada saklandığı haliyle kayıt",
+ "common.none_option": "(yok)",
+ "common.mounted": "(binek üzerinde)",
+ "strings.text_placeholder": "Metin girin"
 }

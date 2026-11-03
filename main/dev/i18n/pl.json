@@ -12944,5 +12944,10 @@
  "menusheets.replace": "Zamień...",
  "scripts.cs_head": "<code>data/{rel}</code>, {lines} wierszy, jako fragmenty skryptu: każdy monitor, pętla, blok if, licznik i polecenie poza blokiem, wraz z komentarzem powyżej. Wiersze script, wait_monitors i end_script zawsze pozostają.",
  "factions.titles_head": "Tytuły <span class=\"count\">Tytuły przywódcy ('King %S'), następcy i byłego przywódcy oraz mocne i słabe strony na ekranie frakcji, zapisane w text/expanded.txt</span>",
- "transfer.own_voice_note": "Własny wpis z banku głosów {src} trafia do tego samego akcentu i klasy w {dst}. Każdy wskazany plik dźwiękowy, którego brakuje w {dst}, jest kopiowany poza archiwa (w razie potrzeby z archiwów {src}). Skompilowane pliki wydarzeń są usuwane, aby gra zbudowała je ponownie."
+ "transfer.own_voice_note": "Własny wpis z banku głosów {src} trafia do tego samego akcentu i klasy w {dst}. Każdy wskazany plik dźwiękowy, którego brakuje w {dst}, jest kopiowany poza archiwa (w razie potrzeby z archiwów {src}). Skompilowane pliki wydarzeń są usuwane, aby gra zbudowała je ponownie.",
+ "buildings.custom_option": "{name} (wartość własna)",
+ "codeview.record_as_stored": "Rekord w postaci zapisanej w pliku",
+ "common.none_option": "(brak)",
+ "common.mounted": "(na wierzchowcu)",
+ "strings.text_placeholder": "Wpisz tekst"
 }

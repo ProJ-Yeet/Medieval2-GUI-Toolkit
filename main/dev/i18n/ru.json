@@ -13013,5 +13013,10 @@
  "eng.modfiles.battle_models_bmdb": "Боевые модели (BMDB)",
  "scripts.cs_head": "<code>data/{rel}</code>, строк: {lines}, как части скрипта: каждый monitor, цикл, блок if, счетчик и команда вне блоков, с комментарием над ними. Строки script, wait_monitors и end_script всегда сохраняются.",
  "settings.nu_horse_charge": "Конница для натиска",
- "factions.titles_head": "Титулы <span class=\"count\">Титулы лидера ('King %S'), наследника, бывшего лидера, а также сильные и слабые стороны на экране фракции; сохраняются в text/expanded.txt</span>"
+ "factions.titles_head": "Титулы <span class=\"count\">Титулы лидера ('King %S'), наследника, бывшего лидера, а также сильные и слабые стороны на экране фракции; сохраняются в text/expanded.txt</span>",
+ "buildings.custom_option": "{name} (своё значение)",
+ "codeview.record_as_stored": "Запись в том виде, как она хранится в файле",
+ "common.none_option": "(нет)",
+ "common.mounted": "(на верховом животном)",
+ "strings.text_placeholder": "Введите текст"
 }

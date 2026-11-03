@@ -12260,5 +12260,10 @@
  "core.base_game_name": "🏰 {name} (Basisspiel)",
  "eng.modfork.base_game_read_only": "das Basisspiel ist hier schreibgeschützt: Erstelle daraus einen Mod (Start > Neuer Mod-Ordner aus dem reinen Spiel) und ändere diesen ({path})",
  "home.base_game": "Basisspiel, schreibgeschützt",
- "home.base_game_note": "Das reine Spiel, aus seinen eigenen Paketen gelesen. Sieh dir seine Einheiten und Gebäude an oder übernimm Einheiten daraus per Übertragen; um etwas zu ändern, erstelle zuerst einen Mod daraus."
+ "home.base_game_note": "Das reine Spiel, aus seinen eigenen Paketen gelesen. Sieh dir seine Einheiten und Gebäude an oder übernimm Einheiten daraus per Übertragen; um etwas zu ändern, erstelle zuerst einen Mod daraus.",
+ "buildings.custom_option": "{name} (eigener Wert)",
+ "codeview.record_as_stored": "Datensatz wie in der Datei gespeichert",
+ "common.none_option": "(keine)",
+ "common.mounted": "(auf dem Reittier)",
+ "strings.text_placeholder": "Text eingeben"
 }

@@ -12373,5 +12373,10 @@
  "eng.modfiles.mounted_engines": "Engins sur monture",
  "eng.modfiles.populace_and_off_map_models": "Foule et modèles hors carte",
  "eng.modfiles.settlement_populace": "Foule des colonies",
- "report.state_open": "en cours"
+ "report.state_open": "en cours",
+ "buildings.custom_option": "{name} (valeur personnalisée)",
+ "codeview.record_as_stored": "Enregistrement tel qu’il est stocké dans le fichier",
+ "common.none_option": "(aucun)",
+ "common.mounted": "(sur une monture)",
+ "strings.text_placeholder": "Saisir le texte"
 }

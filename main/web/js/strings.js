@@ -190,7 +190,7 @@ function strAddHtml(a, i){
     <td class="k"><input type="text" spellcheck="false" placeholder="NEW_TAG" value="${esc(a.tag)}"
       class="${bad ? 'bad' : ''}" title="${esc(bad || tt('strings.the_tag_the_game_asks_for'))}"
       oninput="strAddSet(${i},'tag',this.value,this)"></td>
-    <td><textarea rows="2" placeholder="The text" oninput="strAddSet(${i},'value',this.value,this)">${esc(a.value)}</textarea></td>
+    <td><textarea rows="2" placeholder="${tt('strings.text_placeholder')}" oninput="strAddSet(${i},'value',this.value,this)">${esc(a.value)}</textarea></td>
     <td class="s"><button title="${ttA('strings.drop_this_new_entry')}" onclick="strAddDrop(${i})">✕</button></td>
   </tr>`;
 }

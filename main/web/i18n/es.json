@@ -12751,5 +12751,10 @@
  "core.base_game_name": "🏰 {name} (juego base)",
  "eng.modfork.base_game_read_only": "aquí el juego base es de solo lectura: crea un mod a partir de él (Inicio > Nueva carpeta de mod desde el juego sin mods) y cambia ese ({path})",
  "home.base_game": "Juego base, solo lectura",
- "home.base_game_note": "El juego sin mods, leído de sus propios paquetes. Mira sus unidades y edificios, o toma unidades de él en Transferir; para cambiar algo, crea primero un mod a partir de él."
+ "home.base_game_note": "El juego sin mods, leído de sus propios paquetes. Mira sus unidades y edificios, o toma unidades de él en Transferir; para cambiar algo, crea primero un mod a partir de él.",
+ "buildings.custom_option": "{name} (valor personalizado)",
+ "codeview.record_as_stored": "Registro tal como está almacenado en el archivo",
+ "common.none_option": "(ninguno)",
+ "common.mounted": "(sobre una montura)",
+ "strings.text_placeholder": "Introducir texto"
 }

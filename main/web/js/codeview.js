@@ -192,7 +192,7 @@ function cvHtml(cv){
         <div class="cvhl"><div class="cvshift" id="cvhl-${cv.uid}">${cvOverlay(cv)}</div></div>
         <textarea class="cvta" id="cvta-${cv.uid}" spellcheck="false" wrap="off"
           ${cv.readonly?'readonly':''}
-          aria-label="the record as the file stores it">${esc(cv.text)}</textarea>
+          aria-label="${tt('codeview.record_as_stored')}">${esc(cv.text)}</textarea>
       </div>
     </div>
     <div class="cverr" id="cverr-${cv.uid}">${cvErrHtml(cv)}</div></div>`;

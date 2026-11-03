@@ -761,7 +761,7 @@ function bldRenderBody(lv,orig){
   const sel=(key,list,cur,blank)=>`<select data-scalar="${key}">
       ${blank?`<option value="">${esc(blank)}</option>`:''}
       ${list.map(v=>`<option value="${esc(v)}" ${v===cur?'selected':''}>${esc(v)}</option>`).join('')}
-      ${cur&&!list.includes(cur)?`<option value="${esc(cur)}" selected>${esc(cur)} (custom)</option>`:''}
+      ${cur&&!list.includes(cur)?`<option value="${esc(cur)}" selected>${tt('buildings.custom_option',{name:esc(cur)})}</option>`:''}
     </select>`;
   const pools=[...lv.caps,...lv.fcaps].filter(c=>c.pool);
   const plain=[...lv.caps,...lv.fcaps].filter(c=>!c.pool);
@@ -4183,13 +4183,13 @@ function bldNtPaint(){
           </select></label>
         <label style="flex:0 0 180px">${tt('buildings.religion_2')}
           <select onchange="bldNtSet('religion',this.value)">
-            <option value="">(none)</option>
+            <option value="">${tt('common.none_option')}</option>
             ${(ov.religions||[]).map(r=>`<option value="${esc(r)}" ${
               r===n.religion?'selected':''}>${esc(r)}</option>`).join('')}
           </select></label>
         <label style="flex:1 1 220px">${tt('buildings.converts_to_the_twin_line')}
           <select onchange="bldNtSet('convert_to',this.value)">
-            <option value="">(none)</option>
+            <option value="">${tt('common.none_option')}</option>
             ${(ov.lines||[]).map(l=>`<option value="${esc(l.name)}" ${
               l.name===n.convert_to?'selected':''}>${esc(l.name)}</option>`).join('')}
           </select></label>

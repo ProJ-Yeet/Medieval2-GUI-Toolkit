@@ -11576,5 +11576,10 @@
  "scripts.cs_head": "<code>data/{rel}</code>，共 {lines} 行，按脚本片段显示：每个 monitor、循环、if 块、计数器和块外命令，以及其上方的注释。script、wait_monitors 和 end_script 行始终保留。",
  "editor.armour_step": "盔甲 {n}/{of} · 等级 {level}",
  "editor.armour_step_title": "依次查看此部队的盔甲升级（armour_ug_models），按游戏在相应盔甲等级下的样子显示",
- "editor.engine_with_title": "在操作人员前方显示其使用的攻城器械（部队的 engine 行），保持静止"
+ "editor.engine_with_title": "在操作人员前方显示其使用的攻城器械（部队的 engine 行），保持静止",
+ "buildings.custom_option": "{name}（自定义）",
+ "codeview.record_as_stored": "文件中原样存储的记录",
+ "common.none_option": "（无）",
+ "common.mounted": "（搭载于坐骑）",
+ "strings.text_placeholder": "输入文本"
 }
