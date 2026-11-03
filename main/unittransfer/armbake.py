@@ -263,6 +263,46 @@ def _entry_sheets(asset: dict, mod_of) -> Tuple[str, str]:
     return (over.get("main") or (str(main) if main else "")), (over.get("attach") or (str(att) if att else ""))
 
 
+def _entry_normals(asset: dict, mod_of) -> Tuple[str, str]:
+    """The normal maps of the skin an entry wears: the ``normal`` path of the
+    texture record whose ``texture`` is that skin's main / attachment sheet."""
+    from . import factions
+    mod = mod_of(asset.get("mod") or "")
+    entry = mod.modeldb.by_name().get((asset.get("entry") or "").lower())
+    if entry is None:
+        return "", ""
+    skins = mesh.entry_view(entry, mod.data, mod)["skins"]
+    if not skins:
+        return "", ""
+    skin = skins[min(int(asset.get("skin") or 0), len(skins) - 1)]
+
+    def norm_of(group, rel: str) -> str:
+        rel = (rel or "").strip().replace("\\", "/").lower()
+        for t in group:
+            if (t.texture or "").strip().replace("\\", "/").lower() == rel:
+                n = (t.normal or "").strip()
+                if n and n != "0":
+                    found = factions.read_path(mod, n)
+                    return str(found) if found else ""
+        return ""
+
+    return (norm_of(entry.main_textures, skin.get("rel") or ""),
+            norm_of(entry.attach_textures, skin.get("attach") or ""))
+
+
+def _beside(sheet: str) -> str:
+    """A normal map next to a sheet file: ``x_norm.*`` or ``x_normal.*``."""
+    p = Path(sheet)
+    if not p.parent.is_dir():
+        return ""
+    for suffix in ("_norm", "_normal", "_n"):
+        for ext in (p.suffix, ".texture", ".dds", ".tga", ".png"):
+            q = p.with_name(p.stem + suffix + ext)
+            if q.is_file():
+                return str(q)
+    return ""
+
+
 class _Sheets:
     """Each piece's source images, read once per export."""
 
@@ -288,6 +328,27 @@ class _Sheets:
                     self._paths[key] = _entry_sheets(a, self.mod_of)
                 except Exception:          # a mod since removed: baked as no art
                     self._paths[key] = ("", "")
+        return self._paths[key]
+
+    def normal_paths(self, pc: dict) -> Tuple[str, str]:
+        """``(main, attachment)`` normal maps for a piece, "" where it has none:
+        an entry's own ``normal`` path for the skin it wears, else a file beside
+        the sheet named ``<sheet>_norm`` / ``_normal`` (an external model's)."""
+        key = ("n", pc.get("asset"), int(pc.get("group") or 0), pc.get("sheet") or "")
+        if key in self._paths:
+            return self._paths[key]
+        main, att = self.paths(pc)
+        out = ["", ""]
+        a = self.assets.get(pc.get("asset")) or {}
+        if a.get("kind") != "external" and not pc.get("sheet"):
+            try:
+                out = list(_entry_normals(a, self.mod_of))
+            except Exception:          # a mod since removed: no normal map
+                out = ["", ""]
+        for i, sheet in enumerate((main, att)):
+            if not out[i] and sheet:
+                out[i] = _beside(sheet)
+        self._paths[key] = (out[0], out[1])
         return self._paths[key]
 
     def external(self, pc: dict) -> bool:
@@ -1501,10 +1562,14 @@ def _art_box(st, o, sid, base, span, img):
             max(r[2] for r in rects), max(r[3] for r in rects))
 
 
-def _block_pixels(st: dict, b: Block, margin: int, image_of: ImageOf) -> np.ndarray:
-    """The block's art with its margin, at its size on the sheet, turned."""
+def _block_pixels(st: dict, b: Block, margin: int, image_of: ImageOf,
+                  img: Optional[np.ndarray] = None, use_img: bool = False) -> np.ndarray:
+    """The block's art with its margin, at its size on the sheet, turned.
+    With ``use_img`` the pixels come from ``img`` instead (the block's source
+    normal map), laid out exactly as its art is."""
     tw, th = b.w + 2 * margin, b.h + 2 * margin
-    img = _processed(st, b, image_of)
+    if not use_img:
+        img = _processed(st, b, image_of)
     if img is None:
         return np.broadcast_to(np.array(NO_ART, np.uint8), (th, tw, 4)).copy() if not b.rot             else np.broadcast_to(np.array(NO_ART, np.uint8), (tw, th, 4)).copy()
     x0, y0 = b.rect[0], b.rect[1]
@@ -1528,6 +1593,138 @@ def _block_pixels(st: dict, b: Block, margin: int, image_of: ImageOf) -> np.ndar
     if b.rot:
         px = np.rot90(px, k=-1)
     return px
+
+
+def _source_normal(st: dict, b: Block) -> Optional[np.ndarray]:
+    """The block's source normal map, the same image layout its art comes
+    from (one sheet, its attachment, or the two glued), at the art's size so
+    the block's texel rectangle lands on the same art. None when it has none."""
+    sid, img, base, span, pc = b.src
+    if img is None:
+        return None
+    sheets: _Sheets = st["sheets"]
+    nm, na = sheets.normal_paths(pc)
+    if sheets.external(pc):
+        n = sheets.image(nm)
+    elif span == 2.0:
+        m = sheets.image(nm)
+        if m is None:
+            return None
+        n = _glue(m, sheets.image(na) if na else None)
+    else:
+        tile = int(base) % 2
+        n = sheets.image(na if (tile == 1 and na) else nm)
+    if n is None:
+        return None
+    if n.shape[:2] != img.shape[:2]:
+        n = np.asarray(Image.fromarray(n).resize((img.shape[1], img.shape[0]), Image.BILINEAR))
+    return n
+
+
+def turn_normals(px: np.ndarray, angle: float, quarter: bool) -> np.ndarray:
+    """A tangent-space normal map's X and Y turned with the art it was moved
+    with: by ``angle`` degrees as :func:`_block_pixels` turns a block, then a
+    quarter turn clockwise when the block was laid on its side. Green points up
+    the image, as :func:`normal_pixels` writes it. Blue and alpha are kept."""
+    if not angle and not quarter:
+        return px
+    out = px.copy()
+    x = px[..., 0].astype(np.float64) / 255.0 * 2 - 1
+    y = px[..., 1].astype(np.float64) / 255.0 * 2 - 1
+    if angle:
+        c, s_ = math.cos(math.radians(angle)), math.sin(math.radians(angle))
+        x, y = c * x + s_ * y, -s_ * x + c * y
+    if quarter:
+        x, y = y, -x
+    out[..., 0] = np.clip(np.floor((x * 0.5 + 0.5) * 255 + 0.5), 0, 255)
+    out[..., 1] = np.clip(np.floor((y * 0.5 + 0.5) * 255 + 0.5), 0, 255)
+    return out
+
+
+def render_sheets(st: dict, normals: dict, image_of: ImageOf) -> Dict[str, Tuple[np.ndarray, np.ndarray]]:
+    """Each used sheet as the bake writes it: ``{sheet: (art, normal map)}``.
+
+    The normal map, by ``normals["mode"]``: ``skip`` flat, ``generic`` /
+    ``specialized`` made from the baked art's lightness, ``source`` each
+    block's own source normal map copied and turned with its art (a block whose
+    source has none is made from its art with the generic setting instead)."""
+    per = st["per"]
+    mode = (normals or {}).get("mode") or "skip"
+    out: Dict[str, Tuple[np.ndarray, np.ndarray]] = {}
+    for s in SHEETS:
+        size = per[s]["size"]
+        if not size:
+            continue
+        margin = margin_px(st["margin_pct"], size)
+        canvas = np.zeros((size, size, 4), np.uint8)
+        nmap = np.empty_like(canvas)
+        nmap[:] = NORMAL_FLAT
+        copied = set()                 # blocks whose source normal map was laid
+        for b in per[s]["blocks"]:
+            px = _block_pixels(st, b, margin, image_of)
+            x, y = b.x - margin, b.y - margin
+            h, w = px.shape[:2]
+            ax, ay = max(0, x), max(0, y)
+            bx, by = min(size, x + w), min(size, y + h)
+            # 99l: only the texels under the block's triangles, with its margin
+            keep = b.shape(margin)[ay - y:by - y, ax - x:bx - x]
+            canvas[ay:by, ax:bx][keep] = px[ay - y:by - y, ax - x:bx - x][keep]
+            if mode == "source":
+                src_n = _source_normal(st, b)
+                if src_n is not None:
+                    npx = turn_normals(_block_pixels(st, b, margin, image_of, src_n, True),
+                                       float(b.angle or 0), bool(b.rot))
+                    nmap[ay:by, ax:bx][keep] = npx[ay - y:by - y, ax - x:bx - x][keep]
+                    copied.add(id(b))
+        # the generated parts: each block's own part made from its baked art
+        # with its object's setting, the margin included; flat where no art is
+        for b in per[s]["blocks"]:
+            if mode == "source":
+                if id(b) in copied:
+                    continue
+                setting = dict(NORMAL_GENERIC, **((normals or {}).get("generic") or {}))
+            else:
+                setting = normal_setting(normals, b.islands[0].obj)
+            if setting is None:
+                continue
+            fw = (b.h if b.rot else b.w) + 2 * margin
+            fh = (b.w if b.rot else b.h) + 2 * margin
+            x, y = max(0, b.x - margin), max(0, b.y - margin)
+            x1, y1 = min(size, b.x - margin + fw), min(size, b.y - margin + fh)
+            # blocks nest into each other's rectangles: each writes its shape
+            ox, oy = b.x - margin, b.y - margin
+            keep = b.shape(margin)[y - oy:y1 - oy, x - ox:x1 - ox]
+            nmap[y:y1, x:x1][keep] = normal_pixels(canvas[y:y1, x:x1], setting)[keep]
+        out[s] = (canvas, nmap)
+    return out
+
+
+def _data_url(arr: np.ndarray, side: int, alpha: bool) -> str:
+    import base64
+    im = Image.fromarray(arr, "RGBA")
+    if not alpha:
+        im = im.convert("RGB")
+    if side and im.width > side:
+        im = im.resize((side, side), Image.LANCZOS)
+    buf = io.BytesIO()
+    im.save(buf, "PNG")
+    return "data:image/png;base64," + base64.b64encode(buf.getvalue()).decode("ascii")
+
+
+def preview(project: dict, mod_of, settings: Optional[dict] = None, image_of: ImageOf = default_image_of,
+            scope: Optional[dict] = None, side: int = 1024) -> dict:
+    """The images the bake would write, without writing anything: each used
+    sheet's art and normal map as PNG data URLs at most ``side`` pixels wide.
+    Made by :func:`render_sheets`, the bake's own code, so it is what lands."""
+    st: dict = {}
+    answer = plan(project, mod_of, settings, image_of, scope, _state=st)
+    normals = (settings or {}).get("normals") or project.get("normals") or {}
+    sheets = render_sheets(st, normals, image_of)
+    return {"fits": answer["fits"], "normals": normals.get("mode") or "skip",
+            "sheets": {s: {"size": st["per"][s]["size"],
+                           "art": _data_url(art, side, True),
+                           "normal": _data_url(nm, side, False)}
+                       for s, (art, nm) in sheets.items()}}
 
 
 def _new_uv(b: Block, sx: float, sy: float, size: int, sheet: str) -> Tuple[float, float]:
@@ -1559,43 +1756,13 @@ def bake(project: dict, mod_of, settings: Optional[dict], out_dir: str, stem: st
     out.mkdir(parents=True, exist_ok=True)
     blocks, meshes, objs, per = st["blocks"], st["meshes"], st["objs"], st["per"]
     normals = (settings or {}).get("normals") or project.get("normals") or {}
-    # the sheets
+    # the sheets, rendered exactly as the preview renders them
     written = []
     sheet_files = {}
-    for s in SHEETS:
-        size = per[s]["size"]
-        if not size:
-            continue
-        margin = margin_px(st["margin_pct"], size)
-        canvas = np.zeros((size, size, 4), np.uint8)
-        for b in per[s]["blocks"]:
-            px = _block_pixels(st, b, margin, image_of)
-            x, y = b.x - margin, b.y - margin
-            h, w = px.shape[:2]
-            ax, ay = max(0, x), max(0, y)
-            bx, by = min(size, x + w), min(size, y + h)
-            # 99l: only the texels under the block's triangles, with its margin
-            keep = b.shape(margin)[ay - y:by - y, ax - x:bx - x]
-            canvas[ay:by, ax:bx][keep] = px[ay - y:by - y, ax - x:bx - x][keep]
-        name = stem if s == "main" else stem + "_attach"
+    for s_, (canvas, nmap) in render_sheets(st, normals, image_of).items():
+        name = stem if s_ == "main" else stem + "_attach"
         written += _write_sheet(out, name, canvas)
-        sheet_files[s] = name
-        # its normal map: each block's own part made from its baked art with
-        # its object's setting, the margin included; flat where no art is
-        nmap = np.empty_like(canvas)
-        nmap[:] = NORMAL_FLAT
-        for b in per[s]["blocks"]:
-            setting = normal_setting(normals, b.islands[0].obj)
-            if setting is None:
-                continue
-            fw = (b.h if b.rot else b.w) + 2 * margin
-            fh = (b.w if b.rot else b.h) + 2 * margin
-            x, y = max(0, b.x - margin), max(0, b.y - margin)
-            x1, y1 = min(size, b.x - margin + fw), min(size, b.y - margin + fh)
-            # blocks nest into each other's rectangles: each writes its shape
-            ox, oy = b.x - margin, b.y - margin
-            keep = b.shape(margin)[y - oy:y1 - oy, x - ox:x1 - ox]
-            nmap[y:y1, x:x1][keep] = normal_pixels(canvas[y:y1, x:x1], setting)[keep]
+        sheet_files[s_] = name
         written += _write_sheet(out, name + "_normal", nmap)
     # the UVs: each vertex goes where its island's block went
     new_uv: Dict[int, Dict[int, Tuple[float, float]]] = {}

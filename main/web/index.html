@@ -290,6 +290,12 @@
   .srow .num{color:var(--accent);font-weight:600}
   /* the plain-words preview over the full report (Unit Transfer / Unit Creator) */
   .nmcopy{display:flex;gap:6px;align-items:center} .nmcopy input{flex:1;min-width:0}
+  /* Armory export: the images the bake would write */
+  .armpeeks{display:flex;flex-wrap:wrap;gap:12px;margin-top:8px}
+  .armpeek{margin:0;flex:1 1 280px;max-width:480px}
+  .armpeek img{width:100%;height:auto;display:block;border:1px solid var(--edge);border-radius:6px;
+    background:repeating-conic-gradient(#2a2f38 0 25%,#1f232a 0 50%) 0 0/16px 16px;image-rendering:auto}
+  .armpeek figcaption{font-size:12px;color:var(--dim);margin-top:4px}
   .facfind{width:100%;margin-bottom:6px;box-sizing:border-box}
   .glance{background:var(--panel2);border:1px solid var(--edge);border-radius:8px;padding:9px 12px;font-size:13px;line-height:1.55}
   .glance ul{margin:6px 0 0;padding-left:18px}
@@ -3039,6 +3045,13 @@
   a.kofibadge{display:inline-block;line-height:0;border-radius:8px;transition:transform .12s,filter .12s}
   a.kofibadge img{height:30px;width:auto;display:block}
   a.kofibadge:hover{transform:translateY(-1px);filter:brightness(1.08)}
+  /* Discord and YouTube beside Ko-fi */
+  .topkofi{gap:6px;align-items:center}
+  .sociallinks{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+  a.social{display:inline-block;color:#fff;text-decoration:none;font-size:12px;font-weight:600;padding:3px 10px;border-radius:7px;line-height:1.7;white-space:nowrap}
+  a.social.top{padding:5px 10px}
+  a.social.discord{background:#5865f2} a.social.youtube{background:#d62020}
+  a.social:hover{filter:brightness(1.1)}
   .homeprefs .chk{align-items:baseline;margin:0}
   .homeprefs .count{font-size:11px;margin-left:auto;text-align:right}
   @container page (max-width:600px){

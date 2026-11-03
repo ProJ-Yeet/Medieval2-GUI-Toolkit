@@ -13200,6 +13200,24 @@ left in `ROADMAP.md` as 101h-101m. Built here:
   record count is an error, a skeleton neither the modeldb nor the packs know a
   warning. `tests/test_animentry` 15 (nothing installed needed).
 
+Then, the same day, three more from the user:
+
+* **101n - Armory Studio shows the images it will bake.** *Show the baked
+  images* on the export's Bake step: each used sheet's texture and normal map
+  as the bake will write them (`armbake.preview`, `/api/armory/bake_preview`),
+  nothing written. The bake and the preview share `render_sheets`, so the
+  picture is the file.
+* **101o - the source models' own normal maps baked.** A fourth normal-map
+  mode, *From the source models*: each block's own normal map (an entry's
+  `normal` path for the skin it wears, an external sheet's `_norm` /
+  `_normal` neighbour) copied onto the new sheet exactly as its art is,
+  its X and Y turned with a block laid on its side or given a free turn
+  (`turn_normals`); a part with none falls back to the Generic setting. The
+  mode can be picked on the Bake step as well as in the objects panel.
+  `tests/test_armbake_normals` 15.
+* **101p - Discord and YouTube beside Ko-fi**, in the top bar, the Home footer
+  and the credits (`socialLinks`), the README's own two links.
+
 ## Phase 100 - Armory Studio's second round, and faction cards in the Unit Editor, scheduled 2026-10-19, done 2026-10-20
 
 Sent by the user on 2026-10-19: a list of requests for Armory Studio, a bug

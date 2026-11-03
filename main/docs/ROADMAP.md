@@ -1228,7 +1228,11 @@ installed mods to read, measure or check against:
   and models widgets on both screens (guided and raw view), the 3D column
   following the tiers, *Copy from type*, the new-unit hand-off to the Unit
   Editor, the animation rows on a model card, and the scroll kept on a tick in
-  the battle-model entry list.
+  the battle-model entry list. Also the Armory's *Show the baked images* and
+  *From the source models* normal maps (101n, 101o): bake a model whose parts
+  were turned, and check in game that the turned parts light the right way.
+  The turn assumes green points up the image, as the generator writes it; if
+  the game reads green the other way, flip the sign in `armbake.turn_normals`.
 
 ## Deferred to a later version, by the user
 

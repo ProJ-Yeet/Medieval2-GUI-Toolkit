@@ -317,7 +317,51 @@ function armExpBakeHtml(){
     <div class="armexprow"><label>${tt('armory.exp_stem')}<input value="${esc(e.stem)}" oninput="armExp().stem=this.value"></label>
       <button class="primary" onclick="armExpBake()"${e.busy ? ' disabled' : ''}>${tt('armory.exp_bake')}</button></div>
     <div class="count">${tt('armory.exp_bake_note')}</div>
-    <div class="count">${tt('armory.exp_normals', {mode: typeof armNormModeLabel === 'function' ? armNormModeLabel(armNormals().mode) : ''})}</div>${done}`;
+    <div class="armexprow"><label>${tt('armory.exp_normals_pick')}
+      <select onchange="armExpNormMode(this.value)">${ARM_NORM_MODES.map(m =>
+        `<option value="${m}"${armNormals().mode === m ? ' selected' : ''}>${esc(armNormModeLabel(m))}</option>`).join('')}</select></label>
+      <button onclick="armExpPreview()"${e.peeking ? ' disabled' : ''} title="${ttA('armory.exp_preview_title')}">${tt('armory.exp_preview')}</button></div>
+    <div class="count">${tt('armory.exp_normals_note')}</div>
+    ${armExpPreviewHtml()}${done}`;
+}
+/* The bake's normal maps chosen here as well as in the objects panel: the
+   same project setting, so the two never disagree. A preview already shown
+   is dropped, since it no longer says what will be written. */
+function armExpNormMode(m){
+  armNormals().mode = m;
+  if(typeof armNormChanged === 'function') armNormChanged();
+  armExp().peek = null;
+  armExportPaint();
+}
+/* The actual images the bake would write, art and normal map for each sheet,
+   rendered by the bake's own code on the server and nothing written. */
+async function armExpPreview(){
+  const e = armExp();
+  e.peeking = true; e.err = ''; armExportPaint();
+  try{
+    e.peek = await api.post('/api/armory/bake_preview', Object.assign(armExpBody(), {settings: e.settings, side: 1024}));
+  }catch(err){ e.err = errText(err); e.peek = null; }
+  e.peeking = false;
+  armExportPaint();
+}
+function armExpPreviewHtml(){
+  const e = armExp(), pk = e.peek;
+  if(e.peeking) return `<div class="count armnote">${tt('armory.exp_preview_busy')}</div>`;
+  if(!pk) return '';
+  const view = e.peekView || 'art';
+  const tile = sh => {
+    const S = pk.sheets[sh];
+    if(!S) return '';
+    const src = view === 'normal' ? S.normal : S.art;
+    return `<figure class="armpeek"><a href="${src}" target="_blank" rel="noopener" title="${ttA('armory.exp_preview_open')}">
+        <img src="${src}" alt=""></a>
+      <figcaption>${esc(armExpLabel(sh))} · ${S.size}² · ${view === 'normal' ? tt('armory.exp_preview_normal') : tt('armory.exp_preview_art')}</figcaption></figure>`;
+  };
+  return `<div class="armexprow">
+      <button class="mini${view === 'art' ? ' on' : ''}" onclick="armExp().peekView='art';armExportPaint()">${tt('armory.exp_preview_art')}</button>
+      <button class="mini${view === 'normal' ? ' on' : ''}" onclick="armExp().peekView='normal';armExportPaint()">${tt('armory.exp_preview_normal')}</button>
+      <span class="count">${tt('armory.exp_preview_mode', {mode: esc(armNormModeLabel(pk.normals))})}</span></div>
+    <div class="armpeeks">${tile('main')}${tile('attach')}</div>`;
 }
 async function armExpBrowse(){
   let r;

@@ -10793,7 +10793,6 @@
  "armory.chk_no_weights": "{name} hat keine Knochengewichte an seinen Vertex-Punkten: übertragen Sie zuerst welche darauf.",
  "armory.stamp_rot": "Drehen",
  "armory.exp_auto_moved": "Für Sie gewählt: {n} Blöcke auf das andere Sheet verschoben, wo Platz war. Nichts wurde skaliert.",
- "armory.exp_normals": "Normal Maps: {mode}. Wählen Sie sie unter „Normal Maps“ in der Objektliste.",
  "armory.normal_maps": "Normal Maps",
  "armory.normal_map": "Normal Map",
  "armory.norm_skip": "Überspringen (flache Map)",

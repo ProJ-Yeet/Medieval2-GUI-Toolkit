@@ -3061,7 +3061,8 @@ class Handler(BaseHTTPRequestHandler):
                     return self._json(out)
                 except (armunit.InstallError, armory.ArmoryError, KeyError, ValueError, OSError) as e:
                     return self._err(400, str(e))
-            if u.path in ("/api/armory/check", "/api/armory/uv", "/api/armory/bake"):
+            if u.path in ("/api/armory/check", "/api/armory/uv", "/api/armory/bake",
+                          "/api/armory/bake_preview"):
                 # 95i: the export's check, UV menu and bake, each on the
                 # project as the page holds it
                 proj, scope = body.get("project") or {}, body.get("scope") or {}
@@ -3072,6 +3073,10 @@ class Handler(BaseHTTPRequestHandler):
                     if u.path == "/api/armory/uv":
                         return self._json(armbake.plan(proj, self.registry.get, body.get("settings") or {},
                                                        scope=scope))
+                    if u.path == "/api/armory/bake_preview":
+                        # the images the bake would write, nothing written
+                        return self._json(armbake.preview(proj, self.registry.get, body.get("settings") or {},
+                                                          scope=scope, side=int(body.get("side") or 1024)))
                     return self._json(armbake.bake(proj, self.registry.get, body.get("settings") or {},
                                                    body.get("folder") or "", body.get("stem") or "",
                                                    scope=scope))

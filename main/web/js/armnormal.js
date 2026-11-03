@@ -17,7 +17,9 @@
    ========================================================================= */
 
 const ARM_NORM_GAIN = 2.53;
-const ARM_NORM_MODES = ['skip', 'generic', 'specialized'];
+// 'source': each part's own normal map, packed and turned with its art at the
+// bake (armbake.render_sheets); nothing to preview live, it is not made here
+const ARM_NORM_MODES = ['skip', 'generic', 'specialized', 'source'];
 const ARM_NORM_GENERIC = {strength: 1.0, blur: 0.8, invert: false};
 const ARM_NORM_MATERIALS = {
   metal: {strength: 0.7, blur: 0.0, invert: false},
@@ -43,7 +45,7 @@ function armNormalSetting(o, nm){
   if(o.normal) for(const k of ['strength', 'blur', 'invert']) if(k in o.normal) out[k] = o.normal[k];
   return out;
 }
-function armNormalPreviewOn(){ const nm = armNormals(); return nm.mode !== 'skip' && nm.preview !== false; }
+function armNormalPreviewOn(){ const nm = armNormals(); return nm.mode !== 'skip' && nm.mode !== 'source' && nm.preview !== false; }
 
 function armBlurHeight(h, w, ht, sigma){
   if(sigma <= 0.05) return h;
@@ -86,7 +88,7 @@ function armNormalPixels(data, w, h, s){
 /* --- the side panel -------------------------------------------------------------- */
 
 const armNormModeLabel = m => ({skip: tt('armory.norm_skip'), generic: tt('armory.norm_generic'),
-  specialized: tt('armory.norm_specialized')})[m] || m;
+  specialized: tt('armory.norm_specialized'), source: tt('armory.norm_source')})[m] || m;
 
 function armNormRow(s, set){
   return `<label class="armrange">${tt('armory.norm_strength')}<input type="range" min="0" max="300" value="${Math.round(s.strength * 100)}"
@@ -110,13 +112,15 @@ function armNormalsHtml(){
         <span class="count">${ttN('armory.norm_objects', p.objects.filter(o => (o.material || 'other') === m).length)}</span>
         <div class="armpropsrow armnormrow">${armNormRow(s, `armNormMat.bind(null,'${m}')`)}</div></div>`;
     }).join('') + `<div class="count armnote">${tt('armory.norm_specialized_note')}</div>`;
+  }else if(nm.mode === 'source'){
+    body = `<div class="count armnote">${tt('armory.norm_source_note')}</div>`;
   }else{
     body = `<div class="count armnote">${tt('armory.norm_skip_note')}</div>`;
   }
   return `<div class="armsect">${tt('armory.normal_maps')}</div>
     <div class="armpropsrow"><select onchange="armNormMode(this.value)">${ARM_NORM_MODES.map(m =>
       `<option value="${m}"${nm.mode === m ? ' selected' : ''}>${esc(armNormModeLabel(m))}</option>`).join('')}</select>
-      ${nm.mode !== 'skip' ? `<label class="armcheck"><input type="checkbox"${nm.preview !== false ? ' checked' : ''} onchange="armNormPreview(this.checked)"> ${tt('armory.norm_preview')}</label>` : ''}</div>
+      ${nm.mode !== 'skip' && nm.mode !== 'source' ? `<label class="armcheck"><input type="checkbox"${nm.preview !== false ? ' checked' : ''} onchange="armNormPreview(this.checked)"> ${tt('armory.norm_preview')}</label>` : ''}</div>
     ${body}`;
 }
 

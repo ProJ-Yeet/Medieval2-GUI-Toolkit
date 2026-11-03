@@ -1724,7 +1724,7 @@ function wire(){
   document.querySelectorAll('.era').forEach(cb=>cb.onchange=()=>{cb.checked?state.sel.era.add(cb.value):state.sel.era.delete(cb.value);filtersChanged();});
   settingsBtn.onclick=openSettings;
   topFoldBtn.onclick=()=>topFold(true); topOpenBtn.onclick=()=>topFold(false);
-  topKofi.innerHTML=kofiBadge();
+  topKofi.innerHTML=socialLinks('top')+kofiBadge();
   // …but not `logBtn.onclick=openLog`: a handler is called WITH the click,
   // and openLog's first argument is the mode to filter by. That filter
   // matched nothing, so the header's own button opened an empty log.
@@ -2067,6 +2067,13 @@ const kofiLink=()=>`<a class="kofi" href="${KOFI_URL}" target="_blank" rel="noop
 // falls back to the plain link rather than leaving a broken picture.
 const KOFI_ART='https://ko-fi.com/img/githubbutton_sm.svg';
 const kofiBadge=()=>`<a class="kofibadge" href="${KOFI_URL}" target="_blank" rel="noopener" title="${ttA('core.support_on_kofi')}"><img src="${KOFI_ART}" alt="${ttA('core.support_on_kofi')}" onerror="this.parentNode.outerHTML=kofiLink()"></a>`;
+// The Discord server and the YouTube channel the README links, beside Ko-fi
+// wherever it is shown: the top bar, the Home footer and the credits. Plain
+// links styled as pills (no picture off another server), so they work offline.
+const DISCORD_URL='https://discord.gg/htkpNjk5yq';
+const YOUTUBE_URL='https://www.youtube.com/@proj-yeet';
+const socialLinks=(cls)=>`<a class="social discord${cls?' '+cls:''}" href="${DISCORD_URL}" target="_blank" rel="noopener" title="${ttA('core.join_discord_title')}">${tt('core.join_discord')}</a>`
+  +`<a class="social youtube${cls?' '+cls:''}" href="${YOUTUBE_URL}" target="_blank" rel="noopener" title="${ttA('core.youtube_title')}">${tt('core.youtube')}</a>`;
 async function openCredits(){
   let ver=verLabel(appBuild);
   if(!ver){try{const p=await api.get('/api/ping');ver=verLabel(p.version);}catch(e){}}
@@ -2111,7 +2118,7 @@ async function openCredits(){
       </div>
       <div style="margin-top:14px">
         <div class="lbl" style="margin-bottom:4px">${tt('core.support')}</div>
-        ${kofiLink()}
+        <div class="sociallinks">${kofiLink()}${socialLinks()}</div>
       </div>
     </div>
     <div style="padding:0 16px 16px;text-align:right">
