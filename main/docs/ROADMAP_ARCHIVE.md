@@ -13217,6 +13217,23 @@ Then, the same day, three more from the user:
   `tests/test_armbake_normals` 15.
 * **101p - Discord and YouTube beside Ko-fi**, in the top bar, the Home footer
   and the credits (`socialLinks`), the README's own two links.
+* **101q - the card maker takes what Pfadfinder-Adam's does** (his
+  `campaign_editor/cardmaker.py`, read from the PR refs of
+  RTW-M2TW-Campaign-Editor, taken with his leave and credited in the modules).
+  Ours keeps its own render (poses, the IK rig, the lamp, the finish) and gains:
+  *Framing* - whole man, to the knees, the thighs, the waist - fitted to the
+  figure from its box in the last render (`cgFit`, orthographic so exact,
+  twice for a pitched camera), again on its own when the pose or size
+  changes; *Ground and frame* - see-through (the game's own way), a colour, a
+  picture, the game's own card ground (`STRAT_` / `BATTLE_CARD_BACKGROUND`),
+  for an info picture the scroll paper and the `PORTRAIT_FRAME` laid round it
+  nine-piece (`cgCompose`, `cgNineSlice`); the *Painted look* (Kuwahara twice
+  on summed-area tables, richer and warmer colour, a canvas grain:
+  `cgPaint`); *This mod's cards / info pictures* sizes read off its files and
+  *Bigger* 1-4x, the HD render held under 4096 a side (`cgSS`). Server:
+  `cardart.py` (`game_sprite` from `ui/*.sd.xml` through `gamepack.lookup`,
+  `mod_sizes`), `/api/armory/card_art`, `/api/armory/card_sizes`.
+  `tests/test_cardart` 12.
 
 ## Phase 100 - Armory Studio's second round, and faction cards in the Unit Editor, scheduled 2026-10-19, done 2026-10-20
 

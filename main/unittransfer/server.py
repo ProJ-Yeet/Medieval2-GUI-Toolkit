@@ -6069,6 +6069,18 @@ class Handler(BaseHTTPRequestHandler):
                                "units": [{"type": u.type, "category": u.category, "class": u.class_type,
                                           "soldier": u.soldier_model} for u in mod.edu.units],
                                "entries": sorted(mod.modeldb.by_name())})
+        if path == "/api/armory/card_sizes":
+            # the size the mod's own unit cards and info pictures are
+            from . import cardart
+            return self._json(cardart.mod_sizes(mod))
+        if path == "/api/armory/card_art":
+            # a piece of the game's own interface for the card maker's ground
+            # and frame (cardart.NAMES only), cut from its page
+            from . import cardart
+            im = cardart.game_sprite(mod, arg("name"), arg("culture") or "")
+            if im is None:
+                return self._err(404, "this mod and the game it runs on have no such piece")
+            return self._send(200, cardart.png_bytes(im), "image/png")
         if path == "/api/armory/asset":
             try:
                 return self._json(armory.asset_view(mod, arg("entry")))

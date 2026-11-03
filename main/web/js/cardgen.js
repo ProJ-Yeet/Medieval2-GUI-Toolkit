@@ -27,6 +27,14 @@
    user's. Saving writes a .tga (and a .png) under config/armory/cards/, and
    Give to a unit hands it to the unit editor's own card import, which copies
    it to every owning faction's folder through the edit door.
+
+   From Pfadfinder-Adam's card maker (RTW-M2TW-Campaign-Editor,
+   campaign_editor/cardmaker.py, taken with his leave): the framings (the
+   whole man, to the knees, the thighs, the waist) fitted to the figure, the
+   card laid on a ground (see-through as the game's own, a colour, a picture,
+   or the game's own card ground), an info picture on the game's scroll paper
+   inside its portrait frame, the Painted look (the Kuwahara filter, a warm
+   light, a canvas grain), the mod's own card sizes and 2-4x bigger ones.
    ========================================================================= */
 
 const CG_SIZES = {card: [48, 64], large: [68, 90], info: [180, 230]};
@@ -49,7 +57,31 @@ function cg(){
     post: {blur: 0.5, exposure: 0, brightness: 0, contrast: 1.0, gamma: 1.0, saturation: 1.0, hue: 0, sharpen: 0.2, outline: 0.3},
   };
 }
-function cgDims(){ const c = cg(); return c.size === 'custom' ? [Math.max(8, c.w | 0), Math.max(8, c.h | 0)] : CG_SIZES[c.size]; }
+/* What a maker state from before these options lacks, filled in. */
+function cgFill(c){
+  c.mult = c.mult || 1;
+  c.fit = c.fit || {part: 'thighs', auto: true};
+  c.ground = c.ground || {kind: 'none', colour: '#5d4d36', pic: ''};
+  c.gframe = !!c.gframe;
+  c.paint = c.paint || {on: false, strength: 1};
+  return c;
+}
+// the base size before the 1-4x multiplier: the four of old, or the mod's own
+function cgBase(){
+  const c = cgFill(cg()), m = c.modSizes || {};
+  if(c.size === 'custom') return [Math.max(8, c.w | 0), Math.max(8, c.h | 0)];
+  if(c.size === 'modcard') return m.card || CG_SIZES.card;
+  if(c.size === 'modinfo') return m.info || CG_SIZES.info;
+  return CG_SIZES[c.size] || CG_SIZES.card;
+}
+function cgDims(){ const c = cg(), [w, h] = cgBase(), k = Math.max(1, Math.min(4, c.mult || 1)); return [w * k, h * k]; }
+// the HD render's scale, held so neither side passes 4096 (a WebGL canvas
+// past that is refused on many cards)
+function cgSS(){ const c = cg(), [w, h] = cgDims(); return Math.max(1, Math.min(c.ss, Math.floor(4096 / Math.max(w, h)))); }
+// how big the card is drawn on the page: four times the game's own card, never
+// wider than the column (a 4x info picture would be 2,880 pixels)
+const cgShow = w => Math.max(1, Math.min(4, 340 / w));
+const cgIsInfo = () => ['info', 'modinfo'].includes(cg().size);
 
 /* What is drawn: the model's visible objects, one of each group type (the
    first, as the game would choose one variant per soldier) unless all. */
@@ -63,7 +95,13 @@ function cgObjects(){
 /* --- the tab ----------------------------------------------------------------- */
 
 const cgSizeLabel = s => ({card: tt('cards.gen_size_card'), large: tt('cards.gen_size_large'), info: tt('cards.gen_size_info'),
-  custom: tt('cards.gen_size_custom')})[s] || s;
+  custom: tt('cards.gen_size_custom'), modcard: tt('cards.gen_size_modcard'), modinfo: tt('cards.gen_size_modinfo')})[s] || s;
+const CG_PARTS = [['whole', 1.0], ['knees', 0.78], ['thighs', 0.64], ['waist', 0.5]];
+const cgFramingLabel = p => ({whole: tt('cards.gen_frame_whole'), knees: tt('cards.gen_frame_knees'),
+  thighs: tt('cards.gen_frame_thighs'), waist: tt('cards.gen_frame_waist')})[p] || p;
+const cgGroundLabel = g => ({none: tt('cards.gen_ground_none'), colour: tt('cards.gen_ground_colour'), pic: tt('cards.gen_ground_pic'),
+  STRAT_CARD_BACKGROUND: tt('cards.gen_ground_strat'), BATTLE_CARD_BACKGROUND: tt('cards.gen_ground_battle'),
+  SCROLL_MID: tt('cards.gen_ground_scroll')})[g] || g;
 const cgLightLabel = t => t === 'point' ? tt('cards.gen_light_point') : tt('cards.gen_light_sun');
 const cgPoseLabel = id => ({tpose: tt('cards.gen_pose_tpose'), guard: tt('cards.gen_pose_guard'), brace: tt('cards.gen_pose_brace'),
   draw: tt('cards.gen_pose_draw'), riding: tt('cards.gen_pose_riding'), march: tt('cards.gen_pose_march'),
@@ -78,7 +116,12 @@ async function renderCardGen(){
   st.xf = st.xf || {t: [0, 0, 0], r: [0, 0, 0]};
   st.rig = st.rig || {type: 'auto', basis: {}, handles: true, cat: '', pick: '', part: 'whole'};
   if(state.mode !== 'cards' || (state.cardsSub || 'generate') !== 'generate') return;
-  const c = cg(), [w, h] = cgDims();
+  cgFill(st);
+  if(state.src && st.modSizesFor !== state.src){
+    st.modSizesFor = state.src; st.modSizes = null;
+    api.get('/api/armory/card_sizes?mod=' + enc(state.src)).then(r => { st.modSizes = r; cgRepaint(); }).catch(() => {});
+  }
+  const c = cg(), [w, h] = cgDims(), ss = cgSS();
   const sl = (path, key, min, max, step, label) => {
     const v = c[path][key];
     return `<label class="cgrange">${label}<input type="range" min="${min}" max="${max}" step="${step}" value="${v}"
@@ -97,6 +140,11 @@ async function renderCardGen(){
         <fieldset><legend>${tt('cards.gen_size')}</legend>
           <div class="armexprow">${['card', 'large', 'info', 'custom'].map(s => `<label class="armcheck"><input type="radio" name="cgSize"${c.size === s ? ' checked' : ''}
               onchange="cg().size='${s}';cgRepaint()"> ${cgSizeLabel(s)}${s !== 'custom' ? ` <span class="count">${CG_SIZES[s].join('×')}</span>` : ''}</label>`).join('')}</div>
+          <div class="armexprow">${['modcard', 'modinfo'].map(s => { const d = (c.modSizes || {})[s === 'modcard' ? 'card' : 'info'];
+              return `<label class="armcheck" title="${ttA('cards.gen_size_mod_title')}"><input type="radio" name="cgSize"${c.size === s ? ' checked' : ''}${d ? '' : ' disabled'}
+              onchange="cg().size='${s}';cgRepaint()"> ${cgSizeLabel(s)} <span class="count">${d ? d.join('×') : tt('cards.gen_size_mod_none')}</span></label>`; }).join('')}</div>
+          <div class="armexprow" title="${ttA('cards.gen_mult_title')}">${tt('cards.gen_mult')} ${[1, 2, 3, 4].map(k => `<button class="mini${c.mult === k ? ' on' : ''}" onclick="cg().mult=${k};cgRepaint()">${k}×</button>`).join('')}
+            <span class="count">${w}×${h}</span></div>
           ${c.size === 'custom' ? `<div class="armexprow"><input type="number" class="armnum" value="${c.w}" onchange="cg().w=+this.value;cgRepaint()"> ×
             <input type="number" class="armnum" value="${c.h}" onchange="cg().h=+this.value;cgRepaint()"></div>` : ''}
           <label class="cgrange">${tt('cards.gen_render_at')}<input type="range" min="10" max="40" step="5" value="${c.ss}" onchange="cg().ss=+this.value;cgRepaint()"><span class="count">${c.ss}×</span></label>
@@ -120,6 +168,24 @@ async function renderCardGen(){
           ${sl('cam', 'yaw', -180, 180, 1, tt('cards.gen_turn'))}${sl('cam', 'pitch', -30, 45, 1, tt('cards.gen_tilt'))}
           ${sl('cam', 'scale', 0.4, 3, 0.05, tt('cards.gen_ortho_scale'))}${sl('cam', 'height', -1.5, 1.5, 0.02, tt('cards.gen_height'))}
         </fieldset>
+        <fieldset><legend>${tt('cards.gen_framing')}</legend>
+          <div class="count">${tt('cards.gen_framing_hint')}</div>
+          <div class="armexprow">${CG_PARTS.map(([p]) => `<button class="mini${c.fit.part === p ? ' on' : ''}" onclick="cgFit('${p}')">${cgFramingLabel(p)}</button>`).join('')}</div>
+          <label class="armcheck"><input type="checkbox"${c.fit.auto ? ' checked' : ''} onchange="cg().fit.auto=this.checked"> ${tt('cards.gen_fit_auto')}</label>
+        </fieldset>
+        <fieldset><legend>${tt('cards.gen_ground')}</legend>
+          <div class="armexprow"><select onchange="cgGround(this.value)">${['none', 'colour', 'pic'].concat(cgIsInfo() ? ['SCROLL_MID'] : ['STRAT_CARD_BACKGROUND', 'BATTLE_CARD_BACKGROUND'])
+              .map(g => `<option value="${g}"${c.ground.kind === g ? ' selected' : ''}>${esc(cgGroundLabel(g))}</option>`).join('')}</select>
+            ${c.ground.kind === 'colour' ? `<input type="color" value="${esc(c.ground.colour)}" oninput="cg().ground.colour=this.value;cgRender()">` : ''}
+            ${c.ground.kind === 'pic' ? `<label class="btn">${tt('cards.gen_ground_pick')}<input type="file" accept="image/*" style="display:none" onchange="cgGroundFile(this.files[0])"></label>` : ''}</div>
+          ${c.ground.kind === 'none' ? `<div class="count">${tt('cards.gen_ground_none_note')}</div>` : ''}
+          ${c.groundNote ? `<div class="count w-warn">${esc(c.groundNote)}</div>` : ''}
+          ${cgIsInfo() ? `<label class="armcheck"><input type="checkbox"${c.gframe ? ' checked' : ''} onchange="cgFrameOn(this.checked)"> ${tt('cards.gen_game_frame')}</label>` : ''}
+        </fieldset>
+        <fieldset><legend>${tt('cards.gen_painted')}</legend>
+          <label class="armcheck" title="${ttA('cards.gen_painted_title')}"><input type="checkbox"${c.paint.on ? ' checked' : ''} onchange="cg().paint.on=this.checked;cgRender()"> ${tt('cards.gen_painted_on')}</label>
+          ${c.paint.on ? sl('paint', 'strength', 0.3, 2, 0.05, tt('cards.gen_painted_strength')) : ''}
+        </fieldset>
         <fieldset><legend>${tt('cards.gen_light')}</legend>
           <div class="armexprow">${['sun', 'point'].map(t => `<label class="armcheck"><input type="radio" name="cgLight"${c.light.type === t ? ' checked' : ''}
               onchange="cg().light.type='${t}';cgRender()"> ${cgLightLabel(t)}</label>`).join('')}</div>
@@ -136,10 +202,10 @@ async function renderCardGen(){
         </fieldset>
       </div>
       <div class="cgout">
-        <div class="cghd"><div class="count">${tt('cards.gen_hd', {w: w * c.ss, h: h * c.ss})}</div>
+        <div class="cghd"><div class="count">${tt('cards.gen_hd', {w: w * ss, h: h * ss})}</div>
           <div class="cghdview" id="cgHdView"><canvas id="cgHd" tabindex="0"></canvas><canvas id="cgHdUi"></canvas></div></div>
         <div class="cgcard"><div class="count">${tt('cards.gen_card', {w, h})}</div>
-          <canvas id="cgCard" width="${w}" height="${h}" style="width:${w * 4}px;height:${h * 4}px"></canvas>
+          <canvas id="cgCard" width="${w}" height="${h}" style="width:${Math.round(w * cgShow(w))}px;height:${Math.round(h * cgShow(w))}px"></canvas>
           <div class="armexprow"><label>${tt('cards.gen_name')}<input value="${esc(c.name)}" placeholder="${esc(tt('cards.gen_name_hint'))}" oninput="cg().name=this.value"></label>
             <button class="primary" onclick="cgSave()">${tt('cards.gen_save')}</button>
             <button onclick="cgSaveHd()">${tt('cards.gen_save_hd')}</button></div>
@@ -155,6 +221,10 @@ async function renderCardGen(){
     </div>`;
   cgRender();
   cgViewWire();
+  // Fit on its own: a new pose, size or model is framed again the way it was
+  // asked for, until the camera is moved by hand
+  const fitKey = [c.pose, c.size, c.mult, objs.length, (armAnim() || {}).key || '', c.fit.part].join('|');
+  if(c.fit.auto && objs.length && c.fit.key !== fitKey){ c.fit.key = fitKey; cgFit(c.fit.part); }
 }
 function cgRepaint(){ renderCardGen(); }
 function cgSet(path, key, v){
@@ -269,7 +339,7 @@ function cgDilate(m, W, H, r){
 function cgRender(){
   const c = cg(), hdCv = document.getElementById('cgHd'), cardCv = document.getElementById('cgCard');
   if(!hdCv || !cardCv) return;
-  const objs = cgObjects(), [w, h] = cgDims(), ss = c.ss, W = w * ss, H = h * ss;
+  const objs = cgObjects(), [w, h] = cgDims(), ss = cgSS(), W = w * ss, H = h * ss;
   if(!objs.length || !armGl()) return;
   if(typeof armAnimPose === 'function') armAnimPose(objs);
   const cam = cgCamera(objs, W, H);
@@ -284,10 +354,12 @@ function cgRender(){
     if(mask[i]){ hi.data[i*4] = col.data[i*4]; hi.data[i*4+1] = col.data[i*4+1]; hi.data[i*4+2] = col.data[i*4+2]; hi.data[i*4+3] = 255; }
     else if(grown[i]) hi.data[i*4+3] = 255;
   }
+  if(c.paint && c.paint.on) cgPaint(hi.data, mask, W, H, c.paint.strength);
+  const bbox = cgMaskBox(mask, W, H);
   // the HD render: no blur, no scaling
   hdCv.width = W; hdCv.height = H;
   hdCv.getContext('2d').putImageData(hi, 0, 0);
-  ARM.cgLast = {cam, W, H, objs};
+  ARM.cgLast = {cam, W, H, objs, bbox};
   cgHandlesDraw();
   // the card: blurred, scaled down, coloured and sharpened
   const big = document.createElement('canvas'); big.width = W; big.height = H;
@@ -303,6 +375,182 @@ function cgRender(){
   const im = cx.getImageData(0, 0, w, h);
   cgFinish(im.data, w, h, c.post);
   cx.putImageData(im, 0, 0);
+  cgCompose(cardCv);
+}
+
+/* --- from Pfad's card maker: framing, ground, frame, painted look ---------------- */
+
+/* The figure's box in the HD render, in its pixels: [x0, y0, x1, y1], or null. */
+function cgMaskBox(m, W, H){
+  let x0 = W, y0 = H, x1 = -1, y1 = -1;
+  for(let y = 0; y < H; y++){ const r = y * W;
+    for(let x = 0; x < W; x++) if(m[r + x]){ if(x < x0) x0 = x; if(x > x1) x1 = x; if(y < y0) y0 = y; if(y1 < y) y1 = y; } }
+  return x1 < 0 ? null : [x0, y0, x1 + 1, y1 + 1];
+}
+/* Fit the camera to a framing, as Pfad's region() frames the figure: a part
+   (knees, thighs, waist) keeps that share of the man from the top, his head
+   near the top edge with a little room, cut below; the whole man sits in the
+   middle with room all round. The view is orthographic, so the figure's box
+   in the last render says exactly how far to zoom and move: twice, the
+   second to take up what a pitched camera leaves. */
+function cgFit(part, again){
+  const c = cg();
+  c.fit.part = part;
+  const L = ARM.cgLast;
+  if(!L || !L.bbox){ cgRepaint(); return; }
+  const keep = (CG_PARTS.find(p => p[0] === part) || [0, 1])[1];
+  const [x0, y0, x1, y1] = L.bbox, W = L.W, H = L.H, S0 = c.cam.scale, aspect = W / H;
+  const u = S0 / H;                                     // world units per pixel, both ways
+  const bw = (x1 - x0) * u, bh = (y1 - y0) * u;
+  const cosP = Math.max(0.2, Math.cos(c.cam.pitch * Math.PI / 180));
+  let S1, want, at;
+  if(keep < 1){
+    const room = 0.04;
+    S1 = Math.max(bh * keep * (1 + room), bw / aspect);
+    at = (H / 2 - y0) * u;                              // the head, above the middle
+    want = S1 / 2 - room * S1;
+  }else{
+    const room = 0.05;
+    S1 = Math.max(bh * (1 + 2 * room), bw * (1 + 2 * room) / aspect);
+    at = (H / 2 - (y0 + y1) / 2) * u;                   // the figure's middle
+    want = 0;
+  }
+  S1 = Math.max(0.2, Math.min(6, S1));
+  // the frame's middle moves by dC (world Y): -(S1-S0)/2*0.92 from the scale, plus the height
+  const dC = (at - want) / cosP;
+  c.cam.height = +(c.cam.height + dC + (S1 - S0) / 2 * 0.92).toFixed(4);
+  c.cam.pan = +((c.cam.pan || 0) + ((x0 + x1) / 2 - W / 2) * u).toFixed(4);
+  c.cam.scale = +S1.toFixed(4);
+  cgRender();
+  if(!again){ cgFit(part, true); cgRepaint(); }
+}
+/* The Kuwahara filter (each pixel the mean colour of the calmest of the four
+   squares round it: flat brush areas, the edges kept), as Pfad's _kuwahara,
+   on summed-area tables so its cost does not grow with the brush. */
+function cgKuwahara(src, W, H, r){
+  const n = r + 1, k = n * n, W1 = W + 1;
+  const S1 = new Float64Array(W1 * (H + 1)), S2 = new Float64Array(W1 * (H + 1));
+  const SR = new Float64Array(W1 * (H + 1)), SG = new Float64Array(W1 * (H + 1)), SB = new Float64Array(W1 * (H + 1));
+  for(let y = 0; y < H; y++){
+    let a1 = 0, a2 = 0, ar = 0, ag = 0, ab = 0;
+    for(let x = 0; x < W; x++){
+      const i = (y * W + x) * 4, R = src[i], G = src[i + 1], B = src[i + 2], l = 0.299 * R + 0.587 * G + 0.114 * B;
+      a1 += l; a2 += l * l; ar += R; ag += G; ab += B;
+      const o = (y + 1) * W1 + x + 1, up = y * W1 + x + 1;
+      S1[o] = S1[up] + a1; S2[o] = S2[up] + a2; SR[o] = SR[up] + ar; SG[o] = SG[up] + ag; SB[o] = SB[up] + ab;
+    }
+  }
+  const take = (T, x0, y0) => T[(y0 + n) * W1 + x0 + n] - T[y0 * W1 + x0 + n] - T[(y0 + n) * W1 + x0] + T[y0 * W1 + x0];
+  const out = new Uint8ClampedArray(src.length);
+  for(let y = 0; y < H; y++) for(let x = 0; x < W; x++){
+    let best = Infinity, br = 0, bg = 0, bb = 0;
+    for(const dy of [-r, 0]) for(const dx of [-r, 0]){
+      const yy = Math.max(0, Math.min(H - n, y + dy)), xx = Math.max(0, Math.min(W - n, x + dx));
+      const m = take(S1, xx, yy) / k, v = take(S2, xx, yy) / k - m * m;
+      if(v < best){ best = v; br = take(SR, xx, yy) / k; bg = take(SG, xx, yy) / k; bb = take(SB, xx, yy) / k; }
+    }
+    const i = (y * W + x) * 4;
+    out[i] = br; out[i + 1] = bg; out[i + 2] = bb; out[i + 3] = src[i + 3];
+  }
+  return out;
+}
+/* Pfad's Painted look: flat brush areas (Kuwahara twice), the colour a little
+   richer and warmer, a light canvas grain; the see-through parts kept, the
+   outline the maker already draws. A filter over the render - it paints
+   nothing new. strength 0.3-2 is the brush's size. */
+function cgPaint(d, mask, W, H, strength){
+  const k = Math.max(0, +strength || 0);
+  if(!k) return;
+  // the clear parts a mid colour first, so the brush drags no dark fringe in
+  for(let i = 0; i < W * H; i++) if(!mask[i]){ d[i * 4] = 150; d[i * 4 + 1] = 135; d[i * 4 + 2] = 110; }
+  const r = Math.max(2, Math.round(Math.min(W, H) / 160 * k)) + 1;
+  let f = cgKuwahara(d, W, H, r);
+  f = cgKuwahara(f, W, H, Math.max(1, r >> 1));
+  let seed = 7;
+  const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+  const gw = Math.max(8, Math.floor(W / 3)), gh = Math.max(8, Math.floor(H / 3)), grain = new Float32Array(gw * gh);
+  for(let i = 0; i < grain.length; i++) grain[i] = (236 + rnd() * 19) / 255;
+  const sat = 1 + 0.12 * k;
+  for(let y = 0; y < H; y++) for(let x = 0; x < W; x++){
+    const i = y * W + x, p = i * 4;
+    if(!mask[i]) continue;
+    let R = f[p], G = f[p + 1], B = f[p + 2];
+    const L0 = 0.299 * R + 0.587 * G + 0.114 * B;
+    R = L0 + (R - L0) * sat; G = L0 + (G - L0) * sat; B = L0 + (B - L0) * sat;
+    const g = grain[Math.min(gh - 1, Math.floor(y / 3)) * gw + Math.min(gw - 1, Math.floor(x / 3))] * 1.05;
+    d[p] = R * g; d[p + 1] = G * (244 / 255) * g; d[p + 2] = B * (226 / 255) * g;
+  }
+}
+/* The game's pieces, fetched once per mod and kept as images. */
+function cgArt(name){
+  const key = state.src + '|' + name;
+  ARM.cgArt = ARM.cgArt || {};
+  const hit = ARM.cgArt[key];
+  if(hit) return hit.img && hit.img.complete && hit.img.naturalWidth ? hit.img : null;
+  const img = new Image();
+  ARM.cgArt[key] = {img};
+  img.onload = () => cgRender();
+  img.onerror = () => { ARM.cgArt[key] = {img: null};
+    if(cg().ground.kind === name || name === 'PORTRAIT_FRAME'){ cg().groundNote = tt('cards.gen_art_missing'); cgRepaint(); } };
+  img.src = '/api/armory/card_art?mod=' + enc(state.src) + '&name=' + enc(name);
+  return null;
+}
+function cgGround(kind){ const c = cg(); c.ground.kind = kind; c.groundNote = ''; cgRepaint(); }
+function cgFrameOn(on){ const c = cg(); c.gframe = on; c.groundNote = ''; cgRepaint(); }
+function cgGroundFile(file){
+  if(!file) return;
+  const rd = new FileReader();
+  rd.onload = () => { const c = cg(); c.ground.pic = rd.result; ARM.cgPic = null; cgRepaint(); };
+  rd.readAsDataURL(file);
+}
+function cgGroundPic(){
+  const c = cg();
+  if(!c.ground.pic) return null;
+  if(ARM.cgPic && ARM.cgPic.src === c.ground.pic) return ARM.cgPic.complete ? ARM.cgPic : null;
+  ARM.cgPic = new Image(); ARM.cgPic.onload = () => cgRender(); ARM.cgPic.src = c.ground.pic;
+  return null;
+}
+/* An image laid to cover w x h, its middle kept (on_ground's picture case). */
+function cgCover(ctx, img, w, h){
+  const k = Math.max(w / img.naturalWidth, h / img.naturalHeight), iw = img.naturalWidth * k, ih = img.naturalHeight * k;
+  ctx.drawImage(img, (w - iw) / 2, (h - ih) / 2, iw, ih);
+}
+/* The finished card: the ground under the figure, the game's frame over it.
+   The game's own cards are the figure alone (the game draws their ground),
+   so None is the default and what the game expects. */
+function cgCompose(cv){
+  const c = cg(), w = cv.width, h = cv.height, g = c.ground.kind;
+  const wantFrame = cgIsInfo() && c.gframe;
+  if(g === 'none' && !wantFrame) return;
+  const fig = document.createElement('canvas'); fig.width = w; fig.height = h;
+  fig.getContext('2d').drawImage(cv, 0, 0);
+  const x = cv.getContext('2d');
+  x.clearRect(0, 0, w, h);
+  if(g === 'colour'){ x.fillStyle = c.ground.colour; x.fillRect(0, 0, w, h); }
+  else if(g === 'pic'){ const im = cgGroundPic(); if(im) cgCover(x, im, w, h); }
+  else if(g === 'SCROLL_MID'){
+    // the scroll paper repeated at its own size, as the game lays it (paper())
+    const im = cgArt(g);
+    if(im) for(let yy = 0; yy < h; yy += im.naturalHeight) for(let xx = 0; xx < w; xx += im.naturalWidth) x.drawImage(im, xx, yy);
+  }else if(g !== 'none'){ const im = cgArt(g); if(im) cgCover(x, im, w, h); }
+  x.drawImage(fig, 0, 0);
+  if(wantFrame){
+    const fr = cgArt('PORTRAIT_FRAME');
+    if(fr) cgNineSlice(x, fr, w, h, cg().mult || 1);
+  }
+}
+/* Pfad's framed(): the frame's four corners kept, its sides stretched along
+   the picture, the border scaled with the picture. The border's width is a
+   share of the frame (an eighth) unless the inner opening is known. */
+function cgNineSlice(x, fr, W, H, scale){
+  const fw = fr.naturalWidth, fh = fr.naturalHeight;
+  const bx = Math.max(1, Math.floor(fw / 8)), by = Math.max(1, Math.floor(fh / 8));
+  const sx = Math.min(bx * scale, Math.floor(W / 3)), sy = Math.min(by * scale, Math.floor(H / 3));
+  const P = (a, b, c2, d, e, f, g, h2) => { if(g > 0 && h2 > 0) x.drawImage(fr, a, b, c2, d, e, f, g, h2); };
+  P(0, 0, bx, by, 0, 0, sx, sy); P(fw - bx, 0, bx, by, W - sx, 0, sx, sy);
+  P(0, fh - by, bx, by, 0, H - sy, sx, sy); P(fw - bx, fh - by, bx, by, W - sx, H - sy, sx, sy);
+  P(bx, 0, fw - 2 * bx, by, sx, 0, W - 2 * sx, sy); P(bx, fh - by, fw - 2 * bx, by, sx, H - sy, W - 2 * sx, sy);
+  P(0, by, bx, fh - 2 * by, 0, sy, sx, H - 2 * sy); P(fw - bx, by, bx, fh - 2 * by, W - sx, sy, sx, H - 2 * sy);
 }
 
 /* The colour and sharpen steps, on the card's own pixels. */
@@ -340,7 +588,7 @@ function cgFinish(d, w, h, p){
 
 /* --- saving --------------------------------------------------------------------------- */
 
-function cgKind(){ const s = cg().size; return s === 'info' ? 'info' : s === 'custom' ? 'custom' : 'card'; }
+function cgKind(){ const s = cg().size; return cgIsInfo() ? 'info' : s === 'custom' ? 'custom' : 'card'; }
 async function cgSave(){
   const c = cg(), cv = document.getElementById('cgCard');
   if(!cv) return;

@@ -1233,6 +1233,11 @@ installed mods to read, measure or check against:
   were turned, and check in game that the turned parts light the right way.
   The turn assumes green points up the image, as the generator writes it; if
   the game reads green the other way, flip the sign in `armbake.turn_normals`.
+  And the card maker's game pieces (101q): check on a real install that
+  `ui/*.sd.xml` and the culture pages are found (in the mod, the game's data
+  or its packs) for `STRAT_CARD_BACKGROUND`, `SCROLL_MID` and
+  `PORTRAIT_FRAME`; if vanilla only ships the binary `.sd`, `cardart.py`
+  needs a reader for it (Pfad's editor reads the `.sd.xml` form).
 
 ## Deferred to a later version, by the user
 
