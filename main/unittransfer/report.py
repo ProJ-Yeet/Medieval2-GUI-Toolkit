@@ -72,9 +72,8 @@ def webhook() -> str:
     return s or WEBHOOK.strip()
 
 
-#: the relay's address (a Cloudflare Worker, see ``dev/report-relay/``); empty
-#: until the developer has put one up
-RELAY = ""
+#: the relay's address (a Cloudflare Worker, see ``dev/report-relay/``)
+RELAY = "https://m2-gui-kit-reports.projyeet17.workers.dev"
 RELAY_FILE = Path(__file__).with_name("report_relay.txt")
 #: the relay takes reports from this tool only, by this prefix
 USER_AGENT = f"M2-GUI-Kit/{__version__}"
