@@ -8574,7 +8574,6 @@
   "other": "先前清理移除的 <b>{count}</b> 项内容被此版本新增读取的内容引用，旧版本未读取这些引用。{ok} {lost}"
  },
  "packs.this_pack_names_no_units": "此包未列出任何部队。",
- "packs.this_removes_the_units_block_from": "这会从 <code>export_descr_unit.txt</code> 中移除部队块。仍招募此部队的内容（<code>export_descr_buildings.txt</code>、<code>descr_strat.txt</code>、脚本）必须手动清理，否则游戏会报错。",
  "packs.this_zip_carries_no_unitpack_json": "此 zip 没有 <code>unitpack.json</code>。它仍符合模组结构，可以导入，但请确认其来源。",
  "packs.tick_some_units_first": "请先勾选一些部队。",
  "packs.ticked": "已勾选 {entries_n}/{unused_n} 项",

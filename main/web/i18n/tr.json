@@ -8682,7 +8682,6 @@
   "other": "<b> {count} </b> geçmişteki bir temizleme işleminin gerçekleştirdiği şeyler, bu yapının şu anda okuduğu ve eski yapının okumadığı bir şeyle adlandırılmıştır.  {ok} {lost}"
  },
  "packs.this_pack_names_no_units": "Bu pakette hiçbir birim belirtilmez.",
- "packs.this_removes_the_units_block_from": "Bu, birim'nin blok'sini <code>export_descr_unit.txt</code>'den kaldırır. Hala devşirme ( <code>export_descr_buildings.txt</code> , <code>descr_strat.txt</code> , script ) herhangi bir şey elle temizlenmelidir, aksi takdirde oyun hata verecektir.",
  "packs.this_zip_carries_no_unitpack_json": "Bu zip <code>unitpack.json</code> taşımamaktadır. Hala bir mod gibi görünüyor, bu yüzden hala içe aktarılabiliyor. Sadece nereden geldiğini bildiğinden emin ol.",
  "packs.tick_some_units_first": "Önce bazı birimleri işaretleyin.",
  "packs.ticked": "{entries_n} / {unused_n} işaretli",

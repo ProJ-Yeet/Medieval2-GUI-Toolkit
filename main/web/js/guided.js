@@ -94,6 +94,7 @@ function gfVocabFor(mod){
    about on a mod not marked M2EX: an unknown word on `attributes` stops the
    extended engine at loading, and the plain one does not know them at all. */
 const GF_ATTR_TEXT={
+  can_feign_rout:()=>tt('guided.attr_can_feign_rout'),
   sea_faring:()=>tt('guided.attr_sea_faring'),
   can_swim:()=>tt('guided.attr_can_swim'),
   can_withdraw:()=>tt('guided.attr_can_withdraw'),

@@ -7979,7 +7979,6 @@
   "other": "<b>{count}</b> Elemente, die eine frühere Bereinigung entfernt hat, werden von etwas genannt, das dieser Build jetzt liest und der ältere nicht. {ok} {lost}"
  },
  "packs.this_pack_names_no_units": "Dieses Pack nennt keine Einheiten.",
- "packs.this_removes_the_units_block_from": "Dies entfernt den Block der Einheit aus <code>export_descr_unit.txt</code>. Alles, was sie noch rekrutiert (<code>export_descr_buildings.txt</code>, <code>descr_strat.txt</code>, Skripte), muss von Hand bereinigt werden, sonst meldet das Spiel einen Fehler.",
  "packs.this_zip_carries_no_unitpack_json": "Diese ZIP-Datei enthält keine <code>unitpack.json</code>. Sie sieht trotzdem wie eine Mod aus und kann daher importiert werden. Stellen Sie nur sicher, dass Sie wissen, woher sie stammt.",
  "packs.tick_some_units_first": "Kreuzen Sie zuerst einige Einheiten an.",
  "packs.ticked": "{entries_n}/{unused_n} markiert",

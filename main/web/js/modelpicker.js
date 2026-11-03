@@ -367,15 +367,15 @@ function gfAttrWidget(host,label,cur){
     ${gfChips(host,label,have)}
     <div class="barrow">
       <details class="drop"><summary>${tt('modelpicker.abilities_on',{n:have.filter(a=>!isAI(a)).length})}</summary>
-        <div class="dropbody"><div class="faclist" style="border:none;padding:0;max-height:none">
+        <div class="dropbody"><div class="faclist attrlist" style="border:none;padding:0;max-height:none">
           ${abilities.map(box).join('')}</div></div></details>
       <details class="drop"><summary>${tt('modelpicker.ai_hints_on',{n:have.filter(isAI).length})}</summary>
         <div class="dropbody"><div class="count" style="margin-bottom:6px">${tt('modelpicker.these_change_nothing_about_the_unit')}</div>
-          <div class="faclist" style="border:none;padding:0;max-height:none">${hints.map(box).join('')}</div>
+          <div class="faclist attrlist" style="border:none;padding:0;max-height:none">${hints.map(box).join('')}</div>
         </div></details>
       <details class="drop"><summary>${tt('modelpicker.ex_attrs_on',{n:have.filter(a=>gfIsEx(a,'attributes')).length})}</summary>
         <div class="dropbody"><div class="count" style="margin-bottom:6px">${gfModEx(host)?tt('modelpicker.ex_attrs_note_on'):tt('modelpicker.ex_attrs_note_off')}</div>
-          <div class="faclist" style="border:none;padding:0;max-height:none">${exAll.map(box).join('')}</div>
+          <div class="faclist attrlist" style="border:none;padding:0;max-height:none">${exAll.map(box).join('')}</div>
         </div></details>
       <input id="${gfAddId(label)}" list="gfdl-unit_attr" placeholder="${ttA('modelpicker.add_your_own')}"
         style="width:170px;font-size:12px;padding:3px 7px">
@@ -395,7 +395,7 @@ function gfWeaponAttrWidget(host,label,cur){
     ${gfChips(host,label,have.length?have:[])}
     <div class="barrow">
       <details class="drop"><summary>${tt('modelpicker.choose_attributes_on',{have_n:have.length})}</summary>
-        <div class="dropbody"><div class="faclist" style="border:none;padding:0;max-height:none">
+        <div class="dropbody"><div class="faclist attrlist" style="border:none;padding:0;max-height:none">
           ${all.concat(GF_EX_ATTRS.weapon.filter(a=>all.indexOf(a)<0)).map(a=>facCheckRow(a,'',
             `gfWAttrToggle('${q1(esc(label))}','${q1(esc(a))}',this.checked)`,
             haveSet.has(a),[GF_ATTR_HELP(a),gfIsEx(a,'weapon')?tt('modelpicker.ex_tag'):''].filter(Boolean).join(' · '),haveSet.has(a)!==wasSet.has(a))).join('')}

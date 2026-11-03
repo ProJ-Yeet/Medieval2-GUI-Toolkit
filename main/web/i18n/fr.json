@@ -9133,7 +9133,6 @@
   "other": "<b>{count}</b> éléments retirés par un ancien nettoyage sont référencés par une source lue par cette version mais pas par l’ancienne. {ok} {lost}"
  },
  "packs.this_pack_names_no_units": "Ce pack ne référence aucune unité.",
- "packs.this_removes_the_units_block_from": "Retire le bloc de l’unité de <code>export_descr_unit.txt</code>. Toute référence de recrutement restante (<code>export_descr_buildings.txt</code>, <code>descr_strat.txt</code>, scripts) doit être corrigée manuellement, sinon le jeu signalera une erreur.",
  "packs.this_zip_carries_no_unitpack_json": "Ce zip ne contient pas de <code>unitpack.json</code>. Il ressemble néanmoins à un mod et peut être importé. Assurez-vous simplement de connaître sa provenance.",
  "packs.tick_some_units_first": "Cochez d’abord des unités.",
  "packs.ticked": "{entries_n}/{unused_n} cochés",

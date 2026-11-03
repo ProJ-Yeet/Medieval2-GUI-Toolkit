@@ -8324,7 +8324,6 @@
   "other": "<b>{count}</b> elementos que quitó una limpieza anterior los nombra algo que esta versión ahora lee y la anterior no. {ok} {lost}"
  },
  "packs.this_pack_names_no_units": "Este paquete no nombra ninguna unidad.",
- "packs.this_removes_the_units_block_from": "Esto quita el bloque de la unidad de <code>export_descr_unit.txt</code>. Todo lo que aún la reclute (<code>export_descr_buildings.txt</code>, <code>descr_strat.txt</code>, scripts) límpialo a mano, o el juego dará error.",
  "packs.this_zip_carries_no_unitpack_json": "Este zip no contiene <code>unitpack.json</code>. Aun así parece un mod, así que se puede importar. Solo asegúrate de saber de dónde viene.",
  "packs.tick_some_units_first": "Marca antes alguna unidad.",
  "packs.ticked": "{entries_n}/{unused_n} marcadas",
