@@ -3239,7 +3239,7 @@ body.look-editing :is(button,label,legend,h1,h2,h3,.trsechead,.mftab):hover{outl
 .artcell img.gone{visibility:hidden}
 .artcell figcaption{font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .artmore{grid-column:1/-1;text-align:center}
-@media (max-width:700px){.artbrowse{flex-direction:column}.artkinds{flex:none;flex-direction:row;flex-wrap:wrap}}
+@container page (max-width:700px){.artbrowse{flex-direction:column}.artkinds{flex:none;flex-direction:row;flex-wrap:wrap}}
 .mspagebox{position:relative;width:100%;background:repeating-conic-gradient(#0002 0 25%,#fff1 0 50%) 0 0/16px 16px}
 .mspagebox img{display:block;width:100%;height:100%;image-rendering:pixelated}
 .msbox{position:absolute;box-sizing:border-box;border:1px solid #fff4;cursor:pointer}

@@ -119,6 +119,7 @@ def make_faction(mod, slot: str, donor: str):
 
 med2 = Path(_tmp.mkdtemp(prefix="ut_horde_"))
 cases = []
+armies = {}
 roc = MODS / "ROCSS"
 if (roc / "data" / campstrat.CAMPAIGN_DIR_REL / CAMP).is_dir():
     got = copy_mod(roc, med2, "HordeROC")
@@ -156,6 +157,7 @@ for root, slot, donor in cases:
     # either, so the start is given the donor's own army
     owned = hs.owned_units(mod, donor)
     army = hs.default_army(owned, hs.land_units(owned)[:9])
+    armies[root] = army
 
     print("1) the view")
     v = hs.view(mod, facts, slot)
@@ -325,7 +327,7 @@ if slot:
     mod = Mod(root)
     before = snapshot(mod)
     body = {"mod": name, "campaign": CAMP, "faction": slot, "mode": "start",
-            "province": v["province"], "count": 2}
+            "province": v["province"], "count": 2, "army": armies.get(root)}
     pl = post("/api/map/horde_plan", body)
     check("POST horde_plan previews two people and writes nothing",
           len(pl["plan"]["people"]) == 2 and snapshot(mod) == before)

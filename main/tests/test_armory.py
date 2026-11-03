@@ -861,6 +861,7 @@ except armory.ArmoryError:
 check("something that is not a library is not saved", refused)
 
 if game_k.is_dir() and AMER is not None and AMER.is_dir():
+    from unittransfer.mod import Mod
     amer = Mod(AMER)
     u = next(x for x in amer.edu.units if x.category and x.class_type
              and amer.modeldb.by_name().get((x.soldier_model or "").lower()))
