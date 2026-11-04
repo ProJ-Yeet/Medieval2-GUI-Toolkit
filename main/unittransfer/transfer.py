@@ -2342,6 +2342,23 @@ def _from_base_game(plan: "TransferPlan", source: Mod, dest: Mod, rel: str) -> b
     return True
 
 
+def _packed_sprite_sheets(plan: "TransferPlan", source: Mod, dest: Mod, rel: str) -> None:
+    """The sheets of a ``.spr`` found in packs, not loose: ``<stem>_000.texture``,
+    ``_001``, ... looked up one by one, since a pack cannot be listed like a
+    folder. Crusades' Greek Firethrower came across without them and the game
+    logged both sheets missing."""
+    p = Path(rel.replace("\\", "/"))
+    for i in range(100):
+        sheet = (p.parent / f"{p.stem}_{i:03d}.texture").as_posix()
+        if not _from_base_game(plan, source, dest, sheet):
+            break
+    else:
+        return
+    if i == 0:
+        plan.warnings.append(
+            _i18n.msg("eng.transfer.no_sheet_textures_000_texture_found", "no sheet textures (<name>_000.texture) found next to '{rel}' - far-away sprites may not render.", rel=rel))
+
+
 def plan_transfer(source: Mod, unit_type: str, dest: Mod,
                   options: Optional[TransferOptions] = None) -> TransferPlan:
     opts = options or TransferOptions()
@@ -2694,7 +2711,10 @@ def plan_transfer(source: Mod, unit_type: str, dest: Mod,
                     if not sheets:
                         plan.warnings.append(
                             _i18n.msg("eng.transfer.no_sheet_textures_000_texture_found", "no sheet textures (<name>_000.texture) found next to '{rel}' - far-away sprites may not render.", rel=rel))
-            elif not _from_base_game(plan, source, dest, rel):
+            elif _from_base_game(plan, source, dest, rel):
+                if rel.lower().endswith(".spr"):
+                    _packed_sprite_sheets(plan, source, dest, rel)
+            else:
                 plan.missing_assets.append(rel)
 
     # the mount was brought across on a base unit's ticket - its animations are

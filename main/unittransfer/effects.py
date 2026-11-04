@@ -255,6 +255,22 @@ def base_packed(data_dir, rel: str) -> Optional[Path]:
         return None
 
 
+class _Root:
+    def __init__(self, root: Path):
+        self.root = root
+
+
+def _own_packed(data: Path, rel: str) -> Optional[Path]:
+    """``data/<rel>`` out of the mod's OWN packs (a Kingdoms campaign keeps
+    its effect files there, Crusades' greek fire among them), or ``None``."""
+    from . import gamepack
+    try:
+        path, found = gamepack.own_packed(rel, _Root(data.parent))
+    except Exception:                                        # noqa: BLE001
+        return None
+    return path if found else None
+
+
 def _listed(path: Path) -> List[str]:
     out: List[str] = []
     try:
@@ -307,8 +323,11 @@ def effect_files(data_dir) -> EffectFiles:
     data = Path(data_dir)
     base = base_data(data)
     out = EffectFiles()
+    own_manifest = _own_packed(data, MANIFEST)
     if (data / MANIFEST).is_file():
         out.listed, out.source = _listed(data / MANIFEST), "mod"
+    elif own_manifest is not None:
+        out.listed, out.source = _listed(own_manifest), "mod"
     elif base is not None and (base / MANIFEST).is_file():
         out.listed, out.source = _listed(base / MANIFEST), "base"
     else:
@@ -325,6 +344,9 @@ def effect_files(data_dir) -> EffectFiles:
         if own.is_file():
             out.shipped.append(rel)
             out.paths.append((rel, own))
+        elif (packed_own := _own_packed(data, rel)) is not None:
+            out.shipped.append(rel)
+            out.paths.append((rel, packed_own))
         elif base is not None and (base / rel).is_file():
             out.from_base.append(rel)
             out.paths.append((rel, base / rel))

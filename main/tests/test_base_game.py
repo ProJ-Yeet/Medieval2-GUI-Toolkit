@@ -109,5 +109,25 @@ else:
               n > len(am.edu.units) // 2)
         check("  and its mounts", len(am.mount_file.mounts) >= 5)
 
+    crus, teut = Path(real) / "mods" / "crusades", Path(real) / "mods" / "teutonic"
+    if (crus / "packs").is_dir() and (teut / "packs").is_dir():
+        print("\n5) a Kingdoms campaign's own packed effects and sprites")
+        from unittransfer import effects                          # noqa: E402
+        from unittransfer.transfer import plan_transfer, TransferOptions  # noqa: E402
+        src, dst = Mod(crus), Mod(teut)
+        sidx = effects.index(src.data)
+        fire = sidx.set_of("greek_fire_set")
+        check("Crusades' greek_fire_set is read out of its own packs",
+              bool(fire) and fire[0].rel == "descr_flaming_projectiles.txt")
+        blocks, missing = effects.resolve(sidx, ["greek_fire_set", "greek_fire_man_impact_set"])
+        check("  with the effects it lists, ready to carry", len(blocks) > 3 and not missing)
+        check("Teutonic's own copy is seen too, so it is not carried twice",
+              bool(effects.index(dst.data).set_of("greek_fire_set")))
+        plan = plan_transfer(src, "Greek Firethrower", dst, TransferOptions(import_effects=True))
+        rels = {r.lower() for _a, r in plan.asset_files}
+        for stem in ("byzantium_greek_firethrower_sprite", "byzantium_greek_firethrower_ug1_sprite"):
+            check(f"the packed {stem}.spr brings its sheets",
+                  f"unit_sprites/{stem}_000.texture" in rels)
+
 print(f"\n{sum(ok)}/{len(ok)} passed")
 sys.exit(0 if all(ok) else 1)
