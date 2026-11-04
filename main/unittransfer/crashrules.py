@@ -295,6 +295,39 @@ REFUSED: Tuple[dict, ...] = (
 )
 
 
+MERC_REL = "world/maps/base/descr_mercenaries.txt"
+_POOL = re.compile(r'^\s*recruit_pool\s+"([^"]+)"')
+#: the name ends at a comma in the stock file (``unit merc cog, exp 0``) and
+#: at the whitespace before ``exp`` in kirsi's
+_MERC = re.compile(r"^\s*unit\s+(.+?)\s*,?\s+exp\b")
+
+
+@rule("unit.unknown_recruit", "A recruit or mercenary pool naming a unit the unit file has not got",
+      "fatal", "the engine looks every pooled unit up in export_descr_unit.txt; Kirsi's "
+      "Bigger Map pooled a Greek Firethrower its unit file had lost", "campaign", "rawtext")
+def _unknown_recruits(mod) -> List[Finding]:
+    try:
+        have = {u.type.lower() for u in mod.edu.units}
+    except Exception:                                        # noqa: BLE001
+        return []
+    out = []
+    for rel, pat in (("export_descr_buildings.txt", _POOL), (MERC_REL, _MERC)):
+        p = Path(mod.data) / rel
+        if not p.is_file():
+            continue
+        for i, line in enumerate(_read(p).splitlines()):
+            m = pat.match(_code(line))
+            if not m or m.group(1).strip().lower() in have:
+                continue
+            unit = m.group(1).strip()
+            out.append(Finding(
+                "unit.unknown_recruit", "fatal",
+                _i18n.msg("eng.crashrules.pool_names_a_unit_the_unit_file_lacks", "{rel} names '{unit}', and export_descr_unit.txt has no unit of that type. Port the unit back, or take the line out.", rel=rel, unit=unit),
+                file=rel, line=i + 1, what=f"{rel}|{unit.lower()}", when="campaign",
+                name=unit))
+    return out
+
+
 def run(mod) -> Tuple[List[Tuple[Rule, Finding]], List[dict]]:
     """Every rule. A rule that raises is reported, never lost with the others."""
     found, failed = [], []

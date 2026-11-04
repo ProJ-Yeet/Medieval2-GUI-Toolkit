@@ -2342,6 +2342,25 @@ def _from_base_game(plan: "TransferPlan", source: Mod, dest: Mod, rel: str) -> b
     return True
 
 
+def _note_skeletons(plan: "TransferPlan", entry, name: str, dest_skeletons) -> None:
+    """Record the body and weapon skeletons ``entry`` names that the
+    destination cannot play, against the model ``name``."""
+    for skel in entry.skeletons():
+        if skel and skel not in dest_skeletons:
+            if skel not in plan.missing_skeletons:
+                plan.missing_skeletons.append(skel)
+            owners = plan.skeleton_models.setdefault(skel, [])
+            if name not in owners:
+                owners.append(name)
+    for skel in dict.fromkeys(entry.weapon_skeletons()):
+        if skel not in dest_skeletons:
+            if skel not in plan.missing_weapon_skeletons:
+                plan.missing_weapon_skeletons.append(skel)
+            owners = plan.weapon_skeleton_models.setdefault(skel, [])
+            if name not in owners:
+                owners.append(name)
+
+
 def _packed_sprite_sheets(plan: "TransferPlan", source: Mod, dest: Mod, rel: str) -> None:
     """The sheets of a ``.spr`` found in packs, not loose: ``<stem>_000.texture``,
     ``_001``, ... looked up one by one, since a pack cannot be listed like a
@@ -2658,6 +2677,9 @@ def plan_transfer(source: Mod, unit_type: str, dest: Mod,
             else:
                 plan.model_actions.append(ModelAction(name, "reuse_identical", name,
                                                       "identical incl. filenames"))
+            # reused is not proof it plays: kirsi held the Firethrower's models
+            # and not the base game's pack its skeleton
+            _note_skeletons(plan, entry, alt, dest_skeletons)
             continue
         if name in dest_models:                  # same name, DIFFERENT content
             new_name = _unique_name(name + "_" + _tag(source), taken_names)
@@ -2673,21 +2695,7 @@ def plan_transfer(source: Mod, unit_type: str, dest: Mod,
             plan.model_actions.append(ModelAction(name, "add", name))
             dest_by_content.setdefault(key, name)
 
-        # animation check (for entries we actually add)
-        for skel in entry.skeletons():
-            if skel and skel not in dest_skeletons:
-                if skel not in plan.missing_skeletons:
-                    plan.missing_skeletons.append(skel)
-                owners = plan.skeleton_models.setdefault(skel, [])
-                if name not in owners:
-                    owners.append(name)
-        for skel in dict.fromkeys(entry.weapon_skeletons()):
-            if skel not in dest_skeletons:
-                if skel not in plan.missing_weapon_skeletons:
-                    plan.missing_weapon_skeletons.append(skel)
-                owners = plan.weapon_skeleton_models.setdefault(skel, [])
-                if name not in owners:
-                    owners.append(name)
+        _note_skeletons(plan, entry, name, dest_skeletons)
 
         # assets for this model
         for rel in entry.mesh_files() + entry.texture_files():

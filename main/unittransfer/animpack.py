@@ -1112,8 +1112,11 @@ class KnownSkeletons:
 
 
 def known_skeletons(data_dir, modeldb=None) -> KnownSkeletons:
-    """What a transfer holds a model's skeletons against (Phase 79)."""
-    packs = for_data(data_dir)
+    """What a transfer holds a model's skeletons against (Phase 79): the
+    mod's own pack, or the base game's when it has none, as the game plays
+    it. Kirsi's modeldb named MTW2_Flamethrower, which the base game's pack
+    has not got, so reading the modeldb passed a unit that cannot animate."""
+    packs, _whose = packs_for(data_dir)
     if packs is not None and packs.skels is not None:
         return KnownSkeletons((e.name for e in packs.skels.entries), "pack")
     names: List[str] = []

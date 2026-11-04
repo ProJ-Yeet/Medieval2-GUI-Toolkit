@@ -12736,5 +12736,6 @@
  "codeview.record_as_stored": "Registro tal como está almacenado en el archivo",
  "common.none_option": "(ninguno)",
  "common.mounted": "(sobre una montura)",
- "strings.text_placeholder": "Introducir texto"
+ "strings.text_placeholder": "Introducir texto",
+ "eng.crashrules.pool_names_a_unit_the_unit_file_lacks": "{rel} nombra '{unit}', y export_descr_unit.txt no tiene ninguna unidad de ese tipo. Vuelve a portar la unidad o quita la línea."
 }

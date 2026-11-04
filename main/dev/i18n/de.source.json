@@ -4109,6 +4109,7 @@
  "eng.crashrules.has_ai_label_and_declares_no": "99d676af3070",
  "eng.crashrules.line_has_three_or_more_spaces": "dd02ff103764",
  "eng.crashrules.names_a_path_on_one_particular": "9eb13a3b1090",
+ "eng.crashrules.pool_names_a_unit_the_unit_file_lacks": "ea17c017604c",
  "eng.crashrules.the_script_fires_historic_event_and": "676e5c98c34a",
  "eng.crashrules.two_guilds_in_town": "d50dd67c8685",
  "eng.dupes.a_model_entry_called_already_exists": "9dc0a1fe9115",

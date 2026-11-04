@@ -129,5 +129,35 @@ else:
             check(f"the packed {stem}.spr brings its sheets",
                   f"unit_sprites/{stem}_000.texture" in rels)
 
+    skel = Path(real) / "data" / "animations" / "skeletons.idx"
+    if skel.is_file():
+        print("\n6) a mod with no animation pack plays the base game's")
+        from unittransfer import animpack                         # noqa: E402
+        g2 = tmp / "Game2"
+        (g2 / "data" / "animations").mkdir(parents=True)
+        for n in ("skeletons.idx", "skeletons.dat"):
+            shutil.copy2(skel.parent / n, g2 / "data" / "animations" / n)
+        bare = g2 / "mods" / "nopack" / "data"
+        bare.mkdir(parents=True)
+        k = animpack.known_skeletons(bare)
+        check(f"its skeletons are the base game's pack ({len(k)})",
+              k.source == "pack" and len(k) > 100 and "MTW2_Spear" in k)
+        check("  so a skeleton only Crusades has is not there, whatever its modeldb names",
+              "MTW2_Flamethrower" not in k)
+        if (crus / "packs").is_dir():
+            # kirsi's case: the Firethrower's models already in the destination,
+            # byte for byte, and no skeleton to play them
+            for rel in ("export_descr_unit.txt", "text/export_units.txt",
+                        "unit_models/battle_models.modeldb", "descr_mount.txt"):
+                got, _w = gamepack.lookup(rel, Mod(crus))
+                (bare / rel).parent.mkdir(parents=True, exist_ok=True)
+                if got is not None:              # Crusades keeps no export_units.txt
+                    shutil.copy2(got, bare / rel)
+            plan = plan_transfer(Mod(crus), "Greek Firethrower", Mod(bare.parent),
+                                 TransferOptions(bring_animations=False))
+            check("a model reused as it is is still held against the skeletons",
+                  all(a.action == "reuse_identical" for a in plan.model_actions)
+                  and "MTW2_Flamethrower" in plan.missing_skeletons)
+
 print(f"\n{sum(ok)}/{len(ok)} passed")
 sys.exit(0 if all(ok) else 1)
