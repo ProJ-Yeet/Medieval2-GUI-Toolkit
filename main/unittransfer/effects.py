@@ -237,13 +237,20 @@ def base_data(data_dir) -> Optional[Path]:
 def base_packed(data_dir, rel: str) -> Optional[Path]:
     """The base game's ``data/<rel>`` read out of its ``packs/`` (into the
     cache), for an install that was never unpacked; ``None`` when the mod is
-    not under an install's ``mods`` folder or no pack has the file."""
-    mods = Path(data_dir).parent.parent
-    if mods.name.lower() != "mods":
+    not under an install's ``mods`` folder or no pack has the file. The base
+    game opened read only is its own base: its ``data/`` comes out of the
+    ``packs/`` beside it."""
+    data = Path(data_dir)
+    mods = data.parent.parent
+    if mods.name.lower() == "mods":
+        game = mods.parent
+    elif (data.parent / "packs").is_dir() and (data.parent / "mods").is_dir():
+        game = data.parent
+    else:
         return None
     from . import gamepack
     try:
-        return gamepack.extract(rel, mods.parent)
+        return gamepack.extract(rel, game)
     except Exception:                                        # noqa: BLE001
         return None
 

@@ -85,5 +85,29 @@ else:
     check("a mod made from it takes the packed text out too",
           p["packed_files"] > 100 and not (Path(real) / "mods" / "ut_never_made").exists())
 
+    print("\n4) the rest of a unit, out of the packs too")
+    units = base.edu.units
+    cards = sum(1 for u in units if base.find_unit_card(u))
+    infos = sum(1 for u in units if base.find_unit_info(u))
+    check(f"its unit cards ({cards} of {len(units)})", cards > 380)
+    check(f"  and its info cards ({infos} of {len(units)})", infos > 380)
+    knights = base.edu.by_type().get("Mailed Knights")
+    card = base.find_unit_card(knights) if knights else None
+    check("  a card found is a real .tga on disk", card is not None and card.is_file()
+          and card.stat().st_size > 1000)
+    check("its mounts (vanilla has 11)", len(base.mount_file.mounts) >= 11)
+    check("its projectiles", len(base.projectile_file.projectiles) > 50)
+    check("its siege engines", len(base.engine_file.engines) > 10)
+    check("  and the mounted ones", len(base.mounted_engine_file.engines) > 0)
+    check("its strategy-map models", len(base.strat_models.entries) > 50)
+    check("the effect sets its projectiles name", len(base.effect_sets) > 50)
+    camp = Path(real) / "mods" / "americas"
+    if (camp / "packs").is_dir():
+        am = Mod(camp)
+        n = sum(1 for u in am.edu.units if am.find_unit_card(u))
+        check(f"a Kingdoms campaign's cards, its own and the game's ({n} of {len(am.edu.units)})",
+              n > len(am.edu.units) // 2)
+        check("  and its mounts", len(am.mount_file.mounts) >= 5)
+
 print(f"\n{sum(ok)}/{len(ok)} passed")
 sys.exit(0 if all(ok) else 1)

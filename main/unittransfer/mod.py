@@ -186,6 +186,36 @@ class Mod:
             packed = None
         return packed if packed is not None else path
 
+    def game_or(self, path: Path) -> Path:
+        """``path``, or where the game reads it for a mod that keeps its files
+        in packs: the base game read only, or a Kingdoms campaign, whose
+        missing files are the base game's. A plain mod gets ``path`` back."""
+        if path.exists():
+            return path
+        from . import gamepack
+        if not gamepack.own_prefix(self):
+            return path
+        try:
+            found, _where = gamepack.lookup(self._rel(path), self)
+        except (OSError, ValueError):
+            found = None
+        return found if found is not None else path
+
+    def _icon_packs(self) -> list:
+        """``(pack, prefix)`` for every pack a unit icon of this mod can come
+        out of, in the order the game looks: its own, then the base game's.
+        Empty for a plain mod, whose icons are only ever on disk here."""
+        from . import gamepack
+        prefix = gamepack.own_prefix(self)
+        if not prefix:
+            return []
+        out = [(p, prefix) for p in gamepack.packs(self.root)]
+        if prefix != "data/":
+            game = gamepack.game_root_of(self)
+            if game is not None:
+                out += [(p, "data/") for p in gamepack.packs(game)]
+        return out
+
     def _read_required(self, path: Path, parse, missing: str):
         """Parse a file this mod cannot be opened without, or say why not.
 
@@ -378,12 +408,12 @@ class Mod:
         not in stratmap.py.
         """
         from . import stratmap as stratmap_mod
-        return stratmap_mod.parse_file(self.descr_model_strat_path)
+        return stratmap_mod.parse_file(self.game_or(self.descr_model_strat_path))
 
     @cached_property
     def mount_file(self) -> "mounts_mod.MountFile":
         """Parsed data/descr_mount.txt (blocks kept verbatim for transfers)."""
-        return mounts_mod.parse_file(self.descr_mount_path)
+        return mounts_mod.parse_file(self.game_or(self.descr_mount_path))
 
     @cached_property
     def mounts(self) -> Dict[str, str]:
@@ -401,7 +431,7 @@ class Mod:
     @cached_property
     def projectile_file(self) -> "projectiles_mod.ProjectileFile":
         """Parsed data/descr_projectile.txt (blocks kept verbatim for transfers)."""
-        return projectiles_mod.parse_file(self.descr_projectile_path)
+        return projectiles_mod.parse_file(self.game_or(self.descr_projectile_path))
 
     def projectile_def(self, name: str):
         """The full projectile definition block, or None."""
@@ -410,17 +440,17 @@ class Mod:
     @cached_property
     def engine_file(self) -> "engines_mod.EngineFile":
         """Parsed data/descr_engines.txt (blocks kept verbatim for transfers)."""
-        return engines_mod.parse_file(self.descr_engines_path)
+        return engines_mod.parse_file(self.game_or(self.descr_engines_path))
 
     @cached_property
     def mounted_engine_file(self) -> "engines_mod.EngineFile":
         """Parsed data/descr_mounted_engines.txt (same block format)."""
-        return engines_mod.parse_file(self.descr_mounted_engines_path)
+        return engines_mod.parse_file(self.game_or(self.descr_mounted_engines_path))
 
     @cached_property
     def engine_skeleton_file(self) -> "engines_mod.EngineSkeletonFile":
         """Parsed data/descr_engine_skeleton.txt."""
-        return engines_mod.parse_skeleton_file(self.descr_engine_skeleton_path)
+        return engines_mod.parse_skeleton_file(self.game_or(self.descr_engine_skeleton_path))
 
     def engine_defs(self, name: str):
         """Every descr_engines block for an engine type ([] when absent).
@@ -584,9 +614,10 @@ class Mod:
         one folder has none: the game never looks in theirs."""
         if unit.card_pic_dir:
             return []
-        stem = f"#{unit.dictionary}".lower()
+        stem = f"#{unit.dictionary}"
+        packs = self._icon_packs()
         return [f for f in unit.ownership
-                if any(stem + ext in self._dir_index(self.ui_units_dir / f) for ext in (".tga", ".dds"))]
+                if self._icon_in(self.ui_units_dir, f, stem, (".tga", ".dds"), packs, path=False)]
 
     def find_unit_info(self, unit: "edu.Unit") -> Optional[Path]:
         """Locate the info card: data/ui/unit_info/<faction>/<dict>_info.tga.
@@ -660,15 +691,33 @@ class Mod:
 
     def _find_icon(self, base: Path, factions: List[str], stem: str,
                    exts: tuple) -> Optional[Path]:
-        if not base.is_dir():
+        packs = self._icon_packs()
+        if not packs and not base.is_dir():
             return None
-        stem_lower = stem.lower()
         for fac in factions:
-            index = self._dir_index(base / fac)
-            if not index:
-                continue
+            hit = self._icon_in(base, fac, stem, exts, packs)
+            if hit is not None:
+                return hit
+        return None
+
+    def _icon_in(self, base: Path, fac: str, stem: str, exts: tuple,
+                 packs: list, path: bool = True):
+        """One faction folder's icon: on disk, else out of ``packs`` (read
+        out into the cache when ``path``, else just ``True``)."""
+        stem_lower = stem.lower()
+        index = self._dir_index(base / fac) if base.is_dir() else {}
+        for ext in exts:
+            hit = index.get(stem_lower + ext)
+            if hit is not None:
+                return hit
+        if not packs:
+            return None
+        rel = f"{base.relative_to(self.data).as_posix()}/{fac}/{stem_lower}".lower()
+        for pack, prefix in packs:
             for ext in exts:
-                hit = index.get(stem_lower + ext)
-                if hit is not None:
-                    return hit
+                if prefix + rel + ext in pack.entries:
+                    if not path:
+                        return True
+                    from . import gamepack
+                    return gamepack.extract(rel + ext, pack.path.parent.parent, prefix)
         return None
