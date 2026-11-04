@@ -3528,7 +3528,7 @@ def _apply_writes(plan: TransferPlan, tid: str, backup_root: Path, manifest: Dic
     loc_entry = (None if (plan.replace_type or plan.models_mode)
                  else source.loc.get(unit.dictionary))
     if loc_entry is not None:
-        loc_text, loc_read_as = localization.read_for_edit(dest.export_units_path)
+        loc_text, loc_read_as = localization.read_for_edit(dest.export_units_path, dest)
         # `new_name` is what the player will see. Without it the record is a copy
         # of the source's, which is right when the same unit crosses mods and
         # wrong when the point was to make a unit of your own out of one.

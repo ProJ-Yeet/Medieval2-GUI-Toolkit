@@ -110,5 +110,37 @@ check("  the EDU is byte for byte as it was", dst2.edu_path.read_bytes() == edu_
 check("  and no .txt was left behind", not dst2.export_units_path.exists())
 check("  nor the archive touched", stringsbin.bin_path_for(dst2.export_units_path).exists())
 
+print("\n3) a destination with no unit text at all, which the game takes from itself")
+# A user's report (2026-11-04): "No such file ... export_units.txt" on a mod
+# whose text the game reads from the base install. Starting the .txt empty
+# would write one holding only the new unit, and the game would then show
+# every other unit's name as missing.
+for label, as_bin in (("the game's loose .txt", False), ("the game's .strings.bin", True)):
+    game = tmp / f"Game_{int(as_bin)}"
+    (game / "data" / "text").mkdir(parents=True)
+    gtxt = game / "data" / "text" / "export_units.txt"
+    if as_bin:
+        stringsbin.write(stringsbin.bin_path_for(gtxt), stringsbin.compile_txt(OLD))
+    else:
+        gtxt.write_text(OLD, encoding="utf-16")
+    game_before = sorted((p.name, p.read_bytes()) for p in gtxt.parent.iterdir())
+    d = mod_at(game / "mods" / "Dst3", unit("Old Guard", "Old_Guard"), OLD, as_bin=False)
+    d.export_units_path.unlink()
+    try:
+        apply(src, d)
+        went = True
+    except Exception as e:                                       # noqa: BLE001
+        print("   ", e)
+        went = False
+    loc = localization.parse_file(d.export_units_path) if d.export_units_path.exists() else None
+    check(f"{label}: the transfer goes through", went)
+    check("  the mod's new .txt has the new unit",
+          loc is not None and loc.get("Ghulams") is not None)
+    check("  and every entry the game had",
+          loc is not None and loc.get("Old_Guard") is not None
+          and loc.get("Old_Guard").descr_short == "Short")
+    check("  the game's own files are untouched",
+          sorted((p.name, p.read_bytes()) for p in gtxt.parent.iterdir()) == game_before)
+
 print(f"\n{sum(ok)}/{len(ok)} passed")
 sys.exit(0 if all(ok) else 1)

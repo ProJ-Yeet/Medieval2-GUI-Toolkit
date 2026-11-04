@@ -744,7 +744,7 @@ def plan_edit(mod: Mod, req: EditRequest) -> EditPlan:
         descr = (loc or {}).get("descr", (old_entry.descr if old_entry else "") or "")
         short = (loc or {}).get("descr_short",
                                 (old_entry.descr_short if old_entry else "") or "")
-        text, loc_read_as = localization.read_for_edit(mod.export_units_path)
+        text, loc_read_as = localization.read_for_edit(mod.export_units_path, mod)
         text = localization.upsert_record(text, plan.resolved_dict, name, descr, short)
         if dict_changed:
             others = [u.type for u in mod.edu.units
@@ -1520,7 +1520,7 @@ def _plan_delete(plan: EditPlan, unit) -> EditPlan:
             plan.warnings.append(
                 _i18n.msg("eng.edit.text_entry_kept_still_used_by", "text entry '{dictionary}' kept - still used by {others_same_dict}", dictionary=unit.dictionary, others_same_dict=', '.join(others_same_dict[:3])))
         else:
-            text, loc_read_as = localization.read_for_edit(mod.export_units_path)
+            text, loc_read_as = localization.read_for_edit(mod.export_units_path, mod)
             plan.loc_text = localization.remove_record(text, unit.dictionary)
             _settle_loc_encoding(plan, mod.export_units_path, plan.loc_text,
                                  loc_read_as)

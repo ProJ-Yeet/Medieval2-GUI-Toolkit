@@ -140,14 +140,17 @@ def read_file(path: str | Path) -> Tuple[str, str]:
     return p.read_text(encoding="latin-1"), "latin-1"   # decodes any byte
 
 
-def read_for_edit(path: str | Path) -> Tuple[str, str]:
+def read_for_edit(path: str | Path, mod=None) -> Tuple[str, str]:
     """:func:`read_file` for a file about to be written, which may not be there.
 
     A released mod, and the game's own expansions, often ship only the compiled
     ``<file>.strings.bin`` and no ``.txt``. The text is then rebuilt from that
-    archive, so the ``.txt`` written keeps every entry the game shows today;
-    with neither file the edit starts from nothing. Both come back as UTF-16,
-    which is what the game writes and reads.
+    archive, so the ``.txt`` written keeps every entry the game shows today.
+    A mod with neither file reads the text from where the game does, its own
+    packs or the base game (``mod`` gives the way there): starting from nothing
+    would write a ``.txt`` holding only the new entry, and the game would then
+    lose every other name. Archives come back as UTF-16, which is what the game
+    writes and reads.
     """
     p = Path(path)
     if p.exists():
@@ -156,6 +159,19 @@ def read_for_edit(path: str | Path) -> Tuple[str, str]:
     b = stringsbin.bin_path_for(p)
     if b.exists():
         return stringsbin.to_txt(stringsbin.read(b)), ENCODING
+    if mod is not None:
+        from . import gamepack
+        try:
+            rel = p.relative_to(Path(mod.data)).as_posix()
+        except ValueError:
+            rel = ""
+        if rel:
+            found, _where = gamepack.lookup(rel, mod)
+            if found is not None:
+                return read_file(found)
+            found, _where = gamepack.lookup(rel + ".strings.bin", mod)
+            if found is not None:
+                return stringsbin.to_txt(stringsbin.read(found)), ENCODING
     return "", ENCODING
 
 
