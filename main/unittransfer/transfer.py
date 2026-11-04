@@ -1490,6 +1490,15 @@ def _engine_asset(plan: "TransferPlan", source: Mod, dest: Mod, rel: str,
         plan.asset_files.append((src_abs, rel))
         plan.engine_assets.append(rel)
         return
+    from . import gamepack
+    if gamepack.exists(rel, source) == gamepack.MODPACK:
+        # the source's own file, kept in its packs (Crusades' mangonel
+        # reference points): ours to copy, like a loose one
+        path, _w = gamepack.lookup(rel, source)
+        if path is not None:
+            plan.asset_files.append((path, rel))
+            plan.engine_assets.append(rel)
+            return
     plan.engine_vanilla_refs.append(f"{rel}  ({why})")
     if (dest.data / rel).exists():
         plan.engine_dest_overrides.append(rel)
@@ -1616,6 +1625,14 @@ def _resolve_engines(plan: "TransferPlan", source: Mod, dest: Mod, unit,
         if dst_blocks and same:
             plan.engine_actions.append(
                 (name, "reuse", f"{filename} - identical in destination ({nblocks})"))
+            # the same block is not the same files: kirsi held the mangonel's
+            # block and not its reference points, and the game refused it
+            from . import gamepack
+            for b in src_blocks:
+                for rel in b.file_refs():
+                    if not gamepack.exists(rel, dest):
+                        _engine_asset(plan, source, dest, rel, seen_assets,
+                                      f"referenced by engine '{name}'")
             continue
 
         final_name = name
@@ -3386,7 +3403,10 @@ def _drop_unknown_factions(plan: "TransferPlan", block: str) -> str:
     on ``plan.factions_dropped``. A destination whose factions cannot be read
     is not checked."""
     try:
-        valid = {f.lower() for f in plan.dest.faction_cultures}
+        fc = plan.dest.faction_cultures
+        # a culture is an owner too: the stock siege units say
+        # `ownership northern_european, ...`
+        valid = {f.lower() for f in fc} | {c.lower() for c in fc.values() if c}
     except Exception:
         valid = set()
     plan.factions_dropped = {}

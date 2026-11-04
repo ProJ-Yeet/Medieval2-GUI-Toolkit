@@ -159,5 +159,44 @@ else:
                   all(a.action == "reuse_identical" for a in plan.model_actions)
                   and "MTW2_Flamethrower" in plan.missing_skeletons)
 
+        if (teut / "packs").is_dir():
+            print("\n7) a mod with no faction file has the base game's factions")
+            from unittransfer import factions as fac              # noqa: E402
+            got, _w = gamepack.lookup("descr_sm_factions.txt", root=Path(real))
+            shutil.copy2(got, g2 / "data" / "descr_sm_factions.txt")
+            have = fac.faction_cultures(Mod(bare.parent))
+            check(f"read from the base game ({len(have)} factions)",
+                  "england" in have and "teutonic_order" not in have)
+            # kirsi on a friend's M2EX: "Invalid ownership type 'teutonic_order'
+            # found in unit 'Prussian Archers'", the load stopped there
+            plan = plan_transfer(Mod(teut), "Prussian Archers", Mod(bare.parent),
+                                 TransferOptions(bring_animations=False))
+            check("Prussian Archers come without teutonic_order",
+                  "teutonic_order" in plan.factions_dropped.get("ownership", []))
+            plan = plan_transfer(Mod(teut), "EE Ballista", Mod(bare.parent),
+                                 TransferOptions(bring_animations=False))
+            gone = {f.lower() for fs in plan.factions_dropped.values() for f in fs}
+            check("  a culture in ownership is kept (the stock engines are owned that way)",
+                  "eastern_european" not in gone)
+
+        if (crus / "packs").is_dir():
+            print("\n8) a siege engine's files out of the source's packs")
+            # kirsi on M2EX: "Unable to open reference points file,
+            # data/siege_engines/mangonel.modelReferencePoints"
+            want = {"siege_engines/mangonel.modelreferencepoints",
+                    "siege_engines/bonemaps/mangonel.xml"}
+            plan = plan_transfer(Mod(crus), "Greek Mangonel", Mod(bare.parent),
+                                 TransferOptions(bring_animations=False))
+            rels = {r.lower() for _a, r in plan.asset_files}
+            check("a new engine brings its reference points and bone maps",
+                  [a for _n, a, _d in plan.engine_actions] == ["add"] and want <= rels)
+            got, _w = gamepack.lookup("descr_engines.txt", Mod(crus))
+            shutil.copy2(got, bare / "descr_engines.txt")
+            plan = plan_transfer(Mod(crus), "Greek Mangonel", Mod(bare.parent),
+                                 TransferOptions(bring_animations=False))
+            rels = {r.lower() for _a, r in plan.asset_files}
+            check("  and a reused one still brings the files the destination lacks",
+                  [a for _n, a, _d in plan.engine_actions] == ["reuse"] and want <= rels)
+
 print(f"\n{sum(ok)}/{len(ok)} passed")
 sys.exit(0 if all(ok) else 1)

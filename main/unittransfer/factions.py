@@ -309,6 +309,17 @@ def faction_cultures(mod) -> Dict[str, str]:
     path = path_for(mod)
     if hasattr(mod, "packed_or"):          # read only: its own packs may hold it
         path = mod.packed_or(path)
+    if not path.is_file() and hasattr(mod, "data"):
+        # none of its own: the game plays the base game's, so a transfer must
+        # hold ownership against it (kirsi has none, and took Teutonic's
+        # Prussian Archers with teutonic_order, which the engine refused)
+        from . import gamepack
+        try:
+            found, _where = gamepack.lookup(REL, mod)
+        except (OSError, ValueError):
+            found = None
+        if found is not None:
+            path = found
     if not path.is_file():
         return {}
     try:
