@@ -217,8 +217,11 @@ class _Builder:
     """Collects objects into one vertex pool in the game's space.
 
     Every external format is right-handed with Y up, and the game is
-    left-handed (``mesh.py``), so x is negated and each triangle's winding
-    reversed, the inverse of what ``modelexport`` does on the way out.
+    left-handed (``mesh.py``), so one axis is negated and each triangle's
+    winding reversed. Which axis is the file's: x for this toolkit's own
+    files, the inverse of what ``modelexport`` does on the way out; z for a
+    ``.glb`` out of Blender or IWTE, whose right hand is on the game's +x side
+    already (``_read_gltf``).
     """
 
     def __init__(self, source: str):
@@ -229,7 +232,7 @@ class _Builder:
         self.object_textures: List[str] = []
 
     def add(self, name: str, pos, nrm, uv, tris, texture: str = "",
-            joints=None, weights=None, bone_names: Sequence[str] = ()):
+            joints=None, weights=None, bone_names: Sequence[str] = (), mirror: int = 0):
         # an object takes only the vertices its own triangles use: a .glb's
         # primitives can all share one pool (this toolkit's exporter does)
         used = sorted({i for t in tris for i in t})
@@ -241,12 +244,13 @@ class _Builder:
             tris = [(remap[a], remap[b], remap[c]) for a, b, c in tris]
         base = self.m.vertices
         n = len(pos)
+        sx, sz = (-1.0, 1.0) if mirror == 0 else (1.0, -1.0)
         for x, y, z in pos:
-            self.m.positions.extend((-x, y, z))
+            self.m.positions.extend((sx * x, y, sz * z))
         for i in range(n):
             if nrm:
                 x, y, z = nrm[i]
-                self.m.normals.extend((-x, y, z))
+                self.m.normals.extend((sx * x, y, sz * z))
             else:
                 self.m.normals.extend((0.0, 1.0, 0.0))
             if uv:
@@ -450,6 +454,11 @@ def _read_gltf(path: Path) -> Tuple[mesh.MeshFile, Dict[str, bytes]]:
         src = gltf.get("textures", [])[tex].get("source")
         return names[src] if src is not None and src < len(names) else ""
 
+    # Blender's and IWTE's .glb keep the game's x and mirror z (a soldier's
+    # right hand at +x, as in the game's skeletons); only modelexport's own
+    # files, named by its generator, mirror x. Read the other way, left and
+    # right swap and every animation turns each limb about the far side's joint.
+    mirror = 0 if gltf.get("asset", {}).get("generator") == "Medieval 2 GUI Toolkit" else 2
     b = _Builder(str(path))
     nodes = gltf.get("nodes", [])
     for node in nodes:
@@ -475,7 +484,7 @@ def _read_gltf(path: Path) -> Tuple[mesh.MeshFile, Dict[str, bytes]]:
             if len(prims) > 1:
                 name = f"{name}_{pi + 1}"
             b.add(name, pos, nrm, uv, tris, texture=material_texture(prim.get("material")),
-                  joints=joints, weights=weights, bone_names=bone_names)
+                  joints=joints, weights=weights, bone_names=bone_names, mirror=mirror)
     return b.done(), images
 
 

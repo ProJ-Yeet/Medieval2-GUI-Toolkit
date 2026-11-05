@@ -96,6 +96,43 @@ if horse is not None:
                and all(abs(a["shape"][i] - b["shape"][i]) <= 1e-4 for i in range(1, 5)))
     check(f"every object's shape matches its original ({same} of {len(orig)})", same == len(orig))
 
+
+def side_glb(generator):
+    """One triangle weighted to bone_Rhand, out at glTF +x and +z, the way
+    Blender and IWTE write a soldier's right hand: on the game's +x side."""
+    import struct as _s
+    pos = _s.pack("<9f", 0.8, 0.5, 0.1, 0.9, 0.5, 0.1, 0.8, 0.6, 0.1)
+    nrm = _s.pack("<9f", *(0.0, 0.0, 1.0) * 3)
+    joints = bytes((1, 0, 0, 0) * 3)
+    weights = _s.pack("<12f", *(1.0, 0.0, 0.0, 0.0) * 3)
+    binary = pos + nrm + joints + weights
+    views = [{"buffer": 0, "byteOffset": o, "byteLength": n}
+             for o, n in ((0, 36), (36, 36), (72, 12), (84, 48))]
+    accessors = [{"bufferView": 0, "componentType": 5126, "count": 3, "type": "VEC3"},
+                 {"bufferView": 1, "componentType": 5126, "count": 3, "type": "VEC3"},
+                 {"bufferView": 2, "componentType": 5121, "count": 3, "type": "VEC4"},
+                 {"bufferView": 3, "componentType": 5126, "count": 3, "type": "VEC4"}]
+    gltf = {"asset": {"version": "2.0", "generator": generator},
+            "buffers": [{"byteLength": len(binary)}], "bufferViews": views, "accessors": accessors,
+            "meshes": [{"name": "hand", "primitives": [{"attributes": {
+                "POSITION": 0, "NORMAL": 1, "JOINTS_0": 2, "WEIGHTS_0": 3}}]}],
+            "nodes": [{"name": "bone_pelvis", "children": [1]},
+                      {"name": "bone_Rhand", "translation": [0.76, 0.51, 0.01]},
+                      {"name": "Hand__glove", "mesh": 0, "skin": 0}],
+            "skins": [{"joints": [0, 1]}], "scenes": [{"nodes": [0, 2]}]}
+    return modelexport._glb(gltf, binary)
+
+
+for generator in ("Khronos glTF Blender I/O v5.2.41", "IWTE_v26_05_A"):
+    p = tmp / "side.glb"
+    p.write_bytes(side_glb(generator))
+    got = armory.external_by_id(armory.external_view(str(p))["id"])[0]
+    xs, zs = got.positions[0::3], got.positions[2::3]
+    check(f"a {generator.split()[0]} .glb's right hand stays on the game's +x side, "
+          f"z mirrored ({min(xs):.2f}, {max(zs):.2f})", min(xs) > 0.7 and max(zs) < -0.09)
+    n = got.normals[2]
+    check(f"  and its normal is mirrored with it ({n:+.1f})", n < -0.99)
+
 DAE = """<?xml version="1.0" encoding="utf-8"?>
 <COLLADA xmlns="http://www.collada.org/2005/11/COLLADASchema" version="1.4.1">
  <asset><up_axis>Z_UP</up_axis></asset>
