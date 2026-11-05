@@ -429,7 +429,7 @@ async function cjSave(extra){
   activity('campaign', `${k.mod}: ${body.what}`
     + (body.faction ? ` ${body.faction}` : ''));
   const at = state.cmap && state.cmap.pick;
-  await loadCampmap();
+  await loadCampmap(true);
   if(at && state.cmap) cmapPick(at);
 }
 

@@ -581,3 +581,155 @@ async function edDoDelete(){
   closeModal(); toast(tt('packs.deleted_undo_in_log',{type:e.d.type}),4200);
   state.destData=null; loadSource();
 }
+
+function edBatchDeleteDialog(){
+  const types=[...state.selected];
+  if(!types.length){toast(tt('packs.select_at_least_one_unit'));return;}
+  overlay.classList.add('open');
+  document.getElementById('modal').innerHTML=`<h2 class="w-bad">${tt('packs.delete_selected_unit_s',{types_n:types.length})}</h2>
+    <div class="mbody"><div class="warnbox">${tt('packs.each_unit_is_deleted_through_the')}</div>
+      <fieldset><legend>${tt('packs.also_remove_for_every_selected_unit')}</legend>
+        <label class="chk"><input type="checkbox" id="bdOptLoc" checked> ${tt('packs.its_text_entry_from_export_units_2')}</label><br>
+        <label class="chk"><input type="checkbox" id="bdOptModels"> ${tt('packs.battle_model_entries_no_unit_or')}</label><br>
+        <label class="chk"><input type="checkbox" id="bdOptAssets"> ${tt('packs.mesh_texture_files_of_those_unused')}</label><br>
+        <label class="chk"><input type="checkbox" id="bdOptIcons"> ${tt('packs.unit_and_info_cards')}</label>
+      </fieldset><div class="count">${types.map(esc).join(', ')}</div></div>
+    <div class="foot"><button onclick="closeModal()">${tt('packs.cancel')}</button>
+      <button class="danger" onclick="edBatchDelete()">${tt('packs.delete_selected_units')}</button></div>`;
+}
+function edBatchDeleteOpts(){
+  const checked=id=>!!document.getElementById(id).checked;
+  return {remove_loc:checked('bdOptLoc'),remove_models:checked('bdOptModels'),
+    remove_assets:checked('bdOptAssets'),remove_icons:checked('bdOptIcons')};
+}
+async function edBatchDelete(){
+  const types=[...state.selected];
+  if(!confirm(tt('packs.delete_selected_unit_s_they_are',{types_n:types.length})))return;
+  const opts=edBatchDeleteOpts();
+  const modal=document.getElementById('modal');
+  modal.innerHTML=`<h2>${tt('packs.deleting_selected_units')}</h2><div class="mbody"><div class="count">${tt('packs.applying_the_normal_deletion_rules_to')}</div></div>`;
+  const r=await api.post('/api/units/delete',
+    {mod:state.src,types,delete_options:opts});
+  if(r.error){toast(tt('packs.deletion_failed',{error:r.error}));closeModal();return;}
+  closeModal(); clearSelection();
+  toast(tt('packs.deleted_selected_unit_s_undo_in',{deleted_n:r.deleted.length,errors:r.errors.length?tt('packs.could_not_be_deleted',{errors_n:r.errors.length}):''}),5200);
+  state.destData=null; await loadSource();
+}
+
+/* ---- unused EDU units -------------------------------------------------- */
+function uuResultHtml(s){
+  const unused=s.r.units.filter(x=>x.unused);
+  const o=s.deleteOptions;
+  const rows=unused.map(x=>`<div class="srow${s.deleted.has(x.type)?' count':''}">
+    <span class="sicon">${s.deleted.has(x.type)?'✓':'!'}</span><span class="stext"><code>${esc(x.type)}</code>
+      <div class="count">${tt('packs.found_in',{x:x.files.length ? x.files.map(f=>`<span class="path">${esc(f)}</span>`).join(', ') : tt('packs.no_text_files')})}</div>
+    </span></div>`).join('');
+  return `<h2>${tt('packs.unused_units')} <span class="pill">${esc(s.mod)}</span></h2><div class="mbody">
+    <label class="chk"><input type="checkbox" id="uuSounds" ${s.sounds?'checked':''}
+      onchange="uuRescan()"> ${tt('packs.treat_the_voice_and_weapon_sound')}</label>
+    <div class="count" style="margin:8px 0">${tt('packs.scanned_file_s_skipped_binary_file',{files_scanned:s.r.files_scanned,binary_skipped:s.r.binary_skipped})}</div>
+    <div class="warnbox">${unused.length ? tt('packs.unit_s_have_no_gameplay_reference',{unused_n:unused.length,sounds:s.sounds?tt('packs.sound_registrations_ignored'):''}) : tt('packs.no_unused_units_found')}</div>
+    <fieldset><legend>${tt('packs.when_deleting_unused_units_also_remove')}</legend>
+      <label class="chk"><input type="checkbox" id="uuOptLoc" ${o.remove_loc?'checked':''}> ${tt('packs.their_text_entries_from_export_units')}</label><br>
+      <label class="chk"><input type="checkbox" id="uuOptModels" ${o.remove_models?'checked':''}> ${tt('packs.battle_model_entries_that_no_unit')}</label><br>
+      <label class="chk"><input type="checkbox" id="uuOptAssets" ${o.remove_assets?'checked':''}> ${tt('packs.mesh_texture_files_of_those_unused_2')}</label><br>
+      <label class="chk"><input type="checkbox" id="uuOptIcons" ${o.remove_icons?'checked':''}> ${tt('packs.unit_and_info_cards')}</label>
+    </fieldset>
+    <div class="sum" style="margin-top:10px">${rows||`<div class="count">${tt('packs.nothing_to_delete')}</div>`}</div>
+    <div id="uuNote" class="count" style="margin-top:10px"></div></div>
+    <div class="foot"><button onclick="closeModal()">${tt('packs.close')}</button><button onclick="uuRescan()">${tt('packs.scan_again')}</button>
+      <button class="danger" ${unused.length?'':'disabled'} onclick="uuDelete()">${tt('packs.delete_all_unused_units')}</button></div>`;
+}
+async function openUnusedUnits(){
+  const s=state.uu={mod:state.src,sounds:true,r:null,deleted:new Set(),
+    deleteOptions:{remove_loc:true,remove_models:false,remove_assets:false,remove_icons:false}};
+  overlay.classList.add('open');
+  await uuScan(s,true);
+}
+async function uuScan(s,ask){
+  const job=newJob();
+  const abort=new AbortController(); s.scan={job,abort};
+  const work=runJob(job,tt('packs.finding_unused_units'),tt('packs.searching_every_non_binary_file_in'),
+    ()=>api.get(`/api/units/unused?mod=${enc(s.mod)}&sounds=${s.sounds?1:0}&job=${enc(job)}`,
+      {signal:abort.signal}));
+  document.querySelector('#modal .mbody').insertAdjacentHTML('beforeend',
+    `<div style="margin-top:12px"><button onclick="uuCancelScan()">${tt('packs.cancel_scan')}</button></div>`);
+  let r;
+  try{r=await work;}catch(e){
+    if(isAborted(e)){
+      if(state.uu===s)document.getElementById('modal').innerHTML=`<h2>${tt('packs.unused_unit_scan_cancelled')}</h2>
+        <div class="mbody"><div class="count">${tt('packs.no_files_were_changed')}</div></div>
+        <div class="foot"><button onclick="closeModal()">${tt('packs.close')}</button><button class="primary" onclick="openUnusedUnits()">${tt('packs.scan_again')}</button></div>`;
+      return;
+    }
+    throw e;
+  }
+  if(s.scan&&s.scan.job===job)s.scan=null;
+  if(r.cancelled){
+    document.getElementById('modal').innerHTML=`<h2>${tt('packs.unused_unit_scan_cancelled')}</h2>
+      <div class="mbody"><div class="count">${tt('packs.no_files_were_changed')}</div></div>
+      <div class="foot"><button onclick="closeModal()">${tt('packs.close')}</button><button class="primary" onclick="openUnusedUnits()">${tt('packs.scan_again')}</button></div>`;
+    return;
+  }
+  if(r.error){toast(tt('packs.scan_failed',{error:r.error}));closeModal();return;}
+  if(state.uu!==s)return;
+  s.r=r; document.getElementById('modal').innerHTML=uuResultHtml(s);
+}
+function uuCancelScan(){
+  const s=state.uu, scan=s&&s.scan; if(!scan)return;
+  scan.abort.abort();
+  api.post('/api/progress/cancel',{job:scan.job}).catch(()=>{});
+  document.getElementById('modal').innerHTML=`<h2>${tt('packs.finding_unused_units')}</h2><div class="mbody">
+    <div class="count">${tt('packs.cancelling_the_file_scan')}</div></div>`;
+}
+function uuDeleteOpts(){
+  const s=state.uu, take=(id,key)=>{const el=document.getElementById(id);return el?el.checked:s.deleteOptions[key];};
+  s.deleteOptions={remove_loc:take('uuOptLoc','remove_loc'),remove_models:take('uuOptModels','remove_models'),
+    remove_assets:take('uuOptAssets','remove_assets'),remove_icons:take('uuOptIcons','remove_icons')};
+  return s.deleteOptions;
+}
+async function uuRescan(){
+  const s=state.uu; if(!s)return;
+  const box=document.getElementById('uuSounds'); if(box)s.sounds=box.checked;
+  uuDeleteOpts();
+  s.deleted.clear(); await uuScan(s,false);
+}
+async function uuDelete(){
+  const s=state.uu; if(!s)return;
+  const n=s.r.units.filter(x=>x.unused&&!s.deleted.has(x.type)).length;
+  if(!n)return;
+  const opts=uuDeleteOpts();
+  if(!confirm(tt('packs.delete_all_unused_unit_s_each',{x:n})))return;
+  document.getElementById('uuNote').textContent=tt('packs.deleting_unused_units');
+  const r=await api.post('/api/units/delete_unused',
+    {mod:s.mod,sounds:s.sounds,delete_options:opts});
+  if(r.error){toast(tt('packs.deletion_failed',{error:r.error}));return;}
+  r.deleted.forEach(x=>s.deleted.add(x));
+  document.getElementById('modal').innerHTML=uuResultHtml(s);
+  document.getElementById('uuNote').textContent=tt('packs.deleted_unit_s_the_list_remains',{deleted_n:r.deleted.length});
+  state.destData=null; await loadSource();
+}
+
+/* ---- EDU units absent from recruit pools -------------------------------- */
+function urResultHtml(s){
+  const rows=items=>items.map(x=>`<div class="srow"><span class="sicon">!</span><span class="stext"><code>${esc(x.type)}</code></span></div>`).join('');
+  const unrecruitable=rows(s.r.units), mercenaries=rows(s.r.mercenary_units);
+  return `<h2>${tt('packs.unrecruitable_units')} <span class="pill">${esc(s.mod)}</span></h2><div class="mbody">
+    <div class="count" style="margin:8px 0">${tt('packs.checked_edu_unit_s_against_building',{unit_count:s.r.unit_count,pools_scanned:s.r.pools_scanned,mercenary_files_scanned:s.r.mercenary_files_scanned})}</div>
+    <h3>${tt('packs.unrecruitable')} <span class="pill">${s.r.units.length}</span></h3>
+    <div class="warnbox">${s.r.units.length ? tt('packs.unit_s_have_no_recruit_pool',{units_n:s.r.units.length}) : tt('packs.no_completely_unrecruitable_units_found')}</div>
+    <div class="sum" style="margin-top:10px">${unrecruitable||`<div class="count">${tt('packs.nothing_to_show')}</div>`}</div>
+    <h3 style="margin-top:16px">${tt('packs.recruitable_only_as_mercenaries')} <span class="pill">${s.r.mercenary_units.length}</span></h3>
+    <div class="count">${tt('packs.these_have_no_building_recruit_pool')}</div>
+    <div class="sum" style="margin-top:10px">${mercenaries||`<div class="count">${tt('packs.nothing_to_show')}</div>`}</div></div>
+    <div class="foot"><button onclick="closeModal()">${tt('packs.close')}</button><button onclick="openUnrecruitableUnits()">${tt('packs.scan_again')}</button></div>`;
+}
+async function openUnrecruitableUnits(){
+  const s=state.ur={mod:state.src,r:null};
+  overlay.classList.add('open');
+  document.getElementById('modal').innerHTML=`<h2>${tt('packs.finding_unrecruitable_units')}</h2><div class="mbody"><div class="count">${tt('packs.checking_building_recruit_pools_and_descr')}</div></div>`;
+  const r=await api.get(`/api/units/unrecruitable?mod=${enc(s.mod)}`);
+  if(r.error){toast(tt('packs.scan_failed',{error:r.error}));closeModal();return;}
+  if(state.ur!==s)return;
+  s.r=r; document.getElementById('modal').innerHTML=urResultHtml(s);
+}

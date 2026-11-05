@@ -62,7 +62,7 @@ function cpaintNew(mod){
   return {
     mod, on: false, tool: 'brush', size: 3, shape: 'round',
     target: 'regions', region: '', sea: false, rgb: null,
-    marker: '', pal: null, palErr: '', busy: false, err: '', note: '',
+    marker: '', overwriteMarkers: false, pal: null, palErr: '', busy: false, err: '', note: '',
     filter: '', wiz: null, wizOpen: false, prog: null,
     st: {dirty: [], files: [], undo: 0, redo: 0, dropped: 0, last: '',
          next: '', new_region: null},
@@ -267,7 +267,8 @@ async function cpaintUp(){
   p.painting = false; p.samples = [];
   if(!points.length){ cmapPaint(); return; }
   const body = {tool: p.tool === 'pencil' ? 'pencil' : p.tool,
-                target: p.target, size: p.size, shape: p.shape, points};
+    target: p.target, size: p.size, shape: p.shape, points};
+  if(p.overwriteMarkers && !p.marker) body.overwrite_markers = true;
   if(p.marker){ body.tool = 'pencil'; body.marker = p.marker; body.target = 'regions'; }
   if(p.target === 'regions' || p.tool === 'water' || p.marker){
     body.region = p.region; body.sea = p.sea && !p.marker;
@@ -400,6 +401,7 @@ async function cpaintDiscard(){
   await cpaintPost('paint_discard', {});
   toast(tt('campaint.the_map_was_re_read_from'));
   await loadCampmap();
+  await loadCampmap(true);
 }
 
 async function cpaintSave(){
@@ -422,7 +424,7 @@ async function cpaintSave(){
       : ttN('campaint.saved_layer_count',(res.layers || []).length),
     camp:camp ? ttN('campaint.and_campaign_file_count',camp) : ''}), 6000);
   p.wiz = null; p.wizOpen = false; p.prog = null;
-  await loadCampmap();
+  await loadCampmap(true);
 }
 
 /* ---------- the new-region wizard ---------- */
@@ -609,7 +611,9 @@ function cpaintToolsHtml(){
   return `<div class="cptools">${CPAINT_TOOLS.map(([code, glyph, label, why]) =>
     `<button class="cptool${p.tool === code && !p.marker ? ' on' : ''}"
       data-tool="${code}" title="${esc(label)}: ${esc(why)}"
-      >${glyph}<span>${esc(label)}</span></button>`).join('')}</div>`;
+      >${glyph}<span>${esc(label)}</span></button>`).join('')}</div>${
+    !p.marker ? `<label class="cptg"><input type="checkbox" data-overwrite-markers${
+      p.overwriteMarkers ? ' checked' : ''}> ${tt('campaint.overwrite_settlement_and_port_pixels')}</label>` : ''}`;
 }
 
 //: The size slider and the brush shape, for the two tools that have a size.
@@ -960,6 +964,10 @@ function cpaintWireIn(box){
   box.querySelectorAll('[data-target-btn]').forEach(b => b.onclick = () => {
     p.target = b.dataset.targetBtn; p.marker = ''; p.rgb = null; cpaintPaint();
   });
+  const overwrite = box.querySelector('[data-overwrite-markers]');
+  if(overwrite) overwrite.onchange = () => {
+    p.overwriteMarkers = overwrite.checked; cpaintPaint();
+  };
   const fl = box.querySelector('[data-filter]');
   if(fl) fl.oninput = () => {
     p.filter = fl.value;

@@ -96,6 +96,15 @@ if "%RC%"=="3" (
     echo.
     echo  Keep this window open while you use the tool, or use the Quit
     echo  button in the tool's settings to stop it.
+) else if "%RC%"=="5" (
+    echo ============================================================
+    echo  Medieval 2 GUI Toolkit IS RUNNING.
+    echo ============================================================
+    echo.
+    echo  Browser opening is disabled. Copy the address printed above.
+    echo.
+    echo  Keep this window open while you use the tool, or use the Quit
+    echo  button in the tool's settings to stop it.
 ) else if "%RC%"=="4" (
     rem Code 4 = a DIFFERENT build of the toolkit is already on the port. The
     rem message box and the lines above name both builds and their folders; this

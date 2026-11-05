@@ -1407,10 +1407,10 @@ function cm3Pointers(cv){
     const still = was.moved < CMAP_DRAG_SLOP;
     if(was.mode === 'paint') cpaintUp();
     else if(was.mode === 'mark'){
-      if(still) cmapMarkClick(tileOf(e));
+      if(still) cmapMarkClick(tileOf(e), e.shiftKey);
       else cmkDrop();
     }
-    else if(still && state.cmap) cmapClickTile(tileOf(e), e.button);
+    else if(still && state.cmap) cmapClickTile(tileOf(e), e.button, e.shiftKey);
     if(state.cmap){ state.cmap.tipHold = false; cmapTipPaint(); }
   };
   cv.onpointercancel = e => {

@@ -41,7 +41,7 @@ const CX_DEBOUNCE = 450;
 function cxNew(mod, faction){
   return {mod, faction, open: true, loading: false, err: '', d: null,
           pick: -1, w: null, busy: false, preview: null, timer: 0,
-          adding: false, tab: 'people'};
+          adding: false, tab: 'people', ownedUnitsOnly: false};
 }
 
 async function cxOpen(faction){
@@ -126,6 +126,61 @@ function cxCancel(){
 }
 
 /* ---------- editing ---------- */
+
+/* WalhallaZ's fork: a random first name for the character's sex out of the
+   faction's own descr_names.txt pool (the picker's), the regiment lists cut
+   to the units the faction owns, and every empty rebel settlement given a
+   general in one write. */
+function cxRandomName(){
+  const k = state.cx;
+  if(!k || !k.w) return;
+  const pool = cxPoolOf();
+  const names = !pool || !pool.have ? [] : (k.w.gender === 'female' ? pool.women : pool.characters).map(([t]) => t);
+  if(!names.length){ toast(tt('stratchar.no_names_for_sex', {faction: k.faction || ''}), 5000); return; }
+  cxSet('name', names[Math.floor(Math.random() * names.length)]);
+}
+function cxOwnedUnitsOnly(value){
+  const k = state.cx;
+  if(!k) return;
+  k.ownedUnitsOnly = value;
+  cxPaint();
+}
+async function cxFillRebelSettlements(){
+  const k = state.cx;
+  if(!k || !k.d || k.busy) return;
+  const map = state.cmap, campaign = map && map.campaign;
+  const body = {mod: k.mod, campaign: k.d.campaign};
+  k.busy = true;
+  let preview;
+  try{ preview = await api.post('/api/map/rebel_fill_plan', body); }
+  catch(e){ preview = {error: errText(e)}; }
+  finally{ k.busy = false; }
+  if(preview.error){ toast('✗ ' + preview.error, 8000); return; }
+  const p = preview.plan || {};
+  const made = p.created || [], skipped = p.skipped || [];
+  body.seed = p.seed;
+  const lines = (p.changes || []).slice(0, 12);
+  if(!confirm(tt('stratchar.rebel_fill_confirm', {
+      what: ttN('stratchar.rebel_fill_n', made.length),
+      changes: lines.join('\n') || tt('common.no_visible_change'),
+      more: (p.changes || []).length > lines.length ? tt('stratchar.and_more', {changes: (p.changes || []).length - lines.length}) : '',
+      skipped: skipped.length ? ttN('stratchar.rebel_fill_skipped', skipped.length,
+        {list: skipped.slice(0, 5).map(x => `${x.region}: ${x.reason}`).join('\n')}) : ''}))) return;
+  k.busy = true;
+  let res;
+  try{ res = await api.post('/api/map/rebel_fill_apply', body); }
+  catch(e){ res = {error: errText(e)}; }
+  finally{ k.busy = false; }
+  if(res.error){ toast('✗ ' + res.error, 8000); return; }
+  toast(ttN('stratchar.rebel_fill_done', res.created.length));
+  activity('character', tt('stratchar.rebel_fill_activity', {mod: k.mod, n: res.created.length}));
+  if(state.cmap !== map || !map || map.campaign !== campaign || state.cx !== k) return;
+  const open = k.open, tab = k.tab, faction = k.faction;
+  k.d = null;
+  await cxOpen(faction);
+  if(state.cx && state.cx.d){ state.cx.open = open; state.cx.tab = tab; cxPaint(); }
+  if(state.cmk){ state.cmk.d = null; await cmkLoad(); }
+}
 
 function cxSet(slot, value){
   const k = state.cx;
@@ -401,6 +456,7 @@ function cxPeopleHtml(){
       `<div class="${f.fatal ? 'w-bad' : 'w-warn'}">${esc(f.message)}</div>`).join('')}
     <div class="csbtns">
       <button onclick="cxAdd()">${tt('stratchar.add_a_character')}</button>
+      <button onclick="cxFillRebelSettlements()" title="${ttA('stratchar.rebel_fill_title')}">${tt('stratchar.rebel_fill')}</button>
       ${d.characters.length ? '' : `<button onclick="cxTab('horde')"
         title="${ttA('stratchar.leaders_and_armies_on_free_land')}"
         >${tt('stratchar.give_it_a_horde_start')}</button>`}
@@ -422,7 +478,8 @@ function cxFormHtml(){
       ${k.adding ? '' : `<span class="count">${tt('stratchar.lines',{x:k.d.characters[k.pick].lines[0],x2:k.d.characters[k.pick].lines[1]})}</span>`}
     </div>
     <div class="csrow2">
-      <div class="cmfield"><label>${tt('common.name')}</label>
+      <div class="cmfield"><label>${tt('common.name')} <button onclick="cxRandomName()"
+          title="${ttA('stratchar.random_name_title')}" style="padding:1px 5px">↻</button></label>
         <input value="${esc(w.name)}" list="cxl-first" oninput="cxSet('name', this.value)">
         ${cxNamePickHtml('cxl-first', w.gender, w.name, 'cxSurname')}</div>
       <div class="cmfield"><label>${tt('common.type')}</label>
@@ -538,12 +595,13 @@ function cxTraitsHtml(){
 function cxArmyHtml(){
   const k = state.cx, w = k.w, v = k.d.vocab;
   const guard = new Set(v.bodyguards || []);
+  const units = (v.units || []).filter(u => !k.ownedUnitsOnly || u.owned);
   const rows = w.army.map((a, i) => `<div class="cxbld">
     <select onchange="cxUnit(${i}, 'unit', this.value)">
-      ${v.units.map(u => `<option value="${esc(u.name)}"${
+      ${units.map(u => `<option value="${esc(u.name)}"${
         u.name === a.unit ? ' selected' : ''}>${esc(u.name)}${
         u.general ? ' ★' : ''}</option>`).join('')}
-      ${v.units.some(u => u.name === a.unit) ? ''
+      ${units.some(u => u.name === a.unit) ? ''
         : `<option value="${esc(a.unit)}" selected>${esc(a.unit)}</option>`}
     </select>
     <input type="number" min="0" max="9" value="${a.exp}" title="${ttA('common.experience')}"
@@ -561,9 +619,11 @@ function cxArmyHtml(){
   return `<div class="k" id="cxArmyEditor">${ttN('stratchar.army_regiment_count',w.army.length,{have_edu:v.have_edu ? tt('stratchar.is_a_bodyguard')
       : tt('stratchar.no_export_descr_unit_names')})}</div>
     <div class="cxblds">${rows || `<div class="count">${tt('stratchar.no_army')}</div>`}</div>
+    <label class="count"><input type="checkbox"${k.ownedUnitsOnly ? ' checked' : ''}
+      onchange="cxOwnedUnitsOnly(this.checked)"> ${tt('stratchar.owned_units_only')}</label>
     <div class="csadd"><select onchange="cxUnitAdd(this.value); this.value=''">
       <option value="">${tt('stratchar.add_a_regiment')}</option>
-      ${(v.units || []).map(u => `<option value="${esc(u.name)}">${esc(u.name)}${
+      ${units.map(u => `<option value="${esc(u.name)}">${esc(u.name)}${
         u.general ? ' ★' : ''}</option>`).join('')}</select></div>`;
 }
 

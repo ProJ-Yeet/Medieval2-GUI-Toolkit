@@ -1302,6 +1302,10 @@ async function saveConsole(){
   const on=document.getElementById('consoleChk').checked;
   state.settings=await api.post('/api/settings',{show_console:on});
   toast(on?tt('transfer.console_will_show_on_the_next'):tt('transfer.console_hidden_from_the_next_launch'));}
+async function saveBrowserLaunch(){
+  const on=document.getElementById('browserChk').checked;
+  state.settings=await api.post('/api/settings',{open_browser:on});
+  toast(on?tt('transfer.browser_will_open_automatically_on_the'):tt('transfer.the_launcher_will_print_the_address'));}
 async function quitServer(){
   if(!confirm(tt('transfer.stop_the_medieval_2_gui_toolkit')))return;
   try{await api.post('/api/quit',{});}catch(e){}
@@ -1880,6 +1884,7 @@ async function doApply(){
     }
     const r=await api.post('/api/plan',{source:state.src,dest:state.dst,unit:t,options:optsPayload(t)});
     if(r.error){toast(`${t}: ${r.error}`);state.editing=t;renderComposer();await doPreview();return;}
+    if((r.errors||[]).length){toast(`${t}: ${r.errors[0]}`);state.editing=t;renderComposer();return;}
     if(r.base_error){toast(`${t}: ${r.base_error}`);state.editing=t;renderComposer();return;}
     if(r.option_error){toast(`${t}: ${r.option_error}`);state.editing=t;renderComposer();return;}
     // A unit that already exists no longer stops the first Apply to show a

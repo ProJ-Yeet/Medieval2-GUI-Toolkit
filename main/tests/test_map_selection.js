@@ -5,6 +5,7 @@ const path = require('node:path');
 const vm = require('node:vm');
 const context = {
   state: {}, window: {}, esc: String,
+  tt:key => key, ttA:key => key, ttN:key => key,
   document: {addEventListener(){}, createElement(){
     const canvas = {width:0, height:0};
     canvas.getContext = () => ({
@@ -49,6 +50,27 @@ context.activity = () => {};
 context.cfdGo(0);
 assert(selected,'choosing a region enters selection mode');
 assert.equal(destination,'Alpha','browse selection navigates to the region');
+const second = {name:'Beta', key:0x0000ff, anchor:[1,0], declared:true};
+c.man.regions.push(second);
+c.multi = new Set([region.key, second.key]);
+c.sel = region;
+raw.data.set([255,0,0,255,0,0,255,255]);
+c.outline = null; c.outlineKey = -1;
+context.cmapOverlay(draw,0,0,2,1);
+assert.equal(c.outline.pixels[3],255,'multi-selection outlines its first region');
+assert.equal(c.outline.pixels[7],255,'multi-selection outlines every selected region');
+context.cpaintWorkspacePaint = context.cmapPaint = context.cmapPickPaint = () => {};
+context.cmapSub = context.cmapSurface = context.cmapProbe = context.cmapOpenRegion = context.csOpen = context.cmapOpenPeople = () => {};
+context.cpaintArmed = () => false;
+context.activity = () => {};
+context.cmapRegionAt = x => x ? second : region;
+c.man.markers = {settlement:[0,0,0], port:[255,255,255]};
+context.cmapPick([0,0], false);
+context.cmapPick([1,0], true);
+assert.deepEqual([...c.multi].sort((a,b)=>a-b), [second.key, region.key].sort((a,b)=>a-b),
+  'Shift-click retains both selected regions');
+context.cmapPick([1,0], true);
+assert.deepEqual([...c.multi], [region.key], 'Shift-click toggles a selected region off');
 console.log('PASS: outline rebuild, cache, clear and region browsing/selection');
 
 vm.runInContext(fs.readFileSync(path.join(__dirname,'../web/js/campaint.js'),'utf8'),context);
@@ -87,3 +109,38 @@ handlers.pointermove({...event,clientX:20});
 handlers.pointerup({...event,clientX:20});
 assert.equal(p.region,'Before','right drag pans without sampling a region');
 console.log('PASS: right-click paint sampling and right-drag pan');
+
+(async () => {
+  const calls = [];
+  context.api = {post: async (path, body) => {
+    calls.push({path, body});
+    return path.endsWith('/plan') ? {plan:{changes:[body.name]}} : {};
+  }};
+  context.confirm = () => true;
+  context.toast = () => {};
+  context.cmapOpenRegion = async () => {};
+
+  context.state.cmap = {mod:'TestMod', busy:false, det:{
+    name:'Alpha', campaign:'imperial_campaign', mercPick:'North',
+    mercenaries:{file:'descr_mercenaries.txt'}, multi:{names:['Alpha','Beta']},
+  }};
+  await context.cmapMercSave();
+  let applies = calls.filter(x => x.path.endsWith('/apply'));
+  assert.deepEqual(JSON.parse(JSON.stringify(applies.map(x => x.body.name))), ['Alpha','Beta'],
+    'a mercenary-pool selection applies to every selected region');
+  assert(applies.every(x => x.body.what === 'mercenaries' && x.body.edits.pool === 'North'),
+    'each mercenary-pool request keeps the selected pool');
+
+  calls.length = 0;
+  context.state.cmap = {mod:'TestMod', busy:false, det:{
+    name:'Alpha', musicPick:'eastern_european',
+    music:{file:'descr_sounds_music_types.txt'}, multi:{names:['Alpha','Beta']},
+  }};
+  await context.cmapMusicSave();
+  applies = calls.filter(x => x.path.endsWith('/apply'));
+  assert.deepEqual(JSON.parse(JSON.stringify(applies.map(x => x.body.name))), ['Alpha','Beta'],
+    'a music-type selection applies to every selected region');
+  assert(applies.every(x => x.body.what === 'music' && x.body.edits.music_type === 'eastern_european'),
+    'each music-type request keeps the selected music type');
+  console.log('PASS: multi-region mercenary and music picker saves');
+})().catch(error => { console.error(error); process.exitCode = 1; });

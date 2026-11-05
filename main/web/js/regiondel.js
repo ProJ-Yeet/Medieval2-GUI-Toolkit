@@ -151,7 +151,7 @@ async function rdlApply(){
   state.rdl = null;
   const c = state.cmap;
   if(c){ c.det = null; c.sel = null; c.pick = null; }
-  await loadCampmap();
+  await loadCampmap(true);
 }
 
 /* ---------- drawing ---------- */

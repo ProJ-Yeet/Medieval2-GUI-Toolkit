@@ -265,12 +265,12 @@ print("\n== 5) 97a: a click in 3D lands on the tile drawn under it ==")
 
 cmjs = _webtext.read((ROOT / "web" / "js" / "campmap.js"))
 check("the click goes through the flat map's own code, not a second copy",
-      "cmapClickTile(tileOf(e), e.button)" in src
+      "cmapClickTile(tileOf(e), e.button, e.shiftKey)" in src
       and "function cmapClickTile" in cmjs
-      and "cmapClickTile(cmapEventTile(cv, e), e.button)" in cmjs)
+      and "cmapClickTile(cmapEventTile(cv, e), e.button, e.shiftKey)" in cmjs)
 check("  and so do the hover, the marker drag and the brush",
       "cmapHover(tileOf(e))" in src and "cmkDragStart(tileOf(e))" in src
-      and "cpaintDown(tileOf(e))" in src and "cmapMarkClick(tileOf(e))" in src)
+      and "cpaintDown(tileOf(e))" in src and "cmapMarkClick(tileOf(e), e.shiftKey)" in src)
 check("the pick and the hover are redrawn from the one paint funnel",
       re.search(r"function cm3Retexture\(force\)\{.*?cm3Remark\(\);", src, re.S) is not None)
 

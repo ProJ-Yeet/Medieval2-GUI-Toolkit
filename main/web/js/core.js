@@ -1755,7 +1755,10 @@ function wire(){
   logBtn.onclick=()=>openLog();
   reportBtn.onclick=()=>reportOpen(state.mode);
   selBtn.onclick=toggleSelMode; batchBtn.onclick=openBatch; clearSelBtn.onclick=clearSelection;
+  deleteSelectedBtn.onclick=edBatchDeleteDialog;
   packBtn.onclick=()=>packExport([...state.selected]); importPackBtn.onclick=packImport;
+  unusedUnitsBtn.onclick=openUnusedUnits;
+  unrecruitableUnitsBtn.onclick=openUnrecruitableUnits;
   cleanBtn.onclick=()=>cleanupFor(state.mode)(); unusedOnly.onchange=render;
   ownBtn.onclick=()=>openOwnership('units'); allFacBtn.onclick=()=>openOwnership('all');
   sndBtn.onclick=sndApply;
@@ -1806,15 +1809,18 @@ function applyMode(persist){
   // input that does nothing is worse than no input.
   search.style.display=(home||state.mode==='campmap'||state.mode==='changes'||state.mode==='health'
     ||state.mode==='casmodels'||state.mode==='armory')?'none':'';
-  selBtn.style.display=one?'none':'';
+  selBtn.style.display=(!one||edit)?'inline-block':'none';
   batchBtn.style.display=(!one&&state.selMode)?'inline-block':'none';
-  clearSelBtn.style.display=(!one&&state.selMode&&state.selected.size)?'inline-block':'none';
+  deleteSelectedBtn.style.display=(edit&&state.selMode&&state.selected.size)?'inline-block':'none';
+  clearSelBtn.style.display=((!one||edit)&&state.selMode&&state.selected.size)?'inline-block':'none';
   // A pack is made from the SOURCE mod and imported into the destination, so
   // both live in transfer mode - which is also the only mode where "the other
   // mod" is a thing at all.
   packBtn.style.display=(!one&&state.selMode&&state.selected.size)?'inline-block':'none';
   importPackBtn.style.display=one?'none':'inline-block';
   newUnitBtn.style.display=edit?'inline-block':'none';
+  unusedUnitsBtn.style.display=edit?'inline-block':'none';
+  unrecruitableUnitsBtn.style.display=edit?'inline-block':'none';
   tidyEduBtn.style.display=edit?'inline-block':'none';
   const stm=state.mode==='stratmap', crd=state.mode==='cards', cas=state.mode==='casmodels'||state.mode==='armory',
         cmp=state.mode==='campmap';
@@ -1849,7 +1855,7 @@ function applyMode(persist){
                     :fac?tt('core.search_factions')
                     :raw?tt('core.search_file_names'):tt('core.search');
   document.title=tt('core.page_title',{mode:modeDef(state.mode).name});
-  if(one&&state.selMode)toggleSelMode();
+  if(one&&!edit&&state.selMode)toggleSelMode();
   // A single-mod mode mirrors the destination onto the source, but the pick the
   // user made in Transfer is remembered rather than overwritten - both in
   // `xferDst` and in the persisted setting, so neither this switch nor the next
@@ -1888,7 +1894,7 @@ function applyMode(persist){
 function toggleSelMode(){state.selMode=!state.selMode;document.body.classList.toggle('selmode',state.selMode);
   selBtn.classList.toggle('on',state.selMode);
   paintSelection();
-  batchBtn.style.display=state.selMode?'inline-block':'none';
+  batchBtn.style.display=(state.mode==='transfer'&&state.selMode)?'inline-block':'none';
   updateBatchBtn();}
 function clearSelection(){state.selected.clear();paintSelection();updateBatchBtn();}
 // every card of every selected unit, since one unit can render under several groups
@@ -1898,7 +1904,9 @@ function updateBatchBtn(){batchBtn.textContent=tt('core.transfer_selected',{sele
   const on=state.selMode&&state.selected.size?'inline-block':'none';
   clearSelBtn.style.display=on;
   packBtn.style.display=state.mode==='transfer'?on:'none';
-  packBtn.textContent=tt('core.export_pack',{selected_n:state.selected.size});}
+  packBtn.textContent=tt('core.export_pack',{selected_n:state.selected.size});
+  deleteSelectedBtn.style.display=state.mode==='edit'?on:'none';
+  deleteSelectedBtn.textContent=tt('core.delete_selected',{selected_n:state.selected.size});}
 
 function unitMatches(u){
   const qq=search.value.trim().toLowerCase();

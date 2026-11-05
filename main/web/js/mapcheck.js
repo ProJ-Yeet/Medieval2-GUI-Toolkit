@@ -164,7 +164,7 @@ async function cchkApply(){
   // The files on disk changed, so the map the screen is drawn from is stale.
   // Reloading is the whole screen, deliberately: a fixed layer is a different
   // picture, and half a screen showing the old one is worse than a blink.
-  if(typeof loadCampmap === 'function') loadCampmap();
+  if(typeof loadCampmap === 'function') loadCampmap(true);
 }
 
 function cchkFix(code){

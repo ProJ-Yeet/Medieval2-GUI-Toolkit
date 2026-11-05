@@ -45,6 +45,10 @@ Unit packs (see :mod:`unittransfer.pack`)
                                     it, with every check that implies
   POST /api/pack/unmount         -> drop it again and delete what was unpacked
   GET  /api/units?mod=NAME       -> {mod, factions, categories, classes, units}
+  GET  /api/units/unused?mod=&sounds=1 -> full-mod text-reference audit
+  GET  /api/units/unrecruitable?mod= -> EDU types absent from all recruit pools
+  POST /api/units/delete_unused  -> delete unused units, re-scanning between passes
+  POST /api/units/delete         -> delete selected units through the edit planner
   GET  /icon?mod=&type=&kind=    -> image/png
   GET  /api/unit_models?mod=&type= -> the battle-model entries a unit is
                                     affiliated with + the folder each lives in
@@ -458,13 +462,15 @@ than "does what is on disk load?".
   POST /api/map/baseline         -> stamp what is already wrong as inherited, or
                                     clear the stamp (`action`: take / clear)
   POST /api/map/fix_plan|fix_apply
-                                 -> Geomod's three debugger actions, in one
+                                 -> campaign-map repair actions, in one
                                     backup set + undo
   GET  /api/mapgen?mod=          -> 27: what the layer generators offer
   POST /api/map/gen_plan|gen_apply
                                  -> 27: heights, ground types, climates or
                                     rivers made for the map, previewed, then
-                                    written with one Undo
+                                    written with one Undo; ``rect`` keeps one
+                                    inside a rectangle of tiles
+  POST /api/map/gen_area         -> the box around the land no region claims
   POST /api/map/resize_plan|resize_apply
                                  -> 26a: grow or shrink the map by four margins,
                                     every coordinate in the mod moved with it
@@ -523,6 +529,10 @@ Characters, armies and the family tree (16i, see :mod:`unittransfer.stratchar`)
                                     last one; a move is the block's own span
                                     lifted into another faction (one backup +
                                     undo)
+  POST /api/map/rebel_fill_plan|_apply
+                                 -> one generated general on every unoccupied
+                                    rebel-held settlement tile, with its region
+                                    creator as sub_faction (one backup + undo)
 
 A horde start for a faction that holds nothing (72, D13, see
 :mod:`unittransfer.hordestart`)
@@ -766,6 +776,7 @@ from . import menusheets
 from . import stratscene
 from . import manytowns
 from . import ancillaries, areaeffects, campimport, edbimport, mapbundle, osmmap, osmsites, settlemodel, heroabilities, hordestart, walls, characters, projectzip, campaint, campdb, campevents, campfiles, campmap, campnew, campstrat, cas, casanim, animedit, animpack, animslot, animview, modelexport, launchcheck, packhouse, settlemech, fileswap, factionsites, sidefiles, banners, changesets, health, climatenew, guilds, mapcheck, mapfe, mapquery, mapterrain, mercpools, regiondel, edusort, factionaudit, factionbring, factionclone, factions, images, mesh, minorfiles, namekeys, portrecords, rawtext, rebelpools, renames, soundbanks, soundscripts, spawns, sprites, stratcamp, stratchar, stratedit, stratobj, strings, traits, triggers, winconds
+from . import unrecruitable, unusedunits
 from . import eop as _eop
 from . import logutil
 from . import i18n
@@ -903,6 +914,7 @@ def _liveness_watchdog(httpd) -> None:
 _PROGRESS: Dict[str, dict] = {}
 _PROGRESS_LOCK = threading.Lock()
 _PROGRESS_TTL = 300.0        # seconds a finished job's last report is kept
+_CANCELLED_JOBS = set()
 
 
 def _progress_sink(job: str):
@@ -925,6 +937,16 @@ def _progress_read(job: str) -> dict:
     with _PROGRESS_LOCK:
         rec = _PROGRESS.get((job or "").strip())
         return {"pct": rec["pct"], "label": rec["label"]} if rec else {}
+
+
+def _progress_cancel(job: str) -> None:
+    with _PROGRESS_LOCK:
+        _CANCELLED_JOBS.add((job or "").strip())
+
+
+def _progress_cancelled(job: str) -> bool:
+    with _PROGRESS_LOCK:
+        return (job or "").strip() in _CANCELLED_JOBS
 
 
 def _strings_bin_wanted(body: dict) -> bool:
@@ -1733,6 +1755,7 @@ def _plan_payload(plan) -> dict:
         "base_field_groups": list(dict.fromkeys(plan.base_field_groups)),
         "base_error": plan.base_error,
         "option_error": plan.option_error,
+        "errors": list(plan.errors),
         "model_actions": [asdict(a) for a in plan.model_actions],
         "add_count": len(plan.add_entries),
         "asset_count": len(plan.asset_files),
@@ -2057,6 +2080,20 @@ class Handler(BaseHTTPRequestHandler):
                 if not name or name not in self.registry.names():
                     return self._err(404, "unknown mod")
                 return self._json(build_units_response(self.registry.get(name)))
+            if u.path == "/api/units/unused":
+                name = (q.get("mod") or [None])[0]
+                if not name or name not in self.registry.names():
+                    return self._err(404, "unknown mod")
+                job = (q.get("job") or [""])[0]
+                return self._json(unusedunits.scan(
+                    self.registry.get(name),
+                    (q.get("sounds") or ["1"])[0] != "0", _progress_sink(job),
+                    lambda: _progress_cancelled(job)))
+            if u.path == "/api/units/unrecruitable":
+                name = (q.get("mod") or [None])[0]
+                if not name or name not in self.registry.names():
+                    return self._err(404, "unknown mod")
+                return self._json(unrecruitable.scan(self.registry.get(name)))
             if u.path == "/api/unit_models":
                 # Every battle-model entry this unit is affiliated with, and the
                 # folder each one's files live in - what the composer's
@@ -3416,6 +3453,13 @@ class Handler(BaseHTTPRequestHandler):
                 return self._json(self._edit_plan(body))
             if u.path == "/api/edit/apply":
                 return self._json(self._edit_apply(body))
+            if u.path == "/api/units/delete_unused":
+                return self._json(self._delete_unused_units(body))
+            if u.path == "/api/units/delete":
+                return self._json(self._delete_units(body))
+            if u.path == "/api/progress/cancel":
+                _progress_cancel(body.get("job") or "")
+                return self._json({"ok": True})
             if u.path == "/api/bmdb/plan":
                 mod = self.registry.get(body["mod"])
                 return self._json(_edit_payload(
@@ -3641,6 +3685,9 @@ class Handler(BaseHTTPRequestHandler):
             if u.path in ("/api/map/character_plan", "/api/map/character_apply"):
                 return self._json(self._character(
                     u.path.rsplit("_", 1)[-1], body))
+            if u.path in ("/api/map/rebel_fill_plan", "/api/map/rebel_fill_apply"):
+                return self._json(self._rebel_fill(
+                    u.path.rsplit("_", 1)[-1], body))
             if u.path in ("/api/map/horde_plan", "/api/map/horde_apply"):
                 return self._json(self._horde(
                     u.path.rsplit("_", 1)[-1], body))
@@ -3698,6 +3745,13 @@ class Handler(BaseHTTPRequestHandler):
                 return self._json(self._mapcheck(u.path.rsplit("/", 1)[-1], body))
             if u.path in ("/api/map/resize_plan", "/api/map/resize_apply"):
                 return self._json(self._mapresize(u.path.rsplit("_", 1)[-1], body))
+            if u.path == "/api/map/gen_area":
+                # the land no region claims, for the generators' rectangle
+                try:
+                    cm = self.registry.map_for(body["mod"], body.get("campaign") or "")
+                    return self._json(mapgen.unclaimed_rect(cm))
+                except (KeyError, campmap.MapError, OSError) as e:
+                    return self._json({"error": str(e)})
             if u.path in ("/api/map/gen_plan", "/api/map/gen_apply"):
                 return self._json(self._mapgen(u.path.rsplit("_", 1)[-1], body))
             if u.path in ("/api/edu/sort/plan", "/api/edu/sort/apply"):
@@ -3889,6 +3943,75 @@ class Handler(BaseHTTPRequestHandler):
         if _strings_bin_wanted(body):
             _clear_cache(mod.root, out, rec, mod.name)
         return out
+
+    def _delete_unused_units(self, body):
+        """Delete a scan's findings one at a time, then scan again.
+
+        Rebuilding the Mod between deletions is intentional: the ordinary unit
+        deletion planner is the authority for every write, and a unit which was
+        only referenced by a just-deleted artillery unit becomes a finding on
+        the following pass.
+        """
+        name = body.get("mod") or ""
+        if name not in self.registry.names():
+            return {"error": _i18n.msg("eng.server.unknown_mod", "unknown mod")}
+        sounds = bool(body.get("sounds", True))
+        raw_options = body.get("delete_options") or {}
+        options = edit.DeleteOptions(
+            remove_loc=bool(raw_options.get("remove_loc", True)),
+            remove_models=bool(raw_options.get("remove_models", False)),
+            remove_assets=bool(raw_options.get("remove_assets", False)),
+            remove_icons=bool(raw_options.get("remove_icons", False)))
+        deleted, warnings = [], []
+        while True:
+            mod = self.registry.get(name)
+            report = unusedunits.scan(mod, sounds)
+            pending = [row["type"] for row in report["units"] if row["unused"]]
+            if not pending:
+                break
+            progressed = False
+            for typ in pending:
+                mod = self.registry.get(name)
+                req = edit.EditRequest(unit=typ, delete=True, delete_options=options)
+                plan = edit.plan_edit(mod, req)
+                if plan.errors:
+                    warnings.append(f"{typ}: " + "; ".join(plan.errors))
+                    continue
+                edit.apply_edit(plan)
+                deleted.append(typ)
+                progressed = True
+                self.registry.invalidate(name)
+            if not progressed:
+                break
+        self.registry.invalidate(name)
+        return {"deleted": deleted, "warnings": warnings,
+                "remaining": [row for row in unusedunits.scan(self.registry.get(name), sounds)["units"]
+                              if row["unused"]]}
+
+    def _delete_units(self, body):
+        """Apply the regular unit-delete planner to an explicit selection."""
+        name = body.get("mod") or ""
+        if name not in self.registry.names():
+            return {"error": _i18n.msg("eng.server.unknown_mod", "unknown mod")}
+        raw_options = body.get("delete_options") or {}
+        options = edit.DeleteOptions(
+            remove_loc=bool(raw_options.get("remove_loc", True)),
+            remove_models=bool(raw_options.get("remove_models", False)),
+            remove_assets=bool(raw_options.get("remove_assets", False)),
+            remove_icons=bool(raw_options.get("remove_icons", False)))
+        deleted, errors = [], []
+        for typ in dict.fromkeys(str(x) for x in (body.get("types") or []) if str(x)):
+            mod = self.registry.get(name)
+            plan = edit.plan_edit(mod, edit.EditRequest(
+                unit=typ, delete=True, delete_options=options))
+            if plan.errors:
+                errors.append(f"{typ}: " + "; ".join(plan.errors))
+                continue
+            edit.apply_edit(plan)
+            deleted.append(typ)
+            self.registry.invalidate(name)
+        self.registry.invalidate(name)
+        return {"deleted": deleted, "errors": errors}
 
     # ---- sounds mode ----
     def _sounds_apply(self, body):
@@ -5372,6 +5495,28 @@ class Handler(BaseHTTPRequestHandler):
         self.registry.invalidate(name)              # the file changed on disk
         return out
 
+    # ---- fill unoccupied rebel settlement tiles (campaign map) ----
+    def _rebel_fill(self, action, body):
+        """Preview or write all missing rebel settlement generals at once."""
+        try:
+            name = body["mod"]
+            mod = self.registry.describe(name)
+            facts = self.registry.map_facts(name, body.get("campaign") or "")
+            plan = stratchar.plan_rebel_fill(mod, facts, body)
+        except (KeyError, campmap.MapError, ModDataError, OSError) as e:
+            return {"error": str(e)}
+        out = {"plan": plan.payload()}
+        if action == "plan" or plan.errors:
+            if plan.errors:
+                out["error"] = "; ".join(plan.errors)
+            return out
+        try:
+            out.update(stratchar.apply_rebel_fill(plan))
+        except (OSError, ValueError) as e:
+            return {"error": str(e), "plan": plan.payload()}
+        self.registry.invalidate(name)
+        return out
+
     # ---- a horde start for a faction that holds nothing (72, D13) ----
     def _horde(self, action, body):
         """Preview or write a horde start: up to three files, one Undo.
@@ -5487,7 +5632,7 @@ class Handler(BaseHTTPRequestHandler):
 
     # ---- the campaign map, checked (16f) ----
     def _mapcheck(self, action, body):
-        """The baseline stamp, and Geomod's three auto-fixes.
+        """The baseline stamp and the campaign-map repair actions.
 
         The plan re-runs the rules rather than trusting the finding list the
         browser is holding, so a fix acts on the map as it is now. What the

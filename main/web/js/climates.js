@@ -190,7 +190,7 @@ async function cclApply(){
   activity('climates',
            tt(p.mode === 'add' ? 'climates.activity_declared' : 'climates.activity_took_over',{mod:k.mod,code:p.code}));
   k.plan = null;
-  await loadCampmap();
+  await loadCampmap(true);
 }
 
 /* ---------- drawing ---------- */

@@ -347,6 +347,64 @@ check("and one Undo takes the rivers away again",
       read(root / "data" / campmap.BASE_REL / "map_features.tga")[0]
       .convert("RGB").getbbox() is None)
 
+# ---- 4b) only inside a rectangle ---------------------------------------------
+print("\n4b) every generator kept inside a rectangle of tiles")
+hfile = root / "data" / campmap.BASE_REL / "map_heights.tga"
+before = read(hfile)[0].convert("RGB")
+p = mapgen.plan(Mod(root), campmap.CampaignMap(Mod(root)),
+                {"kind": "heights", "rect": [20, 0, 59, 39], "feather": 0})
+d = p.payload()
+check(f"a rectangle plans and says where: {d['changes'][-1:]}",
+      d["ok"] and "only inside tiles x 20-59" in d["changes"][-1])
+got = mapresize._decode(io.BytesIO(p.data[f"{campmap.BASE_REL}/map_heights.tga"])).convert("RGB")
+outside = [(x, y) for y in range(got.height) for x in range(2 * 20 + 1)]
+check("every corner left of it is exactly as it was",
+      all(got.getpixel(c) == before.getpixel(c) for c in outside))
+check(f"and inside it the hill is made: {got.getpixel((W, H))}",
+      got.getpixel((W, H)) == (255, 255, 255))
+check("rect numbers in either order, and off the edge, are put right",
+      mapgen.plan(Mod(root), campmap.CampaignMap(Mod(root)),
+                  {"kind": "heights", "rect": [99, 39, 20, -5]}).rect == (20, 0, 59, 39))
+check("a rectangle wholly off the map is refused",
+      not mapgen.plan(Mod(root), campmap.CampaignMap(Mod(root)),
+                      {"kind": "heights", "rect": [100, 100, 120, 120]}).payload()["ok"])
+p = mapgen.plan(Mod(root), campmap.CampaignMap(Mod(root)),
+                {"kind": "heights", "rect": [20, 0, 59, 39], "feather": 8})
+soft = mapresize._decode(io.BytesIO(p.data[f"{campmap.BASE_REL}/map_heights.tga"])).convert("RGB")
+edge, deep = (2 * 20 + 1, H), (W, H)
+o, n = before.getpixel(edge)[0], got.getpixel(edge)[0]
+check(f"with a fade, a land corner on the inner edge sits between old and new "
+      f"({o} .. {soft.getpixel(edge)[0]} .. {n})",
+      min(o, n) <= soft.getpixel(edge)[0] <= max(o, n) and o != n
+      and soft.getpixel(edge)[0] != n)
+check("and deep inside it is the new height",
+      soft.getpixel(deep) == got.getpixel(deep))
+check("the sea is not blended: a sea corner stays sea",
+      soft.getpixel((2 * W, 0)) == before.getpixel((2 * W, 0)))
+p = mapgen.plan(Mod(root), campmap.CampaignMap(Mod(root)),
+                {"kind": "ground", "rect": [20, 0, 59, 39]})
+gnew = mapresize._decode(io.BytesIO(p.data[f"{campmap.BASE_REL}/map_ground_types.tga"])).convert("RGB")
+gold = read(root / "data" / campmap.BASE_REL / "map_ground_types.tga")[0].convert("RGB")
+check("ground types: nothing outside the rectangle changes",
+      all(gnew.getpixel(c) == gold.getpixel(c) for c in outside))
+p = mapgen.plan(Mod(root), campmap.CampaignMap(Mod(root)),
+                {"kind": "features", "rect": [0, 0, 25, 39]})
+d = p.payload()
+out = mapgen.apply(p)
+ft = read(root / "data" / campmap.BASE_REL / "map_features.tga")[0].convert("RGB")
+fp = ft.load()
+check("rivers: nothing drawn right of the rectangle",
+      not any(fp[x, y] in (SRC, RIV) for y in range(H) for x in range(26, W)))
+check("but the part inside is drawn",
+      any(fp[x, y] in (SRC, RIV) for y in range(H) for x in range(0, 26)))
+rep = mapcheck.run(Mod(root), use_baseline=False)
+bad = [(f.code, f.message[:60]) for f in rep.findings
+       if f.code.startswith("river.") or f.code == "marker.feature"]
+check(f"and each clipped piece is a river the validator accepts: {bad}", not bad)
+transfer.undo(out["id"])
+check("the area finder says so when every land tile has a region",
+      mapgen.unclaimed_rect(campmap.CampaignMap(Mod(root)))["rect"] is None)
+
 # ---- 5) the pieces on their own ------------------------------------------------
 print("\n5) the pieces")
 line = mapgen.cardinal([(0, 0), (5, 3)])

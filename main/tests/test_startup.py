@@ -268,8 +268,8 @@ config.CONFIG_DIR = real_cfg
 config.SETTINGS_PATH = real_cfg / "settings.json"
 config.LOG_PATH = real_cfg / "transfers.json"
 config.BACKUP_DIR = real_cfg / "backups"
-saved = config.load_settings().get("show_console")
-config.save_settings(show_console=False)
+saved_settings = config.load_settings()
+config.save_settings(show_console=False, open_browser=True)
 
 print("\n== detached launch ==")
 lport = free_port()
@@ -439,6 +439,18 @@ finally:
 check("a failed startup check exits EXIT_PREFLIGHT (2), not 1",
       rc_fail == app_mod.EXIT_PREFLIGHT == 2)
 check("a passing run still exits 0", app_mod.main(["--check"]) == 0)
+original_launch = app_mod._launch_detached
+settings_before_browser_test = config.load_settings()
+try:
+    config.save_settings(open_browser=False, show_console=False)
+    captured = {}
+    app_mod._launch_detached = lambda log, port, args: captured.update(args=args) or 0
+    check("disabling automatic browser opening forwards --no-browser to the detached server",
+          app_mod.main(["--port", str(free_port())]) == 0
+          and "--no-browser" in captured.get("args", []))
+finally:
+    app_mod._launch_detached = original_launch
+    config._write_json(config.SETTINGS_PATH, settings_before_browser_test)
 # The launcher branches on that number: it used to print "Pillow is missing" for
 # every non-zero code, right underneath the real reason. It sits at the TOP of
 # the repo, beside Install-Dependencies.bat and the README, because those three
@@ -491,7 +503,10 @@ check("the launcher has a branch for code 4", '"%RC%"=="4"' in bat)
 check("…and the portable launcher the zip ships has one too",
       '"%RC%"=="4"' in (ROOT / "dev" / "release" / "build_release.py").read_text(
           encoding="utf-8", errors="replace"))
-
+check("both launchers keep the URL visible when browser opening is disabled",
+      '"%RC%"=="5"' in bat
+      and '"%RC%"=="5"' in (ROOT / "dev" / "release" / "build_release.py").read_text(
+          encoding="utf-8", errors="replace"))
 
 # ---------------------------------------------------------------------------
 print("\nthe release's own check that the instructions name real files")
@@ -541,8 +556,7 @@ check("…and a real doc naming that same missing file still is refused",
 
 shutil.rmtree(_stage, ignore_errors=True)
 
-if saved is not None:
-    config.save_settings(show_console=saved)
+config._write_json(config.SETTINGS_PATH, saved_settings)
 shutil.rmtree(cfg, ignore_errors=True)
 print(f"\n{sum(ok)}/{len(ok)} checks - " + ("ALL PASSED" if all(ok) else "SOME FAILED"))
 sys.exit(0 if all(ok) else 1)

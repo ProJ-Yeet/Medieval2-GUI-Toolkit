@@ -69,6 +69,7 @@ the count that made it one.
 """
 from __future__ import annotations
 
+import random
 import re
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -227,6 +228,10 @@ class Vocabulary:
         self.ancillaries: set = set()
         self.have_eda = False
         self.pool: Dict[str, List[str]] = {}
+        #: Character names split by the sections that declare them.  The form
+        #: uses this for its random-name button, so a female character draws
+        #: from ``women`` rather than from the male ``characters`` list.
+        self.pool_by_gender: Dict[str, Dict[str, List[str]]] = {}
         #: the fourth section 19a taught the parser about - see
         #: :data:`unittransfer.minorfiles.NAME_SECTIONS`. Kept apart from
         #: :attr:`pool` because a surname is the *second* half of a name and
@@ -274,6 +279,7 @@ class Vocabulary:
             attrs = getattr(u, "attributes", None) or []
             self.units[u.type] = {"name": u.type, "category": u.category,
                                   "class": u.class_type,
+                                  "ownership": list(getattr(u, "ownership", None) or []),
                                   "general": "general_unit" in attrs}
             if "general_unit" in attrs:
                 self.bodyguards.add(u.type)
@@ -336,11 +342,15 @@ class Vocabulary:
             return
         self.have_pool = True
         for f in nf.factions:
-            got: List[str] = []
-            for s in f.sections:
-                if s.name in ("characters", "women"):
-                    got += [e.value for e in s.entries]
+            male = f.section("characters")
+            female = f.section("women")
+            by_gender = {
+                "male": [e.value for e in male.entries] if male else [],
+                "female": [e.value for e in female.entries] if female else [],
+            }
+            got = by_gender["male"] + by_gender["female"]
             self.pool[f.name] = got
+            self.pool_by_gender[f.name] = by_gender
             sec = f.section("surnames")
             self.surnames[f.name] = [e.value for e in sec.entries] if sec else []
 
@@ -402,7 +412,8 @@ class Vocabulary:
         """Every unit that may be put in an army, the roster first."""
         return sorted(self.units, key=str.lower) or list(self.file_units)
 
-    def payload(self) -> dict:
+    def payload(self, faction: str = "") -> dict:
+        wanted = faction.lower()
         return {
             "types": list(CHARACTER_TYPES),
             "ranks": list(RANKS),
@@ -412,7 +423,9 @@ class Vocabulary:
             "have_edct": self.have_edct,
             "have_eda": self.have_eda,
             "have_pool": self.have_pool,
-            "units": [{"name": n, "general": n in self.bodyguards}
+            "units": [{"name": n, "general": n in self.bodyguards,
+                       "owned": (not self.have_edu or wanted in {
+                           x.lower() for x in self.units[n]["ownership"]})}
                       for n in self.unit_names()],
             "bodyguards": sorted(self.bodyguards, key=str.lower),
             "traits": [{"name": n, "levels": v}
@@ -426,6 +439,8 @@ class Vocabulary:
             "labels": list(self.labels),
             "factions": list(self.factions),
             "pool": {k: len(v) for k, v in self.pool.items()},
+            "names": self.pool_by_gender.get(faction,
+                                               {"male": [], "female": []}),
             "surnames": {k: len(v) for k, v in self.surnames.items() if v},
             "have_name_keys": self.have_name_keys,
             "skipped": list(self.skipped),
@@ -1115,6 +1130,7 @@ UNTOUCHED = ("faction", "settlement", "building", "region", "fort",
              "faction_relationships", "character_record", "relative")
 
 ACTIONS = ("edit", "add", "delete", "move")
+REBEL_FACTIONS = ("slave", "slaves", "rebel", "rebels")
 
 
 @dataclass
@@ -1150,6 +1166,36 @@ class CharPlan:
                 "changes": list(self.changes), "warnings": list(self.warnings),
                 "errors": list(self.errors), "findings": list(self.findings),
                 "block": self.block, "moved": self.moved,
+                "ok": not self.errors and bool(self.text)}
+
+
+@dataclass
+class RebelFillPlan:
+    """One all-at-once fill of rebel-held settlement tiles."""
+
+    mod: object = None
+    campaign: str = ""
+    faction: str = ""
+    seed: int = 0
+    changes: List[str] = field(default_factory=list)
+    warnings: List[str] = field(default_factory=list)
+    errors: List[str] = field(default_factory=list)
+    findings: List[dict] = field(default_factory=list)
+    created: List[dict] = field(default_factory=list)
+    skipped: List[dict] = field(default_factory=list)
+    text: str = ""
+    path: Optional[Path] = None
+
+    def summary(self) -> str:
+        head = (f"fill rebel settlements in {getattr(self.mod, 'name', '?')}/"
+                f"{self.campaign} ({len(self.created)} character(s))")
+        return "\n".join([head] + [f"  {c}" for c in self.changes])
+
+    def payload(self) -> dict:
+        return {"campaign": self.campaign, "faction": self.faction, "seed": self.seed,
+                "changes": list(self.changes), "warnings": list(self.warnings),
+                "errors": list(self.errors), "findings": list(self.findings),
+                "created": list(self.created), "skipped": list(self.skipped),
                 "ok": not self.errors and bool(self.text)}
 
 
@@ -1409,6 +1455,193 @@ def _splice(sf: StratFile, p: CharPlan, faction: Node, node: Optional[Node],
 
 
 # ---------------------------------------------------------------------------
+# fill rebel-held settlements
+
+
+def _rebel_faction(sf: StratFile) -> Optional[Node]:
+    """The campaign's rebel holder, under the spelling this campaign uses."""
+    for name in REBEL_FACTIONS:
+        node = sf.faction(name)
+        if node is not None:
+            return node
+    return None
+
+
+def _pool_for(voc: Vocabulary, faction: str) -> List[str]:
+    """A creator's male names, falling back to its complete name pool."""
+    key = faction.lower()
+    for name, genders in voc.pool_by_gender.items():
+        if name.lower() == key:
+            return list(genders.get("male") or voc.pool.get(name) or [])
+    for name, names in voc.pool.items():
+        if name.lower() == key:
+            return list(names)
+    return []
+
+
+def _owned_units(voc: Vocabulary, faction: str) -> List[str]:
+    """Land regiments explicitly owned by ``faction``.
+
+    Ship units belong in navies. Putting one in a land general's army can make
+    the battle engine crash, so they are never candidates for this generator.
+    """
+    wanted = faction.lower()
+    return [name for name, row in voc.units.items()
+            if str(row["category"]).lower() != "ship"
+            and wanted in {str(owner).lower() for owner in row["ownership"]}]
+
+
+def plan_rebel_fill(mod, facts, body: Optional[dict] = None) -> RebelFillPlan:
+    """Plan characters for unoccupied rebel settlement tiles.
+
+    A generated character belongs to the campaign's rebel faction, while its
+    ``sub_faction`` and roster come from the region creator.  All blocks are
+    inserted together so the user gets one preview, backup and Undo record.
+    """
+    from .campmap import MapError
+
+    body = body or {}
+    campaign = str(body.get("campaign") or "") or facts.campaign
+    try:
+        seed = int(body.get("seed")) if body.get("seed") is not None else random.SystemRandom().randrange(1 << 53)
+    except (TypeError, ValueError):
+        seed = random.SystemRandom().randrange(1 << 53)
+    p = RebelFillPlan(mod=mod, campaign=campaign, seed=seed)
+    try:
+        sf = campstrat.read_strat(mod, campaign)
+    except (OSError, ValueError, MapError) as exc:
+        p.errors.append(str(exc))
+        return p
+    p.path = sf.path
+    rebels = _rebel_faction(sf)
+    if rebels is None:
+        p.errors.append(_i18n.msg("eng.stratchar.this_campaign_has_no_rebel_faction", "this campaign has no rebel faction (looked for slave, slaves, rebel or rebels)"))
+        return p
+    p.faction = rebels.name
+    voc = Vocabulary(facts, sf)
+    if not voc.have_edu:
+        p.errors.append(_i18n.msg("eng.stratchar.export_descr_unit_txt_is_needed", "export_descr_unit.txt is needed to choose each creator's owned units"))
+        return p
+    if not voc.have_pool:
+        p.errors.append(_i18n.msg("eng.stratchar.descr_names_txt_is_needed_to", "descr_names.txt is needed to choose each creator's character names"))
+        return p
+
+    occupied = {(int(c.get("x")), int(c.get("y")))
+                for c in sf.of_kind("character")
+                if isinstance(c.get("x"), int) and isinstance(c.get("y"), int)}
+    used_names = {c.name.lower() for c in characters_of(sf, rebels) if c.name}
+    additions: List[List[str]] = []
+    rng = random.Random(p.seed)
+    for region in facts.regions:
+        if region.owner.lower() != rebels.name.lower():
+            continue
+        mapped = facts.cm.index.by_key.get(region.rgb_key)
+        tile = mapped.settlement if mapped is not None else None
+        if tile is None:
+            p.skipped.append({"region": region.name, "reason": _i18n.msg("eng.stratchar.no_settlement_tile_on_map_regions", "no settlement tile on map_regions.tga")})
+            continue
+        x, y = facts.cm.game_xy(*tile)
+        if (x, y) in occupied:
+            p.skipped.append({"region": region.name, "reason": _i18n.msg("eng.stratchar.a_character_already_stands_on_its", "a character already stands on its settlement tile")})
+            continue
+        creator = region.creator.strip()
+        names = _pool_for(voc, creator)
+        units = _owned_units(voc, creator)
+        if not creator or not names:
+            p.skipped.append({"region": region.name, "reason": _i18n.msg("eng.stratchar.has_no_character_names_in_descr", "{x} has no character names in descr_names.txt", x=creator or 'no creator')})
+            continue
+        if not units:
+            p.skipped.append({"region": region.name, "reason": _i18n.msg("eng.stratchar.owns_no_units_in_export_descr", "{creator} owns no units in export_descr_unit.txt", creator=creator)})
+            continue
+        available = [name for name in names if name.lower() not in used_names]
+        if not available:
+            p.skipped.append({"region": region.name, "reason": _i18n.msg("eng.stratchar.s_name_pool_has_no_unused", "{creator}'s name pool has no unused name for the rebel faction", creator=creator)})
+            continue
+        name = rng.choice(available)
+        count = rng.randint(4, 8)
+        spec = Spec(name=name, type="general", gender="male", age=25, x=x, y=y,
+                    sub_faction=creator,
+                    army=[Army(rng.choice(units)) for _ in range(count)])
+        findings = check_character(voc, spec, facts.cm)
+        fatal = [f["message"] for f in findings if f["fatal"]]
+        if fatal:
+            p.errors.extend(fatal)
+            return p
+        p.findings.extend(findings)
+        additions.append(new_character(sf, rebels, spec))
+        occupied.add((x, y))
+        used_names.add(name.lower())
+        p.created.append({"region": region.name, "creator": creator,
+                          "name": name, "x": x, "y": y, "units": count})
+        p.changes.append(f"{region.name}: {name} ({creator}) at {x},{y} with {count} units")
+
+    if not additions:
+        p.errors.append(_i18n.msg("eng.stratchar.no_unoccupied_rebel_settlement_tiles_could", "no unoccupied rebel settlement tiles could be filled"))
+        return p
+    at = insert_at(sf, rebels)
+    lines = sf.lines[:at] + [line for block in additions for line in block] + sf.lines[at:]
+    text = serialise(sf, lines)
+    done = campstrat.parse_strat(text)
+    if done.counts().get("character", 0) != sf.counts().get("character", 0) + len(additions):
+        p.errors.append(_i18n.msg("eng.stratchar.the_generated_blocks_did_not_add", "the generated blocks did not add the expected number of characters"))
+        return p
+    for kind in UNTOUCHED:
+        if done.counts().get(kind, 0) != sf.counts().get(kind, 0):
+            p.errors.append(_i18n.msg("eng.stratchar.this_would_change_records_which_filling", "this would change {kind} records, which filling rebels must not do", kind=kind))
+            return p
+    p.findings += check_faction(done, done.faction(rebels.name), voc)
+    p.warnings = [f["message"] for f in p.findings if not f["fatal"]]
+    p.errors += [f["message"] for f in p.findings if f["fatal"]]
+    p.text = text if not p.errors else ""
+    return p
+
+
+def apply_rebel_fill(p: RebelFillPlan) -> dict:
+    """Write a rebel-fill plan in one backed-up, undoable operation."""
+    import shutil
+    import time
+
+    from . import config
+    from .keyblock import write_text
+    from .logutil import file_op, log
+
+    if p.errors:
+        raise ValueError(_i18n.msg("eng.stratchar.cannot_apply", "cannot apply: {why}", why="; ".join(p.errors)))
+    if not p.text:
+        raise ValueError(_i18n.msg("eng.stratchar.nothing_to_change", "nothing to change"))
+    rel = f"{campstrat.CAMPAIGN_DIR_REL}/{p.campaign}/{campstrat.STRAT_NAME}"
+    tid = config.new_transfer_id()
+    backup_root = config.backup_root_for(tid)
+    manifest: Dict[str, List[str]] = {"backed_up": [], "created": [], "deleted": []}
+    target = Path(p.mod.data) / rel
+    bpath = backup_root / "data" / rel
+    bpath.parent.mkdir(parents=True, exist_ok=True)
+    if target.exists():
+        shutil.copy2(target, bpath)
+        manifest["backed_up"].append(rel)
+        file_op("BACKUP", target, f"-> {bpath}")
+    else:
+        manifest["created"].append(rel)
+    target.parent.mkdir(parents=True, exist_ok=True)
+    write_text(target, p.text, campstrat.ENCODING)
+    file_op("WRITE", target, f"{len(p.text)} bytes")
+    rec = {"id": tid, "when": time.strftime("%Y-%m-%d %H:%M:%S"),
+           "mode": "campmap", "action": "fill_rebel_settlements",
+           "source": p.mod.name, "source_root": str(p.mod.root),
+           "dest": p.mod.name, "dest_root": str(p.mod.root),
+           "unit_type": "rebel settlements", "resolved_type": "rebel settlements",
+           "options": {"campaign": p.campaign, "faction": p.faction},
+           "applied": True, "undone": False, "note": "", "summary": p.summary(),
+           "warnings": list(p.warnings), "manifest": manifest,
+           "backup_root": str(backup_root)}
+    config.append_log(rec)
+    log.info("CHARACTER fill rebels in %s/%s - %d character(s), id=%s",
+             p.mod.name, p.campaign, len(p.created), tid)
+    return {"id": tid, "created": list(p.created), "campaign": p.campaign,
+            "faction": p.faction, "record": rec}
+
+
+# ---------------------------------------------------------------------------
 # the save
 
 
@@ -1528,5 +1761,5 @@ def faction_detail(facts, faction: str) -> dict:
                        "line": r.start + 1}
                       for r in relatives_of(sf, node)],
         "findings": check_faction(sf, node, voc),
-        "vocab": voc.payload(),
+        "vocab": voc.payload(faction),
     }

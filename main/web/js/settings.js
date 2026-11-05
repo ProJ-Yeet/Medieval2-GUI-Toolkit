@@ -140,6 +140,8 @@ async function openSettings(){
         <div id="rootStatus" class="count" style="margin-top:8px"></div>
       </fieldset>
       <fieldset><legend>${tt('settings.launcher')}</legend>
+        <label class="chk"><input type="checkbox" id="browserChk" ${s.open_browser===false?'':'checked'} onchange="saveBrowserLaunch()">
+          ${tt('settings.open_the_browser_automatically_off_the')}</label>
         <label class="chk"><input type="checkbox" id="consoleChk" ${s.show_console?'checked':''} onchange="saveConsole()">
           ${tt('settings.keep_the_console_window_open_the')}</label>
         <div class="count" style="margin-top:6px">${docPoints(
