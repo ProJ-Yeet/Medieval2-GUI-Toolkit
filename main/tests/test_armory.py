@@ -410,6 +410,46 @@ console.log(JSON.stringify({trip, keys, t1: o1.t.map(v => Math.round(v * 1000) /
     check("a turn goes into degrees and back to the same matrix", got.get("trip"))
     check(f"keys are named as the keymap writes them ({got.get('keys')})",
           got.get("keys") == ["numpad1", "ctrl+numpad1", "alt+h", "numpad."])
+
+    # a sheet whose request the server never saw (a refused connection) is
+    # asked for again until it arrives; one the server answers with an error
+    # is not, since asking again will not change that answer
+    probe = stub + js + r""";
+let fetches = 0, refused = 2;
+globalThis.Image = class { set src(u){ setTimeout(() => (u.startsWith('blob:') ? this.onload : this.onerror)(), 0); } };
+globalThis.URL = {createObjectURL: () => 'blob:x', revokeObjectURL(){}};
+globalThis.fetch = async u => {
+  fetches++;
+  if(u.includes('bad')) return {ok: false, status: 415};
+  if(refused-- > 0) throw new TypeError('Failed to fetch');
+  return {ok: true, status: 200, blob: async () => ({})};
+};
+(async () => {
+  const out = {};
+  try{ await armImage('/api/armory/texture?path=helmet'); out.got = true; }catch(e){ out.got = String(e); }
+  out.fetches = fetches; fetches = 0;
+  try{ await armImage('/api/armory/texture?path=bad'); out.bad = 'loaded'; }catch(e){ out.bad = 'refused'; }
+  out.badFetches = fetches;
+  console.log(JSON.stringify(out));
+})();
+"""
+    (tmp / "probe2b.js").write_text(probe, encoding="utf-8")
+    out2b = subprocess.run([node, str(tmp / "probe2b.js")], capture_output=True, text=True, timeout=60)
+    gotr = __import__("json").loads(out2b.stdout or "null") or {}
+    check(f"a sheet lost on the way is fetched again until it arrives ({gotr})",
+          gotr.get("got") is True and gotr.get("fetches") == 3)
+    check("a sheet the server refuses is asked for once, not forever",
+          gotr.get("bad") == "refused" and gotr.get("badFetches") == 1)
+    # the allow before it: a lost one made the sheet's own request a 403
+    probe = ("const ARM={},ABORTED='__aborted__',enc=encodeURIComponent;let posts=0,lost=2;"
+             "const api={post:async()=>{posts++;if(lost-->0)throw new Error('Failed to fetch');return {ok:true};}};"
+             + (ROOT / "web" / "js" / "armtex.js").read_text(encoding="utf-8")
+             + ";armAllow('C:/a.png').then(()=>console.log(JSON.stringify({posts,allowed:ARM.sheetAllowed.has('C:/a.png')})));")
+    (tmp / "probe2c.js").write_text(probe, encoding="utf-8")
+    out2c = subprocess.run([node, str(tmp / "probe2c.js")], capture_output=True, text=True, timeout=60)
+    gota = __import__("json").loads(out2c.stdout or "null") or {}
+    check(f"a lost allow is sent again until the server has it ({gota or out2c.stderr[-200:]})",
+          gota.get("posts") == 3 and gota.get("allowed") is True)
     check(f"several objects turn about their middle ({got.get('t1')}, {got.get('r1')})",
           got.get("t1") == [0, 0, -1] and got.get("r1") == [0, 90, 0])
     if out.stderr.strip():

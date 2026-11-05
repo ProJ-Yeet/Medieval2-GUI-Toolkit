@@ -644,13 +644,35 @@ async function armPickTexture(key, group){
   armPaintAssets();
 }
 
-function armImage(url){
+function armImageOnce(src){
   return new Promise((res, rej) => {
     const img = new Image();
     img.onload = () => res(img);
-    img.onerror = () => rej(new Error(url));
-    img.src = url;
+    img.onerror = () => rej(new Error(src));
+    img.src = src;
   });
+}
+/* A sheet from this toolkit's server. Windows refuses the odd connection to it
+   before the server ever sees the request, and an object then stood bare for
+   good; such a sheet is asked for again until it arrives. Only the server
+   answering with an error ends it, since asking again will not change that. */
+async function armImage(url){
+  try{ return await armImageOnce(url); }catch(e){}
+  for(let wait = 250;; wait = Math.min(wait * 2, 2000)){
+    let blob = null;
+    try{
+      const r = await fetch(url);
+      if(!r.ok) throw new Error(url + ' (' + r.status + ')');
+      blob = await r.blob().catch(() => null);
+    }catch(e){
+      if(!(e instanceof TypeError)) throw e;   // a TypeError is the connection, not the answer
+    }
+    if(blob){
+      const obj = URL.createObjectURL(blob);
+      try{ return await armImageOnce(obj); }finally{ URL.revokeObjectURL(obj); }
+    }
+    await new Promise(ok => setTimeout(ok, wait));
+  }
 }
 
 /* An entry's skin is its main and attachment sheets glued side by side, the

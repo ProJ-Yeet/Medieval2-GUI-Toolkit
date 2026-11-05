@@ -863,7 +863,7 @@ function armStampImage(path){
   if(hit === undefined && path){
     ARM_STAMP_IMG.set(path, 'loading');
     // the server serves only an image it was given, and forgets on a restart
-    api.post('/api/armory/allow_texture', {path}).catch(() => ({}))
+    armAllow(path)
       .then(() => armImage('/api/armory/texture?hd=1&path=' + enc(path)))
       .then(img => { ARM_STAMP_IMG.set(path, img); armFrame(); })
       .catch(() => ARM_STAMP_IMG.set(path, null));

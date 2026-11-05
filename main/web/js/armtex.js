@@ -22,10 +22,15 @@ function armSheetUrl(path){
   return '/api/armory/texture?path=' + enc(path) + '&v=' + (ARM.sheetStamp[path] || 0);
 }
 // a sheet picked or imported in an earlier run is allowed again before it is
-// asked for: the server keeps that list in memory only
+// asked for: the server keeps that list in memory only. A post lost to a
+// refused connection is sent again until it lands, or the sheet's own
+// request is turned away as never given.
 async function armAllow(path){
   if(!path || ARM.sheetAllowed.has(path)) return;
-  try{ await api.post('/api/armory/allow_texture', {path}); }catch(e){}
+  for(let wait = 250;; wait = Math.min(wait * 2, 2000)){
+    try{ await api.post('/api/armory/allow_texture', {path}); break; }
+    catch(e){ if(e === ABORTED) return; await new Promise(ok => setTimeout(ok, wait)); }
+  }
   ARM.sheetAllowed.add(path);
 }
 // the texture an object's own sheet draws with; null until it has loaded
