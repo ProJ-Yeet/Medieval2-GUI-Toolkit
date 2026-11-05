@@ -2,7 +2,9 @@
 
 The UI is a browser page, and browsers deliberately never expose a real
 filesystem path from an `<input type="file">` picker. But the server IS this
-machine, so it can pop the OS's own folder dialog (`SHBrowseForFolderW`) and
+machine, so it can pop the OS's own folder dialog (the Explorer-style
+`IFileOpenDialog` the file pickers show, `SHBrowseForFolderW` only if COM
+will not make one) and
 hand the chosen path back over the API - the same trick a desktop app would
 use, just triggered over HTTP instead of a local button handler.
 
@@ -305,6 +307,76 @@ def browse_for_save(title: str = "Save as", filter_spec: str = "",
     return buf.value or None
 
 
+# The folder picker is the same Explorer window the file dialogs open
+# (IFileOpenDialog with FOS_PICKFOLDERS), not SHBrowseForFolderW's old tree
+# box. It is a COM object, called through its vtable: ctypes has no COM of its
+# own, and comtypes is not in the portable build.
+class _GUID(ctypes.Structure):
+    _fields_ = [("d1", wintypes.DWORD), ("d2", wintypes.WORD), ("d3", wintypes.WORD), ("d4", ctypes.c_ubyte * 8)]
+
+    def __init__(self, text: str):
+        super().__init__()
+        _ole32.CLSIDFromString(text, ctypes.byref(self))
+
+
+_ole32.CLSIDFromString.argtypes = [wintypes.LPCWSTR, ctypes.c_void_p]
+_ole32.CoCreateInstance.argtypes = [ctypes.c_void_p, ctypes.c_void_p, wintypes.DWORD,
+                                    ctypes.c_void_p, ctypes.POINTER(ctypes.c_void_p)]
+_CLSID_FILE_OPEN_DIALOG = "{DC1C5A9C-E88A-4DDE-A5A1-60F82A20AEF7}"
+_IID_IFILE_OPEN_DIALOG = "{D57C7288-D4AD-4768-BE02-9D969532D960}"
+FOS_PICKFOLDERS = 0x20
+FOS_FORCEFILESYSTEM = 0x40
+FOS_PATHMUSTEXIST = 0x800
+SIGDN_FILESYSPATH = 0x80058000
+_CANCELLED = 0x800704C7 - (1 << 32)        # HRESULT_FROM_WIN32(ERROR_CANCELLED)
+
+
+def _vcall(obj, index: int, restype, *args):
+    """Calls method ``index`` of a COM object's vtable."""
+    argtypes = [ctypes.c_void_p] + [type(a) if isinstance(a, ctypes._SimpleCData) else ctypes.c_void_p for a in args]
+    fn = ctypes.WINFUNCTYPE(restype, *argtypes)(ctypes.cast(obj, ctypes.POINTER(ctypes.POINTER(ctypes.c_void_p)))[0][index])
+    return fn(obj, *args)
+
+
+class _NoModernDialog(Exception):
+    pass
+
+
+def _pick_folder_modern(title: str) -> Optional[str]:
+    """The Explorer-style folder picker; raises :class:`_NoModernDialog` if
+    COM will not make one, so the old box can stand in."""
+    dlg = ctypes.c_void_p()
+    hr = _ole32.CoCreateInstance(ctypes.byref(_GUID(_CLSID_FILE_OPEN_DIALOG)), None, 1,
+                                 ctypes.byref(_GUID(_IID_IFILE_OPEN_DIALOG)), ctypes.byref(dlg))
+    if hr != 0 or not dlg:
+        raise _NoModernDialog(hr)
+    try:
+        opts = wintypes.DWORD()
+        _vcall(dlg, 10, ctypes.HRESULT, ctypes.byref(opts))                       # GetOptions
+        _vcall(dlg, 9, ctypes.HRESULT,                                             # SetOptions
+               wintypes.DWORD(opts.value | FOS_PICKFOLDERS | FOS_FORCEFILESYSTEM | FOS_PATHMUSTEXIST))
+        _vcall(dlg, 17, ctypes.HRESULT, wintypes.LPCWSTR(title))                   # SetTitle
+        with _Owner() as owner:
+            hr = _vcall(dlg, 3, ctypes.c_long, wintypes.HWND(owner or 0))          # Show
+        if hr == _CANCELLED:
+            return None
+        if hr != 0:
+            raise _NoModernDialog(hr)
+        item = ctypes.c_void_p()
+        _vcall(dlg, 20, ctypes.HRESULT, ctypes.byref(item))                        # GetResult
+        try:
+            name = ctypes.c_wchar_p()
+            _vcall(item, 5, ctypes.HRESULT, ctypes.c_ulong(SIGDN_FILESYSPATH), ctypes.byref(name))  # GetDisplayName
+            try:
+                return name.value or None
+            finally:
+                _ole32.CoTaskMemFree(ctypes.cast(name, ctypes.c_void_p))
+        finally:
+            _vcall(item, 2, ctypes.c_ulong)                                        # Release
+    finally:
+        _vcall(dlg, 2, ctypes.c_ulong)                                             # Release
+
+
 def browse_for_folder(title: str = "Select a folder") -> Optional[str]:
     """Blocking native folder-picker. Returns the chosen path, or None if the
     user cancelled (or this isn't Windows)."""
@@ -312,6 +384,10 @@ def browse_for_folder(title: str = "Select a folder") -> Optional[str]:
         return None
     ctypes.windll.ole32.CoInitialize(None)
     try:
+        try:
+            return _pick_folder_modern(title)
+        except (_NoModernDialog, OSError):
+            pass
         display_name = ctypes.create_unicode_buffer(260)
         bi = _BROWSEINFO()
         bi.pszDisplayName = ctypes.cast(display_name, wintypes.LPWSTR)
