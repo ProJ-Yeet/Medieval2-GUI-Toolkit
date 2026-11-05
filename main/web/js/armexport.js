@@ -21,7 +21,7 @@ function armExp(){
   const p = armProj();
   return state.armExp = state.armExp || {step: 'check', scope: {mode: 'visible',
     collections: p.collections.filter(c => c.export).map(c => c.id)},
-    settings: {size: {both: 'auto'}, margin: 0.4, obj_sheet: {}, block_sheet: {}, scale: {}, dyes: true, rotate: 'quarter'},
+    settings: {size: {both: 'auto'}, margin: 0.4, obj_sheet: {}, block_sheet: {}, scale: {}, block_scale: {}, dyes: true, rotate: 'quarter'},
     check: null, plan: null, busy: false, err: '', folder: '', stem: '', done: null};
 }
 function armExpBody(){ return {project: armProj(), scope: armExp().scope}; }
@@ -160,6 +160,7 @@ async function armExportPlan(auto){
     const r = await api.post('/api/armory/uv', Object.assign(armExpBody(), {settings: Object.assign({}, e.settings, {auto: !!auto})}));
     if(seq !== e.seq) return;
     e.plan = r; e.err = '';
+    if(e.sel && !armExpSelBlock()){ e.sel = null; e.selSrc = null; }
     if(auto){
       // the way out the server found becomes the settings, to be seen and changed
       e.settings.scale = r.settings.scale; e.settings.block_sheet = r.settings.block_sheet;
@@ -235,6 +236,69 @@ function armExpScale(id, pct){
   if(v >= 1) delete s.scale[id]; else s.scale[id] = v;
   armExpReplan();
 }
+/* An island picked on a sheet: its object's row and its object's other
+   islands light up, its source texture shows beside the sheets with it
+   marked, and a slider scales it alone, on top of its object's scale. */
+function armExpSelBlock(){
+  const e = armExp();
+  if(!e.sel || !e.plan) return null;
+  for(const sh of ['main', 'attach']){
+    const b = e.plan.sheets[sh].blocks.find(x => x.id === e.sel);
+    if(b) return b;
+  }
+  return null;
+}
+function armExpPick(sh, ev){
+  const e = armExp(), S = e.plan && e.plan.sheets[sh], cv = ev.currentTarget;
+  if(!S || !S.size) return;
+  const r = cv.getBoundingClientRect();
+  const x = (ev.clientX - r.left) * S.size / r.width, y = (ev.clientY - r.top) * S.size / r.height;
+  // the smallest box under the click, as boxes of shapes packed by shape nest
+  let hit = null, best = Infinity;
+  for(const b of S.blocks){
+    if(!b.placed) continue;
+    const w = b.rot ? b.h : b.w, h = b.rot ? b.w : b.h;
+    if(x >= b.x && x < b.x + w && y >= b.y && y < b.y + h && w * h < best){ hit = b; best = w * h; }
+  }
+  e.sel = hit ? hit.id : null; e.selSrc = null;
+  armExportPaint();
+  if(hit) armExpFetchSel();
+}
+async function armExpFetchSel(){
+  const e = armExp(), id = e.sel;
+  try{
+    const r = await api.post('/api/armory/uv_source', Object.assign(armExpBody(), {settings: e.settings, block: id}));
+    if(e.sel !== id) return;
+    e.selSrc = r;
+  }catch(err){ if(e.sel === id) e.selSrc = {err: errText(err)}; }
+  const box = document.getElementById('armExpSel');
+  if(box) box.innerHTML = armExpSelHtml();
+}
+function armExpBlockScale(pct){
+  const e = armExp(), s = e.settings;
+  if(!e.sel) return;
+  const v = Math.max(5, Math.min(100, +pct || 100)) / 100;
+  if(v >= 1) delete s.block_scale[e.sel]; else s.block_scale[e.sel] = v;
+  armExpReplan();
+}
+function armExpList(show){ armExp().listHidden = !show; armExportPaint(); }
+function armExpSelHtml(){
+  const e = armExp(), b = armExpSelBlock();
+  if(!b) return `<b>${tt('armory.exp_sel_title')}</b><div class="count">${tt('armory.exp_sel_none')}</div>`;
+  const names = new Map(e.plan.objects.map(o => [o.id, o.name]));
+  const own = Math.round((e.settings.block_scale[b.id] || 1) * 100), src = e.selSrc;
+  return `<b>${tt('armory.exp_sel_title')}</b>
+    <div class="count">${esc(tt('armory.exp_sel_of', {names: b.objs.map(id => names.get(id) || id).join(', ')}))}</div>
+    ${!src ? `<div class="count">${tt('armory.reading')}</div>`
+      : src.err ? `<div class="armexperr">${esc(src.err)}</div>`
+      : `<div class="count">${esc(tt('armory.exp_sel_from', {name: src.name || '-'}))}</div><img src="${src.picture}" alt="">`}
+    <label title="${ttA('armory.exp_sel_scale_title')}">${tt('armory.exp_sel_scale')}</label>
+    <div class="armexprow"><input type="range" min="5" max="100" step="1" value="${own}"
+        oninput="this.nextElementSibling.textContent = this.value + '%'" onchange="armExpBlockScale(this.value)">
+      <span class="num">${own}%</span>
+      ${own < 100 ? `<button class="mini" onclick="armExpBlockScale(100)">${tt('armory.exp_sel_reset')}</button>` : ''}</div>
+    ${Math.round(b.scale * 100) !== own ? `<div class="count">${tt('armory.exp_sel_overall', {pct: Math.round(b.scale * 100)})}</div>` : ''}`;
+}
 function armExpMoveBlock(sh, i, to){
   const b = armExp().plan.sheets[sh].blocks[i];
   if(b){ armExp().settings.block_sheet[b.id] = to; armExpReplan(); }
@@ -256,7 +320,8 @@ function armExpUvHtml(){
   const sizeSel = `<label title="${esc(tt('armory.exp_sheets_title'))}">${tt('armory.exp_sheets')}<select onchange="armExpSet('size', this.value)">
       <option value="auto"${both === 'auto' ? ' selected' : ''}>${tt('armory.exp_size_auto')}</option>
       ${ARM_SIZES.map(z => `<option value="${z}"${both === z ? ' selected' : ''}>${z}</option>`).join('')}</select></label>`;
-  const rows = P.objects.map(o => `<tr>
+  const selB = armExpSelBlock(), selObjs = new Set(selB ? selB.objs : []);
+  const rows = P.objects.map(o => `<tr${selObjs.has(o.id) ? ' class="armexpsel"' : ''}>
       <td><span class="armswatch" style="background:${armExpColour(o.id)}"></span> ${esc(o.name)}</td>
       <td class="num">${o.islands}</td>
       <td class="num">${Math.round(Math.sqrt(o.area)).toLocaleString()}²</td>
@@ -273,14 +338,15 @@ function armExpUvHtml(){
     if(!S.size) return `<div class="armexpsheet"><b>${armExpLabel(sh)}</b><div class="count">${tt('armory.exp_sheet_unused')}</div></div>`;
     return `<div class="armexpsheet"><b>${armExpLabel(sh)} · ${S.size}²</b>
       <span class="count">${tt('armory.exp_sheet_facts', {fill: Math.round(S.fill * 100), needs: S.needs, margin: S.margin_px})}</span>
-      <canvas id="armExpCv_${sh}" width="512" height="512"></canvas></div>`;
+      <canvas id="armExpCv_${sh}" width="512" height="512" onclick="armExpPick('${sh}', event)" title="${ttA('armory.exp_pick_title')}"></canvas></div>`;
   };
   return `<div class="armexprow">
       <label class="armcheck" title="${ttA('armory.exp_live_title')}"><input type="checkbox"${e.live !== false ? ' checked' : ''}
         onchange="armExpLive(this.checked)"> ${tt('armory.exp_live')}</label>
       <button id="armExpRefresh" class="mini${e.stale ? ' primary' : ''}" onclick="armExpRefresh()" title="${ttA('armory.exp_refresh_title')}">${tt('armory.exp_refresh')}</button>
       <label class="armcheck" title="${ttA('armory.exp_textures_title')}"><input type="checkbox"${e.art ? ' checked' : ''}
-        onchange="armExpArt(this.checked)"> ${tt('armory.exp_textures')}</label></div>
+        onchange="armExpArt(this.checked)"> ${tt('armory.exp_textures')}</label>
+      <button class="mini" onclick="armExpList(${e.listHidden ? 'true' : 'false'})" title="${ttA('armory.exp_hide_list_title')}">${tt(e.listHidden ? 'armory.exp_show_list' : 'armory.exp_hide_list')}</button></div>
     <div class="armexprow">${sizeSel}
       <label>${tt('armory.exp_margin')}<input type="number" class="armnum" min="0" max="5" step="0.1" value="${s.margin}"
         onchange="armExpSet('margin', this.value)" title="${esc(tt('armory.exp_margin_title'))}">%</label>
@@ -292,11 +358,12 @@ function armExpUvHtml(){
     ${P.fits ? '' : armExpOverflowHtml()}
     ${P.auto ? `<div class="armissue warning">${P.auto.sheet ? tt('armory.exp_auto_done', {sheet: armExpLabel(P.auto.sheet), pct: Math.round(P.auto.scale * 100)})
                                                        : tt('armory.exp_auto_moved', {n: P.auto.moved})}</div>` : ''}
-    <div class="armexpuv">
-      <div class="armexplist"><table class="armexptable"><thead><tr><th>${tt('armory.exp_col_object')}</th><th>${tt('armory.exp_col_islands')}</th>
+    <div class="armexpuv${e.listHidden ? ' nolist' : ''}">
+      <div class="armexplist"${e.listHidden ? ' hidden' : ''}><table class="armexptable"><thead><tr><th>${tt('armory.exp_col_object')}</th><th>${tt('armory.exp_col_islands')}</th>
         <th>${tt('armory.exp_col_area')}</th><th>${tt('armory.exp_col_needs')}</th><th>${tt('armory.exp_col_from')}</th>
         <th>${tt('armory.exp_col_sheet')}</th><th>${tt('armory.exp_col_scale')}</th></tr></thead><tbody>${rows}</tbody></table></div>
       <div class="armexpsheets">${sheet('main')}${sheet('attach')}</div>
+      <div id="armExpSel" class="armexpselbox">${armExpSelHtml()}</div>
     </div>`;
 }
 
@@ -337,17 +404,12 @@ function armExpDrawSheets(){
     const ctx = cv.getContext('2d'), k = cv.width / S.size;
     ctx.fillStyle = '#1d2128'; ctx.fillRect(0, 0, cv.width, cv.height);
     const art = e.art && e.artPeek && e.artPeek.sheets && e.artPeek.sheets[sh];
-    if(art && art.art){
+    // 99l: else the server draws each block's shape, the texels it takes
+    const pic = art && art.art ? art.art : S.picture;
+    if(pic){
       const img = new Image();
-      img.onload = () => { if(cv.isConnected) ctx.drawImage(img, 0, 0, cv.width, cv.height); };
-      img.src = art.art;
-      continue;
-    }
-    // 99l: the server draws each block's shape, the texels it takes
-    if(S.picture){
-      const img = new Image();
-      img.onload = () => { if(cv.isConnected) ctx.drawImage(img, 0, 0, cv.width, cv.height); };
-      img.src = S.picture;
+      img.onload = () => { if(cv.isConnected){ ctx.drawImage(img, 0, 0, cv.width, cv.height); armExpDrawSel(ctx, S, k); } };
+      img.src = pic;
       continue;
     }
     for(const b of S.blocks){
@@ -357,7 +419,26 @@ function armExpDrawSheets(){
       ctx.globalAlpha = 0.75; ctx.fillRect(b.x * k, b.y * k, w, h);
       ctx.globalAlpha = 1; ctx.strokeStyle = '#000'; ctx.strokeRect(b.x * k + 0.5, b.y * k + 0.5, w - 1, h - 1);
     }
+    armExpDrawSel(ctx, S, k);
   }
+}
+// the picked island boxed bright, its object's other islands fainter
+function armExpDrawSel(ctx, S, k){
+  const sel = armExpSelBlock();
+  if(!sel) return;
+  const mine = new Set(sel.objs);
+  for(const b of S.blocks){
+    if(!b.placed) continue;
+    const on = b.id === sel.id;
+    if(!on && !b.objs.some(o => mine.has(o))) continue;
+    const w = (b.rot ? b.h : b.w) * k, h = (b.rot ? b.w : b.h) * k;
+    ctx.fillStyle = on ? 'rgba(255,214,64,0.35)' : 'rgba(255,214,64,0.14)';
+    ctx.fillRect(b.x * k, b.y * k, w, h);
+    ctx.lineWidth = on ? 2 : 1;
+    ctx.strokeStyle = on ? '#ffd640' : 'rgba(255,214,64,0.6)';
+    ctx.strokeRect(b.x * k + 1, b.y * k + 1, w - 2, h - 2);
+  }
+  ctx.lineWidth = 1;
 }
 
 /* --- 3. bake --------------------------------------------------------------- */

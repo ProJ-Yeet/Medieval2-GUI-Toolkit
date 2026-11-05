@@ -12641,5 +12641,18 @@
  "armory.nav_title": "Einfach: Ziehen mit links dreht, Ziehen mit rechts verschiebt, das Mausrad zoomt. Blender: mittlere Maustaste, wie in Blender.",
  "armory.view_hint_simple": "Ziehen mit links dreht die Ansicht, Ziehen mit rechts (oder Shift+Ziehen) verschiebt sie, das Mausrad zoomt, ein Doppelklick passt den Bildausschnitt an. Klicken wählt aus, Shift fügt zur Auswahl hinzu, Ctrl+Ziehen zieht einen Auswahlrahmen auf. G, R, S mit X, Y oder Z und einer Zahl; Enter übernimmt, Esc setzt zurück. H blendet aus, Alt+H blendet ein.",
  "campaint.overwrite_settlement_and_port_pixels": "Siedlungs- und Hafenpixel überschreiben",
- "eng.edusort.the_planned_edu_contains_a_character": "die geplante EDU enthält ein Zeichen {object}, das sich mit {ENCODING} nicht schreiben lässt"
+ "eng.edusort.the_planned_edu_contains_a_character": "die geplante EDU enthält ein Zeichen {object}, das sich mit {ENCODING} nicht schreiben lässt",
+ "eng.armbake.island_gone": "Diese UV-Insel ist nicht mehr auf dem Blatt; erneut packen",
+ "armory.exp_hide_list": "Objekte ausblenden",
+ "armory.exp_show_list": "Objekte anzeigen",
+ "armory.exp_hide_list_title": "Blendet die Objektliste aus, damit die beiden Blätter größer und nebeneinander angezeigt werden",
+ "armory.exp_pick_title": "Eine UV-Insel anklicken, um sie auszuwählen",
+ "armory.exp_sel_title": "Ausgewählte UV-Insel",
+ "armory.exp_sel_none": "Eine UV-Insel auf einem Blatt anklicken: Ihre Quelltextur wird hier angezeigt, und sie lässt sich einzeln skalieren.",
+ "armory.exp_sel_of": "Von {names}",
+ "armory.exp_sel_from": "Aus {name}",
+ "armory.exp_sel_scale": "UV-Insel skalieren",
+ "armory.exp_sel_scale_title": "Skaliert nur diese UV-Insel zusätzlich zur Skalierung ihres Objekts. Unter 100% wird ihr Bild kleiner neu berechnet, was die Qualität verringert",
+ "armory.exp_sel_reset": "Zurücksetzen",
+ "armory.exp_sel_overall": "{pct}% mit der Skalierung ihres Objekts"
 }

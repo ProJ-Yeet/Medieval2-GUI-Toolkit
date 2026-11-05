@@ -12763,5 +12763,18 @@
  "armory.disk_intro": "Un fichier de modèle (.obj, .glb, .gltf, .dae, .mesh), ou un dossier : tous les modèles qu'il contient, y compris dans les sous-dossiers, sont proposés au choix.",
  "armory.disk_none": "Aucun fichier .obj, .glb, .gltf, .dae ou .mesh dans ce dossier ni ses sous-dossiers.",
  "armory.view_hint_simple": "Glisser avec le bouton gauche fait tourner la vue, avec le bouton droit (ou Maj+glisser) la déplace, la molette zoome, un double-clic ajuste le cadrage. Un clic sélectionne, Maj ajoute à la sélection, Ctrl+glisser trace un rectangle de sélection. G, R, S avec X, Y ou Z et un nombre ; Entrée valide, Échap annule. H masque, Alt+H affiche.",
- "eng.edusort.the_planned_edu_contains_a_character": "l'EDU prévu contient un caractère {object} impossible à écrire avec {ENCODING}"
+ "eng.edusort.the_planned_edu_contains_a_character": "l'EDU prévu contient un caractère {object} impossible à écrire avec {ENCODING}",
+ "eng.armbake.island_gone": "Cet îlot UV n'est plus sur la feuille ; relancez le compactage",
+ "armory.exp_hide_list": "Masquer les objets",
+ "armory.exp_show_list": "Afficher les objets",
+ "armory.exp_hide_list_title": "Masque la liste des objets pour afficher les deux feuilles côte à côte et en plus grand",
+ "armory.exp_pick_title": "Cliquez sur un îlot UV pour le sélectionner",
+ "armory.exp_sel_title": "Îlot UV sélectionné",
+ "armory.exp_sel_none": "Cliquez sur un îlot UV d'une feuille : sa texture d'origine s'affiche ici et vous pouvez le redimensionner séparément.",
+ "armory.exp_sel_of": "De {names}",
+ "armory.exp_sel_from": "Depuis {name}",
+ "armory.exp_sel_scale": "Échelle de l'îlot UV",
+ "armory.exp_sel_scale_title": "Redimensionne uniquement cet îlot UV, en plus de l'échelle de son objet. En dessous de 100%, son image est rééchantillonnée à une taille plus petite, ce qui réduit la qualité",
+ "armory.exp_sel_reset": "réinitialiser",
+ "armory.exp_sel_overall": "{pct}% avec l'échelle de son objet"
 }

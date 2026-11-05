@@ -13461,5 +13461,18 @@
  "packs.battle_model_entries_that_no_unit": "элементы боевых моделей, которые не использует ни один отряд или верховое животное",
  "packs.its_text_entry_from_export_units_2": "его текстовый элемент из export_units.txt",
  "packs.their_text_entries_from_export_units": "их текстовые элементы из export_units.txt",
- "eng.stratfamily.years": "Возраст {father}: {fa}, возраст {kid}: {ka}, разница: {x} лет; живой отец должен быть старше как минимум на {years} лет"
+ "eng.stratfamily.years": "Возраст {father}: {fa}, возраст {kid}: {ka}, разница: {x} лет; живой отец должен быть старше как минимум на {years} лет",
+ "eng.armbake.island_gone": "Этого UV-острова больше нет на листе; упакуйте заново",
+ "armory.exp_hide_list": "Скрыть объекты",
+ "armory.exp_show_list": "Показать объекты",
+ "armory.exp_hide_list_title": "Скрывает список объектов, чтобы оба листа отображались крупнее и рядом друг с другом",
+ "armory.exp_pick_title": "Нажмите на UV-остров, чтобы выбрать его",
+ "armory.exp_sel_title": "Выбранный UV-остров",
+ "armory.exp_sel_none": "Нажмите на UV-остров на листе: здесь появится его исходная текстура, а сам остров можно масштабировать отдельно.",
+ "armory.exp_sel_of": "Объекты: {names}",
+ "armory.exp_sel_from": "Источник: {name}",
+ "armory.exp_sel_scale": "Масштаб UV-острова",
+ "armory.exp_sel_scale_title": "Масштабирует только этот UV-остров с учётом масштаба его объекта. При значении ниже 100% его изображение пересчитывается в меньший размер, что снижает качество",
+ "armory.exp_sel_reset": "сбросить",
+ "armory.exp_sel_overall": "{pct}% с учётом масштаба его объекта"
 }

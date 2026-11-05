@@ -3728,7 +3728,13 @@ body.look-editing :is(button,label,legend,h1,h2,h3,.trsechead,.mftab):hover{outl
   .armexptable td.num{text-align:right;font-variant-numeric:tabular-nums}
   .armexpsheets{display:flex;flex-direction:column;gap:8px}
   .armexpsheet{display:flex;flex-direction:column;gap:3px}
-  .armexpsheet canvas{width:480px;height:480px;max-width:100%;border:1px solid var(--edge);border-radius:4px;image-rendering:pixelated}
+  .armexpsheet canvas{width:480px;height:480px;max-width:100%;border:1px solid var(--edge);border-radius:4px;image-rendering:pixelated;cursor:pointer}
+  .armexpuv.nolist .armexpsheets{flex-direction:row;flex-wrap:wrap}
+  .armexpuv.nolist .armexpsheet canvas{width:min(620px,36vw);height:auto;aspect-ratio:1}
+  .armexptable tr.armexpsel td{background:rgba(255,214,64,.12)}
+  .armexpselbox{width:260px;display:flex;flex-direction:column;gap:5px;font-size:12.5px}
+  .armexpselbox img{width:100%;border:1px solid var(--edge);border-radius:4px}
+  .armexpselbox input[type=range]{flex:1}
   .armnum{width:60px}
   .armexpchoices{display:flex;flex-direction:column;gap:4px}
   .armexpchoice{align-items:baseline}

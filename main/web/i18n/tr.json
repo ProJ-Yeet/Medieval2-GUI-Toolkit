@@ -12158,5 +12158,18 @@
  "guided.attr_bp": "gövde delici: atılan cisim isabet ettiği askeri delip geçerek yoluna devam eder",
  "armory.nav_title": "Basit: sol tuşla sürükleme döndürür, sağ tuşla sürükleme kaydırır, tekerlek yakınlaştırır. Blender: Blender'daki gibi orta tuş kullanılır.",
  "armory.view_hint_simple": "Sol tuşla sürükleme görünümü döndürür, sağ tuşla sürükleme (veya Shift ile sürükleme) kaydırır, tekerlek yakınlaştırır, çift tıklama kadraja sığdırır. Tıklama seçer, Shift seçime ekler, Ctrl ile sürükleme seçim kutusu çizer. G, R, S ile X, Y veya Z ve bir sayı kullanın; Enter onaylar, Esc geri alır. H gizler, Alt+H gösterir.",
- "campaint.overwrite_settlement_and_port_pixels": "Yerleşim yeri ve liman piksellerinin üzerine yaz"
+ "campaint.overwrite_settlement_and_port_pixels": "Yerleşim yeri ve liman piksellerinin üzerine yaz",
+ "eng.armbake.island_gone": "Bu UV adası artık paftada değil; yeniden paketleyin",
+ "armory.exp_hide_list": "Nesneleri gizle",
+ "armory.exp_show_list": "Nesneleri göster",
+ "armory.exp_hide_list_title": "İki paftanın yan yana ve daha büyük görünmesi için nesne listesini gizler",
+ "armory.exp_pick_title": "Seçmek için bir UV adasına tıklayın",
+ "armory.exp_sel_title": "Seçili UV adası",
+ "armory.exp_sel_none": "Paftadaki bir UV adasına tıklayın: kaynak doku burada görünür ve ada ayrı olarak ölçeklenebilir.",
+ "armory.exp_sel_of": "Nesneler: {names}",
+ "armory.exp_sel_from": "Kaynak: {name}",
+ "armory.exp_sel_scale": "UV adası ölçeği",
+ "armory.exp_sel_scale_title": "Nesnesinin ölçeğine ek olarak yalnızca bu UV adasını ölçekler. %100'ün altında görüntüsü daha küçük boyuta yeniden örneklenir ve kalite düşer",
+ "armory.exp_sel_reset": "Sıfırla",
+ "armory.exp_sel_overall": "Nesnesinin ölçeğiyle birlikte %{pct}"
 }

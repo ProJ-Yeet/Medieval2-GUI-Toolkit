@@ -3403,7 +3403,7 @@ class Handler(BaseHTTPRequestHandler):
                 except (ValueError, OSError) as e:
                     return self._err(400, str(e))
             if u.path in ("/api/armory/check", "/api/armory/uv", "/api/armory/bake",
-                          "/api/armory/bake_preview"):
+                          "/api/armory/bake_preview", "/api/armory/uv_source"):
                 # 95i: the export's check, UV menu and bake, each on the
                 # project as the page holds it
                 proj, scope = body.get("project") or {}, body.get("scope") or {}
@@ -3414,6 +3414,10 @@ class Handler(BaseHTTPRequestHandler):
                     if u.path == "/api/armory/uv":
                         return self._json(armbake.plan(proj, self.registry.get, body.get("settings") or {},
                                                        scope=scope))
+                    if u.path == "/api/armory/uv_source":
+                        # the texture an island picked on the sheet is from, it marked
+                        return self._json(armbake.source_view(proj, self.registry.get, body.get("settings") or {},
+                                                              str(body.get("block") or ""), scope=scope))
                     if u.path == "/api/armory/bake_preview":
                         # the images the bake would write, nothing written
                         return self._json(armbake.preview(proj, self.registry.get, body.get("settings") or {},

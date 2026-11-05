@@ -13365,5 +13365,18 @@
  "armory.nav_title": "Prosta: przeciąganie lewym przyciskiem obraca, prawym przesuwa, kółko przybliża. Blender: środkowy przycisk, jak w Blenderze.",
  "armory.view_hint_simple": "Przeciąganie lewym przyciskiem obraca widok, prawym (lub z Shift) przesuwa, kółko przybliża, dwuklik dopasowuje kadr. Kliknięcie zaznacza, Shift dodaje do zaznaczenia, Ctrl+przeciąganie rysuje prostokąt. G, R, S z X, Y lub Z i liczbą; Enter zatwierdza, Esc przywraca. H ukrywa, Alt+H pokazuje.",
  "campaint.overwrite_settlement_and_port_pixels": "Nadpisuj piksele osad i portów",
- "eng.edusort.the_planned_edu_contains_a_character": "planowane EDU zawiera znak {object}, którego nie można zapisać w kodowaniu {ENCODING}"
+ "eng.edusort.the_planned_edu_contains_a_character": "planowane EDU zawiera znak {object}, którego nie można zapisać w kodowaniu {ENCODING}",
+ "eng.armbake.island_gone": "Tej wyspy UV nie ma już na arkuszu; spakuj ponownie",
+ "armory.exp_hide_list": "Ukryj obiekty",
+ "armory.exp_show_list": "Pokaż obiekty",
+ "armory.exp_hide_list_title": "Ukrywa listę obiektów, aby oba arkusze były większe i widoczne obok siebie",
+ "armory.exp_pick_title": "Kliknij wyspę UV, aby ją wybrać",
+ "armory.exp_sel_title": "Wybrana wyspa UV",
+ "armory.exp_sel_none": "Kliknij wyspę UV na arkuszu: tutaj pojawi się jej tekstura źródłowa, a wyspę można skalować osobno.",
+ "armory.exp_sel_of": "Obiekty: {names}",
+ "armory.exp_sel_from": "Źródło: {name}",
+ "armory.exp_sel_scale": "Skala wyspy UV",
+ "armory.exp_sel_scale_title": "Skaluje tylko tę wyspę UV, dodatkowo do skali jej obiektu. Poniżej 100% jej obraz jest ponownie próbkowany do mniejszego rozmiaru, co obniża jakość",
+ "armory.exp_sel_reset": "Resetuj",
+ "armory.exp_sel_overall": "{pct}% z uwzględnieniem skali jej obiektu"
 }

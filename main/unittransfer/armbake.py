@@ -1255,6 +1255,7 @@ def plan(project: dict, mod_of, settings: Optional[dict] = None, image_of: Image
     free_turn = settings.get("rotate") == "free"
     auto_note = None
     scales = dict(settings.get("scale") or {})
+    block_scale = dict(settings.get("block_scale") or {})
     sizes_in = settings.get("size") or {}
 
     # both sheets are always one size (the game's skins are pairs of a size)
@@ -1265,6 +1266,11 @@ def plan(project: dict, mod_of, settings: Optional[dict] = None, image_of: Image
 
     def run(scales, block_sheet, quick=False, ways=None):
         blocks = make_blocks(islands, dyes, scales)
+        # an island scaled on its own from the sheet, on top of its object's scale
+        for b in blocks:
+            own = block_scale.get(b.id)
+            if own:
+                b.scale *= max(0.05, min(1.0, float(own)))
         st = dict(settings, block_sheet=block_sheet)
         rooms = {"main": 0.0, "attach": 0.0}
         order = sorted(blocks, key=lambda b: -(b.src_w * b.src_h))
@@ -1374,6 +1380,7 @@ def plan(project: dict, mod_of, settings: Optional[dict] = None, image_of: Image
             "recommended_margin": round(SCALED_MARGIN_PX * 100.0 / size, 2) if size else 0,
             "blocks": [{"id": b.id, "objs": b.objs, "x": b.x, "y": b.y, "w": b.w, "h": b.h,
                         "rot": b.rot, "angle": b.angle, "placed": b.placed, "islands": len(b.islands),
+                        "scale": round(b.scale, 4), "own": float(block_scale.get(b.id) or 1.0),
                         "share": (b.w * b.h) / (size * size) if size else 0}
                        for b in p["blocks"]],
             "left": [b.id for b in p["left"]],
@@ -1725,6 +1732,50 @@ def preview(project: dict, mod_of, settings: Optional[dict] = None, image_of: Im
                            "art": _data_url(art, side, True),
                            "normal": _data_url(nm, side, False)}
                        for s, (art, nm) in sheets.items()}}
+
+
+def source_view(project: dict, mod_of, settings: Optional[dict], block_id: str,
+                image_of: ImageOf = default_image_of, scope: Optional[dict] = None, side: int = 512) -> dict:
+    """The texture an island on the sheet is from, for the UV step's side
+    panel: the whole source image at most ``side`` wide, dimmed, with the
+    island's own texels at full light and its rectangle outlined. Nothing
+    is packed, so it is quick on a click."""
+    settings = dict(settings or {})
+    objs = in_scope(project, scope)
+    sheets = _Sheets(armory.project_assets(project), mod_of, image_of)
+    _meshes, islands = gather(project, objs, mod_of, sheets)
+    blocks = make_blocks(islands, settings.get("dyes", True) is not False, dict(settings.get("scale") or {}))
+    b = next((x for x in blocks if x.id == block_id), None)
+    if b is None:
+        raise BakeError(_i18n.msg("eng.armbake.island_gone", "that island is no longer on the sheet; pack again"))
+    img = b.src[1]
+    if img is None:
+        H = W = 64
+        rgb = np.full((H, W, 3), 60, np.float32)
+    else:
+        H, W = img.shape[0], img.shape[1]
+        rgb = img[..., :3].astype(np.float32)
+    lit = np.zeros((H, W), bool)
+    for isl in b.islands:
+        r = isl.rect
+        x0, y0, x1, y1 = max(0, r[0]), max(0, r[1]), min(W, r[2]), min(H, r[3])
+        if x0 < x1 and y0 < y1:
+            lit[y0:y1, x0:x1] |= isl.mask()[y0 - r[1]:y1 - r[1], x0 - r[0]:x1 - r[0]]
+    out = rgb * 0.3
+    out[lit] = rgb[lit]
+    k = min(1.0, side / float(max(W, H)))
+    im = Image.fromarray(out.clip(0, 255).astype(np.uint8), "RGB")
+    if k < 1.0:
+        im = im.resize((max(1, int(W * k)), max(1, int(H * k))), Image.LANCZOS)
+    from PIL import ImageDraw
+    x0, y0, x1, y1 = (int(round(v * k)) for v in b.rect)
+    ImageDraw.Draw(im).rectangle([x0 - 2, y0 - 2, x1 + 1, y1 + 1], outline=(255, 214, 64), width=2)
+    buf = io.BytesIO()
+    im.save(buf, "PNG")
+    import base64
+    names = [Path(p).name for p in str(b.src[0]).split("|") if p and p not in ("0", "1", "glued")]
+    return {"picture": "data:image/png;base64," + base64.b64encode(buf.getvalue()).decode("ascii"),
+            "name": " + ".join(names), "size": [W, H], "rect": list(b.rect)}
 
 
 def _new_uv(b: Block, sx: float, sy: float, size: int, sheet: str) -> Tuple[float, float]:

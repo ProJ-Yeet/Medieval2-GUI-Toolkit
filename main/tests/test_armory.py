@@ -730,6 +730,30 @@ if horse is not None:
     check("the dialog's picture of each sheet comes with the plan",
           all(S["picture"].startswith("data:image/png;base64,") for S in P["sheets"].values() if S["size"]))
 
+    # one island scaled on its own from the sheet: only it shrinks, the bake
+    # takes it, and its source texture comes back with it marked
+    big = max(P["sheets"]["main"]["blocks"], key=lambda b: b["w"] * b["h"])
+    st_b = {}
+    PB = armbake.plan(hproj, None, {"block_scale": {big["id"]: 0.5}}, image_of=im_of, _state=st_b)
+    after = {b["id"]: b for S in PB["sheets"].values() for b in S["blocks"]}
+    check(f"an island scaled from the sheet is half its size ({big['w']}x{big['h']} to "
+          f"{after[big['id']]['w']}x{after[big['id']]['h']}), scale {after[big['id']]['scale']}",
+          after[big["id"]]["scale"] == 0.5 and after[big["id"]]["own"] == 0.5
+          and abs(max(after[big["id"]]["w"], after[big["id"]]["h"]) - max(big["w"], big["h"]) / 2) <= 2)
+    check("and no other island's scale moves",
+          all(b["scale"] == 1.0 for i, b in after.items() if i != big["id"]))
+    check("the bake reads the same scale", any(b.id == big["id"] and b.scale == 0.5 for b in st_b["blocks"]))
+    src = armbake.source_view(hproj, None, {}, big["id"], image_of=im_of, side=128)
+    check(f"an island's source texture comes back with it marked ({src.get('name')}, {src.get('size')})",
+          src["picture"].startswith("data:image/png;base64,") and src["name"] == "horse_sheet.png"
+          and src["size"] == [W, W])
+    try:
+        armbake.source_view(hproj, None, {}, "no such island", image_of=im_of)
+        gone = False
+    except armbake.BakeError:
+        gone = True
+    check("an island that is no longer there is refused", gone)
+
     # a margin of 1.5%: since 99p fills holes, the horse fits 512 at 1%
     small = armbake.plan(hproj, None, {"size": {"main": 512, "attach": 512}, "margin": 1.5}, image_of=im_of)
     check(f"a sheet too small says what did not fit ({len(small['sheets']['main']['left'])} on the main sheet)",

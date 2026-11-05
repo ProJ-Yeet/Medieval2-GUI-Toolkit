@@ -13145,5 +13145,18 @@
  "armory.nav_title": "Simple: arrastrar con el botón izquierdo gira, con el derecho desplaza y la rueda acerca o aleja. Blender: el botón central, como en Blender.",
  "armory.view_hint_simple": "Arrastra con el botón izquierdo para girar la vista, con el derecho (o Mayús+arrastrar) para desplazarla; la rueda acerca o aleja y el doble clic encuadra. Clic selecciona, Mayús añade a la selección y Ctrl+arrastrar dibuja un recuadro. G, R, S con X, Y o Z y un número; Intro confirma y Esc revierte. H oculta, Alt+H muestra.",
  "campaint.overwrite_settlement_and_port_pixels": "Sobrescribir los píxeles de asentamientos y puertos",
- "eng.edusort.the_planned_edu_contains_a_character": "el EDU previsto contiene un carácter {object} que no se puede escribir con {ENCODING}"
+ "eng.edusort.the_planned_edu_contains_a_character": "el EDU previsto contiene un carácter {object} que no se puede escribir con {ENCODING}",
+ "eng.armbake.island_gone": "Esa isla UV ya no está en la hoja; vuelve a empaquetar",
+ "armory.exp_hide_list": "Ocultar objetos",
+ "armory.exp_show_list": "Mostrar objetos",
+ "armory.exp_hide_list_title": "Oculta la lista de objetos para mostrar las dos hojas más grandes y una junto a otra",
+ "armory.exp_pick_title": "Haz clic en una isla UV para seleccionarla",
+ "armory.exp_sel_title": "Isla UV seleccionada",
+ "armory.exp_sel_none": "Haz clic en una isla UV de una hoja: aquí se muestra su textura de origen y puedes escalarla por separado.",
+ "armory.exp_sel_of": "De {names}",
+ "armory.exp_sel_from": "Desde {name}",
+ "armory.exp_sel_scale": "Escala de la isla UV",
+ "armory.exp_sel_scale_title": "Escala solo esta isla UV, además de la escala de su objeto. Por debajo del 100%, su imagen se remuestrea a un tamaño menor y pierde calidad",
+ "armory.exp_sel_reset": "Restablecer",
+ "armory.exp_sel_overall": "{pct}% con la escala de su objeto"
 }

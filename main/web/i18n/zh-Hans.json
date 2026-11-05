@@ -11949,5 +11949,18 @@
  "armory.nav_title": "简易：左键拖动旋转，右键拖动平移，滚轮缩放。Blender：与 Blender 一样使用鼠标中键。",
  "armory.view_hint_simple": "左键拖动旋转视角，右键拖动（或 Shift+拖动）平移，滚轮缩放，双击适配视图。点击选择，Shift 追加选择，Ctrl+拖动框选。G、R、S 可配合 X、Y、Z 和数字使用；Enter 确认，Esc 还原。H 隐藏，Alt+H 显示。",
  "campaint.overwrite_settlement_and_port_pixels": "覆盖定居点和港口像素",
- "eng.edusort.the_planned_edu_contains_a_character": "拟写入的 EDU 包含无法使用 {ENCODING} 编码写入的字符 {object}"
+ "eng.edusort.the_planned_edu_contains_a_character": "拟写入的 EDU 包含无法使用 {ENCODING} 编码写入的字符 {object}",
+ "eng.armbake.island_gone": "该 UV 岛已不在图集上，请重新打包",
+ "armory.exp_hide_list": "隐藏对象",
+ "armory.exp_show_list": "显示对象",
+ "armory.exp_hide_list_title": "隐藏对象列表，让两张图集并排显示，并获得更大的显示空间",
+ "armory.exp_pick_title": "点击 UV 岛以选中",
+ "armory.exp_sel_title": "选中的 UV 岛",
+ "armory.exp_sel_none": "点击图集上的 UV 岛：此处会显示其来源贴图，且可单独缩放该 UV 岛。",
+ "armory.exp_sel_of": "所属对象：{names}",
+ "armory.exp_sel_from": "来源：{name}",
+ "armory.exp_sel_scale": "UV 岛缩放",
+ "armory.exp_sel_scale_title": "在对象缩放的基础上单独缩放此 UV 岛。低于 100% 时，其图像会重新采样为更小尺寸，画质会降低",
+ "armory.exp_sel_reset": "重置",
+ "armory.exp_sel_overall": "计入对象缩放后为 {pct}%"
 }
