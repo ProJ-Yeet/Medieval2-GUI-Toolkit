@@ -13158,5 +13158,10 @@
  "armory.exp_sel_scale": "Escala de la isla UV",
  "armory.exp_sel_scale_title": "Escala solo esta isla UV, además de la escala de su objeto. Por debajo del 100%, su imagen se remuestrea a un tamaño menor y pierde calidad",
  "armory.exp_sel_reset": "Restablecer",
- "armory.exp_sel_overall": "{pct}% con la escala de su objeto"
+ "armory.exp_sel_overall": "{pct}% con la escala de su objeto",
+ "armory.exp_corner_hint": "Arrastra una esquina de la isla seleccionada para cambiar su escala.",
+ "armory.exp_sel_left": "Esta isla no cupo en su hoja de textura. Redúcela o cambia la escala o la posición de otras islas.",
+ "armory.exp_sheet_left": "No cupieron: {n}",
+ "armory.exp_left_mark_title": "Algunas de sus islas no cupieron en ninguna hoja de textura",
+ "armory.exp_pick_row_title": "Haz clic para seleccionar la isla más grande de este objeto"
 }

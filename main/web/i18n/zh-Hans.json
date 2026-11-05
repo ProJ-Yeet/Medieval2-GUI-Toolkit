@@ -11962,5 +11962,10 @@
  "armory.exp_sel_scale": "UV 岛缩放",
  "armory.exp_sel_scale_title": "在对象缩放的基础上单独缩放此 UV 岛。低于 100% 时，其图像会重新采样为更小尺寸，画质会降低",
  "armory.exp_sel_reset": "重置",
- "armory.exp_sel_overall": "计入对象缩放后为 {pct}%"
+ "armory.exp_sel_overall": "计入对象缩放后为 {pct}%",
+ "armory.exp_corner_hint": "拖动所选 UV 岛的角点可缩放该岛。",
+ "armory.exp_sel_left": "此 UV 岛无法放入其纹理页。请缩小此岛，或缩放、移动其他岛。",
+ "armory.exp_sheet_left": "未能放入：{n}",
+ "armory.exp_left_mark_title": "此对象的部分 UV 岛无法放入任何纹理页",
+ "armory.exp_pick_row_title": "点击选择此对象最大的 UV 岛"
 }

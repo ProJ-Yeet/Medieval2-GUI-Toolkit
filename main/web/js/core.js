@@ -163,20 +163,34 @@ const api={
           if(isAborted(e)||(o.signal&&o.signal.aborted))throw ABORTED;
           err=e;
           if(e.deliberate)break;   // an answer, not a blip - asking again changes nothing
-          if(i<tries-1) await new Promise(res=>setTimeout(res,200*(i+1)));}
+          if(i<tries-1) await new Promise(res=>setTimeout(res,apiWait(i)));}
       }
       throw apiFailed(err,u);
     }finally{loadbar.closed(u);}},
   post:async(u,b,opts)=>{
     const o=opts||{};
+    const tries=o.tries||4, body=JSON.stringify(b||{});
     loadbar.opened(u,o.label);
     try{
-      const out=i18nFromServer(await (await fetch(u,{method:'POST',headers:{'Content-Type':'application/json'},
-        body:JSON.stringify(b||{}),signal:o.signal})).json());
-      if(out&&out.repair)repairOffer(out.repair);
-      return out;
-    }catch(e){ if(isAborted(e))throw ABORTED; throw apiFailed(e,u); }
+      for(let i=0;;i++){
+        // "Failed to fetch": nothing answered (a server restarting, a dropped
+        // connection), so it is asked again; an answer, even an error, is not
+        let r;
+        try{ r=await fetch(u,{method:'POST',headers:{'Content-Type':'application/json'},body,signal:o.signal}); }
+        catch(e){
+          if(isAborted(e)||(o.signal&&o.signal.aborted))throw ABORTED;
+          if(i>=tries-1)throw apiFailed(e,u);
+          await new Promise(res=>setTimeout(res,apiWait(i)));
+          continue;
+        }
+        const out=i18nFromServer(await r.json());
+        if(out&&out.repair)repairOffer(out.repair);
+        return out;
+      }
+    }catch(e){ if(e===ABORTED||isAborted(e))throw ABORTED; throw e&&e.apiFailure?e:apiFailed(e,u); }
     finally{loadbar.closed(u);}}};
+// the wait before asking again: 0.3, 0.6, 1.2, 2.4 s, long enough for a restart
+const apiWait=i=>300*Math.pow(2,i);
 
 /* Say what a failed request actually was.
 

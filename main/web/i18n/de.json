@@ -12654,5 +12654,10 @@
  "armory.exp_sel_scale": "UV-Insel skalieren",
  "armory.exp_sel_scale_title": "Skaliert nur diese UV-Insel zusätzlich zur Skalierung ihres Objekts. Unter 100% wird ihr Bild kleiner neu berechnet, was die Qualität verringert",
  "armory.exp_sel_reset": "Zurücksetzen",
- "armory.exp_sel_overall": "{pct}% mit der Skalierung ihres Objekts"
+ "armory.exp_sel_overall": "{pct}% mit der Skalierung ihres Objekts",
+ "armory.exp_corner_hint": "Ziehe an einer Ecke der ausgewählten Insel, um sie zu skalieren.",
+ "armory.exp_sel_left": "Diese Insel passte nicht auf ihr Texturblatt. Verkleinere sie oder skaliere oder verschiebe andere Inseln.",
+ "armory.exp_sheet_left": "Nicht untergebracht: {n}",
+ "armory.exp_left_mark_title": "Einige seiner Inseln passten auf kein Texturblatt",
+ "armory.exp_pick_row_title": "Klicke, um die größte Insel dieses Objekts auszuwählen"
 }

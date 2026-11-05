@@ -12171,5 +12171,10 @@
  "armory.exp_sel_scale": "UV adası ölçeği",
  "armory.exp_sel_scale_title": "Nesnesinin ölçeğine ek olarak yalnızca bu UV adasını ölçekler. %100'ün altında görüntüsü daha küçük boyuta yeniden örneklenir ve kalite düşer",
  "armory.exp_sel_reset": "Sıfırla",
- "armory.exp_sel_overall": "Nesnesinin ölçeğiyle birlikte %{pct}"
+ "armory.exp_sel_overall": "Nesnesinin ölçeğiyle birlikte %{pct}",
+ "armory.exp_corner_hint": "Seçili adayı ölçeklendirmek için bir köşesini sürükleyin.",
+ "armory.exp_sel_left": "Bu ada kendi doku sayfasına sığmadı. Adayı küçültün veya diğer adaları ölçeklendirin ya da taşıyın.",
+ "armory.exp_sheet_left": "Sığmayan: {n}",
+ "armory.exp_left_mark_title": "Bu nesnenin bazı adaları hiçbir doku sayfasına sığmadı",
+ "armory.exp_pick_row_title": "Bu nesnenin en büyük adasını seçmek için tıklayın"
 }

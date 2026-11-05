@@ -12776,5 +12776,10 @@
  "armory.exp_sel_scale": "Échelle de l'îlot UV",
  "armory.exp_sel_scale_title": "Redimensionne uniquement cet îlot UV, en plus de l'échelle de son objet. En dessous de 100%, son image est rééchantillonnée à une taille plus petite, ce qui réduit la qualité",
  "armory.exp_sel_reset": "réinitialiser",
- "armory.exp_sel_overall": "{pct}% avec l'échelle de son objet"
+ "armory.exp_sel_overall": "{pct}% avec l'échelle de son objet",
+ "armory.exp_corner_hint": "Faites glisser un coin de l'îlot sélectionné pour le redimensionner.",
+ "armory.exp_sel_left": "Cet îlot n'a pas trouvé de place sur sa planche de texture. Réduisez-le ou redimensionnez ou déplacez d'autres îlots.",
+ "armory.exp_sheet_left": "Îlots sans place : {n}",
+ "armory.exp_left_mark_title": "Certains de ses îlots n'ont trouvé de place sur aucune planche de texture",
+ "armory.exp_pick_row_title": "Cliquez pour sélectionner le plus grand îlot de cet objet"
 }

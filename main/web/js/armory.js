@@ -355,7 +355,8 @@ function armAssetHtml(a){
   const mode = a.show || 'gallery';
   let body = '';
   if(open){
-    if(live.err) body = `<div class="w-bad armnote">${esc(live.err)}</div>`;
+    if(live.err) body = `<div class="w-bad armnote">${esc(live.err)}
+        <button class="mini" onclick="armRetryAsset('${esc(q1(key))}')">${tt('common.retry')}</button></div>`;
     else if(!v) body = `<div class="count armnote">${tt('armory.reading')}</div>`;
     else{
       const objs = v.objects.filter(ob => !armOnlyUsed() || armProj().objects.some(o => armUses(o, key, ob.index)))
@@ -504,25 +505,44 @@ function armPullAll(key){
 
 /* --- loading an asset ------------------------------------------------------ */
 
+function armRetryAsset(key){
+  const live = ARM.assets.get(key);
+  if(!live || live.loading) return;
+  ARM.assets.delete(key);
+  live.err = '';
+  armPaintAssets();
+  armLoadAsset(live.asset).then(() => { armPaintObjects(); armFrameAll(); });
+}
 async function armLoadAsset(a){
   const key = armAssetKey(a);
   let live = ARM.assets.get(key);
-  if(live && (live.view || live.loading)) return live;
+  // a model whose geometry never came is not loaded: it is asked for again
+  if(live && (live.geo || live.loading)) return live;
   live = {asset: a, loading: true};
   ARM.assets.set(key, live);
-  try{
-    live.view = a.kind === 'external'
-      ? await api.get('/api/armory/external?path=' + enc(a.path), 1)
-      : await api.get(`/api/armory/asset?mod=${enc(a.mod)}&entry=${enc(a.entry)}`, 1);
-    if(a.kind === 'external') a.id = live.view.id;
-    const url = a.kind === 'external' ? '/api/armory/geometry?ext=' + enc(live.view.id)
-      : `/api/model/geometry?mod=${enc(a.mod)}&entry=${enc(a.entry)}&lod=0`;
-    const r = await fetch(url, {cache: 'no-store'});
-    if(!r.ok) throw await httpAnswer(r);
-    live.geo = v3Parse(await r.arrayBuffer());
-    armUpload(live);
-    armLoadSkin(a, live);
-  }catch(e){ live.err = errText(e); }
+  // a server restarting answers nothing for a moment ("Failed to fetch"), so
+  // the whole load is tried again before it is shown as failed
+  for(let i = 0; i < 4; i++){
+    try{
+      live.view = a.kind === 'external'
+        ? await api.get('/api/armory/external?path=' + enc(a.path))
+        : await api.get(`/api/armory/asset?mod=${enc(a.mod)}&entry=${enc(a.entry)}`);
+      if(a.kind === 'external') a.id = live.view.id;
+      const url = a.kind === 'external' ? '/api/armory/geometry?ext=' + enc(live.view.id)
+        : `/api/model/geometry?mod=${enc(a.mod)}&entry=${enc(a.entry)}&lod=0`;
+      const r = await fetch(url, {cache: 'no-store'});
+      if(!r.ok) throw await httpAnswer(r);
+      live.geo = v3Parse(await r.arrayBuffer());
+      live.err = '';
+      armUpload(live);
+      armLoadSkin(a, live);
+      break;
+    }catch(e){
+      live.err = errText(e);
+      if(e && e.deliberate) break;      // the server said no: asking again changes nothing
+      await new Promise(ok => setTimeout(ok, 500 * (i + 1)));
+    }
+  }
   live.loading = false;
   if(state.mode === 'armory'){ armPaintAssets(); armPaintBar(); armFrame(); }
   return live;

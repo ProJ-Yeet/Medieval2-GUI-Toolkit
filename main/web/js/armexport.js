@@ -161,6 +161,7 @@ async function armExportPlan(auto){
     if(seq !== e.seq) return;
     e.plan = r; e.err = '';
     if(e.sel && !armExpSelBlock()){ e.sel = null; e.selSrc = null; }
+    e.drag = null;
     if(auto){
       // the way out the server found becomes the settings, to be seen and changed
       e.settings.scale = r.settings.scale; e.settings.block_sheet = r.settings.block_sheet;
@@ -250,6 +251,7 @@ function armExpSelBlock(){
 }
 function armExpPick(sh, ev){
   const e = armExp(), S = e.plan && e.plan.sheets[sh], cv = ev.currentTarget;
+  if(e.noClick){ e.noClick = false; return; }
   if(!S || !S.size) return;
   const r = cv.getBoundingClientRect();
   const x = (ev.clientX - r.left) * S.size / r.width, y = (ev.clientY - r.top) * S.size / r.height;
@@ -274,6 +276,97 @@ async function armExpFetchSel(){
   const box = document.getElementById('armExpSel');
   if(box) box.innerHTML = armExpSelHtml();
 }
+// an object picked from the list: its largest island, placed or not
+function armExpPickObj(id, ev){
+  if(ev && ev.target.closest('select,input,option,button')) return;
+  const e = armExp();
+  if(!e.plan) return;
+  const mine = ['main', 'attach'].flatMap(sh => e.plan.sheets[sh].blocks).filter(b => b.objs.includes(id));
+  if(!mine.length) return;
+  mine.sort((a, b) => (b.placed - a.placed) || (b.w * b.h - a.w * a.h));
+  e.sel = mine[0].id; e.selSrc = null;
+  armExportPaint();
+  armExpFetchSel();
+}
+
+/* A corner of the picked island dragged: the island is drawn at the new size
+   from the opposite corner while the mouse moves, and the scale is set on
+   release. The picture stays until the packing it asks for comes back, so it
+   shows with Live off too. */
+function armExpCvPoint(cv, ev){
+  const r = cv.getBoundingClientRect();
+  return {x: (ev.clientX - r.left) * cv.width / r.width, y: (ev.clientY - r.top) * cv.height / r.height,
+          tol: 9 * cv.width / r.width};
+}
+function armExpSelBox(sh){
+  const e = armExp(), b = armExpSelBlock();
+  const S = e.plan && e.plan.sheets[sh];
+  if(!b || !b.placed || !S || !S.blocks.includes(b)) return null;
+  const k = 512 / S.size;
+  return {b, x: b.x * k, y: b.y * k, w: (b.rot ? b.h : b.w) * k, h: (b.rot ? b.w : b.h) * k};
+}
+function armExpCorner(sh, pt){
+  const box = armExpSelBox(sh);
+  if(!box) return null;
+  for(const [cx, cy] of [[0, 0], [1, 0], [0, 1], [1, 1]]){
+    if(Math.abs(pt.x - (box.x + cx * box.w)) <= pt.tol && Math.abs(pt.y - (box.y + cy * box.h)) <= pt.tol)
+      return {box, cx, cy};
+  }
+  return null;
+}
+function armExpHover(sh, ev){
+  if(armExp().drag && !armExp().drag.done) return;
+  const cv = ev.currentTarget, c = armExpCorner(sh, armExpCvPoint(cv, ev));
+  cv.style.cursor = c ? (c.cx === c.cy ? 'nwse-resize' : 'nesw-resize') : '';
+}
+function armExpDown(sh, ev){
+  const e = armExp(), cv = ev.currentTarget, c = armExpCorner(sh, armExpCvPoint(cv, ev));
+  if(!c || ev.button !== 0) return;
+  ev.preventDefault();
+  const own = e.settings.block_scale[c.box.b.id] || 1, B = c.box;
+  e.drag = {sh, id: B.b.id, ox: B.x, oy: B.y, ow: B.w, oh: B.h, W0: B.w / own, H0: B.h / own, s: own,
+            ax: B.x + (1 - c.cx) * B.w, ay: B.y + (1 - c.cy) * B.h, dx: c.cx ? 1 : -1, dy: c.cy ? 1 : -1};
+  const move = mv => {
+    const d = e.drag, pt = armExpCvPoint(cv, mv);
+    d.s = Math.max(0.05, Math.min(1, Math.max((pt.x - d.ax) * d.dx / d.W0, (pt.y - d.ay) * d.dy / d.H0)));
+    const sl = document.querySelector('#armExpSel input[type=range]');
+    if(sl){ sl.value = Math.round(d.s * 100); sl.nextElementSibling.textContent = sl.value + '%'; }
+    armExpPaintCv(sh);
+  };
+  const up = () => {
+    window.removeEventListener('mousemove', move); window.removeEventListener('mouseup', up);
+    const d = e.drag;
+    if(!d) return;
+    d.done = true; e.noClick = true;
+    setTimeout(() => { e.noClick = false; }, 0);
+    armExpPaintCv(sh);
+    armExpBlockScale(Math.round(d.s * 100));
+  };
+  window.addEventListener('mousemove', move); window.addEventListener('mouseup', up);
+}
+function armExpDrawDrag(ctx, cv){
+  const d = armExp().drag;
+  if(!d) return;
+  const w = d.W0 * d.s, h = d.H0 * d.s;
+  const x = d.dx > 0 ? d.ax : d.ax - w, y = d.dy > 0 ? d.ay : d.ay - h;
+  ctx.fillStyle = 'rgba(0,0,0,0.6)'; ctx.fillRect(d.ox, d.oy, d.ow, d.oh);
+  if(cv._img){
+    const r = cv._img.naturalWidth / cv.width;
+    ctx.drawImage(cv._img, d.ox * r, d.oy * r, d.ow * r, d.oh * r, x, y, w, h);
+  }
+  ctx.setLineDash([5, 3]); ctx.lineWidth = 2; ctx.strokeStyle = '#ffd640';
+  ctx.strokeRect(x + 1, y + 1, w - 2, h - 2);
+  ctx.setLineDash([]); ctx.lineWidth = 1;
+  armExpHandles(ctx, x, y, w, h);
+  ctx.font = 'bold 13px sans-serif'; ctx.fillStyle = '#ffd640';
+  ctx.fillText(Math.round(d.s * 100) + '%', x + 4, y + 15);
+}
+function armExpHandles(ctx, x, y, w, h){
+  ctx.fillStyle = '#ffd640'; ctx.strokeStyle = '#000';
+  for(const [cx, cy] of [[x, y], [x + w, y], [x, y + h], [x + w, y + h]]){
+    ctx.fillRect(cx - 4, cy - 4, 8, 8); ctx.strokeRect(cx - 4.5, cy - 4.5, 9, 9);
+  }
+}
 function armExpBlockScale(pct){
   const e = armExp(), s = e.settings;
   if(!e.sel) return;
@@ -297,7 +390,8 @@ function armExpSelHtml(){
         oninput="this.nextElementSibling.textContent = this.value + '%'" onchange="armExpBlockScale(this.value)">
       <span class="num">${own}%</span>
       ${own < 100 ? `<button class="mini" onclick="armExpBlockScale(100)">${tt('armory.exp_sel_reset')}</button>` : ''}</div>
-    ${Math.round(b.scale * 100) !== own ? `<div class="count">${tt('armory.exp_sel_overall', {pct: Math.round(b.scale * 100)})}</div>` : ''}`;
+    ${Math.round(b.scale * 100) !== own ? `<div class="count">${tt('armory.exp_sel_overall', {pct: Math.round(b.scale * 100)})}</div>` : ''}
+    ${b.placed ? `<div class="count">${tt('armory.exp_corner_hint')}</div>` : `<div class="armexpleftnote">${tt('armory.exp_sel_left')}</div>`}`;
 }
 function armExpMoveBlock(sh, i, to){
   const b = armExp().plan.sheets[sh].blocks[i];
@@ -321,8 +415,10 @@ function armExpUvHtml(){
       <option value="auto"${both === 'auto' ? ' selected' : ''}>${tt('armory.exp_size_auto')}</option>
       ${ARM_SIZES.map(z => `<option value="${z}"${both === z ? ' selected' : ''}>${z}</option>`).join('')}</select></label>`;
   const selB = armExpSelBlock(), selObjs = new Set(selB ? selB.objs : []);
-  const rows = P.objects.map(o => `<tr${selObjs.has(o.id) ? ' class="armexpsel"' : ''}>
-      <td><span class="armswatch" style="background:${armExpColour(o.id)}"></span> ${esc(o.name)}</td>
+  const leftObjs = new Set(['main', 'attach'].flatMap(sh => P.sheets[sh].blocks.filter(b => P.sheets[sh].left.includes(b.id)).flatMap(b => b.objs)));
+  const rows = P.objects.map(o => `<tr class="${selObjs.has(o.id) ? 'armexpsel' : ''}${leftObjs.has(o.id) ? ' armexpleft' : ''}"
+        onclick="armExpPickObj(${o.id}, event)" title="${ttA('armory.exp_pick_row_title')}">
+      <td>${leftObjs.has(o.id) ? `<span class="armleftmark" title="${ttA('armory.exp_left_mark_title')}">!</span>` : ''}<span class="armswatch" style="background:${armExpColour(o.id)}"></span> ${esc(o.name)}</td>
       <td class="num">${o.islands}</td>
       <td class="num">${Math.round(Math.sqrt(o.area)).toLocaleString()}²</td>
       <td class="num">${o.needs || '-'}</td>
@@ -338,7 +434,9 @@ function armExpUvHtml(){
     if(!S.size) return `<div class="armexpsheet"><b>${armExpLabel(sh)}</b><div class="count">${tt('armory.exp_sheet_unused')}</div></div>`;
     return `<div class="armexpsheet"><b>${armExpLabel(sh)} · ${S.size}²</b>
       <span class="count">${tt('armory.exp_sheet_facts', {fill: Math.round(S.fill * 100), needs: S.needs, margin: S.margin_px})}</span>
-      <canvas id="armExpCv_${sh}" width="512" height="512" onclick="armExpPick('${sh}', event)" title="${ttA('armory.exp_pick_title')}"></canvas></div>`;
+      ${S.left.length ? `<span class="armexpleftnote">${tt('armory.exp_sheet_left', {n: S.left.length})}</span>` : ''}
+      <canvas id="armExpCv_${sh}" width="512" height="512" onclick="armExpPick('${sh}', event)" onmousedown="armExpDown('${sh}', event)"
+        onmousemove="armExpHover('${sh}', event)" title="${ttA('armory.exp_pick_title')}"></canvas></div>`;
   };
   return `<div class="armexprow">
       <label class="armcheck" title="${ttA('armory.exp_live_title')}"><input type="checkbox"${e.live !== false ? ' checked' : ''}
@@ -401,29 +499,38 @@ function armExpDrawSheets(){
   for(const sh of ['main', 'attach']){
     const cv = document.getElementById('armExpCv_' + sh), S = P.sheets[sh];
     if(!cv || !S.size) continue;
-    const ctx = cv.getContext('2d'), k = cv.width / S.size;
-    ctx.fillStyle = '#1d2128'; ctx.fillRect(0, 0, cv.width, cv.height);
     const art = e.art && e.artPeek && e.artPeek.sheets && e.artPeek.sheets[sh];
     // 99l: else the server draws each block's shape, the texels it takes
     const pic = art && art.art ? art.art : S.picture;
+    cv._img = null; cv._pic = !!pic;
+    armExpPaintCv(sh);
     if(pic){
       const img = new Image();
-      img.onload = () => { if(cv.isConnected){ ctx.drawImage(img, 0, 0, cv.width, cv.height); armExpDrawSel(ctx, S, k); } };
+      img.onload = () => { if(cv.isConnected){ cv._img = img; armExpPaintCv(sh); } };
       img.src = pic;
-      continue;
     }
-    for(const b of S.blocks){
+  }
+}
+function armExpPaintCv(sh){
+  const e = armExp(), P = e.plan, cv = document.getElementById('armExpCv_' + sh);
+  const S = P && P.sheets[sh];
+  if(!cv || !S || !S.size) return;
+  const ctx = cv.getContext('2d'), k = cv.width / S.size;
+  ctx.fillStyle = '#1d2128'; ctx.fillRect(0, 0, cv.width, cv.height);
+  if(cv._img) ctx.drawImage(cv._img, 0, 0, cv.width, cv.height);
+  else if(!cv._pic) for(const b of S.blocks){
       if(!b.placed) continue;
       const w = (b.rot ? b.h : b.w) * k, h = (b.rot ? b.w : b.h) * k;
       ctx.fillStyle = armExpColour(b.objs[0]);
       ctx.globalAlpha = 0.75; ctx.fillRect(b.x * k, b.y * k, w, h);
       ctx.globalAlpha = 1; ctx.strokeStyle = '#000'; ctx.strokeRect(b.x * k + 0.5, b.y * k + 0.5, w - 1, h - 1);
     }
-    armExpDrawSel(ctx, S, k);
-  }
+  if(cv._pic && !cv._img) return;
+  armExpDrawSel(ctx, S, k, !(e.drag && e.drag.sh === sh));
+  if(e.drag && e.drag.sh === sh) armExpDrawDrag(ctx, cv);
 }
 // the picked island boxed bright, its object's other islands fainter
-function armExpDrawSel(ctx, S, k){
+function armExpDrawSel(ctx, S, k, handles){
   const sel = armExpSelBlock();
   if(!sel) return;
   const mine = new Set(sel.objs);
@@ -437,6 +544,7 @@ function armExpDrawSel(ctx, S, k){
     ctx.lineWidth = on ? 2 : 1;
     ctx.strokeStyle = on ? '#ffd640' : 'rgba(255,214,64,0.6)';
     ctx.strokeRect(b.x * k + 1, b.y * k + 1, w - 2, h - 2);
+    if(on && handles) armExpHandles(ctx, b.x * k, b.y * k, w, h);
   }
   ctx.lineWidth = 1;
 }
