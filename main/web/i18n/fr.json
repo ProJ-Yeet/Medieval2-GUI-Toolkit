@@ -1059,8 +1059,6 @@
  "armory.external_file": "un fichier sur disque",
  "armory.face_orientation": "Orientation des faces",
  "armory.file_first": "Collez ou choisissez d’abord un fichier.",
- "armory.file_intro": "Un .obj, .glb, .gltf, .dae ou un maillage .mesh isolé. Ses textures sont recherchées dans le même dossier et dans son dossier textures ; un objet pour lequel aucune n’est trouvée vous demande d’en choisir une.",
- "armory.file_placeholder": "Coller le chemin d’un fichier de modèle ou parcourir les fichiers",
  "armory.file_title": "Un modèle à importer",
  "armory.filter_any": "tous",
  "armory.filter_category": "Catégorie",

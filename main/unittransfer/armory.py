@@ -728,6 +728,49 @@ def _mesh_sheets(path: Path) -> Optional[Tuple[Optional[Path], Optional[Path]]]:
     return (main if main and main.is_file() else None, att if att and att.is_file() else None)
 
 
+#: How many models one folder listing hands back, and how deep it looks.
+FOLDER_LIMIT = 2000
+FOLDER_DEPTH = 6
+
+
+def folder_models(path_text: str, limit: int = FOLDER_LIMIT) -> dict:
+    """Every model file under a folder, for the import dialog's folder view.
+
+    Walked top down, a folder's own files before the folders under it, each
+    level in name order; hidden folders (``.git``, ``.blend1`` caches) are
+    skipped. Only the names are read here: a model is parsed when it is drawn
+    or imported. ``dir`` is the folder under the chosen one, for grouping.
+    """
+    import os
+    root = Path((path_text or "").strip().strip('"'))
+    if not root.is_dir():
+        raise ArmoryError(_i18n.msg("eng.armory.no_such_folder", "{path} is not a folder", path=str(root)))
+    out: List[dict] = []
+    truncated = False
+    for here, dirs, files in os.walk(root):
+        rel_dir = Path(here).relative_to(root)
+        dirs[:] = sorted((d for d in dirs if not d.startswith(".")), key=str.lower) \
+            if len(rel_dir.parts) < FOLDER_DEPTH else []
+        for name in sorted(files, key=str.lower):
+            if Path(name).suffix.lower() not in EXTERNAL_SUFFIXES:
+                continue
+            if len(out) >= limit:
+                truncated = True
+                break
+            full = Path(here) / name
+            try:
+                size = full.stat().st_size
+            except OSError:
+                continue
+            out.append({"path": str(full), "name": name, "stem": full.stem,
+                        "rel": (rel_dir / name).as_posix(),
+                        "dir": "" if rel_dir == Path(".") else rel_dir.as_posix(),
+                        "suffix": full.suffix.lower(), "size": size})
+        if truncated:
+            break
+    return {"folder": str(root), "models": out, "truncated": truncated}
+
+
 def external_by_id(ext: str) -> Optional[Tuple[mesh.MeshFile, dict]]:
     with _EXT_LOCK:
         for key, (_stamp, m, textures) in _EXTERNAL.items():

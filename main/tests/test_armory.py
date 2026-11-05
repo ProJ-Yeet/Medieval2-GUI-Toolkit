@@ -1034,6 +1034,27 @@ check("a session deletes, and the open model stays, as no session",
       "session" not in armory.load_project() and other not in [x["id"] for x in armory.sessions_view()["sessions"]])
 
 # ---------------------------------------------------------------------------
+print("\nImport from a folder: every model in it, found")
+fold = tmp / "kit"
+(fold / "helmets" / "deep").mkdir(parents=True)
+(fold / ".git").mkdir()
+for rel in ("a_body.obj", "helmets/kettle.glb", "helmets/deep/sallet.dae", "b_shield.MESH",
+            "notes.txt", "helmets/kettle.png", ".git/stray.obj"):
+    (fold / rel).write_bytes(b"x")
+f = armory.folder_models(str(fold))
+rels = [m["rel"] for m in f["models"]]
+check("every model under it, in the folders under it too",
+      rels == ["a_body.obj", "b_shield.MESH", "helmets/kettle.glb", "helmets/deep/sallet.dae"])
+check("each with its own folder for grouping", [m["dir"] for m in f["models"]] == ["", "", "helmets", "helmets/deep"])
+check("and the full path the import reads", all(Path(m["path"]).is_file() for m in f["models"]))
+check("pictures, notes and hidden folders are not models", not any(r.endswith((".png", ".txt")) or ".git" in r for r in rels))
+cap = armory.folder_models(str(fold), limit=2)
+check("a folder with too many is cut short, and says so", len(cap["models"]) == 2 and cap["truncated"])
+try:
+    armory.folder_models(str(fold / "a_body.obj")); check("a file is refused as a folder", False)
+except armory.ArmoryError:
+    check("a file is refused as a folder", True)
+
 print("\nA real mod")
 game = _realmod.game(required=False)
 mods = sorted(p for p in (game / "mods").iterdir() if (p / "data").is_dir()) if game.is_dir() else []

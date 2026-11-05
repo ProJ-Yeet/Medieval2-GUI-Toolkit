@@ -581,9 +581,6 @@
    "mesh",
    "texture"
   ],
-  "armory.file_intro": [
-   "mesh"
-  ],
   "armory.no_assets_yet": [
    "mesh"
   ],
@@ -1241,8 +1238,6 @@
  "armory.external_file": "plik na dysku",
  "armory.face_orientation": "Orientacja ścian",
  "armory.file_first": "Najpierw wklej lub wybierz plik.",
- "armory.file_intro": "Plik .obj, .glb, .gltf, .dae albo osobny .mesh. Tekstury są wyszukiwane w tym samym folderze i jego podfolderze textures. Jeśli dla obiektu nie znaleziono tekstury, pojawi się prośba o jej wskazanie.",
- "armory.file_placeholder": "Wklej ścieżkę pliku modelu lub przeglądaj",
  "armory.file_title": "Model do importu",
  "armory.filter_any": "dowolne",
  "armory.filter_category": "Kategoria",

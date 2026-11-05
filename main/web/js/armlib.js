@@ -123,6 +123,8 @@ function armLibRowHtml(it){
     <div class="armexprow"><input class="armlibname" value="${esc(it.name || '')}" onchange="armLibSet(${it.id},'name',this.value)" title="${esc(tt('armory.lib_name_title'))}">
       <span class="count" title="${esc(it.path || '')}">${esc(armLibCode(it))}</span>${facts}<span style="flex:1"></span>
       <button class="mini" onclick="armLibDetails(${it.id})">${open ? '▾' : '▸'} ${tt('armory.lib_details')}</button>
+      <button class="mini" onclick="armLibLook(${it.id})" title="${esc(tt('armory.look_closer_title'))}">🔍 ${tt('armory.lib_preview')}</button>
+      ${armLibMoveHtml(it, state.armLibUi.by)}
       <button class="mini" onclick="armLibLoadItem(${it.id})">${tt('armory.lib_load')}</button>
       <button class="mini armx" onclick="armLibRemove(${it.id})" title="${esc(tt('armory.lib_remove'))}">✕</button></div>
     ${it.notes && !open ? `<div class="count armlibnote">${esc(it.notes)}</div>` : ''}
@@ -194,25 +196,125 @@ async function armLibAddAsset(key){
 
 /* --- the import dialog's tab ------------------------------------------------------- */
 
+/* Grouped, found and looked at as the Library window has them; an item is
+   moved into another collection (or category) by its Move to list, or by
+   dragging it onto a group's heading while grouped by collections or
+   categories. The rows repaint under the find box, never the box. */
+function armLibPickUi(){
+  const imp = state.armImp;
+  imp.libUi = imp.libUi || {by: (state.armLibUi && state.armLibUi.by) || 'class', q: '', folded: []};
+  return imp.libUi;
+}
 function armLibPickHtml(){
   const imp = state.armImp;
   imp.libPicked = imp.libPicked || new Set();
-  if(!ARM.lib){ armLibLoad().then(() => { const el = document.getElementById('armLibPick'); if(el){ el.innerHTML = armLibPickHtml(); armImpLibMount(); } }); return `<div class="count">${tt('armory.reading')}</div>`; }
-  const items = armLib().items;
-  if(!items.length) return `<div class="empty armempty">${tt('armory.lib_empty')}</div>`;
-  // 99g: as tiles, a model entry drawn from its own mod; a file on disk has
-  // no tile of its own to draw and shows its name
-  if(armImpGallery())
-    return `<div class="armimprows armimpgal"><div class="galgrid">${items.map(it => {
-      const label = `<b>${esc(it.name)}</b> ${esc(armLibCode(it))}`;
-      if(it.kind === 'external')
-        return `<div class="gtile armimptile gnone${imp.libPicked.has(it.id) ? ' picked' : ''}" data-k="${it.id}" onclick="armLibTileToggle(this)"
-          title="${esc(it.path || '')}"><canvas></canvas><span class="gname">${label}</span><span class="armimptick">✓</span></div>`;
-      return armImpTileHtml(String(it.id), it.mod, it.entry, label, imp.libPicked.has(it.id));
-    }).join('')}</div></div>`;
-  return `<div class="armimprows">${items.map(it => `<label class="armcheck armlibpick"><input type="checkbox"${imp.libPicked.has(it.id) ? ' checked' : ''}
-      onchange="armLibPick(${it.id}, this.checked)"> <b>${esc(it.name)}</b> <span class="count">${esc(armLibCode(it))}</span>
-      ${it.notes ? `<span class="count">· ${esc(it.notes)}</span>` : ''}</label>`).join('')}</div>`;
+  if(!ARM.lib){ armLibLoad().then(() => { const el = document.getElementById('armLibPick'); if(el){ el.innerHTML = armLibPickHtml(); armLibPickRows(); } }); return `<div class="count">${tt('armory.reading')}</div>`; }
+  if(!armLib().items.length) return `<div class="empty armempty">${tt('armory.lib_empty')}</div>`;
+  const ui = armLibPickUi();
+  setTimeout(armLibPickRows, 0);
+  return `<div class="armimpctl">
+      <label class="count">${tt('armory.lib_group_by')}<select onchange="armLibPickUi().by=this.value;armLibPickRows()">${ARM_LIB_GROUPS.map(g =>
+        `<option value="${g}"${ui.by === g ? ' selected' : ''}>${esc(armLibGroupLabel(g))}</option>`).join('')}</select></label>
+      <input id="armLibPickQ" placeholder="${esc(tt('armory.find'))}" value="${esc(ui.q)}" oninput="armLibPickUi().q=this.value;armLibPickRows()">
+      <span class="count">${ttN('armory.lib_count', armLib().items.length)}</span></div>
+    <div class="armimprows" id="armLibPickRows"></div>`;
+}
+/* The kind an item moves between under a grouping: collections, unless the
+   list is grouped by categories. */
+const armLibMoveKind = by => by === 'category' ? 'categories' : 'collections';
+function armLibMoveHtml(it, by){
+  const kind = armLibMoveKind(by), list = armLib()[kind];
+  return `<select class="armlibmove" title="${esc(tt('armory.lib_move_title'))}" onclick="event.stopPropagation()"
+      onchange="armLibMove(${it.id}, '${kind}', this.value);this.value=''">
+    <option value="">${tt(kind === 'categories' ? 'armory.lib_move_category' : 'armory.lib_move_collection')}</option>
+    ${list.map(c => `<option value="${c.id}">${esc(c.name)}</option>`).join('')}
+    <option value="new">${tt(kind === 'categories' ? 'armory.lib_new_category' : 'armory.new_collection')}</option></select>`;
+}
+function armLibPickRows(){
+  const el = document.getElementById('armLibPickRows');
+  if(!el) return;
+  const imp = state.armImp, ui = armLibPickUi(), lib = armLib();
+  const groups = new Map();
+  for(const it of lib.items){
+    if(!armLibMatches(it, ui.q)) continue;
+    const keys = armLibKeys(it, ui.by);
+    for(const k of keys.length ? keys : [null]){
+      if(!groups.has(k)) groups.set(k, []);
+      groups.get(k).push(it);
+    }
+  }
+  const tiles = armImpGallery();
+  const movable = ['collection', 'category'].includes(ui.by);
+  const kind = armLibMoveKind(ui.by);
+  const look = it => `<button class="mini armimplook" onclick="event.preventDefault();event.stopPropagation();armLibLook(${it.id})" title="${esc(tt('armory.look_closer_title'))}">🔍</button>`;
+  const drag = it => movable ? ` data-drag="${it.id}"` : '';
+  const order = [...groups.keys()].sort((a, b) => a === null ? 1 : b === null ? -1 : String(a).localeCompare(String(b)));
+  el.innerHTML = order.map(k => {
+    const items = groups.get(k);
+    const label = k === null ? tt('armory.lib_ungrouped') : k === '' ? tt('armory.lib_all') : k;
+    const fkey = ui.by + ':' + k, folded = ui.folded.includes(fkey);
+    // a group's heading takes a dragged item, when the group is a collection or category
+    const target = movable && k !== null ? (lib[kind].find(c => c.name === k) || {}).id : null;
+    const drop = target != null ? ` data-drop="${target}"` : '';
+    const body = folded ? '' : tiles
+      ? `<div class="galgrid">${items.map(it => {
+          const lbl = `<b>${esc(it.name)}</b> ${esc(armLibCode(it))}`;
+          const mod = it.kind === 'external' ? GAL_EXT : it.mod, name = it.kind === 'external' ? it.path : it.entry;
+          return `<div class="gtile armimptile${imp.libPicked.has(it.id) ? ' picked' : ''}" data-mod="${esc(mod)}" data-name="${esc(name)}"
+            data-k="${it.id}" title="${esc(it.path || it.entry || '')}"${drag(it)}><canvas></canvas><span class="gname">${lbl}</span>
+            <span class="armimptick">✓</span>${look(it)}</div>`; }).join('')}</div>`
+      : items.map(it => `<label class="armcheck armlibpick"${drag(it)}><input type="checkbox"${imp.libPicked.has(it.id) ? ' checked' : ''}
+          onchange="armLibPick(${it.id}, this.checked)"> <b>${esc(it.name)}</b> <span class="count">${esc(armLibCode(it))}</span>
+          ${it.notes ? `<span class="count">· ${esc(it.notes)}</span>` : ''}<span style="flex:1"></span>${look(it)}${armLibMoveHtml(it, ui.by)}</label>`).join('');
+    return `<div class="armlibgroup"><div class="armlibhead"${drop}><button class="armfold" onclick="armLibPickFold(${JSON.stringify(fkey).replace(/"/g, '&quot;')})">${folded ? '▸' : '▾'} ${esc(label)}</button>
+      <span class="count">${items.length}</span></div>${body}</div>`;
+  }).join('') || `<div class="empty armempty">${tt('armory.lib_none_match')}</div>`;
+  el.classList.toggle('armimpgal', tiles);
+  armLibWireDrag(el, kind);
+  if(tiles && typeof galMount === 'function') galMount(el, (name, t) => armLibTileToggle(t));
+}
+/* An item dragged onto a group's heading moves into that collection or category. */
+function armLibWireDrag(el, kind){
+  el.querySelectorAll('[data-drag]').forEach(x => {
+    x.draggable = true;
+    x.addEventListener('dragstart', ev => ev.dataTransfer.setData('text/plain', x.dataset.drag));
+  });
+  el.querySelectorAll('[data-drop]').forEach(h => {
+    h.addEventListener('dragover', ev => { ev.preventDefault(); h.classList.add('armdrop'); });
+    h.addEventListener('dragleave', () => h.classList.remove('armdrop'));
+    h.addEventListener('drop', ev => {
+      ev.preventDefault(); h.classList.remove('armdrop');
+      armLibMove(+ev.dataTransfer.getData('text/plain'), kind, +h.dataset.drop);
+    });
+  });
+}
+function armLibPickFold(k){
+  const f = armLibPickUi().folded, i = f.indexOf(k);
+  if(i < 0) f.push(k); else f.splice(i, 1);
+  armLibPickRows();
+}
+/* Into one collection (or category) and out of the others of that kind. */
+function armLibMove(id, kind, cid){
+  const it = armLibItem(id);
+  if(!it || cid === '' || cid == null) return;
+  if(cid === 'new'){
+    const name = prompt(kind === 'collections' ? tt('armory.collection_name') : tt('armory.lib_category_name'));
+    if(!name || !name.trim()) return;
+    const list = armLib()[kind];
+    cid = armLibNextId(list);
+    list.push({id: cid, name: name.trim()});
+  }
+  it[kind] = [+cid];
+  armLibSave();
+  if(document.getElementById('armLibPickRows')) armLibPickRows();
+  if(document.getElementById('armLibRows')) armLibPaint();
+}
+/* A closer look: an entry in the Models viewer, a file on disk in the big tile. */
+function armLibLook(id){
+  const it = armLibItem(id);
+  if(!it) return;
+  if(it.kind === 'external') armExtLook(it.path, it.name);
+  else armImpLook(it.mod, it.entry);
 }
 function armLibPick(id, on){
   const s = state.armImp.libPicked;

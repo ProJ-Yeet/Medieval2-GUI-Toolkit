@@ -855,8 +855,6 @@
  "armory.external_file": "diskteki bir dosya",
  "armory.face_orientation": "Yüz yönü",
  "armory.file_first": "Önce bir dosyayı yapıştırın veya seçin.",
- "armory.file_intro": "Bir .obj, .glb, .gltf, .dae veya gevşek bir .mesh. Dokuları aynı klasörde ve dokular klasöründe aranır; hiçbiri bulunmayan bir nesne bir tane ister.",
- "armory.file_placeholder": "Bir model dosyasının yolunu yapıştırın veya göz atın",
  "armory.file_title": "İçe aktarılacak bir model",
  "armory.filter_any": "herhangi biri",
  "armory.filter_category": "Kategori",

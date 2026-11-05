@@ -195,8 +195,38 @@ function galPump(){
   }
 }
 
+/* A tile whose data-mod is GAL_EXT draws a model file from disk, data-name
+   being its path: Armory Studio's folder import and the asset library's files.
+   Read through the import's own routes, its first object's texture on it. */
+const GAL_EXT = '@ext';
+async function galLoadExt(m, seq){
+  const view = await api.get('/api/armory/external?path=' + enc(m.name), 2);
+  const r = await fetch('/api/armory/geometry?ext=' + enc(view.id), {cache: 'no-store'});
+  if(!r.ok) throw new Error(String(r.status));
+  const geo = v3Parse(await r.arrayBuffer());
+  const file = ((view.objects || []).find(o => o.texture_file) || {}).texture_file;
+  const tex = file ? await new Promise(ok => {
+    const i = new Image();
+    i.onload = () => ok(i); i.onerror = () => ok(null);
+    i.src = '/api/armory/texture?path=' + enc(file);
+  }) : null;
+  if(!gal || seq !== gal.seq) return;
+  m.geo = geo; m.tex = tex; m.att = null; m.uScale = 1.0;
+  m.parts = galParts(geo);
+  m.variant = {}; m.hidden = {};
+  const tall = geo.max[1] - geo.min[1];
+  const wide = Math.max(geo.max[0] - geo.min[0], geo.max[2] - geo.min[2]);
+  m.centre = [0, 1, 2].map(k => (geo.min[k] + geo.max[k]) / 2);
+  m.dist = (Math.max(tall, wide * 0.8) || 1) * 1.12;
+  m.status = 'ready';
+}
+
 async function galLoad(m, seq){
   m.status = 'loading';
+  if(m.mod === GAL_EXT){
+    try{ await galLoadExt(m, seq); }catch(e){ m.status = 'none'; }
+    return;
+  }
   const mod = m.mod, q = `mod=${enc(mod)}&entry=${enc(m.name)}`;
   try{
     const info = await api.get(`/api/model?${q}`);

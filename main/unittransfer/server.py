@@ -6349,6 +6349,21 @@ class Handler(BaseHTTPRequestHandler):
                 return self._json(armory.external_view(arg("path")))
             except armory.ArmoryError as e:
                 return self._err(400, str(e))
+        if path == "/api/armory/folder":
+            # every model under a folder, for the import dialog to list
+            try:
+                return self._json(armory.folder_models(arg("path")))
+            except armory.ArmoryError as e:
+                return self._err(400, str(e))
+        if path == "/api/armory/skeleton":
+            # a skeleton chosen with no model loaded (the names come from
+            # /api/model/skeleton_names): its actions, in the shape
+            # /api/model/anims gives for an entry's skeletons
+            sk_mod = arg("mod")
+            if not sk_mod or sk_mod not in self.registry.names():
+                return self._err(404, f"unknown mod {sk_mod!r}")
+            return self._json(animview.sets_view(self.registry.get(sk_mod).data,
+                                                 [{"primary": arg("skel")}]))
         if path == "/api/armory/geometry":
             hit = armory.external_by_id(arg("ext"))
             if hit is None:
