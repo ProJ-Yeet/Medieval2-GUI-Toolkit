@@ -12249,5 +12249,6 @@
  "common.none_option": "(keine)",
  "common.mounted": "(auf dem Reittier)",
  "strings.text_placeholder": "Text eingeben",
- "eng.crashrules.pool_names_a_unit_the_unit_file_lacks": "{rel} nennt '{unit}', und export_descr_unit.txt hat keine Einheit dieses Typs. Portiere die Einheit zurück oder nimm die Zeile heraus."
+ "eng.crashrules.pool_names_a_unit_the_unit_file_lacks": "{rel} nennt '{unit}', und export_descr_unit.txt hat keine Einheit dieses Typs. Portiere die Einheit zurück oder nimm die Zeile heraus.",
+ "settings.undone_pools_dropped": "Rückgängig gemacht ✓ - und {count} Rekrutierungszeile(n) mit der entfernten Einheit gleich mit herausgenommen"
 }

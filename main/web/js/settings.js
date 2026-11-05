@@ -451,7 +451,7 @@ async function doForgetPacks(id){
   if(r.error){toast(r.error);return;}
   toast(tt('settings.old_packs_deleted_mb_freed',{freed:(r.freed/1048576).toFixed(0)}));openLog();}
 async function doUndo(id){const r=await api.post('/api/undo',{id});if(r.error){toast(tt('settings.undo_error_message',{error:r.error}));return;}
-  toast(tt('settings.undone_2'));state.destData=null;openLog();if(state.data)loadSource();}
+  toast(r.refs_dropped?tt('settings.undone_pools_dropped',{count:r.refs_dropped}):tt('settings.undone_2'));state.destData=null;openLog();if(state.data)loadSource();}
 async function doRevert(id){
   const e=(state.logView.entries||[]).find(x=>x.id===id); if(!e){toast(tt('settings.log_entry_not_found'));return;}
   // counted by the server, which is the only place that has the whole log

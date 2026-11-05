@@ -195,6 +195,46 @@ def rename_refs(mod, old: str, new: str,
     return _scan(mod, old, new, all_types, paths, rewrite=bool(new and new != old))
 
 
+#: the lines that exist only to recruit a unit, so a deleted unit takes them
+#: with it: the stock engine refuses a pool naming a unit the EDU has not got
+#: (Kirsi's Bigger Map pooled five)
+_POOL_LINE = re.compile(r"\s*(recruit_pool|recruit)\s", re.IGNORECASE)
+_MERC_LINE = re.compile(r"\s*unit\s", re.IGNORECASE)
+MERCS = "descr_mercenaries.txt"
+
+
+def drop_refs(mod, unit_type: str, all_types: Optional[Iterable[str]] = None,
+              paths: Optional[Sequence[Path]] = None
+              ) -> Tuple[Dict[Path, str], List[Ref], List[Ref]]:
+    """What deleting ``unit_type`` does outside the EDU: ``(texts, dropped,
+    left)``. Every recruit / recruit_pool line and every mercenary ``unit``
+    line naming it is taken out whole (``texts`` holds each changed file's new
+    text); every other place that names it is ``left`` for the caller to judge.
+    """
+    res = find_refs(mod, unit_type, all_types, paths)
+    texts: Dict[Path, str] = {}
+    dropped: List[Ref] = []
+    left: List[Ref] = []
+    by_path: Dict[Path, List[Ref]] = {}
+    for r in res.refs:
+        by_path.setdefault(r.path, []).append(r)
+    for path, refs in by_path.items():
+        lines = _read(path).splitlines(keepends=True)
+        gone = set()
+        for r in refs:
+            line = lines[r.line - 1] if r.line <= len(lines) else ""
+            pool = (_MERC_LINE if path.name.lower() == MERCS else _POOL_LINE).match(line)
+            if pool:
+                if r.line not in gone:
+                    gone.add(r.line)
+                    dropped.append(r)
+            else:
+                left.append(r)
+        if gone:
+            texts[path] = "".join(l for i, l in enumerate(lines, 1) if i not in gone)
+    return texts, dropped, left
+
+
 def _scan(mod, old: str, new: str, all_types, paths, rewrite: bool) -> RenameResult:
     res = RenameResult()
     old = (old or "").strip()
@@ -250,7 +290,8 @@ def _scan(mod, old: str, new: str, all_types, paths, rewrite: bool) -> RenameRes
 #: taking a line out of a script can change what the script does.
 _REMOVABLE = (
     ("export_descr_buildings.txt", re.compile(r'^\s*(recruit_pool|recruit|retrain_pool|retrain)\s+"(?P<n>[^"]+)"', re.I)),
-    ("descr_mercenaries.txt", re.compile(r"^\s*unit\s+(?P<n>[^,]+?)\s*,", re.I)),
+    # the comma is optional: the base game's own pools leave it out on most lines
+    ("descr_mercenaries.txt", re.compile(r"^\s*unit\s+(?P<n>[^,]+?)\s*(,|\s+exp\b)", re.I)),
     ("descr_rebel_factions.txt", re.compile(r"^\s*unit\s+(?P<n>.+?)\s*(;.*)?$", re.I)),
 )
 _UNIT_LINE = re.compile(r"^\s*unit\s+(?P<n>.+?)\s+(exp|soldiers|armour|weapon_lvl)\b", re.I)
@@ -347,7 +388,9 @@ def write_refs(texts: Dict[Path, str], backup_root: Path, manifest: dict) -> Lis
             continue                     # unreadable -> do not risk writing it
         backed.append({"path": str(path), "backup": str(bpath)})
         file_op("BACKUP", path, f"unit-name reference -> {bpath}")
-        path.write_text(text, encoding="latin-1")
+        # bytes, not write_text: on Windows that turns each "\r\n" the file
+        # was read with into "\r\r\n"
+        path.write_bytes(text.encode("latin-1"))
         file_op("WRITE", path, f"unit name rewritten, {len(text)} chars")
         written.append(str(path))
     return written

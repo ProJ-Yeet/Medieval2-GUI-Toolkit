@@ -4004,7 +4004,32 @@ def undo(transfer_id: str) -> Dict:
 
     config.update_log(transfer_id, undone=True)
     rec["undone"] = True
+    rec["refs_dropped"] = _drop_orphan_pools(rec)
     return rec
+
+
+def _drop_orphan_pools(rec: Dict) -> int:
+    """After an undo: when the unit the job wrote is gone from the EDU, the
+    recruit and mercenary lines naming it go too (pooled by hand after the
+    transfer, they would otherwise name a unit the stock engine refuses).
+    Backed up beside the job's own backups. Returns how many were taken."""
+    unit_type = (rec.get("resolved_type") or "").strip()
+    if not unit_type or not rec.get("dest_root"):
+        return 0
+    from . import unitrefs
+    try:
+        dest = Mod(Path(rec["dest_root"]))
+        if any(u.type == unit_type for u in dest.edu.units):
+            return 0
+        texts, dropped, _left = unitrefs.drop_refs(dest, unit_type)
+        if texts:
+            unitrefs.write_refs(texts, Path(rec.get("backup_root", "")) / "undo_pools", {})
+    except Exception as e:                                   # noqa: BLE001
+        log.warning("UNDO   could not check the pools naming %r: %s", unit_type, e)
+        return 0
+    if dropped:
+        log.info("UNDO   %d recruitment line(s) naming %r taken out", len(dropped), unit_type)
+    return len(dropped)
 
 
 def _put_back(data: Path, backup_root: Path, manifest: Dict) -> None:

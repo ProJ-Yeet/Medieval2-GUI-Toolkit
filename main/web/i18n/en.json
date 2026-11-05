@@ -9069,6 +9069,7 @@
 "settings.undo_reverts_just_that_entry": "<b>Undo</b> reverts just that entry.",
 "settings.undone": "undone",
 "settings.undone_2": "Undone ✓",
+"settings.undone_pools_dropped": "Undone ✓ - and {count} recruitment line(s) naming the removed unit taken out with it",
 "settings.unit_cards": "🖼 Unit cards",
 "settings.unit_edits": "✎ Unit edits",
 "settings.unit_limit_warning_500_vanilla_cap": "Unit-limit warning (500 vanilla cap)",
