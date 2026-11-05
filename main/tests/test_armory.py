@@ -448,6 +448,38 @@ console.log(JSON.stringify({trip, keys, t1: o1.t.map(v => Math.round(v * 1000) /
     check(f"keys are named as the keymap writes them ({got.get('keys')})",
           got.get("keys") == ["numpad1", "ctrl+numpad1", "alt+h", "numpad."])
 
+    # while an action plays the posed model is lowered to stand where the
+    # still one stood; the skeleton drawn over it is lowered with it (it
+    # floated a whole hip-height above a Blender soldier)
+    probe = (stub + "".join((ROOT / "web" / "js" / f).read_text(encoding="utf-8")
+                            for f in ("armory.js", "armview.js", "armanim.js")) + r""";
+const bones = [{parent: -1}, {parent: 0}, {parent: 1}], pose = [[0, 0, 0], [0, 0.8, 0], [0, 0.05, 0]];
+function v3aPose(){ return pose.map(p => ({p, m: [1,0,0,0,1,0,0,0,1]})); }
+function v3aBoneMap(){ return {map: [0, 1, 2], missing: []}; }
+function v3aSkin(g, pose, bind, map, outPos, outNrm, shift){ for(let i = 0; i < outPos.length; i += 3) outPos[i + 1] = g.positions[i + 1] + 0.95 + shift[1]; }
+function armAnimLength(){ return 0; }
+const geo = {positions: new Float32Array([0, -0.96, 0, 0, 0.95, 0]), outPos: new Float32Array(6), outNrm: new Float32Array(6),
+             vertices: 2, weights: [1, 0, 1, 0], joints: [1, 0, 1, 0], bones: ['a', 'b', 'c']};
+function armVisibleObjects(){ return [{}]; }
+function armAnimGeo(){ return geo; }
+function armGl(){ return {bindBuffer(){}, bufferSubData(){}, ARRAY_BUFFER: 0}; }
+function armToScreen(p){ return [p[0], p[1]]; }
+ARM.anim = {data: {bones}, t: 0, tpose: false, travel: [0, 0], bind: pose, carried: false};
+ARM.view = {getBoundingClientRect: () => ({left: 0, top: 0, width: 1})}; ARM.bones = true;
+armAnimPose();
+const dots = [];
+armBonesDraw({save(){}, restore(){}, beginPath(){}, moveTo(){}, lineTo(){}, stroke(){}, fill(){},
+              arc(x, y){ dots.push(y); }}, 1, 1);
+const meshLow = Math.min(geo.outPos[1], geo.outPos[4]);
+console.log(JSON.stringify({meshLow: +meshLow.toFixed(3), footY: +dots[1].toFixed(3)}));
+"""
+             )
+    (tmp / "probe2d.js").write_text(probe, encoding="utf-8")
+    out2d = subprocess.run([node, str(tmp / "probe2d.js")], capture_output=True, text=True, timeout=60)
+    gotd = __import__("json").loads(out2d.stdout or "null") or {}
+    check(f"the skeleton is lowered with the posed model it plays ({gotd or out2d.stderr[-200:]})",
+          gotd and abs(gotd["footY"] - (0.05 - 0.96)) < 1e-3)
+
     # armory.js loads even when viewer3d.js has not arrived yet: core.js
     # fetches a dropped file again, but only after the files behind it ran,
     # and armory.js dying on V3_ENV left the Armory Studio button dead

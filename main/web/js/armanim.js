@@ -323,6 +323,7 @@ function armAnimPose(objs){
   const rig = card && typeof cgRigActive === 'function' && cgRigActive();
   const pose = rig ? cgRigPose(a.data) : v3aPose(a.data, a.t);
   const shift = rig ? [0, 0, 0] : [-tr[0] * f, a.carried ? 0 : (isFinite(low) ? low : 0), -tr[1] * f];
+  a.ground = shift[1];      // armBonesDraw lowers the skeleton with the model
   const gl = armGl();
   for(const g of geos){
     if(g.unweighted){ g.posed = false; continue; }

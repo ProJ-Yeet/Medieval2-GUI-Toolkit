@@ -503,7 +503,9 @@ function armBonesDraw(ctx, w, h){
   const len = armAnimLength(), f = len > 0 ? ((a.t % len) + len) % len / len : 0;
   const tr = a.travel || [0, 0];
   const pts = a.tpose ? (a.bind || v3aBind(a.data)) : v3aPose(a.data, a.t).map(b => b.p);
-  const shift = a.tpose ? [0, 0, 0] : [-tr[0] * f, 0, -tr[1] * f];
+  // lowered as armAnimPose lowered the posed model; alone, it stands as it is
+  const drop = armVisibleObjects().length ? (a.ground || 0) : 0;
+  const shift = a.tpose ? [0, 0, 0] : [-tr[0] * f, drop, -tr[1] * f];
   const r = ARM.view.getBoundingClientRect(), dpr = w / (r.width || w);
   const at = p => { const s = armToScreen([p[0] + shift[0], p[1] + shift[1], p[2] + shift[2]]);
     return [(s[0] - r.left) * dpr, (s[1] - r.top) * dpr]; };
