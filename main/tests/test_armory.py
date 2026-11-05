@@ -448,6 +448,17 @@ console.log(JSON.stringify({trip, keys, t1: o1.t.map(v => Math.round(v * 1000) /
     check(f"keys are named as the keymap writes them ({got.get('keys')})",
           got.get("keys") == ["numpad1", "ctrl+numpad1", "alt+h", "numpad."])
 
+    # armory.js loads even when viewer3d.js has not arrived yet: core.js
+    # fetches a dropped file again, but only after the files behind it ran,
+    # and armory.js dying on V3_ENV left the Armory Studio button dead
+    probe = ("const tt=x=>x,ttN=x=>x,state={},overlay=null,api={};"
+             + (ROOT / "web" / "js" / "armory.js").read_text(encoding="utf-8")
+             + ";console.log(typeof armGl)")
+    (tmp / "probe2a.js").write_text(probe, encoding="utf-8")
+    out2a = subprocess.run([node, str(tmp / "probe2a.js")], capture_output=True, text=True, timeout=60)
+    check(f"armory.js loads before viewer3d.js has ({(out2a.stdout + out2a.stderr).strip()[-120:]})",
+          out2a.stdout.strip() == "function")
+
     # a sheet whose request the server never saw (a refused connection) is
     # asked for again until it arrives; one the server answers with an error
     # is not, since asking again will not change that answer

@@ -40,7 +40,9 @@ void main(){
   vPos = w.xyz;
   gl_Position = uProj * uView * w;
 }`;
-const ARM_FRAG = `#extension GL_OES_standard_derivatives : enable
+// built when the viewport first draws, not at load: V3_ENV is viewer3d.js's,
+// and a dropped viewer3d.js that core.js fetches again arrives after this file ran
+const armFrag = () => `#extension GL_OES_standard_derivatives : enable
 precision mediump float;
 varying vec3 vNormal; varying vec2 vUv; varying vec3 vPos;
 uniform sampler2D uTex, uNTex;
@@ -744,7 +746,7 @@ function armGl(){
   };
   const p = gl.createProgram();
   gl.attachShader(p, sh(gl.VERTEX_SHADER, ARM_VERT));
-  gl.attachShader(p, sh(gl.FRAGMENT_SHADER, ARM_FRAG));
+  gl.attachShader(p, sh(gl.FRAGMENT_SHADER, armFrag()));
   gl.linkProgram(p);
   ARM.prog = p;
   ARM.loc = {};
