@@ -13153,6 +13153,130 @@ user (see *Deferred to a later version* under *What else is open*).
 
 ---
 
+## Phase 101 - the user's list of 2026-11-03, the part built in a cloud session
+
+Fourteen items in one message. What needs the installed mods to measure is
+left in `ROADMAP.md` as 101h-101m. Built here:
+
+* **101a - the battle-model entry list kept where it was scrolled.** Unit
+  Transfer's *battle-model entries only* list redrew the whole composer on every
+  tick, which threw the list and the dialog back to the top. `holdScroll(root,
+  paint)` in `core.js` remembers every scrolled element under the dialog (by id,
+  else by class and position) and puts each back after the repaint;
+  `toggleImportModel` and `allImportModels` go through it.
+* **101b - Apply without a Probe, and a preview in plain words.** Apply no
+  longer stops the first time a unit already exists in the destination to show
+  a probe: the conflict is settled the way the dialog already says (rename with
+  its pre-filled names, unless the user chose otherwise). The preview opens with
+  `planGlanceHtml`: a green *Ready* or red *problems* line and at most five short
+  sentences (what is created, renamed, how many battle models and files); the
+  planner's full report folds under *Show full detail*, remembered as
+  `transfer_detail_open`.
+* **101c - a Find box over the sidebar's faction checklist**, in the Unit
+  Editor's filters and in Buildings' (`facFindApply`). A ticked faction stays
+  shown while it is filtering.
+* **101d - armour upgrade levels and models, the same on both screens.**
+  `gfUgLevelsWidget` is now the levels box everywhere (guided and raw view of
+  the editor, the creator): chips always in ascending order, no drag, and *Add*
+  with nothing typed goes one past the highest level. The creator's models box,
+  `gfUgModelsWidget`, is drawn like the editor's (✕ above each tier, which drops
+  its level too, drag to reorder, ＋ with *repeat the last tier* and *name an
+  existing entry*). Adding a model when there are fewer levels than models tops
+  the levels up (`ugTopUpLevels`, and `edUgAppend` in the editor).
+* **101e - the 3D column follows the tiers.** A tier added or swapped is drawn
+  straight away, in the editor (`edPrevFollowTiers` from `edSetField`;
+  `edPrevEntries` reads the tiers as typed) and in the creator
+  (`cmpPrevFollowTiers` from the guided host's `set` and the raw boxes).
+* **101f - the Unit Creator hands over to the Unit Editor.** After a new unit
+  is written in the Unit Editor's mode, the list is re-read and the new unit
+  opens in the editor. *Copy from type* sits beside the displayed name in both
+  the creator and the editor.
+* **101g - a unit's animations changed directly.** Each battle-model card
+  (Unit Editor and BMDB editor) shows the entry's animation records: mount type
+  and primary / secondary skeleton, with the mod's skeleton names suggested.
+  `ModelEdit.animations` carries them; `_plan_model_edit` writes them with
+  `modeldb.rewrite_animations` (only those three names, weapon skeletons and
+  every other byte kept); an unknown mount type, an empty primary or a changed
+  record count is an error, a skeleton neither the modeldb nor the packs know a
+  warning. `tests/test_animentry` 15 (nothing installed needed).
+
+Then, the same day, three more from the user:
+
+* **101n - Armory Studio shows the images it will bake.** *Show the baked
+  images* on the export's Bake step: each used sheet's texture and normal map
+  as the bake will write them (`armbake.preview`, `/api/armory/bake_preview`),
+  nothing written. The bake and the preview share `render_sheets`, so the
+  picture is the file.
+* **101o - the source models' own normal maps baked.** A fourth normal-map
+  mode, *From the source models*: each block's own normal map (an entry's
+  `normal` path for the skin it wears, an external sheet's `_norm` /
+  `_normal` neighbour) copied onto the new sheet exactly as its art is,
+  its X and Y turned with a block laid on its side or given a free turn
+  (`turn_normals`); a part with none falls back to the Generic setting. The
+  mode can be picked on the Bake step as well as in the objects panel.
+  `tests/test_armbake_normals` 15.
+* **101p - Discord and YouTube beside Ko-fi**, in the top bar, the Home footer
+  and the credits (`socialLinks`), the README's own two links.
+* **101q - the card maker takes what Pfadfinder-Adam's does** (his
+  `campaign_editor/cardmaker.py`, read from the PR refs of
+  RTW-M2TW-Campaign-Editor, taken with his leave and credited in the modules).
+  Ours keeps its own render (poses, the IK rig, the lamp, the finish) and gains:
+  *Framing* - whole man, to the knees, the thighs, the waist - fitted to the
+  figure from its box in the last render (`cgFit`, orthographic so exact,
+  twice for a pitched camera), again on its own when the pose or size
+  changes; *Ground and frame* - see-through (the game's own way), a colour, a
+  picture, the game's own card ground (`STRAT_` / `BATTLE_CARD_BACKGROUND`),
+  for an info picture the scroll paper and the `PORTRAIT_FRAME` laid round it
+  nine-piece (`cgCompose`, `cgNineSlice`); the *Painted look* (Kuwahara twice
+  on summed-area tables, richer and warmer colour, a canvas grain:
+  `cgPaint`); *This mod's cards / info pictures* sizes read off its files and
+  *Bigger* 1-4x, the HD render held under 4096 a side (`cgSS`). Server:
+  `cardart.py` (`game_sprite` from `ui/*.sd.xml` through `gamepack.lookup`,
+  `mod_sizes`), `/api/armory/card_art`, `/api/armory/card_sizes`.
+  `tests/test_cardart` 12.
+Then, the same day, from a look at Pfadfinder-Adam's unit and building screens
+and the users' word that the toolkit is "very hard and not user friendly ...
+especially the error logs and the console":
+
+* **101r - Delete takes the unit out of every file.** Its recruit lines, its
+  `unit` lines in a campaign's or a battle's armies and garrisons, its
+  mercenary pool line and its rebel lines go with it, one Undo
+  (`unitrefs.remove_refs`, `DeleteOptions.remove_refs`, on by default); a
+  script naming it is listed and never cut; an army left with no unit is
+  warned about. Before, a starting army naming the deleted unit stopped the
+  campaign loading. `tests/test_delete_refs` 14.
+* **101s - a recruit pool given to a tier goes to the tiers above.** The
+  Recruitment tab's picker and Buildings' add-unit picker, one remembered
+  switch (`recruit_upward`, on): the game recruits only from the level a
+  building stands at, so a unit given one tier was gone after an upgrade.
+* **101t - attributes explained, and M2EX / REX's own.** Every word's
+  meaning under its box (`GF_ATTR_TEXT`); the extended engines' words (Pfad's
+  `unitattrs.py`) in a fold of their own, warned about on a mod not marked
+  M2EX; a word on `stat_mental` / `stat_ground` where it does nothing warned
+  about.
+* **101u - the game's log in plain words.** One card: did it crash, after
+  which file and line, that line as it reads now, a button to the unit /
+  building / file that holds it (`gamelog.fix_target`); problems first, the
+  usually-harmless notes folded; a grouped row names what each line was about
+  (`names`) instead of "X" and "Y"; Script Errors and unknown attributes
+  explained; the game's own words behind a fold; Copy for a bug report.
+  Health's Checks tab got the same summary card and folds its 20 filters.
+* **101v - errors anywhere.** Messages at the foot of the screen stay long
+  enough to read (about a second per eight words, to 15 s), red for a
+  failure, held under the mouse, closable. A fault in a screen's own code
+  shows one bar (Draw the screen again / Report it) instead of nothing. A
+  server fault replies in plain words, the exception as `detail`
+  (`Handler._fault`); a missing name says what was not found (`_not_found`).
+* **101w - the console window.** Only what a player needs: the version, one
+  line for the startup checks (each failure on its own), "Starting…", the
+  card conversion's progress, warnings and errors with a mark, and one
+  "✓ Ready" line. The environment block and every passing check go to
+  server.log only (`logutil.FILE_ONLY`, `startup.console_line`).
+* **101x - wording.** "Probe" is "Preview" in every English string the page
+  shows (the engine's own messages keep theirs); the Unit Editor's tabs are
+  "Stats & fields" and "Battle models"; a tick box in its form no longer
+  floats above its label.
+
 ## Phase 100 - Armory Studio's second round, and faction cards in the Unit Editor, scheduled 2026-10-19, done 2026-10-20
 
 Sent by the user on 2026-10-19: a list of requests for Armory Studio, a bug

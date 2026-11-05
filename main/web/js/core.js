@@ -353,7 +353,30 @@ function caretKeep(id, paint){
 // written this way. .count, .bnote, .sprnote and .gfdoc all style the list.
 const docPoints=(lead,points)=>{const ps=points.filter(Boolean);
   return ps.length?lead+'<ul>'+ps.map(p=>'<li>'+p+'</li>').join('')+'</ul>':lead;};
-function toast(m,ms=2800){const t=document.getElementById('toast');t.textContent=m;t.classList.add('show');clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('show'),ms);}
+/* A message at the bottom of the screen. Users found them gone before they
+   could be read, so a message stays longer the longer it is (about a second
+   per eight words, up to 15 s), never shorter than asked; one that reports a
+   failure is red; the mouse over it holds it; ✕ closes it; the text can be
+   selected and copied. */
+const TOAST_BAD=/(^\s*[✗✕]|\b(failed|could not|couldn't|cannot|can't|error|refused|not found|went wrong)\b)/i;
+function toast(m,ms=2800){
+  const t=document.getElementById('toast'); if(!t)return;
+  const text=String(m==null?'':m);
+  const words=text.split(/\s+/).length;
+  const life=Math.max(ms,Math.min(15000,1800+words*130));
+  t.innerHTML='';
+  const span=document.createElement('span'); span.className='toasttext'; span.textContent=text;
+  const x=document.createElement('button'); x.className='toastx'; x.textContent='✕';
+  x.title=tt('common.close'); x.onclick=()=>{clearTimeout(t._t); t.classList.remove('show');};
+  t.appendChild(span); t.appendChild(x);
+  t.classList.toggle('bad',TOAST_BAD.test(text));
+  t.classList.add('show');
+  clearTimeout(t._t);
+  const arm=()=>{clearTimeout(t._t); t._t=setTimeout(()=>t.classList.remove('show'),life);};
+  t.onmouseenter=()=>clearTimeout(t._t);
+  t.onmouseleave=arm;
+  arm();
+}
 /* The mend a refused read offered.
 
    A modeldb a hand edit has knocked out of step stops every screen that needs
@@ -728,7 +751,20 @@ function buildFilter(id,values,key,useLabel){
     state.sel[key].has(v)?'checked':''}>${esc(useLabel?facLabel(v):v)}</label>`).join('')
     ||`<span class="count">${tt('common.none_2')}</span>`;
   box.querySelectorAll('input').forEach(cb=>cb.onchange=()=>{const s=state.sel[key];cb.checked?s.add(cb.value):s.delete(cb.value);filtersChanged();paintFilterFolds();});
+  if(id==='factionFilter'){const f=document.getElementById('facFind'); if(f&&f.value)facFindApply(id,f.value);}
   paintFilterFolds();
+}
+/* The Find box over a sidebar's faction checklist: hides the factions whose
+   shown name (or code name) does not contain what was typed. A ticked faction
+   stays visible, so a filter in force is never hidden by the search. */
+function facFindApply(id,q){
+  const box=document.getElementById(id); if(!box)return;
+  const s=(q||'').trim().toLowerCase();
+  box.querySelectorAll('label.opt').forEach(l=>{
+    const cb=l.querySelector('input');
+    const hay=(l.textContent+' '+(cb?cb.value:'')).toLowerCase();
+    l.style.display=(!s||hay.includes(s)||(cb&&cb.checked))?'':'none';
+  });
 }
 /* ---------- burger menu ----------
    The single registry of modules. Everything the menu shows - and the header
@@ -1551,6 +1587,34 @@ const navCan=d=>{const t=state.trail, j=t.i+d; return j>=0&&j<t.list.length;};
 //: themselves; the scroll is what a repaint throws away.
 const navPlace=()=>({scroll:(typeof main!=='undefined'&&main&&main.scrollTop)||0});
 
+/* Repaint a dialog or panel without losing where any list inside it was
+   scrolled to. Every scrolled element under `root` (and `root` itself) is
+   remembered by its id, or by its class and position among elements with the
+   same class, and put back once `paint` has rebuilt the markup. Used where a
+   tick box redraws the whole dialog (Unit Transfer's battle-model entries). */
+function holdScroll(root, paint){
+  if(!root) return paint();
+  const keyOf = el => el.id ? '#' + el.id : (el.className ? '.' + String(el.className) : '');
+  const seen = {}, saved = [];
+  const walk = el => {
+    const k = keyOf(el);
+    if(k){ const n = seen[k] = (seen[k] || 0) + 1; if(el.scrollTop > 0) saved.push([k, n, el.scrollTop]); }
+  };
+  walk(root); root.querySelectorAll('*').forEach(walk);
+  const page = document.scrollingElement ? document.scrollingElement.scrollTop : 0;
+  const out = paint();
+  const put = () => {
+    const now = {}, at = {};
+    const scan = el => { const k = keyOf(el); if(k){ const n = now[k] = (now[k] || 0) + 1; at[k + '|' + n] = el; } };
+    scan(root); root.querySelectorAll('*').forEach(scan);
+    for(const [k, n, top] of saved){ const el = at[k + '|' + n]; if(el) el.scrollTop = top; }
+    if(document.scrollingElement && document.scrollingElement.scrollTop !== page) document.scrollingElement.scrollTop = page;
+  };
+  put();
+  if(out && typeof out.then === 'function') out.then(put, put);
+  return out;
+}
+
 /* Put a place back, once there is a screen tall enough to hold it. The repaint
    can be a fetch away, so this keeps trying for a few seconds and then lets go:
    landing at the top of the right screen is not a failure worth a message. */
@@ -1684,7 +1748,7 @@ function wire(){
   document.querySelectorAll('.era').forEach(cb=>cb.onchange=()=>{cb.checked?state.sel.era.add(cb.value):state.sel.era.delete(cb.value);filtersChanged();});
   settingsBtn.onclick=openSettings;
   topFoldBtn.onclick=()=>topFold(true); topOpenBtn.onclick=()=>topFold(false);
-  topKofi.innerHTML=kofiBadge();
+  topKofi.innerHTML=socialLinks('top')+kofiBadge();
   // …but not `logBtn.onclick=openLog`: a handler is called WITH the click,
   // and openLog's first argument is the mode to filter by. That filter
   // matched nothing, so the header's own button opened an empty log.
@@ -2029,6 +2093,13 @@ const kofiLink=()=>`<a class="kofi" href="${KOFI_URL}" target="_blank" rel="noop
 // falls back to the plain link rather than leaving a broken picture.
 const KOFI_ART='https://ko-fi.com/img/githubbutton_sm.svg';
 const kofiBadge=()=>`<a class="kofibadge" href="${KOFI_URL}" target="_blank" rel="noopener" title="${ttA('core.support_on_kofi')}"><img src="${KOFI_ART}" alt="${ttA('core.support_on_kofi')}" onerror="this.parentNode.outerHTML=kofiLink()"></a>`;
+// The Discord server and the YouTube channel the README links, beside Ko-fi
+// wherever it is shown: the top bar, the Home footer and the credits. Plain
+// links styled as pills (no picture off another server), so they work offline.
+const DISCORD_URL='https://discord.gg/htkpNjk5yq';
+const YOUTUBE_URL='https://www.youtube.com/@proj-yeet';
+const socialLinks=(cls)=>`<a class="social discord${cls?' '+cls:''}" href="${DISCORD_URL}" target="_blank" rel="noopener" title="${ttA('core.join_discord_title')}">${tt('core.join_discord')}</a>`
+  +`<a class="social youtube${cls?' '+cls:''}" href="${YOUTUBE_URL}" target="_blank" rel="noopener" title="${ttA('core.youtube_title')}">${tt('core.youtube')}</a>`;
 async function openCredits(){
   let ver=verLabel(appBuild);
   if(!ver){try{const p=await api.get('/api/ping');ver=verLabel(p.version);}catch(e){}}
@@ -2073,7 +2144,7 @@ async function openCredits(){
       </div>
       <div style="margin-top:14px">
         <div class="lbl" style="margin-bottom:4px">${tt('core.support')}</div>
-        ${kofiLink()}
+        <div class="sociallinks">${kofiLink()}${socialLinks()}</div>
       </div>
     </div>
     <div style="padding:0 16px 16px;text-align:right">

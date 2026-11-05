@@ -45,7 +45,7 @@ function renderHome(){
     <div class="homegrid">${mods.map(homeCardHtml).join('')}</div>
     <div class="hcfork" style="margin:8px 0"><button onclick="homeFork('', true)" title="${ttA('home.fork_game_title')}">${tt('home.fork_game')}</button></div>
     ${homePrefsHtml()}
-    <div class="homefoot">${kofiLink()}</div>
+    <div class="homefoot sociallinks">${kofiLink()}${socialLinks()}</div>
   </div>`;
   mods.forEach(m => homeLoadReport(m.name));
 }

@@ -101,6 +101,11 @@ class ModelEdit:
     # 98e: copy every texture outside <model folder>/textures into it and point
     # the entry there (see :func:`_plan_gather`)
     gather: bool = False
+    # The entry's animation records, by position: [{"mount_type", "primary",
+    # "secondary"}]. None = leave them alone. Only those three names change;
+    # the record count and the weapon skeletons stay as they are
+    # (:func:`modeldb.rewrite_animations`).
+    animations: Optional[List[Dict[str, str]]] = None
 
 
 @dataclass
@@ -137,6 +142,9 @@ class DeleteOptions:
                                       # and the unit's mount when nothing else rides it
     remove_assets: bool = False       # mesh/texture files of those entries
     remove_icons: bool = False
+    # the lines elsewhere that only name the unit: recruitment, armies and
+    # garrisons, mercenary pools, rebel lists (unitrefs.remove_refs)
+    remove_refs: bool = True
 
 
 @dataclass
@@ -219,6 +227,24 @@ def _folder_list(v) -> List[str]:
     return out
 
 
+MOUNT_TYPES = ("none", "horse", "camel", "elephant")
+
+
+def _clean_anims(v) -> Optional[List[Dict[str, str]]]:
+    """The browser's animation records, names trimmed and lower-cased (the
+    game reads skeleton names case-blind; :func:`modeldb.rewrite_animations`
+    leaves a name that only differs in case alone). None stays None."""
+    if v is None:
+        return None
+    out: List[Dict[str, str]] = []
+    for a in v or []:
+        if not isinstance(a, dict):
+            continue
+        out.append({k: str(a.get(k) or "").strip().lower()
+                    for k in ("mount_type", "primary", "secondary")})
+    return out
+
+
 def request_from_dict(d: dict) -> EditRequest:
     dops = d.get("delete_options") or {}
     return EditRequest(
@@ -246,7 +272,8 @@ def request_from_dict(d: dict) -> EditRequest:
                                          if m.get("factions") is not None else None),
                                move_dir=(m.get("move_dir") or "").strip(),
                                move_shared=bool(m.get("move_shared", False)),
-                               gather=bool(m.get("gather", False)))
+                               gather=bool(m.get("gather", False)),
+                               animations=_clean_anims(m.get("animations")))
                      for m in (d.get("model_edits") or [])],
         new_models=[NewModel(name=(n.get("name") or "").strip().lower(),
                              clone_from=(n.get("clone_from") or "").strip().lower(),
@@ -274,7 +301,8 @@ def request_from_dict(d: dict) -> EditRequest:
             remove_loc=bool(dops.get("remove_loc", True)),
             remove_models=bool(dops.get("remove_models", False)),
             remove_assets=bool(dops.get("remove_assets", False)),
-            remove_icons=bool(dops.get("remove_icons", False))),
+            remove_icons=bool(dops.get("remove_icons", False)),
+            remove_refs=bool(dops.get("remove_refs", True))),
     )
 
 
@@ -1265,6 +1293,47 @@ def _raw_entry(plan: "EditPlan", entry, me: ModelEdit) -> str:
     return me.raw_entry
 
 
+def _plan_animations(plan: EditPlan, mod: Mod, entry, me: ModelEdit) -> None:
+    """Refuse what the game cannot load, and warn about a skeleton the mod's
+    animation packs have not got (a model asking for one takes the game down
+    the moment it is drawn)."""
+    if len(me.animations) != len(entry.animations):
+        plan.errors.append(_i18n.msg(
+            "eng.edit.animation_record_count_changed",
+            "{name}: the entry has {have} animation record(s) and {got} were sent; "
+            "records can be changed here, not added or removed",
+            name=entry.name, have=len(entry.animations), got=len(me.animations)))
+        return
+    named = {s.lower() for s in mod.modeldb.all_skeletons()}
+    try:
+        from . import animpack
+        ks = animpack.known_skeletons(mod.data, mod.modeldb)
+    except Exception:  # noqa: BLE001 - the pack list is a nicety, not a gate
+        ks = ()
+
+    def known(sk: str) -> bool:
+        return sk in named or sk in ks
+    for a in me.animations:
+        if a["mount_type"] not in MOUNT_TYPES:
+            plan.errors.append(_i18n.msg(
+                "eng.edit.unknown_mount_type",
+                "{name}: '{mount}' is not a mount type (none, horse, camel or elephant)",
+                name=entry.name, mount=a["mount_type"]))
+        if not a["primary"]:
+            plan.errors.append(_i18n.msg(
+                "eng.edit.animation_needs_a_primary_skeleton",
+                "{name}: every animation record needs a primary skeleton",
+                name=entry.name))
+        for sk in (a["primary"], a["secondary"]):
+            if sk and not known(sk):
+                plan.warnings.append(_i18n.msg(
+                    "eng.edit.skeleton_not_in_this_mod",
+                    "{name}: no entry in this mod uses the skeleton '{skeleton}' and it was "
+                    "not found in its animation packs - check the spelling, or the unit "
+                    "will crash the game when it is drawn",
+                    name=entry.name, skeleton=sk))
+
+
 def _plan_model_edit(plan: EditPlan, mod: Mod, me: ModelEdit,
                      entries: Dict[str, "modeldb.ModelEntry"], taken: set) -> None:
     """Apply one entry's edits, in the only order that keeps them all meaningful.
@@ -1347,6 +1416,21 @@ def _plan_model_edit(plan: EditPlan, mod: Mod, me: ModelEdit,
             for fac in sorted(touched):
                 plan.changes.append(
                     f"{entry.name}: {fac} {', '.join(sorted(touched[fac]))} repointed")
+
+    # ---- animation records: which skeletons the entry is animated with ----
+    if me.animations:
+        _plan_animations(plan, mod, entry, me)
+        anims = [modeldb.Animation(a["mount_type"] or "none", a["primary"], a["secondary"])
+                 for a in me.animations]
+        new_raw = modeldb.rewrite_animations(raw, anims, pad=pad)
+        if new_raw != raw:
+            raw = new_raw
+            for i, (a, old) in enumerate(zip(anims, entry.animations)):
+                if (a.mount_type, a.primary_skeleton, a.secondary_skeleton) != \
+                        (old.mount_type, old.primary_skeleton.lower(), old.secondary_skeleton.lower()):
+                    plan.changes.append(
+                        f"{entry.name}: animation #{i + 1} -> {a.mount_type}: "
+                        f"{a.primary_skeleton or '-'} / {a.secondary_skeleton or '-'}")
 
     # ---- one folder for the mesh + textures (last: it owns every path) ----
     if me.move_dir:
@@ -1513,6 +1597,32 @@ def _plan_delete(plan: EditPlan, unit) -> EditPlan:
         f"unit '{unit.type}' removed from "
         + (f"its EOP file ({eop.rel_to_root(mod, unit.eop_file)})" if unit.is_eop
            else "export_descr_unit.txt"))
+
+    # Everything else that names it: a recruit line, an army's or a garrison's
+    # unit line, a mercenary pool's, a rebel faction's. Left in, they name a
+    # unit that no longer exists - a campaign whose starting army names one
+    # does not load. Taken out with the unit, one Undo for all of it; what
+    # cannot be cut safely (a script, the voice bank) is listed instead.
+    if opts.remove_refs:
+        gone = unitrefs.remove_refs(mod, unit.type, [u.type for u in mod.edu.units])
+        plan.ref_texts.update(gone.texts)
+        plan.ref_counts = gone.counts()
+        if gone.removed:
+            plan.changes.append(
+                f"{len(gone.removed)} line(s) naming '{unit.type}' removed from "
+                + ", ".join(f"{f} ({n})" for f, n in gone.counts()[:5])
+                + ("…" if len(gone.counts()) > 5 else ""))
+        for r in gone.alone[:5]:
+            plan.warnings.append(_i18n.msg(
+                "eng.edit.delete_left_an_army_empty",
+                "{where}: that army or garrison had only this unit, and is left with none - give it another unit, or the game may refuse the campaign",
+                where=r.label()))
+        if gone.kept:
+            plan.warnings.append(_i18n.msg(
+                "eng.edit.delete_still_named",
+                "{n} other place(s) still name '{unit}' and were left alone (a script or a list that cannot be cut safely) - check them by hand: {spots}{more}",
+                n=len(gone.kept), unit=unit.type, spots=", ".join(r.label() for r in gone.kept[:5]),
+                more="…" if len(gone.kept) > 5 else ""))
 
     others_same_dict = [u.type for u in kept if u.dictionary == unit.dictionary]
     if opts.remove_loc:
@@ -1841,6 +1951,9 @@ def unit_detail(mod: Mod, unit_type: str) -> dict:
                 "descr_short": (loc.descr_short if loc else "") or ""},
         "models": models,
         "model_names": sorted(entries.keys()),
+        # every skeleton the mod's entries already name: the animation boxes'
+        # suggestions
+        "skeleton_names": sorted(mod.modeldb.all_skeletons()),
         "icons": [{"rel": rel, "kind": kind}
                   for _abs, rel, kind in _unit_icon_files(mod, unit.dictionary)],
         # the same files grouped by content: one row per DISTINCT picture, with
@@ -1893,6 +2006,10 @@ def model_payload(e: "modeldb.ModelEntry", slots=(), used_by=(), mod=None) -> di
         "texture_defaults": _texture_defaults(slot_paths),
         "folder": folder,
         "skeletons": sorted(set(s for s in e.skeletons() if s)),
+        # the animation records themselves, in file order, for the editor's
+        # mount type / skeleton boxes
+        "animations": [{"mount_type": a.mount_type, "primary": a.primary_skeleton,
+                        "secondary": a.secondary_skeleton} for a in e.animations],
         # the whole list, not a sample: it backs the "shared with" dropdown
         "used_by": used,
         "shared": bool(used),

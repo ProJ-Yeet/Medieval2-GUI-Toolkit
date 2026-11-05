@@ -49,7 +49,36 @@ from . import config
 LOGGER_NAME = "unittransfer"
 log = logging.getLogger(LOGGER_NAME)
 
-_CONSOLE_FMT = "%(asctime)s  %(levelname)-7s %(message)s"
+_CONSOLE_FMT = "%(asctime)s  %(message)s"
+
+
+class ConsoleFormatter(logging.Formatter):
+    """The console window as a player reads it: the time, a mark instead of
+    the level's name (nothing for news, ⚠ for a warning, ✗ for an error), and
+    the message. The file keeps the plain level names for a bug report."""
+
+    MARKS = {logging.WARNING: "⚠ ", logging.ERROR: "✗ ", logging.CRITICAL: "✗ "}
+
+    def format(self, record: logging.LogRecord) -> str:
+        out = super().format(record)
+        mark = self.MARKS.get(record.levelno, "")
+        if mark:
+            stamp = self.formatTime(record, self.datefmt)
+            out = out.replace(stamp + "  ", stamp + "  " + mark, 1)
+        return out
+
+
+class _NotFileOnly(logging.Filter):
+    """Lines logged with ``extra=FILE_ONLY`` go to server.log and not the
+    console: the environment block, each passing startup check - what a bug
+    report needs and a player starting the tool does not."""
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        return not getattr(record, "file_only", False)
+
+
+#: pass as ``extra=`` to keep a line out of the console window
+FILE_ONLY = {"file_only": True}
 _FILE_FMT = "%(asctime)s  %(levelname)-7s %(message)s"
 
 #: Rotation. Four megabytes is many thousands of operations, and two backups mean
@@ -109,7 +138,8 @@ def setup(verbose: bool = False) -> logging.Logger:
         try:
             sh = logging.StreamHandler(stream)
             sh.setLevel(logging.DEBUG if verbose else logging.INFO)
-            sh.setFormatter(logging.Formatter(_CONSOLE_FMT, datefmt="%H:%M:%S"))
+            sh.setFormatter(ConsoleFormatter(_CONSOLE_FMT, datefmt="%H:%M:%S"))
+            sh.addFilter(_NotFileOnly())
             log.addHandler(sh)
         except Exception:
             pass
@@ -174,7 +204,7 @@ def _stat_line(path: Path) -> str:
 
 
 def block(header: str, lines: Iterable[str], limit: int = CONSOLE_LIST_LIMIT,
-          level: int = logging.INFO) -> None:
+          level: int = logging.INFO, file_only: bool = False) -> None:
     """A header line, then ``lines`` indented under it.
 
     The console stops after ``limit`` items and says how many it swallowed; the
@@ -183,14 +213,15 @@ def block(header: str, lines: Iterable[str], limit: int = CONSOLE_LIST_LIMIT,
     cut short for everybody.
     """
     items = [str(x) for x in lines]
-    log.log(level, "%s", header)
+    kw = {"extra": FILE_ONLY} if file_only else {}
+    log.log(level, "%s", header, **kw)
     if not items:
         return
     for i, item in enumerate(items):
         # past the console's patience the line still has to reach the file, and
         # DEBUG is what the console filters and the file keeps
-        log.log(level if i < limit else logging.DEBUG, "     %s", item)
-    if len(items) > limit:
+        log.log(level if i < limit else logging.DEBUG, "     %s", item, **kw)
+    if len(items) > limit and not file_only:
         log.log(level, "     … and %d more (all of them are in %s)",
                 len(items) - limit, _log_path.name if _log_path else "the log file")
 
@@ -204,10 +235,10 @@ def banner(port: Optional[int] = None) -> None:
     checkout resolve ``config/`` differently.
     """
     from . import __version__
-    log.info("=" * 78)
-    log.info("Unit Transfer %s - session started %s", __version__,
-             time.strftime("%Y-%m-%d %H:%M:%S"))
-    log.info("=" * 78)
+    log.info("=" * 78, extra=FILE_ONLY)
+    log.info("Medieval 2 GUI Toolkit %s - session started %s", __version__,
+             time.strftime("%Y-%m-%d %H:%M:%S"), extra=FILE_ONLY)
+    log.info("=" * 78, extra=FILE_ONLY)
     rows = [
         f"version      {__version__}",
         f"python       {platform.python_version()} ({platform.architecture()[0]}) "
@@ -223,7 +254,7 @@ def banner(port: Optional[int] = None) -> None:
     ]
     if port is not None:
         rows.append(f"port         {port}")
-    block("Environment:", rows)
+    block("Environment:", rows, file_only=True)
 
 
 def fingerprint(mod) -> None:

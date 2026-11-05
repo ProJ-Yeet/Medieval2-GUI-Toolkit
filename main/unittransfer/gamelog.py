@@ -41,6 +41,8 @@ CAP = 40 * 1024 * 1024
 
 #: (pattern, plain words) - the pattern's groups fill {a}, {b}, {c}
 KNOWN: List[Tuple[str, object]] = [
+    (r"Script Error in (.+?), at line (\d+), column (\d+)", lambda *g: _i18n.msg("eng.gamelog.known_script_error", "The game could not read line {b} of {a} (at character {c}): a word or a number there is not what the game expects. The line is shown below as the file has it now.", a=g[0], b=g[1], c=g[2])),
+    (r"unknown attribute '(.+?)'", lambda *g: _i18n.msg("eng.gamelog.known_unknown_attribute", "A unit's attributes line has a word the game does not know: {a}. Check its spelling in the Unit Editor's Attributes, or take it out.", a=g[0])),
     (r"year_founded", lambda *g: _i18n.msg("eng.gamelog.known_1", "A town's founding year (descr_strat.txt, year_founded) is later than the campaign's start year, and the game stops here. Set it to the start year or earlier.")),
     (r"Character '(.+?)' is placed on an invalid tile", lambda *g: _i18n.msg("eng.gamelog.known_2", "{a} stands on a tile no one may stand on (the sea, a river, mountains, dense forest, off the map), so the game leaves him out. Move him on the campaign map.", a=g[0])),
     (r"unit\((.+?)\) does not match up to the ownership for faction\((.+?)\)", lambda *g: _i18n.msg("eng.gamelog.known_3", "A building lets {b} recruit {a}, but the unit's ownership in export_descr_unit.txt does not name {b}, so the game drops that recruit line. Give {b} the unit in the Unit Editor, or take {b} off the line in Buildings.", a=g[0], b=g[1])),
@@ -57,7 +59,7 @@ KNOWN: List[Tuple[str, object]] = [
     (r"DATA: src.(.+?)\((\d+)\)", lambda *g: _i18n.msg("eng.gamelog.known_14", "The game's own check failed in its code ({a}, line {b}) while reading data; the lines before it say what it was reading.", a=g[0], b=g[1])),
     (r"does not exist|not found|unknown", lambda *g: _i18n.msg("eng.gamelog.known_15", "The game met a name it does not know.")),
 ]
-_GENERIC = {13, 14, 15}
+_GENERIC = {15, 16, 17}
 
 
 def parse(text: str) -> List[Dict]:
@@ -144,6 +146,36 @@ def mod_line(game, rel: Optional[str], line: Optional[int]) -> Optional[str]:
     return None
 
 
+_RE_TYPE = re.compile(r"^\s*type\s+(.+?)\s*$")
+_RE_BUILDING = re.compile(r"^\s*building\s+(\S+)")
+
+
+def fix_target(game, rel: Optional[str], line: Optional[int]) -> Optional[Dict]:
+    """Where in the toolkit the line a Script Error names is fixed: the unit
+    whose block holds it (export_descr_unit.txt), the building line that holds
+    it (export_descr_buildings.txt), or the file as text. None without a file."""
+    if not game or not rel:
+        return None
+    name = rel.rsplit("/", 1)[-1].lower()
+    path = os.path.join(str(game), *rel.split("/"))
+    if line and os.path.isfile(path) and name in ("export_descr_unit.txt", "export_descr_buildings.txt"):
+        want = _RE_TYPE if name == "export_descr_unit.txt" else _RE_BUILDING
+        found = None
+        try:
+            with open(path, encoding="latin-1") as fh:
+                for n, t in enumerate(fh, 1):
+                    if n > line:
+                        break
+                    m = want.match(t)
+                    if m:
+                        found = m.group(1).strip()
+        except OSError:
+            found = None
+        if found:
+            return {"kind": "unit" if name == "export_descr_unit.txt" else "building", "name": found}
+    return {"kind": "file", "name": rel}
+
+
 RE_FATAL = re.compile(r"\[fatal\]|encountered an unspecified error", re.I)
 RE_STOP = re.compile(r"ASSERT FAILED|encountered an unspecified error", re.I)
 RE_CLOSED = re.compile(r"sprites_close\(\)|libs called display_close", re.I)
@@ -227,9 +259,15 @@ def verdict(text: str, game=None) -> Optional[Dict]:
             break
     head = _i18n.msg("eng.gamelog.stopped", "The game stopped: {why}",
                      why=why or _i18n.msg("eng.gamelog.no_cause", "the log names no cause; the lines before the stop are shown below"))
-    return {"stopped": True, "headline": head, "lines": before[-8:] + [first] + ([detail] if detail else []),
-            "serious": serious[:5], "file": rel, "line": line_no,
-            "now": mod_line(game, rel, line_no) if rel and line_no else None}
+    col = None
+    for e in reversed(parse("\n".join(before))):
+        if e["file"] == rel and e["line"] == line_no:
+            col = e["col"]
+            break
+    return {"stopped": True, "headline": head, "why": why, "lines": before[-8:] + [first] + ([detail] if detail else []),
+            "serious": serious[:5], "file": rel, "line": line_no, "col": col,
+            "now": mod_line(game, rel, line_no) if rel and line_no else None,
+            "fix": fix_target(game, rel, line_no) if rel else None}
 
 
 # ---------------------------------------------------------------------------
@@ -299,8 +337,21 @@ def read(mod, path=None, limit: int = 60) -> Dict:
     out = []
     for e, n, seen in groups[:limit]:
         generic = len({w for _, w in seen}) > 1
+        # the names each line of the group is about (a unit and a faction, a
+        # file...), so the page can say "the same for Spearmen (france)" rather
+        # than an explanation in X and Y
+        names = []
+        for _ln, w in seen:
+            _n, m, _w = _known(w or "")
+            if m and m.groups():
+                t = " · ".join(x for x in m.groups() if x)
+                if t and t not in names:
+                    names.append(t)
         out.append({"level": e["level"], "area": e["area"], "file": e["file"], "msg": e["msg"][:300],
                     "count": n, "plain": explain(e["why"] or e["msg"], generic=generic),
+                    "plain_first": explain(e["why"] or e["msg"]) if generic else "",
+                    "names": names[:6], "known": bool(_known(e["why"] or e["msg"])[1]),
+                    "fix": fix_target(game, e["file"], seen[0][0] if seen else None) if e["file"] else None,
                     "seen": [{"line": ln, "why": (w or "")[:240],
                               "now": (mod_line(game, e["file"], ln) or "")[:240] if e["file"] else ""}
                              for ln, w in seen]})

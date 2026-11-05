@@ -94,7 +94,8 @@ function hlPaint(){
   main.innerHTML = `<div class="hlwrap">
     ${hxTabsHtml()}
     ${hlHeadHtml(r)}
-    ${hlSourcesHtml(r)}
+    <details class="hlsrcfold"${state.hl.src || r.sources.some(x => x.state === 'failed') ? ' open' : ''}>
+      <summary class="count">${tt('health.filter_by_check',{n:r.sources.length})}</summary>${hlSourcesHtml(r)}</details>
     ${r.when.map(w => hlGroupHtml(w, rows.filter(f => f.when === w.id), labelOf)).join('')}
     ${rows.length ? '' : `<div class="bsec"><div class="trnote">${r.findings.length
       ? tt('health.nothing_matches_what_is_shown_tick')
@@ -109,7 +110,9 @@ function hlHeadHtml(r){
   const base = r.findings.filter(f => f.baseline).length;
   return `<div class="bsec"><h4>${tt('health.health_of_checks_ran_in_s',{mod:esc(r.mod),n:r.sources.filter(s => s.state === 'ok').length,ms:(r.ms / 1000).toFixed(1)})}
       <button style="margin-left:auto" onclick="loadHealth()">${tt('health.run_again')}</button></h4>
-    <div class="trnote">${tt('health.every_check_the_toolkit_has_over')}</div>
+    <div class="hxcard ${c.fatal ? 'stop' : c.warn ? 'warn' : 'ok'}"><div class="hxcardhead">${c.fatal
+        ? `✗ ${ttN('health.card_fatal', c.fatal)}` : c.warn ? `⚠ ${ttN('health.card_warn', c.warn)}` : `✓ ${tt('health.card_ok')}`}</div>
+      <div class="hxcardwhy">${tt('health.card_how')}</div></div>
     <div class="hlcounts">
       ${tt('health.fatal_and_warnings',{fatal:c.fatal,warnings:ttN('health.warning_count',c.warn)})}
       <label class="chk"><input type="checkbox" ${h.notes ? 'checked' : ''}

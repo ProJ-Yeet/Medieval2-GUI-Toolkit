@@ -164,7 +164,7 @@ r = subprocess.run([sys.executable, str(ROOT / "app.py"), "--check",
 out = r.stdout + r.stderr
 check("a held port does not stop startup any more", r.returncode == 0)
 check("…it says which port it moved to instead",
-      f"Using port {alt}" in out and f"[ok  ] port {alt}" in out)
+      f"Using port {alt}" in out and f"port {alt}:" not in out)
 check("…and it stops telling the player to relaunch with --port",
       "relaunch with --port" not in out)
 squatter.close()
@@ -295,10 +295,13 @@ r1 = run_launcher()
 out1 = r1.stdout + r1.stderr
 check("launcher exited 0", r1.returncode == 0)
 check("launcher returned instead of blocking on the server", True)
-check("console mirrored the server's startup checks", "Startup checks:" in out1)
+# the window shows what a player needs - the passing checks and the
+# environment block stay in server.log - and one plain "Ready" line
+check("console keeps the passing checks out of the window", "Startup checks:" not in out1
+      and "[ok  ]" not in out1 and "Environment:" not in out1)
 check("console mirrored the TGA->PNG icon progress",
-      "icons: converting unit cards" in out1)
-check("console saw STARTUP-COMPLETE", startup.READY_MARKER in out1)
+      "converting unit cards" in out1)
+check("console says it is ready, in plain words", "✓ Ready" in out1)
 info = ping(lport)
 check(f"server outlived the launcher (pid {info and info.get('pid')})",
       info is not None and info.get("app") == "unit-transfer")

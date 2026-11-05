@@ -99,7 +99,14 @@ def main(argv):
     # Logs go to the console (when there is one) and always to config/server.log,
     # so the detached server still leaves a full trail.
     log = setup_logging(verbose)
-    log.info("Medieval 2 GUI Toolkit %s - %s", mode, APP_PATH.parent)
+    from unittransfer import __version__ as _ver
+    from unittransfer.logutil import FILE_ONLY
+    if mode == "serve":
+        # the launcher already said hello; the server's own line is for the file
+        log.info("Medieval 2 GUI Toolkit %s (%s) - %s", _ver, mode, APP_PATH.parent, extra=FILE_ONLY)
+    else:
+        log.info("Medieval 2 GUI Toolkit %s", _ver)
+        log.info("(%s) %s", mode, APP_PATH.parent, extra=FILE_ONLY)
 
     # A restart-in-place starts us while the server being replaced still holds the
     # port: it cannot answer the request that asked for the restart *after* it has
@@ -208,8 +215,7 @@ def _resolve_port(log, port: int):
 
 def _launch_detached(log, port: int, passthrough) -> int:
     """Start the server as a child, mirror its startup, then close this console."""
-    log.info("Starting the server (detached) - this window closes once it's up.")
-    log.info("Turn on Settings → Show console window to keep it open instead.")
+    log.info("Starting… this window closes by itself once the toolkit is open in your browser.")
     # Take the offset AFTER our own lines are written: launcher and server share
     # server.log, and mirroring from an earlier point would echo them back.
     try:
@@ -223,11 +229,11 @@ def _launch_detached(log, port: int, passthrough) -> int:
         return 1
     ok, reason, browser_ok = startup.follow_until_ready(proc, offset)
     if not ok:
-        log.error("STARTUP FAILED - %s", reason)
-        log.error("Full log: %s", startup.server_log_path())
+        log.error("The toolkit did not start (%s).", reason)
+        log.error("The lines above say why; the whole story is in %s.", startup.server_log_path())
         return 1
-    log.info("Server is up: http://127.0.0.1:%d/", port)
-    log.info("Stop the tool with Quit in the UI. Log: %s", startup.server_log_path())
+    log.info("✓ Ready - the toolkit is open at http://127.0.0.1:%d/", port)
+    log.info("  To stop it, use Quit in the toolkit's menu.")
     if not browser_ok:
         log.error("No browser opened - leaving this window up so the address "
                   "above stays readable.")

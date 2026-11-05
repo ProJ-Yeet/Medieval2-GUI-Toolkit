@@ -30,6 +30,13 @@ translation pass, not fixes. Turkish (88l) has the same kinds of fault, fewer
 common nouns, 127 joined pieces that lost their leading space), and is still
 offered.
 
+**2026-11-03: Phase 101, the user's fourteen-item list.** 101a-101g built in a
+cloud session (see `ROADMAP_ARCHIVE.md`); a local session with the mods
+installed does 101h-101m in `ROADMAP.md`, starting with 101m (try the new UI in
+the real app) and 101l (ask which screen "Install" meant). 101r-101x (Delete
+following the unit, recruit pools up the chain, M2EX attributes, the game's log,
+errors and the console in plain words) also want that look in the real app.
+
 **2026-10-28: Phases 88o and 88l complete as drafts: Simplified Chinese and
 Turkish.** Both are promoted to Settings, each 9,633/9,633 with zero catalogue
 problems. Turkish is machine-assisted with direct corrections; native review

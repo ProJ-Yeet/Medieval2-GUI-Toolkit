@@ -88,6 +88,76 @@ function gfVocabFor(mod){
   }).catch(()=>{});
   return GF_STATIC;
 }
+/* What each unit attribute does, in plain words, beside its tick box; and the
+   words M2EX / REX added (Pfadfinder-Adam's unitattrs.py, the engines' own
+   list, taken with his leave), offered in a fold of their own and warned
+   about on a mod not marked M2EX: an unknown word on `attributes` stops the
+   extended engine at loading, and the plain one does not know them at all. */
+const GF_ATTR_TEXT={
+  can_feign_rout:()=>tt('guided.attr_can_feign_rout'),
+  sea_faring:()=>tt('guided.attr_sea_faring'),
+  can_swim:()=>tt('guided.attr_can_swim'),
+  can_withdraw:()=>tt('guided.attr_can_withdraw'),
+  can_run_amok:()=>tt('guided.attr_can_run_amok'),
+  can_formed_charge:()=>tt('guided.attr_can_formed_charge'),
+  cannot_skirmish:()=>tt('guided.attr_cannot_skirmish'),
+  start_not_skirmishing:()=>tt('guided.attr_start_not_skirmishing'),
+  fire_by_rank:()=>tt('guided.attr_fire_by_rank'),
+  hardy:()=>tt('guided.attr_hardy'),
+  very_hardy:()=>tt('guided.attr_very_hardy'),
+  hide_forest:()=>tt('guided.attr_hide_forest'),
+  hide_improved_forest:()=>tt('guided.attr_hide_improved_forest'),
+  hide_long_grass:()=>tt('guided.attr_hide_long_grass'),
+  hide_anywhere:()=>tt('guided.attr_hide_anywhere'),
+  frighten_foot:()=>tt('guided.attr_frighten_foot'),
+  frighten_mounted:()=>tt('guided.attr_frighten_mounted'),
+  power_charge:()=>tt('guided.attr_power_charge'),
+  knight:()=>tt('guided.attr_knight'),
+  general_unit:()=>tt('guided.attr_general_unit'),
+  mercenary_unit:()=>tt('guided.attr_mercenary_unit'),
+  free_upkeep_unit:()=>tt('guided.attr_free_upkeep_unit'),
+  is_peasant:()=>tt('guided.attr_is_peasant'),
+  no_custom:()=>tt('guided.attr_no_custom'),
+  gunpowder_unit:()=>tt('guided.attr_gunpowder_unit'),
+  stakes:()=>tt('guided.attr_stakes'),
+  druid:()=>tt('guided.attr_druid'),
+  cantabrian_circle:()=>tt('guided.attr_cantabrian_circle'),
+  command:()=>tt('guided.attr_command'),
+  legionary_name:()=>tt('guided.attr_legionary_name'),
+  can_sap:()=>tt('guided.attr_can_sap'),
+  immune_arrows:()=>tt('guided.attr_immune_arrows'),
+  immune_fire:()=>tt('guided.attr_immune_fire'),
+  resistance_projectiles:()=>tt('guided.attr_resistance_projectiles'),
+  enduring_fortitude:()=>tt('guided.attr_enduring_fortitude'),
+  life_steal:()=>tt('guided.attr_life_steal'),
+  hardy_1:()=>tt('guided.attr_hardy_1'),
+  stun_immune:()=>tt('guided.attr_stun_immune'),
+  unstoppable:()=>tt('guided.attr_unstoppable'),
+  is_knockdown_immune:()=>tt('guided.attr_is_knockdown_immune'),
+  unique_unit:()=>tt('guided.attr_unique_unit'),
+  strong_against_armour:()=>tt('guided.attr_strong_against_armour'),
+  ignores_armour:()=>tt('guided.attr_ignores_armour'),
+  hp_damage_2:()=>tt('guided.attr_hp_damage_2'),
+  ap:()=>tt('guided.attr_ap'),
+  bp:()=>tt('guided.attr_bp'),
+  spear:()=>tt('guided.attr_spear'),
+  light_spear:()=>tt('guided.attr_light_spear'),
+  long_pike:()=>tt('guided.attr_long_pike'),
+  short_pike:()=>tt('guided.attr_short_pike'),
+  prec:()=>tt('guided.attr_prec'),
+  thrown:()=>tt('guided.attr_thrown'),
+  launching:()=>tt('guided.attr_launching'),
+  area:()=>tt('guided.attr_area')
+};
+const GF_ATTR_HELP=w=>{const f=GF_ATTR_TEXT[String(w).toLowerCase()]||GF_ATTR_TEXT[String(w).toLowerCase().replace(/_\d+$/,'_1')]||GF_ATTR_TEXT[String(w).toLowerCase().replace(/_\d+$/,'_2')]; return f?f():'';};
+const GF_EX_ATTRS={
+  attributes:['immune_arrows','immune_fire','resistance_projectiles','enduring_fortitude','life_steal',
+    'hardy_1','stun_immune','unstoppable','is_knockdown_immune','unique_unit'],
+  weapon:['strong_against_armour','ignores_armour','hp_damage_2'],
+};
+const gfIsEx=(w,kind)=>{const l=String(w).toLowerCase();
+  return GF_EX_ATTRS[kind].some(x=>x===l||(/_\d+$/.test(x)&&l.startsWith(x.replace(/\d+$/,''))&&/\d+$/.test(l)));};
+const gfModEx=host=>{const m=host&&host.mod; return !!((state.mods||[]).find(x=>x.name===m)||{}).m2ex;};
 const gfV=(host,name)=>((host.vocab||GF_STATIC)[name])||[];
 // Names a mod file actually defines, for "this points at nothing" warnings. An
 // empty list means the file is missing or unparsed - then we say nothing.
@@ -634,7 +704,10 @@ function gfHostComposer(){
     get:l=>{const lk=lockFor(gfKey(l)); if(lk)return lk.val;
       return (l in c.field_overrides)?c.field_overrides[l]:c._orig[l];},
     orig:l=>c._orig[l],
-    set:(l,v)=>{if(v!==c._orig[l])c.field_overrides[l]=v; else delete c.field_overrides[l];},
+    set:(l,v)=>{const was=(l in c.field_overrides)?c.field_overrides[l]:c._orig[l];
+      if(v!==c._orig[l])c.field_overrides[l]=v; else delete c.field_overrides[l];
+      // the 3D column follows the armour tiers
+      if(l==='armour_ug_models'&&was!==v&&typeof cmpPrevFollowTiers==='function')cmpPrevFollowTiers(was,v);},
     changed:l=>(l in c.field_overrides)&&c.field_overrides[l]!==c._orig[l],
     removed:()=>false,
     canRemove:false,
@@ -736,6 +809,21 @@ function gfWarnings(host){
   if(extras.length>1)extras.forEach(k=>add(k,
     tt('guided.a_unit_can_only_use_one_of',{extras:extras.join('</b>, <b>')}),'bad'));
 
+  // A word an attribute line knows, written on stat_mental or stat_ground
+  // instead: the engine takes it without a word and it does nothing there (a
+  // game test by Pfadfinder-Adam's tester: steadfast on stat_mental)
+  ['stat_mental','stat_ground'].forEach(k=>{
+    if(!has(k))return;
+    const known=new Set(gfV(host,'unit_attr').concat(GF_EX_ATTRS.attributes).map(x=>String(x).toLowerCase()));
+    parts(k).forEach(w=>{const l=String(w||'').trim().toLowerCase();
+      if(l&&isNaN(+l)&&(known.has(l)||gfIsEx(l,'attributes')))
+        add(k,tt('guided.attr_on_the_wrong_line',{word:esc(l),line:k}));});
+  });
+  if(!gfModEx(host)){
+    const ex=csv(val('attributes')).filter(w=>gfIsEx(w,'attributes'))
+      .concat(['stat_pri_attr','stat_sec_attr'].flatMap(k=>csv(val(k)).filter(w=>gfIsEx(w,'weapon'))));
+    if(ex.length)add(has('attributes')?'attributes':'stat_pri_attr',tt('guided.attr_needs_m2ex',{words:ex.map(esc).join(', ')}));
+  }
   ['stat_pri','stat_sec','stat_ter'].forEach(k=>{
     if(!has(k))return;
     const p=parts(k); if(p.length<11)return;

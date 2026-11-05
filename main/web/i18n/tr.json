@@ -7358,7 +7358,6 @@
  "health.could_not_run": "✕ {label} çalıştırılamadı: {error}",
  "health.couldnt_run_the_checks": "Kontroller gerçekleştirilemedi.",
  "health.every_check_came_back_clean": "Her çek temiz çıktı.",
- "health.every_check_the_toolkit_has_over": "Araç setindeki her kontrol, bu mod üzerinden tek bir listede yer alır. Her satır, kendisine ait olan ve sabitlendiği ekranı açar. Arşivdeki iki çarpışma kılavuzunun belirttiği şekilde, ısırdığı zamana göre gruplandırılmıştır.",
  "health.fatal": "{fatal} ölümcül",
  "health.fatal_and_warnings": "<span class=\"hlc w-bad\">✕ {fatal} ölümcül</span> <span class=\"hlc w-warn\">!  {warnings} </span>",
  "health.fatal_the_game_crashes_or_refuses": "Ölümcül: oyun çöküyor veya dosyayı reddediyor",
@@ -7431,10 +7430,8 @@
  },
  "healthx.just_now": "şimdi",
  "healthx.levels": "{n} seviyeleri",
- "healthx.line_now": "{file} satırı {line} şimdi okuyor:",
  "healthx.log_clean": "Hata veya uyarı yok: Oyun kendisine verilen her şeyi okudu.",
  "healthx.log_cut": "uzun bir günlük, en yenisi 40 MB okundu",
- "healthx.log_head": "Oyunun son çalıştırması: {errors} hataları, {warnings} uyarıları",
  "healthx.looked_in": "Bakıldı:",
  "healthx.minutes_ago": {
   "one": "{count} dakika önce",
@@ -7443,10 +7440,6 @@
  "healthx.more_kinds": {
   "one": "ve {count} daha fazla mesaj türü",
   "other": "ve {count} daha fazla mesaj çeşidi"
- },
- "healthx.more_like_it": {
-  "one": "ve {count} buna daha çok benziyor",
-  "other": "ve {count} buna daha çok benziyor"
  },
  "healthx.no_log": "Bu mod için oyun günlüğü bulunamadı",
  "healthx.part_failed": "{part} okunamadı: {why}",
@@ -8278,7 +8271,6 @@
  "minorfiles.written_the_list_of_what_it": "{name} yazılı. Hala ihtiyaç duyduğu şeylerin listesi az önce okuduğunuz önizlemede yer alıyor.",
  "modelpicker.3_a_class_horse_camel_elephant": "{pairs_n} /3 · bir sınıf (at, deve, fil) veya belirli bir binek",
  "modelpicker.abilities_on": "▾ Yetenekler: {n} açık",
- "modelpicker.add": "ekle…",
  "modelpicker.add_a_line": "Bir satır ekleyin:",
  "modelpicker.add_a_mount_effect": "＋ Binek efekti ekle",
  "modelpicker.add_your_own": "kendinizinkini ekleyin…",
@@ -8303,7 +8295,6 @@
  "modelpicker.from_another_unit": "Başka bir birimden",
  "modelpicker.has_no_line": "{type}'de {x} hattı yoktur.",
  "modelpicker.line_copied_from": "{type}'den kopyalanan {x} satırı: {line}",
- "modelpicker.list_gfdl": "list=\"gfdl-{vocabName}\"",
  "modelpicker.lod_skin": "<span class=\"count\"> {lods} LOD · {skins} dış görünüm</span> <span class=\"mu\"> {x} </span>",
  "modelpicker.missing_from_this_group": "Bu grupta yok",
  "modelpicker.model_set_to": "Model {name} olarak ayarlandı.",
@@ -8721,7 +8712,6 @@
   "other": "<b> {count} </b> geçmişteki bir temizleme işleminin gerçekleştirdiği şeyler, bu yapının şu anda okuduğu ve eski yapının okumadığı bir şeyle adlandırılmıştır.  {ok} {lost}"
  },
  "packs.this_pack_names_no_units": "Bu pakette hiçbir birim belirtilmez.",
- "packs.this_removes_the_units_block_from": "Bu, birim'nin blok'sini <code>export_descr_unit.txt</code>'den kaldırır. Hala devşirme ( <code>export_descr_buildings.txt</code> , <code>descr_strat.txt</code> , script ) herhangi bir şey elle temizlenmelidir, aksi takdirde oyun hata verecektir.",
  "packs.this_zip_carries_no_unitpack_json": "Bu zip <code>unitpack.json</code> taşımamaktadır. Hala bir mod gibi görünüyor, bu yüzden hala içe aktarılabiliyor. Sadece nereden geldiğini bildiğinden emin ol.",
  "packs.tick_some_units_first": "Önce bazı birimleri işaretleyin.",
  "packs.ticked": "{entries_n} / {unused_n} işaretli",
@@ -10101,7 +10091,6 @@
  "transfer.added_to_descr_projectile_txt_its": "→ descr_projectile.txt'ye eklendi; efekt setleri de geliyor, burada\n      {src} bunları tanımlar ({dst}, M2EX olarak işaretlenmiştir)",
  "transfer.adds_the_mercenary_unit_attribute_and": "<code>mercenary_unit</code> özniteliğini ve bir <code>merc</code> doku kayıt ekler.  {mercenary} <br> Aslında devşirme için, <code>descr_mercenaries.txt</code>'ye kendiniz bir havuz girdi ekleyin.",
  "transfer.already_a_mercenary_in_the_source": "Zaten kaynakta bir paralı asker.",
- "transfer.already_exists_in_the_destination_choose": "Hedefte “{x}” zaten mevcut. Yeniden adlandırmayı, üzerine yazmayı veya atlamayı seçin ve ardından tekrar Uygula'yı seçin.",
  "transfer.already_there": "zaten orada",
  "transfer.already_there_as": "zaten orada",
  "transfer.an_entry_already_has_is_reused": "Zaten sahip olan bir girdi {dst} olduğu gibi yeniden kullanılır, asla üzerine yazılmaz.",
@@ -11441,10 +11430,7 @@
  "eng.menusheets.no_sprite": "{rel} içinde {name} yok",
  "eng.menusheets.not_a_picture": "bu dosya bir resim değil",
  "eng.menusheets.summary": "{culture} kültürünün {page} sayfasındaki {name} resmi",
- "cards.gen_painted_hint": "kartın 3B değil boyanmış görünmesi için birleşimlerinde ince koyu çizgiler olan düz fırça alanları",
  "cards.gen_painted": "Boyanmış görünüm",
- "cards.gen_mod_size": "modun kendi boyutu",
- "cards.gen_bigger": "Daha büyük:",
  "look.all_back": "Renk ve yazı tipi aracın varsayılanına döndü",
  "look.appearance": "Araç görünümü",
  "look.colour_accent2": "İkinci vurgu",
