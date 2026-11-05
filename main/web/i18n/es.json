@@ -12738,5 +12738,11 @@
  "common.mounted": "(sobre una montura)",
  "strings.text_placeholder": "Introducir texto",
  "eng.crashrules.pool_names_a_unit_the_unit_file_lacks": "{rel} nombra '{unit}', y export_descr_unit.txt no tiene ninguna unidad de ese tipo. Vuelve a portar la unidad o quita la línea.",
- "settings.undone_pools_dropped": "Deshecho ✓ - y {count} línea(s) de reclutamiento con la unidad eliminada quitadas también"
+ "settings.undone_pools_dropped": "Deshecho ✓ - y {count} línea(s) de reclutamiento con la unidad eliminada quitadas también",
+ "armory.exp_live": "En vivo",
+ "armory.exp_live_title": "Volver a empaquetar las hojas tras cada cambio. Desactivado: los cambios esperan a Actualizar",
+ "armory.exp_refresh": "Actualizar",
+ "armory.exp_refresh_title": "Empaquetar las hojas con los ajustes tal como están ahora",
+ "armory.exp_textures": "Texturas",
+ "armory.exp_textures_title": "Mostrar cada hoja con el arte que el horneado escribiría en ella, en lugar de los bloques de colores"
 }

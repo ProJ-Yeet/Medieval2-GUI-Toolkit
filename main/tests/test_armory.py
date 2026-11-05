@@ -448,6 +448,52 @@ console.log(JSON.stringify({trip, keys, t1: o1.t.map(v => Math.round(v * 1000) /
     check(f"keys are named as the keymap writes them ({got.get('keys')})",
           got.get("keys") == ["numpad1", "ctrl+numpad1", "alt+h", "numpad."])
 
+    # the export's UV step: the packing drawn bigger; Live off holds every
+    # change until Refresh; Textures draws the bake's own art, not blocks
+    probe = (r"""
+const tt = (k, a) => k, ttA = tt, esc = String, ttN = tt, state = {}, ARM = {}, overlay = {classList: {add(){}}};
+const posts = [];
+let artLost = 1;
+const api = {post: async (u, b) => { posts.push([u, b]); if(u.endsWith('bake_preview') && artLost-- > 0) throw new Error('Failed to fetch'); return u.endsWith('/uv')
+  ? {fits: true, islands: 1, blocks: 1, folded: 0, objects: [], settings: {scale: {}, block_sheet: {}},
+     sheets: {main: {size: 1024, fill: .5, needs: 1024, margin_px: 4, blocks: [], left: []}, attach: {size: 0, blocks: [], left: []}}}
+  : {fits: true, normals: 'skip', sheets: {main: {size: 1024, art: 'data:art', normal: 'data:nm'}}}; }};
+const drawn = [];
+const cv = {width: 512, height: 512, isConnected: true, getContext: () => ({fillRect(){}, strokeRect(){}, drawImage(i){ drawn.push(i.src); }, set fillStyle(v){}, set strokeStyle(v){}, set globalAlpha(v){}})};
+const document = {getElementById: id => id.startsWith('armExpCv_') ? cv : id === 'modal' ? modal : null};
+class Image { set src(v){ this._s = v; setTimeout(() => this.onload && this.onload(), 0); } get src(){ return this._s; } }
+const modal = {}; function armProj(){ return {objects: [], collections: [], assets: []}; }
+function armExportPaint(){} function errText(e){ return String(e); }
+""" + (ROOT / "web" / "js" / "armexport.js").read_text(encoding="utf-8") + r""";
+const wait = ms => new Promise(r => setTimeout(r, ms));
+(async () => {
+  const e = armExp(); e.step = 'uv';
+  await armExportPlan();
+  const html = armExpUvHtml();
+  const out = {big: /id="armExpCv_main" width="512" height="512"/.test(html), liveBox: html.includes('armory.exp_live')};
+  posts.length = 0;
+  armExpLive(false);
+  armExpSet('margin', 1); await wait(400);
+  out.heldWhileOff = posts.length === 0 && e.stale === true;
+  await armExpRefresh();
+  out.refreshPlans = posts.some(p => p[0] === '/api/armory/uv') && !e.stale;
+  posts.length = 0;
+  armExpArt(true); await wait(600);   // the first render request is lost on the way
+  const peek = posts.find(p => p[0] === '/api/armory/bake_preview');
+  out.artAsked = !!peek && peek[1].side === 512;
+  drawn.length = 0; armExpDrawSheets(); await wait(20);
+  out.artDrawn = drawn.includes('data:art');
+  console.log(JSON.stringify(out));
+})();
+""")
+    (tmp / "probe2e.js").write_text(probe, encoding="utf-8")
+    out2e = subprocess.run([node, str(tmp / "probe2e.js")], capture_output=True, text=True, timeout=60)
+    gote = __import__("json").loads(out2e.stdout or "null") or {}
+    check(f"the export's sheets are drawn at 512 with a Live switch ({gote or out2e.stderr[-200:]})",
+          gote.get("big") and gote.get("liveBox"))
+    check("with Live off a change waits, and Refresh packs it", gote.get("heldWhileOff") and gote.get("refreshPlans"))
+    check("Textures asks the bake for its art, again when the request is lost, and draws it", gote.get("artAsked") and gote.get("artDrawn"))
+
     # while an action plays the posed model is lowered to stand where the
     # still one stood; the skeleton drawn over it is lowered with it (it
     # floated a whole hip-height above a Blender soldier)

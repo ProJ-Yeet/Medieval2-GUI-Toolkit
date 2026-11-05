@@ -167,8 +167,52 @@ async function armExportPlan(auto){
   }catch(err){ if(seq === e.seq){ e.err = errText(err); e.plan = null; } }
   e.busy = false;
   if(e.step === 'uv') armExportPaint();
+  if(e.plan && e.art) armExpFetchArt();
 }
-function armExpReplan(){ clearTimeout(ARM.expTimer); ARM.expTimer = setTimeout(() => armExportPlan(), 250); }
+// Live off: a change waits for Refresh, which lights up meanwhile; repainting
+// the step would take the box being typed in away, so only the button changes
+function armExpReplan(){
+  const e = armExp();
+  if(e.live === false){ e.stale = true; armExpStaleMark(); return; }
+  clearTimeout(ARM.expTimer); ARM.expTimer = setTimeout(() => armExportPlan(), 250);
+}
+function armExpStaleMark(){
+  const b = document.getElementById('armExpRefresh');
+  if(b) b.classList.toggle('primary', !!armExp().stale);
+}
+async function armExpRefresh(){
+  const e = armExp();
+  e.stale = false; clearTimeout(ARM.expTimer);
+  await armExportPlan();
+}
+function armExpLive(on){
+  const e = armExp();
+  e.live = !!on;
+  if(on && e.stale){ e.stale = false; armExpReplan(); }
+  armExpStaleMark();
+}
+/* Textures: each sheet drawn with the art the bake would write there (the
+   bake's own render, at the canvas's size), in place of the coloured blocks.
+   Blocks stand in while it renders, and for a packing it has not caught up with. */
+function armExpArt(on){
+  const e = armExp();
+  e.art = !!on;
+  if(on) armExpFetchArt(); else armExpDrawSheets();
+}
+async function armExpFetchArt(){
+  const e = armExp(), seq = (e.artSeq || 0) + 1;
+  e.artSeq = seq; e.artPeek = null;
+  armExpDrawSheets();
+  // it only reads, so a request lost on the way to the server is sent again
+  let r = null;
+  for(let i = 0; i < 4 && !r && seq === e.artSeq; i++){
+    try{ r = await api.post('/api/armory/bake_preview', Object.assign(armExpBody(), {settings: e.settings, side: 512})); }
+    catch(err){ await new Promise(ok => setTimeout(ok, 250 * (i + 1))); }
+  }
+  if(seq !== e.artSeq) return;
+  e.artPeek = r;
+  if(e.step === 'uv') armExpDrawSheets();
+}
 function armExpSet(key, v){
   const s = armExp().settings;
   if(key === 'margin') s.margin = Math.max(0, Math.min(5, +v || 0));
@@ -229,9 +273,15 @@ function armExpUvHtml(){
     if(!S.size) return `<div class="armexpsheet"><b>${armExpLabel(sh)}</b><div class="count">${tt('armory.exp_sheet_unused')}</div></div>`;
     return `<div class="armexpsheet"><b>${armExpLabel(sh)} · ${S.size}²</b>
       <span class="count">${tt('armory.exp_sheet_facts', {fill: Math.round(S.fill * 100), needs: S.needs, margin: S.margin_px})}</span>
-      <canvas id="armExpCv_${sh}" width="320" height="320"></canvas></div>`;
+      <canvas id="armExpCv_${sh}" width="512" height="512"></canvas></div>`;
   };
-  return `<div class="armexprow">${sizeSel}
+  return `<div class="armexprow">
+      <label class="armcheck" title="${ttA('armory.exp_live_title')}"><input type="checkbox"${e.live !== false ? ' checked' : ''}
+        onchange="armExpLive(this.checked)"> ${tt('armory.exp_live')}</label>
+      <button id="armExpRefresh" class="mini${e.stale ? ' primary' : ''}" onclick="armExpRefresh()" title="${ttA('armory.exp_refresh_title')}">${tt('armory.exp_refresh')}</button>
+      <label class="armcheck" title="${ttA('armory.exp_textures_title')}"><input type="checkbox"${e.art ? ' checked' : ''}
+        onchange="armExpArt(this.checked)"> ${tt('armory.exp_textures')}</label></div>
+    <div class="armexprow">${sizeSel}
       <label>${tt('armory.exp_margin')}<input type="number" class="armnum" min="0" max="5" step="0.1" value="${s.margin}"
         onchange="armExpSet('margin', this.value)" title="${esc(tt('armory.exp_margin_title'))}">%</label>
       <label class="armcheck"><input type="checkbox"${s.dyes ? ' checked' : ''} onchange="armExpSet('dyes', this.checked)"> ${tt('armory.exp_apply_dyes')}</label>
@@ -279,13 +329,20 @@ function armExpColour(id){
   return `hsl(${h.toFixed(0)},62%,58%)`;
 }
 function armExpDrawSheets(){
-  const P = armExp().plan;
+  const e = armExp(), P = e.plan;
   if(!P) return;
   for(const sh of ['main', 'attach']){
     const cv = document.getElementById('armExpCv_' + sh), S = P.sheets[sh];
     if(!cv || !S.size) continue;
     const ctx = cv.getContext('2d'), k = cv.width / S.size;
     ctx.fillStyle = '#1d2128'; ctx.fillRect(0, 0, cv.width, cv.height);
+    const art = e.art && e.artPeek && e.artPeek.sheets && e.artPeek.sheets[sh];
+    if(art && art.art){
+      const img = new Image();
+      img.onload = () => { if(cv.isConnected) ctx.drawImage(img, 0, 0, cv.width, cv.height); };
+      img.src = art.art;
+      continue;
+    }
     // 99l: the server draws each block's shape, the texels it takes
     if(S.picture){
       const img = new Image();

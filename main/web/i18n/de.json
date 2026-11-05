@@ -12250,5 +12250,11 @@
  "common.mounted": "(auf dem Reittier)",
  "strings.text_placeholder": "Text eingeben",
  "eng.crashrules.pool_names_a_unit_the_unit_file_lacks": "{rel} nennt '{unit}', und export_descr_unit.txt hat keine Einheit dieses Typs. Portiere die Einheit zurück oder nimm die Zeile heraus.",
- "settings.undone_pools_dropped": "Rückgängig gemacht ✓ - und {count} Rekrutierungszeile(n) mit der entfernten Einheit gleich mit herausgenommen"
+ "settings.undone_pools_dropped": "Rückgängig gemacht ✓ - und {count} Rekrutierungszeile(n) mit der entfernten Einheit gleich mit herausgenommen",
+ "armory.exp_live": "Live",
+ "armory.exp_live_title": "Die Blätter nach jeder Änderung neu packen. Aus: Änderungen warten auf Aktualisieren",
+ "armory.exp_refresh": "Aktualisieren",
+ "armory.exp_refresh_title": "Die Blätter mit den aktuellen Einstellungen packen",
+ "armory.exp_textures": "Texturen",
+ "armory.exp_textures_title": "Jedes Blatt mit den Bildern zeigen, die das Backen darauf schreiben würde, statt der farbigen Blöcke"
 }
