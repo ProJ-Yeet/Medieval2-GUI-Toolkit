@@ -1035,8 +1035,6 @@
  "armory.external_file": "磁盘文件",
  "armory.face_orientation": "面朝向",
  "armory.file_first": "请先粘贴路径或选择文件。",
- "armory.file_intro": "支持 .obj、.glb、.gltf、.dae 或散装 .mesh 网格。从同一文件夹及其 textures 文件夹查找贴图；未找到贴图的对象会请求指定贴图。",
- "armory.file_placeholder": "粘贴模型文件路径，或浏览选择",
  "armory.file_title": "要导入的模型",
  "armory.filter_any": "任意",
  "armory.filter_category": "类别",

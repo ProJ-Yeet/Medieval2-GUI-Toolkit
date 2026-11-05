@@ -1042,10 +1042,39 @@ function armThumbsPaint(fresh){
 
 /* --- viewport controls (95g makes them Blender's) -------------------------- */
 
-/* Blender's mouse (95g): middle drag orbits, Shift+middle pans, Ctrl+middle
-   zooms, the wheel zooms; left click selects and left drag draws a box.
-   Alt+left stands in for the middle button on a mouse or pad without one.
-   A G, R or S under way (armview.js) takes the mouse while it lasts. */
+/* Two ways to steer the view, chosen on the bar (setting armory_nav):
+
+   Simple, the default, for anyone: a left drag turns the view round the
+   model, a right drag (or Shift + left drag) moves it, the wheel zooms, a
+   click selects (Shift adds) and Ctrl + left drag draws a box. A double
+   click frames what is under it.
+
+   Blender (95g): middle drag orbits, Shift+middle pans, Ctrl+middle zooms,
+   the wheel zooms; left click selects and left drag draws a box. Alt+left
+   stands in for the middle button on a mouse or pad without one.
+
+   In either, a G, R or S under way (armview.js) takes the mouse while it
+   lasts, and the gizmo's drag orbits. */
+const armNav = () => ((state.settings || {}).armory_nav === 'blender' ? 'blender' : 'simple');
+function armNavSet(v){
+  state.settings.armory_nav = v;
+  api.post('/api/settings', {armory_nav: v}).catch(() => {});
+  if(typeof armPaintSliders === 'function') armPaintSliders();
+}
+/* What a press does: 'orbit', 'pan', 'zoom', 'box', or 'turn' (orbit when it
+   moves, a select when it does not). Blender's middle button reads its
+   modifier as it moves, as it always has. */
+function armNavAct(e, giz){
+  if(giz) return 'orbit';
+  if(armNav() === 'blender'){
+    if(e.button === 0 && !e.altKey) return 'box';
+    if(e.button === 1 || (e.button === 0 && e.altKey)) return 'mid';
+    return 'none';
+  }
+  if(e.button === 0) return e.ctrlKey || e.metaKey ? 'box' : e.shiftKey ? 'panclick' : 'turn';
+  if(e.button === 1 || e.button === 2) return 'pan';
+  return 'none';
+}
 function armInstallControls(c){
   let drag = null;
   c.tabIndex = 0;
@@ -1054,10 +1083,12 @@ function armInstallControls(c){
     if(typeof armPointerDown === 'function' && armPointerDown(e)) return;
     // the view gizmo (99k): a left drag on it orbits, a click looks down an axis
     const giz = e.button === 0 && typeof armGizmoHit === 'function' ? armGizmoHit(e) : null;
-    const button = giz || (e.button === 0 && e.altKey) ? 1 : e.button;
-    drag = {x: e.clientX, y: e.clientY, x0: e.clientX, y0: e.clientY, button, moved: false, giz};
+    const act = armNavAct(e, giz);
+    // armBoxDrag and the click read `button` 0 for the left button's jobs
+    drag = {x: e.clientX, y: e.clientY, x0: e.clientX, y0: e.clientY, act,
+            button: act === 'box' ? 0 : 1, moved: false, giz};
     c.setPointerCapture(e.pointerId);
-    if(button === 1) e.preventDefault();
+    if(e.button === 1) e.preventDefault();
   });
   c.addEventListener('pointermove', e => {
     if(typeof armXformMove === 'function' && armXformMove(e)) return;
@@ -1069,14 +1100,18 @@ function armInstallControls(c){
     const dx = e.clientX - drag.x, dy = e.clientY - drag.y;
     if(Math.abs(e.clientX - drag.x0) + Math.abs(e.clientY - drag.y0) > 3) drag.moved = true;
     drag.x = e.clientX; drag.y = e.clientY;
-    if(drag.button === 0){ if(typeof armBoxDrag === 'function') armBoxDrag(drag, e); return; }
+    if(drag.act === 'box'){ if(typeof armBoxDrag === 'function') armBoxDrag(drag, e); return; }
     if(!drag.moved) return;
-    if(drag.button === 1 && e.shiftKey && !drag.giz) armPan(dx, dy);
-    else if(drag.button === 1 && e.ctrlKey) ARM.cam.dist = Math.max(0.05, ARM.cam.dist * Math.exp(dy * 0.01));
-    else if(drag.button === 1){
+    let act = drag.act;
+    if(act === 'mid') act = e.shiftKey && !drag.giz ? 'pan' : e.ctrlKey ? 'zoom' : 'orbit';
+    if(act === 'turn') act = 'orbit';
+    if(act === 'panclick') act = 'pan';
+    if(act === 'pan') armPan(dx, dy);
+    else if(act === 'zoom') ARM.cam.dist = Math.max(0.05, ARM.cam.dist * Math.exp(dy * 0.01));
+    else if(act === 'orbit'){
       ARM.cam.yaw -= dx * 0.01;
       ARM.cam.pitch = Math.max(-1.5, Math.min(1.5, ARM.cam.pitch + dy * 0.01));
-    }
+    }else return;
     armFrame();
   });
   c.addEventListener('pointerup', e => {
@@ -1084,7 +1119,15 @@ function armInstallControls(c){
     if(!d) return;
     if(d.giz){ if(!d.moved) armGizmoClick(d.giz); return; }
     if(d.box && typeof armBoxEnd === 'function'){ armBoxEnd(d, e); return; }
-    if(!d.moved && d.button === 0 && typeof armClick === 'function') armClick(e);
+    const clicks = d.act === 'box' || d.act === 'turn' || d.act === 'panclick';
+    if(!d.moved && clicks && e.button === 0 && typeof armClick === 'function') armClick(e);
+  });
+  c.addEventListener('dblclick', e => {
+    // Simple: a double click frames what is under it, or everything
+    if(armNav() !== 'simple' || e.button !== 0) return;
+    const sel = armSelected();
+    if(typeof armFrameObjects === 'function') armFrameObjects(sel.length ? sel : armVisibleObjects());
+    else armFrameAll();
   });
   c.addEventListener('pointerleave', () => {
     if(typeof armHoverAt === 'function') armHoverAt(null);
@@ -1142,6 +1185,7 @@ function armImportPaint(){
     </div></div>`;
   armImportCount();
   armImpLibMount();
+  if(imp.tab === 'file' && typeof armDiskRows === 'function') armDiskRows();
 }
 function armImportTab(t){ state.armImp.tab = t; armImportPaint(); if(t === 'mod') armImportCatalogue(); }
 
@@ -1167,6 +1211,7 @@ function armImpTileHtml(k, mod, name, label, on, missing){
    the dialog (orbit, zoom, skins, variations, animations), the dialog back
    live when it closes */
 async function armImpLook(mod, name){
+  if(mod === GAL_EXT) return armExtLook(name);
   // the list comes back where it was, not at its top (the tester's notes)
   const rows = document.getElementById('armImpRows'), top = rows ? rows.scrollTop : 0;
   const go = v3Open(mod, name);
@@ -1186,9 +1231,7 @@ function armImpTilePick(t, set, after){
   armImportCount();
 }
 function armImpLibMount(){
-  const el = document.getElementById('armLibPick');
-  if(!el || !armImpGallery() || state.armImp.tab !== 'library' || typeof galMount !== 'function') return;
-  galMount(el, (name, t) => armLibTileToggle(t));
+  // the library tab paints its own rows (armlib.js armLibPickRows), tiles and all
 }
 function armLibTileToggle(t){
   const s = state.armImp.libPicked, id = +t.dataset.k;
@@ -1199,11 +1242,7 @@ function armLibTileToggle(t){
 
 function armImportBodyHtml(){
   const imp = state.armImp;
-  if(imp.tab === 'file')
-    return `<div class="count" style="margin:8px 0">${tt('armory.file_intro')}</div>
-      <div class="armpathrow"><input id="armImpPath" value="${esc(imp.path || '')}" placeholder="${esc(tt('armory.file_placeholder'))}"
-        oninput="state.armImp.path=this.value">
-      <button onclick="armImportBrowse()">${tt('armory.browse')}</button></div>`;
+  if(imp.tab === 'file') return armDiskBodyHtml();
   if(imp.tab === 'library')
     return `<div id="armLibPick">${typeof armLibPickHtml === 'function' ? armLibPickHtml() : ''}</div>`;
   return `<div class="armimpctl">
@@ -1345,6 +1384,8 @@ function armImportCount(){
   const el = document.getElementById('armImpCount');
   if(el && state.armImp.tab === 'mod') el.textContent = ttN('armory.n_picked', state.armImp.picked.size);
   else if(el && state.armImp.tab === 'library') el.textContent = ttN('armory.n_picked', (state.armImp.libPicked || new Set()).size);
+  else if(el && state.armImp.tab === 'file' && state.armImp.disk && state.armImp.disk.picked.size)
+    el.textContent = ttN('armory.n_picked', state.armImp.disk.picked.size);
   else if(el) el.textContent = '';
 }
 
@@ -1364,8 +1405,10 @@ async function armImportGo(){
   const imp = state.armImp, p = armProj();
   const adds = [];
   if(imp.tab === 'file'){
-    if(!(imp.path || '').trim()){ toast(tt('armory.file_first')); return; }
-    adds.push({kind: 'external', path: imp.path.trim()});
+    const disk = armDiskAdds();
+    if(disk === null) return;              // a folder: listed, not imported
+    if(!disk.length){ toast(tt('armory.file_first')); return; }
+    adds.push(...disk);
   }else if(imp.tab === 'library'){
     if(typeof armLibPicked === 'function') adds.push(...armLibPicked());
   }else{
@@ -1375,18 +1418,27 @@ async function armImportGo(){
     }
   }
   if(!adds.length){ toast(tt('armory.pick_something')); return; }
+  await armImportRun(adds);
+}
+
+/* Each model asked for patiently (armdisk.js): the dialog stays open saying
+   which and which try, and closes only when everything is in; what still
+   failed stays on it with Try again. */
+async function armImportRun(adds){
+  const imp = state.armImp, p = armProj();
   const btn = document.getElementById('armImpGo');
   if(btn) btn.disabled = true;
-  const said = [];
-  let added = 0;
+  const said = [], failed = [];
+  let added = 0, i = 0;
   for(const a of adds){
+    i++;
     const key = armAssetKey(a);
     if(p.assets.some(x => armAssetKey(x) === key)){
       said.push(tt('armory.already_loaded', {name: armAssetLabel(a)}));
       continue;
     }
-    const live = await armLoadAsset(a);
-    if(live.err){ ARM.assets.delete(key); said.push(`${armAssetLabel(a)}: ${live.err}`); continue; }
+    const live = await armLoadAssetPatient(a, n => armImportProgress(i, adds.length, armAssetLabel(a), n));
+    if(live.err){ ARM.assets.delete(key); failed.push({a, err: live.err}); continue; }
     // the same file under another name (an entry that points at a mesh
     // another loaded entry uses, or a model copied into a second mod)
     const twin = p.assets.find(x => { const l = ARM.assets.get(armAssetKey(x)); return l && l.view && l.view.file_hash === live.view.file_hash; });
@@ -1400,7 +1452,14 @@ async function armImportGo(){
     added++;
   }
   imp.picked.clear();
+  if(imp.disk) imp.disk.picked.clear();
   armSave();
+  if(failed.length){
+    // the dialog stays: what is in is in, what is not can be tried again
+    renderArmory();
+    armImportFailed(failed, said);
+    return;
+  }
   closeModal();
   if(said.length) toast(said.join(' · '), 6000);
   if(added && !p.objects.length && p.base == null) armStartChooser();

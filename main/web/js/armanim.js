@@ -44,7 +44,9 @@ function armAnimPaint(){
       ${a.data ? `<span class="count">${esc(a.data.name || '')}</span>` : ''}<span style="flex:1"></span>${tp}</div>
     <label class="count">${tt('armory.skeleton_of')}<select onchange="armAnimFrom(this.value)">
       <option value="">${tt('armory.pick_model_entry')}</option>${entries.map(e => { const k = armAssetKey(e);
-        return `<option value="${esc(k)}"${k === chosen ? ' selected' : ''}>${esc(armAssetLabel(e))}</option>`; }).join('')}</select></label>
+        return `<option value="${esc(k)}"${k === chosen ? ' selected' : ''}>${esc(armAssetLabel(e))}</option>`; }).join('')}
+      <option value="@mod"${armAnimByMod() ? ' selected' : ''}>${tt('armory.skeleton_from_mod')}</option></select></label>
+    ${armAnimByMod() ? armAnimModHtml() : ''}
     ${L && L.error ? `<div class="w-bad">${esc(L.error)}</div>` : ''}
     ${skels.length ? `<label class="count">${tt('armory.skeleton')}<select onchange="armAnimSkel(this.value)">${skels.map(s =>
       `<option${s === (a.skel || '').toLowerCase() ? ' selected' : ''}>${esc(L.skeletons[s].name || s)}</option>`).join('')}</select></label>` : ''}
@@ -85,8 +87,61 @@ function armAnimFind(v){
   if(el && sk) el.innerHTML = armAnimListHtml(sk);         // the rows only, never the box
 }
 
+/* A skeleton straight out of a mod's packs, with no model loaded: the mod and
+   the skeleton picked here, its actions read as an entry's would be
+   (/api/armory/skeleton), played from that mod. Kept in the project as
+   {mod, skel}, and read again when the window opens on it. */
+const armAnimByMod = () => { const p = armProj(); return !!(p.anim && p.anim.mod !== undefined && !p.anim.asset); };
+function armAnimModHtml(){
+  const p = armProj(), a = armAnim(), mod = p.anim.mod || '';
+  if(!ARM.mods){
+    api.get('/api/mods').then(r => { ARM.mods = r.map(m => m.name); armAnimPaint(); }).catch(() => { ARM.mods = [state.src]; armAnimPaint(); });
+    return `<div class="count">${tt('armory.reading')}</div>`;
+  }
+  if(mod && !(ARM.skelNames || {})[mod]) armAnimModNames(mod);
+  if(mod && p.anim.skel && !a.list && !a.loadingSk) armAnimFromMod(mod, p.anim.skel);
+  const names = (ARM.skelNames || {})[mod];
+  return `<label class="count">${tt('armory.skeleton_mod')}<select onchange="armAnimSetMod(this.value)">
+      <option value="">${tt('armory.pick_mod')}</option>${ARM.mods.map(m => `<option${m === mod ? ' selected' : ''}>${esc(m)}</option>`).join('')}</select></label>
+    ${mod ? names ? (names.length ? `<label class="count">${tt('armory.skeleton')}<select onchange="armAnimFromMod('${esc(mod)}', this.value)">
+        <option value="">${tt('armory.pick_skeleton')}</option>${names.map(n => `<option${n === p.anim.skel ? ' selected' : ''}>${esc(n)}</option>`).join('')}</select></label>`
+        : `<div class="count">${tt('armory.no_skeletons')}</div>`) : `<div class="count">${tt('armory.reading')}</div>` : ''}`;
+}
+async function armAnimModNames(mod){
+  ARM.skelNames = ARM.skelNames || {};
+  if(ARM.skelNames[mod] || (ARM.skelAsk || {})[mod]) return;
+  (ARM.skelAsk = ARM.skelAsk || {})[mod] = true;
+  let r;
+  try{ r = await api.get('/api/model/skeleton_names?mod=' + enc(mod)); }catch(e){ r = {names: []}; }
+  ARM.skelNames[mod] = [...new Set(r.names || [])].sort((x, y) => x.localeCompare(y));
+  delete ARM.skelAsk[mod];
+  armAnimPaint();
+}
+function armAnimSetMod(mod){
+  const p = armProj(), a = armAnim();
+  p.anim = {mod, skel: ''};
+  Object.assign(a, {list: null, skel: '', key: '', data: null, err: '', set: null});
+  armSave(); armAnimRest(); armAnimPaint();
+}
+async function armAnimFromMod(mod, skel){
+  const p = armProj(), a = armAnim();
+  p.anim = {mod, skel};
+  armSave();
+  Object.assign(a, {list: null, skel: '', key: '', data: null, err: '', set: null});
+  armAnimRest();
+  if(!skel) return armAnimPaint();
+  a.loadingSk = true;
+  armAnimPaint();
+  try{ a.list = await api.get(`/api/armory/skeleton?mod=${enc(mod)}&skel=${enc(skel)}`); }
+  catch(e){ a.list = {error: errText(e)}; }
+  a.loadingSk = false;
+  a.skel = skel;
+  armAnimPaint();
+}
+
 async function armAnimFrom(key){
   const p = armProj(), a = armAnim();
+  if(key === '@mod') return armAnimSetMod(state.src || '');
   p.anim = key ? {asset: key} : null;
   armSave();
   Object.assign(a, {list: null, skel: '', key: '', data: null, err: ''});
@@ -121,10 +176,12 @@ async function armAnimPick(key){
   if(!row || !row.playable) return;
   a.key = key; a.err = '';
   const asset = p.assets.find(x => armAssetKey(x) === (p.anim || {}).asset);
+  const from = asset ? asset.mod : (p.anim || {}).mod;
+  if(!from) return;
   const q = row.rel ? `rel=${enc(row.rel)}` : `pack=${enc(row.path)}`;
   const w = armAnimWeapons();
   let data;
-  try{ data = await api.get(`/api/model/anim?mod=${enc(asset.mod)}&${q}&skel=${enc(a.skel)}`
+  try{ data = await api.get(`/api/model/anim?mod=${enc(from)}&${q}&skel=${enc(a.skel)}`
     + (row.slot != null ? `&slot=${row.slot}` : '') + (w.length ? `&weapons=${enc(w.join(','))}` : '')); }
   catch(e){ a.err = errText(e); return armAnimPaint(); }
   if(a.key !== key) return;

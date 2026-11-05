@@ -4329,8 +4329,6 @@
  "armory.external_file": "файл на диске",
  "armory.face_orientation": "Ориентация граней",
  "armory.file_first": "Сначала вставьте путь или выберите файл.",
- "armory.file_intro": "Файл .obj, .glb, .gltf, .dae или отдельный меш .mesh. Его текстуры ищутся в той же папке и в ее папке textures; если у объекта текстура не найдена, ее нужно будет указать.",
- "armory.file_placeholder": "Вставьте путь к файлу модели или выберите через обзор",
  "armory.file_title": "Модель для импорта",
  "armory.filter_any": "любая",
  "armory.filter_category": "Категория",

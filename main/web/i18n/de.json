@@ -10394,8 +10394,6 @@
  "armory.from_a_mod": "Aus einer Mod",
  "armory.from_a_file": "Eine Datei auf dem Datenträger",
  "armory.from_the_library": "Aus der Asset-Bibliothek",
- "armory.file_intro": "Eine .obj-, .glb-, .gltf- oder .dae-Datei oder ein einzelnes .mesh. Ihre Texturen werden im selben Ordner und in seinem Ordner textures gesucht; ein Objekt ohne gefundene Textur fragt nach einer.",
- "armory.file_placeholder": "Pfad einer Modelldatei einfügen oder durchsuchen",
  "armory.browse": "Durchsuchen…",
  "armory.file_title": "Ein zu importierendes Modell",
  "armory.units": "Einheiten",

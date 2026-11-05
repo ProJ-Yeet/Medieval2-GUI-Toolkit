@@ -278,7 +278,7 @@ function csHtml(){
     <div class="csown">
       <select id="csNewOwner">${(d.factions || []).map(f => `<option value="${esc(f.name)}">${tt('stratedit.held',{x:esc(f.label || f.name),settlements:f.settlements})}</option>`).join('')}</select>
       <button class="primary" onclick="csCreate()">${tt('stratedit.create_a_village_here')}</button>
-    </div>${csTownsHtml()}</div>`;
+    </div>${csTownsHtml()}${csAllHtml()}</div>`;
   return head + `<div class="cspanel">
     <div class="cshead">
       <b>${esc(d.shown_settlement || d.settlement || d.region)}</b>
@@ -296,6 +296,7 @@ function csHtml(){
     </div>
     ${csCopyHtml()}
     ${csTownsHtml()}
+    ${csAllHtml()}
   </div>`;
 }
 
@@ -703,4 +704,55 @@ function csFindingsHtml(){
     ${changes.length ? `<div class="count">${tt('stratedit.would_change',{changes:changes.map(esc).join(' · ')})}</div>`
       : p ? `<div class="count">${tt('stratedit.nothing_to_save_yet')}</div>` : ''}
   </div>`;
+}
+
+/* ---------- every settlement at once (after Mylae's validation tab) ----------
+   The findings the form shows for the settlement it has open, for every
+   settlement of the campaign, plus whether each population fits its level by
+   the mod's descr_settlement_mechanics.xml. A row opens that settlement. */
+
+function csAllHtml(){
+  const c = state.cmap;
+  if(!c) return '';
+  const a = state.csAll && state.csAll.mod === c.mod ? state.csAll : null;
+  let body;
+  if(!a || (!a.d && !a.loading && !a.err)){
+    body = `<button onclick="csAllRead()">${tt('stratedit.check_every_settlement')}</button>`;
+  }else if(a.loading){
+    body = `<div class="count">${tt('common.working_2')}</div>`;
+  }else if(a.err){
+    body = `<div class="w-warn">${esc(a.err)}</div>`;
+  }else{
+    const n = a.d.counts;
+    const rows = a.d.settlements.map(r => `<div class="csall">
+      <a href="#" onclick="csOpen('${esc(r.region)}');return false">${esc(r.region)}</a>
+      <span class="count">${esc(r.owner)} · ${esc(r.level)}${r.settlement_type === 'castle' ? tt('stratedit.castle_paren') : ''}</span>
+      ${r.findings.map(f => `<div class="${f.fatal ? 'w-bad' : f.severity === 'note' ? 'count' : 'w-warn'}">${esc(f.message)}</div>`).join('')}
+    </div>`).join('');
+    body = `<div class="count">${tt('stratedit.checked_settlements',{settlements:n.settlements,listed:n.listed,fatal:n.fatal,warn:n.warn,note:n.note})}</div>
+      ${a.d.population_checked ? '' : `<div class="count">${tt('stratedit.no_mechanics_no_population')}</div>`}
+      ${rows}
+      <button onclick="csAllRead()">${tt('stratedit.check_again')}</button>`;
+  }
+  return `<details class="cscopy"${a && a.open ? ' open' : ''} ontoggle="csAllOpen(this.open)">
+    <summary class="count">${tt('stratedit.every_settlement_at_once')}</summary>
+    <div class="csown">${body}</div></details>`;
+}
+
+function csAllOpen(open){
+  const c = state.cmap;
+  if(!c) return;
+  if(!state.csAll || state.csAll.mod !== c.mod) state.csAll = {mod: c.mod};
+  state.csAll.open = open;
+}
+
+async function csAllRead(){
+  const c = state.cmap;
+  if(!c) return;
+  const a = state.csAll = {mod: c.mod, open: true, loading: true};
+  csPaint();
+  try{ a.d = await api.get(`/api/map/settlements_check?mod=${enc(c.mod)}${cmapCampQ()}`); }
+  catch(e){ a.err = errText(e); }
+  a.loading = false;
+  if(state.csAll === a) csPaint();
 }

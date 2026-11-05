@@ -6377,6 +6377,21 @@ class Handler(BaseHTTPRequestHandler):
                 return self._json(armory.external_view(arg("path")))
             except armory.ArmoryError as e:
                 return self._err(400, str(e))
+        if path == "/api/armory/folder":
+            # every model under a folder, for the import dialog to list
+            try:
+                return self._json(armory.folder_models(arg("path")))
+            except armory.ArmoryError as e:
+                return self._err(400, str(e))
+        if path == "/api/armory/skeleton":
+            # a skeleton chosen with no model loaded (the names come from
+            # /api/model/skeleton_names): its actions, in the shape
+            # /api/model/anims gives for an entry's skeletons
+            sk_mod = arg("mod")
+            if not sk_mod or sk_mod not in self.registry.names():
+                return self._err(404, f"unknown mod {sk_mod!r}")
+            return self._json(animview.sets_view(self.registry.get(sk_mod).data,
+                                                 [{"primary": arg("skel")}]))
         if path == "/api/armory/geometry":
             hit = armory.external_by_id(arg("ext"))
             if hit is None:
@@ -6716,6 +6731,15 @@ class Handler(BaseHTTPRequestHandler):
                 facts = self.registry.map_facts(name, (q.get("campaign") or [""])[0])
                 return self._json(stratedit.settlement_detail(
                     facts, (q.get("region") or [""])[0]))
+            except (campmap.MapError, ModDataError, OSError) as exc:
+                return self._err(404, str(exc))
+
+        if path == "/api/map/settlements_check":
+            # Every settlement of the campaign through the form's own checks,
+            # after Mylae's validation tab; read out of the same fact table.
+            try:
+                facts = self.registry.map_facts(name, (q.get("campaign") or [""])[0])
+                return self._json(stratedit.check_all_settlements(facts))
             except (campmap.MapError, ModDataError, OSError) as exc:
                 return self._err(404, str(exc))
 

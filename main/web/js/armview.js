@@ -375,8 +375,12 @@ function armPaintSliders(){
       <label class="armcheck"><input type="checkbox"${ARM.faceOrient ? ' checked' : ''} onchange="armToggle('faceOrient')"> ${tt('armory.face_orientation')}</label>
       <label class="armcheck" title="${esc(tt('armory.head_as_one_title'))}"><input type="checkbox"${ARM.headLink ? ' checked' : ''} onchange="armToggle('headLink')"> ${tt('armory.head_as_one')}</label>
       <button class="mini${ARM.cam.ortho ? ' on' : ''}" onclick="armToggleOrtho()">${tt('armory.ortho')}</button>
+      <button class="mini${ARM.bones ? ' on' : ''}" onclick="ARM.bones=!ARM.bones;armPaintSliders();armFrame()" title="${esc(tt('armory.bones_title'))}">${tt('armory.bones')}</button>
       <button class="mini" onclick="armShortcutsOpen()">${tt('armory.shortcuts')}</button>
-      <span class="count armhint">${tt('armory.view_hint')}</span>
+      <span class="armnav" title="${esc(tt('armory.nav_title'))}">${tt('armory.nav')}
+        <button class="mini${armNav() === 'simple' ? ' on' : ''}" onclick="armNavSet('simple')">${tt('armory.nav_simple')}</button>
+        <button class="mini${armNav() === 'blender' ? ' on' : ''}" onclick="armNavSet('blender')">${tt('armory.nav_blender')}</button></span>
+      <span class="count armhint">${tt(armNav() === 'simple' ? 'armory.view_hint_simple' : 'armory.view_hint')}</span>
     </div>
     <div class="armanimhost" id="armAnimHost"></div>`;
   if(typeof armAnimPaint === 'function') armAnimPaint();
@@ -484,7 +488,38 @@ function armOverlay95g(ctx, w, h){
     ctx.fillText(badge, 16 * dpr, 13 * dpr + lines.length * lh);
   }
   ctx.restore();
+  armBonesDraw(ctx, w, h);
   armGizmoDraw(ctx, w, h);
+}
+
+/* The skeleton an action plays, as lines from each bone to its parent: on its
+   own when no object is shown (a skeleton chosen with no model loaded), and
+   over the model when Bones is on. Posed as armAnimPose poses the model, the
+   cycle's travel taken out; in T-pose, the bind pose. */
+function armBonesDraw(ctx, w, h){
+  const a = ARM.anim;
+  if(!a || !a.data || !a.data.bones || !ARM.view) return;
+  if(!ARM.bones && armVisibleObjects().length) return;
+  const len = armAnimLength(), f = len > 0 ? ((a.t % len) + len) % len / len : 0;
+  const tr = a.travel || [0, 0];
+  const pts = a.tpose ? (a.bind || v3aBind(a.data)) : v3aPose(a.data, a.t).map(b => b.p);
+  const shift = a.tpose ? [0, 0, 0] : [-tr[0] * f, 0, -tr[1] * f];
+  const r = ARM.view.getBoundingClientRect(), dpr = w / (r.width || w);
+  const at = p => { const s = armToScreen([p[0] + shift[0], p[1] + shift[1], p[2] + shift[2]]);
+    return [(s[0] - r.left) * dpr, (s[1] - r.top) * dpr]; };
+  const scr = pts.map(at);
+  ctx.save();
+  ctx.lineWidth = 2 * dpr;
+  ctx.strokeStyle = '#f3c26b';
+  ctx.fillStyle = '#f3c26b';
+  a.data.bones.forEach((b, i) => {
+    // the scene root stands at the origin and joins nothing that matters
+    if(b.parent > 0 && b.parent < i){
+      ctx.beginPath(); ctx.moveTo(scr[b.parent][0], scr[b.parent][1]); ctx.lineTo(scr[i][0], scr[i][1]); ctx.stroke();
+    }
+    if(i > 0){ ctx.beginPath(); ctx.arc(scr[i][0], scr[i][1], 2.5 * dpr, 0, Math.PI * 2); ctx.fill(); }
+  });
+  ctx.restore();
 }
 
 /* --- the view gizmo (99k) --------------------------------------------------------
