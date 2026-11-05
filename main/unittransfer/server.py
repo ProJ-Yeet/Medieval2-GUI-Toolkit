@@ -6679,6 +6679,15 @@ class Handler(BaseHTTPRequestHandler):
             except (campmap.MapError, ModDataError, OSError) as exc:
                 return self._err(404, str(exc))
 
+        if path == "/api/map/settlements_check":
+            # Every settlement of the campaign through the form's own checks,
+            # after Mylae's validation tab; read out of the same fact table.
+            try:
+                facts = self.registry.map_facts(name, (q.get("campaign") or [""])[0])
+                return self._json(stratedit.check_all_settlements(facts))
+            except (campmap.MapError, ModDataError, OSError) as exc:
+                return self._err(404, str(exc))
+
         if path == "/api/map/faction":
             # 16i. Through the fact table for the same reason 16h's settlement
             # form is: the parse of descr_strat.txt is already done and cached,

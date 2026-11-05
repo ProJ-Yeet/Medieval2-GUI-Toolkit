@@ -106,7 +106,71 @@ def problems(people: List[Dict], tree: List[Dict]) -> List[Dict]:
                 if k in seen and seen[k] != fam["father"]:
                     out.append({"kind": "two-families", "name": name, "message": _i18n.msg("eng.stratfamily.two_families", "{name} is a child of both {a} and {b}", name=name, a=seen[k], b=fam["father"])})
                 seen[k] = fam["father"]
+    out += _shape(by, tree)
     return out
+
+
+def _living_age(p: Optional[Dict]) -> Optional[int]:
+    """A person's age when it can be compared: alive, and a whole number.
+
+    A dead record's ``age`` is the age they died at, which is :mod:`stratchar`'s
+    reason for leaving the dead out of its sixteen-year rule; the same rule here.
+    """
+    if not p or p.get("dead") not in (None, "", False):
+        return None
+    try:
+        return int(str(p.get("age")).strip())
+    except (TypeError, ValueError):
+        return None
+
+
+def _shape(by: Dict[str, Dict], tree: List[Dict]) -> List[Dict]:
+    """The three rules about the tree as a whole, after Mylae's family-tree
+    checks (``familyTreeLogic.js``, which credits the Pfadfinder editor's
+    ``family.py``): nobody is their own ancestor; a living father is at least
+    :data:`stratchar.PARENT_YEARS` older than his child, the rule the character
+    editor already holds; and a father's line stands above his children's own
+    lines, the order vanilla writes them in. All three are warnings: none is a
+    load crash anybody has measured."""
+    from .stratchar import PARENT_YEARS
+    out: List[Dict] = []
+    real = lambda n: bool(n) and n.lower() != "nobody"
+    kids_of: Dict[str, List[str]] = {}
+    for fam in tree:
+        for parent in (fam["father"], fam["wife"]):
+            if real(parent):
+                kids_of.setdefault(parent.lower(), []).extend(c.lower() for c in fam["children"])
+    for start in sorted(kids_of):
+        stack, seen = list(kids_of[start]), set()
+        while stack:
+            n = stack.pop()
+            if n == start:
+                name = by.get(start, {}).get("name", start)
+                out.append({"kind": "ancestor", "name": name, "message": _i18n.msg("eng.stratfamily.own_ancestor", "{name} is their own ancestor: follow the children down from {name} and {name} comes back", name=name)})
+                break
+            if n not in seen:
+                seen.add(n)
+                stack.extend(kids_of.get(n, []))
+    for fam in tree:
+        fa = _living_age(by.get(fam["father"].lower()))
+        for kid in fam["children"]:
+            ka = _living_age(by.get(kid.lower()))
+            if fa is not None and ka is not None and fa - ka < PARENT_YEARS:
+                out.append({"kind": "years", "name": kid, "message": _i18n.msg("eng.stratfamily.years", "{father} is {fa} and {kid} is {ka}, which is {x} years; a living father should be at least {years} years older", father=fam["father"], fa=fa, kid=kid, ka=ka, x=fa - ka, years=PARENT_YEARS)})
+    at = {fam["father"].lower(): i for i, fam in enumerate(tree) if real(fam["father"])}
+    for i, fam in enumerate(tree):
+        for kid in fam["children"]:
+            j = at.get(kid.lower())
+            if j is not None and j < i:
+                out.append({"kind": "order", "name": fam["father"], "message": _i18n.msg("eng.stratfamily.order", "{father}'s line stands below the line of his child {kid}; vanilla writes a father's line above his children's", father=fam["father"], kid=kid)})
+    return out
+
+
+def _line_for(father: str, kids: List[str], rels: Dict, fallback: int) -> int:
+    """Where a new relative line goes: above the first existing line headed by
+    one of its children, so a father stays above his sons; else ``fallback``."""
+    below = [rels[k.lower()].start for k in kids if k.lower() in rels]
+    return min(below) if below else fallback
 
 
 # ---------------------------------------------------------------------------
@@ -190,7 +254,8 @@ def plan(mod, campaign: str, faction: str, ops: List[Dict]) -> Dict:
             if old is not None:
                 replace[old.start] = relative_line(father, wife, kids, sf.lines[old.start])
             else:
-                inserts.append((rel_at, n, relative_line(father, wife, kids, rel_like)))
+                inserts.append((_line_for(father, kids, rels, rel_at), n,
+                                relative_line(father, wife, kids, rel_like)))
             tree[father.lower()] = {"father": father, "wife": wife, "children": kids}
             changes.append(_i18n.msg("eng.stratfamily.set_family", "~ {father}: wife {wife}, children {kids}", father=father, wife=wife, kids=", ".join(kids) or "-"))
         elif kind == "drop_family":
@@ -216,7 +281,11 @@ def plan(mod, campaign: str, faction: str, ops: List[Dict]) -> Dict:
         lines.insert(at, text)
     out = [x for x in lines if x is not None]
     text = sf.newline.join(out) + (sf.newline if sf.trailing_newline and out else "")
-    warns = [f["message"] for f in problems(people, list(tree.values()))]
+    # the warnings read the families in the order the new file has them
+    pos = {m.group(1).strip().lower(): i for i, x in enumerate(out)
+           if (m := re.match(r"\s*relative\s+([^,]+),", x))}
+    fams = sorted(tree.values(), key=lambda f: pos.get(f["father"].lower(), len(out)))
+    warns = [f["message"] for f in problems(people, fams)]
     return {"text": "" if errors else text, "changes": changes, "errors": errors, "warnings": warns,
             "ok": not errors and bool(changes)}
 

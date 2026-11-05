@@ -11261,5 +11261,17 @@
 "eng.manytowns.no_tile": "{region} came with no tile, so it gets no garrison",
 "eng.manytowns.garrison": "  {name} holds it with {n} regiments",
 "eng.manytowns.no_town_could_be_added": "no town could be added: {why}",
-"viewer3d.not_in_this_mod": "not in this mod"
+"viewer3d.not_in_this_mod": "not in this mod",
+"eng.stratfamily.own_ancestor": "{name} is their own ancestor: follow the children down from {name} and {name} comes back",
+"eng.stratfamily.years": "{father} is {fa} and {kid} is {ka}, which is {x} years; a living father should be at least {years} years older",
+"eng.stratfamily.order": "{father}'s line stands below the line of his child {kid}; vanilla writes a father's line above his children's",
+"eng.buildings.ref_unknown": "{name}/{name2} requires {kind} {what}, and {where} declares no such name ({n} clause(s) in the file name it). The game does not complain; the condition is simply never true.",
+"eng.stratedit.population_past_upgrade": "Population {pop} is past {upgrade}, where a {level} grows to the next level, so it can grow on the first turn.",
+"eng.stratedit.population_under_base": "Population {pop} is under {base}, the population a {level} is defined from, so it starts small for its level.",
+"stratedit.every_settlement_at_once": "Every settlement at once",
+"stratedit.check_every_settlement": "Check every settlement",
+"stratedit.check_again": "Check again",
+"stratedit.checked_settlements": "{settlements} settlements checked, {listed} with something to say: {fatal} fatal, {warn} warnings, {note} notes",
+"stratedit.no_mechanics_no_population": "This mod has no descr_settlement_mechanics.xml of its own, so populations are not checked against levels.",
+"stratedit.castle_paren": " (castle)"
 }

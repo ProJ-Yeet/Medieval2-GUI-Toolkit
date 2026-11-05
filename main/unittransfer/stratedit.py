@@ -492,6 +492,99 @@ def settlement_detail(facts, region: str) -> dict:
     }
 
 
+#: The castle names ``descr_settlement_mechanics.xml`` gives each rung of the
+#: ladder (a castle has no village). Vanilla's file spells the first one
+#: ``moot_and_bailey``, so both spellings are looked for.
+CASTLE_MECH = {"town": ("motte_and_bailey", "moot_and_bailey"),
+               "large_town": ("wooden_castle",), "city": ("castle",),
+               "large_city": ("fortress",), "huge_city": ("citadel",)}
+
+
+def _population_bands(mod) -> Dict[str, Tuple[Optional[int], Optional[int]]]:
+    """level name (lowercased) -> (base, upgrade), from the mod's own
+    ``descr_settlement_mechanics.xml``; empty when it has none, and then no
+    population is checked."""
+    from . import settlemech
+    try:
+        mf, _text = settlemech.read(mod)
+    except (settlemech.SettleError, OSError, AttributeError, TypeError):
+        return {}
+    out: Dict[str, Tuple[Optional[int], Optional[int]]] = {}
+    for lv in mf.levels:
+        def num(key):
+            v = lv.values.get(key)
+            return int(v.value) if v is not None and is_int(v.value) else None
+        out[lv.name.lower()] = (num("base"), num("upgrade"))
+    return out
+
+
+def check_population(bands: Dict[str, Tuple[Optional[int], Optional[int]]],
+                     kind: str, level: str, population) -> List[dict]:
+    """Whether a settlement's starting population fits its level: notes only.
+
+    After Mylae's editor, which sets the level from the population. Here it is
+    said and not done: a town past its level's ``upgrade`` population can grow
+    on the first turn, and one under its level's ``base`` starts small, and
+    neither stops the game.
+    """
+    if not bands or not is_int(population):
+        return []
+    names = CASTLE_MECH.get(level, ()) if kind == "castle" else (level,)
+    band = next((bands[n] for n in names if n in bands), None)
+    if band is None:
+        return []
+    base, upgrade = band
+    pop = int(str(population).strip())
+    shown = level.replace("_", " ") if kind != "castle" else names[0].replace("_", " ")
+    if upgrade is not None and pop >= upgrade and level != LADDER[-1]:
+        return [finding("population.upgrade", False, _i18n.msg("eng.stratedit.population_past_upgrade", "Population {pop} is past {upgrade}, where a {level} grows to the next level, so it can grow on the first turn.", pop=pop, upgrade=upgrade, level=shown), severity="note")]
+    if base is not None and pop < base:
+        return [finding("population.base", False, _i18n.msg("eng.stratedit.population_under_base", "Population {pop} is under {base}, the population a {level} is defined from, so it starts small for its level.", pop=pop, base=base, level=shown), severity="note")]
+    return []
+
+
+def check_all_settlements(facts) -> dict:
+    """Every settlement of the campaign, checked as the form checks one.
+
+    The same :func:`check_settlement` the settlement form runs, plus
+    :func:`check_population`. Only settlements with something to say are
+    listed, fatal ones first, then by how many findings they have.
+    """
+    from .campmap import MapError
+
+    sf = getattr(facts, "strat", None)
+    if sf is None:
+        raise MapError(_i18n.msg("eng.stratedit.could_not_be_read_so_this", "{strat_rel} could not be read, so this map has no campaign to edit", strat_rel=facts.strat_rel))
+    voc = Vocabulary(facts, sf)
+    bands = _population_bands(getattr(facts, "mod", None))
+    rows = []
+    every = sf.of_kind("settlement")
+    for node in every:
+        kind = str(node.get("settlement_type") or "city")
+        level = str(node.get("level") or "")
+        buildings = [(b.name or "", str(b.get("level") or ""))
+                     for b in sf.children_of(node, "building")]
+        found = check_settlement(voc, kind, level, node.get("population"),
+                                 node.get("year_founded"), buildings)
+        found += check_population(bands, kind, level, node.get("population"))
+        if not found:
+            continue
+        faction = faction_of(sf, node)
+        rows.append({"region": str(node.get("region") or ""), "settlement_type": kind,
+                     "level": level, "population": node.get("population"),
+                     "owner": str(faction.get("name") or faction.name) if faction else "",
+                     "line": node.start + 1, "findings": found})
+    rows.sort(key=lambda r: (not any(f["fatal"] for f in r["findings"]),
+                             -len(r["findings"]), r["region"].lower()))
+    flat = [f for r in rows for f in r["findings"]]
+    return {"campaign": getattr(facts, "campaign", ""), "file": getattr(facts, "strat_rel", ""),
+            "population_checked": bool(bands), "settlements": rows,
+            "counts": {"settlements": len(every), "listed": len(rows),
+                       "fatal": sum(1 for f in flat if f["fatal"]),
+                       "warn": sum(1 for f in flat if not f["fatal"] and f.get("severity") != "note"),
+                       "note": sum(1 for f in flat if f.get("severity") == "note")}}
+
+
 def _faction_rows(sf: StratFile, facts) -> List[dict]:
     """Every faction the settlement could be given to, with what it holds now.
 

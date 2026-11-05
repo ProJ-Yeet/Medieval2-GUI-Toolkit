@@ -146,5 +146,32 @@ sfm.add_to_library(mod, "northern_european", "generals", [pic.getvalue(), pic.ge
 check("new portraits go in at the next number of every age at once",
       all((pdir / a / "generals" / "004.tga").is_file() for a in ("young", "old")) and (pdir / "dead" / "004.tga").is_file())
 
+print("\nthe tree's shape (after Mylae's family-tree rules)")
+P = [{"name": "Henry", "sex": "male", "age": 40, "source": "map"},
+     {"name": "Edward", "sex": "male", "age": 18, "source": "map"},
+     {"name": "Young", "sex": "male", "age": 30, "source": "map"},
+     {"name": "William", "sex": "male", "age": 70, "dead": 2, "source": "record"},
+     {"name": "Matilda", "sex": "female", "age": 38, "source": "record"}]
+loop = sfm.problems(P, [{"father": "Henry", "wife": "nobody", "children": ["Edward"]},
+                        {"father": "Edward", "wife": "nobody", "children": ["Henry"]}])
+check("someone who is their own ancestor is said", any(f["kind"] == "ancestor" for f in loop))
+young = sfm.problems(P, [{"father": "Young", "wife": "nobody", "children": ["Edward"]}])
+check("a living father under sixteen years older than his child is said",
+      [f["kind"] for f in young] == ["years"])
+dead = sfm.problems(P, [{"father": "William", "wife": "nobody", "children": ["Young"]}])
+check("a dead father's age is the age he died at, so it is not compared", dead == [])
+late = sfm.problems(P, [{"father": "Henry", "wife": "Matilda", "children": ["Edward"]},
+                        {"father": "William", "wife": "nobody", "children": ["Henry"]}])
+check("a father's line after his son's line is said", [f["kind"] for f in late] == ["order"])
+check("the sound tree at the top still says nothing", sfm.read(mod, "imperial_campaign", "england")["findings"] == [])
+p = sfm.plan(mod, "imperial_campaign", "england",
+             [{"op": "record", "name": "Odo", "sex": "male", "age": 95, "dead": True},
+              {"op": "family", "father": "Odo", "wife": "nobody", "children": ["William"]}])
+lines = p["text"].split("\r\n")
+check("a new father's line goes in above his son's, not at the end",
+      p["ok"] and lines.index("relative \t\tOdo, nobody, William, end")
+      < lines.index("relative \t\tWilliam, nobody, Henry, end"))
+check("and so the plan has nothing to warn about", p["warnings"] == [])
+
 print(f"\n{sum(ok)}/{len(ok)} checks passed")
 sys.exit(0 if all(ok) else 1)

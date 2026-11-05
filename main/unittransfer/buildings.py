@@ -3210,9 +3210,13 @@ class TreeCheck:
     well under a tenth of a second on the largest installed EDB.
     """
 
-    def __init__(self, edb: EdbFile):
+    def __init__(self, edb: EdbFile, refs: Optional[Dict[str, Optional[set]]] = None):
         self.edb = edb
         self.lines = edb.buildings
+        #: what the mod declares, from :func:`requires_refs`: kind -> lowercased
+        #: names, or None for a list the mod does not have. No refs at all (the
+        #: EDB import's call) and the ``ref.*`` rules say nothing.
+        self.refs = refs
         #: name -> the FIRST line with that name. A duplicate is a rule of its
         #: own; everything else resolves against the first, which is what the
         #: engine does with the file as written.
@@ -3399,6 +3403,104 @@ def _t_no_factions(tc: TreeCheck):
                 line=b.header + 1, building=bl.name, what=f"{bl.name}|{b.name}")
 
 
+# ---------------------------------------------------------------------------
+# what a requires clause names, against what the mod declares
+
+def requires_refs(mod) -> Dict[str, Optional[set]]:
+    """The names a ``requires`` clause may use, lowercased, one set per kind.
+
+    The same lists :mod:`edbvocab` offers in the clause editor, so the editor
+    and this check can never disagree. A kind whose file the mod does not have
+    is ``None`` and is not checked: calling every religion unknown because
+    ``descr_religions.txt`` is missing would bury the one finding that matters.
+    """
+    def low(names) -> Optional[set]:
+        out = {str(n).lower() for n in names if n}
+        return out or None
+    factions = low(mod.faction_cultures)
+    return {"factions": factions,
+            "cultures": low(edbvocab.cultures(mod)) if factions else None,
+            "religions": low(edbvocab.religions(mod)),
+            "resources": low(edbvocab.resources(mod))}
+
+
+def _clauses(tc: TreeCheck):
+    """Every requires clause in the file, with the level it stands on: the
+    level's own, each capability line's, and the clause an upgrades entry may
+    carry (``zz_2 requires event_counter zz_open 1``)."""
+    for bl in tc.lines:
+        for b in bl.blocks:
+            yield bl, b, b.requires or ""
+            for c in b.capabilities + b.faction_capabilities:
+                yield bl, b, c.requires or ""
+            for entry in b.upgrades:
+                yield bl, b, _split_requires(entry)[1]
+
+
+#: kind -> (the clause's term, the refs list it is checked against, the file
+#: that declares it, the rule's label)
+_REF_KINDS = {
+    "faction": ("factions", "factions", "descr_sm_factions.txt or descr_cultures.txt",
+                "A factions list naming no faction or culture"),
+    "hidden_resource": ("hidden_resource", "hidden", "the EDB's own hidden_resources line",
+                        "A hidden_resource nothing declares"),
+    "resource": ("resource", "resources", "descr_sm_resources.txt",
+                 "A trade resource nothing declares"),
+    "religion": ("region_religion", "religions", "descr_religions.txt",
+                 "A religion nothing declares"),
+}
+
+
+def _ref_names(kind: str, cond) -> List[str]:
+    if kind == "faction":
+        return [v for v in cond.values if v.lower() != edbvocab.ALL]
+    return cond.values[:1]
+
+
+def _ref_rule(kind: str):
+    term, list_key, where, _label = _REF_KINDS[kind]
+
+    def rule(tc: TreeCheck):
+        if tc.refs is None:
+            return
+        if list_key == "hidden":
+            known = {h.lower() for h in tc.edb.hidden_resources}
+        elif list_key == "factions":
+            if tc.refs.get("factions") is None:
+                return
+            known = set(tc.refs["factions"]) | set(tc.refs.get("cultures") or ())
+        else:
+            known = tc.refs.get(list_key)
+            if known is None:
+                return
+        first: Dict[str, Tuple[BuildingLine, LevelBlock]] = {}
+        count: Dict[str, int] = {}
+        for bl, b, clause in _clauses(tc):
+            for cond in parse_clause(clause):
+                if cond.kind != term:
+                    continue
+                for name in _ref_names(kind, cond):
+                    if not name or name.lower() in known:
+                        continue
+                    key = name.lower()
+                    first.setdefault(key, (bl, b))
+                    count[key] = count.get(key, 0) + 1
+        for key, (bl, b) in first.items():
+            yield EdbFinding(
+                f"ref.{kind}", "warn",
+                _i18n.msg("eng.buildings.ref_unknown", "{name}/{name2} requires {kind} {what}, and {where} declares no such name ({n} clause(s) in the file name it). The game does not complain; the condition is simply never true.", name=bl.name, name2=b.name, kind=term, what=key, where=where, n=count[key]),
+                line=b.header + 1, building=bl.name, what=f"{kind}|{key}",
+                count=count[key])
+    return rule
+
+
+for _ref_kind, _ref_spec in _REF_KINDS.items():
+    edb_rule(f"ref.{_ref_kind}", _ref_spec[3], "warn",
+             "Mylae's buildingRequirementValidation: a clause is checked against "
+             "the lists the clause editor (edbvocab) offers; case-blind, as the "
+             "engine reads them")(_ref_rule(_ref_kind))
+
+
 #: The rules that were on the table and are NOT here, with what decided it.
 #:
 #: Kept in the module rather than in the write-up because the next person to
@@ -3427,17 +3529,28 @@ RULES_REFUSED: Tuple[dict, ...] = (
                  "them. Excluding those leaves three real chains on Divide and "
                  "Conquer with a second entry point, and it ships.",
      "verdict": "reshaped into tree.second_entry, at note"},
+    {"rule": "an event_counter no file sets is unknown",
+     "his source": "Mylae's buildingRequirementValidation, checked against descr_events",
+     "measured": "a counter is moved by the campaign script, by descr_events.txt's "
+                 "historic events and by the engine itself, and edbvocab's list "
+                 "already counts every counter the EDB names as known. Nothing in "
+                 "a mod's files proves a counter is never set, so the ref.* rules "
+                 "leave it out rather than guess.",
+     "verdict": "refused"},
 )
 
 
-def tree_check(edb: EdbFile, line: str = "") -> dict:
+def tree_check(edb: EdbFile, line: str = "", mod=None,
+               refs: Optional[Dict[str, Optional[set]]] = None) -> dict:
     """Every tree rule over one parsed EDB, or over one line of it.
 
     Returns the findings and the rule table together, because the panel needs
     both: a rule that found nothing still has to be listable, or a validator
     that is silent is indistinguishable from one that did not run.
     """
-    tc = TreeCheck(edb)
+    if refs is None and mod is not None:
+        refs = requires_refs(mod)
+    tc = TreeCheck(edb, refs)
     out: List[EdbFinding] = []
     for r in EDB_RULES:
         for f in r.fn(tc):
@@ -3570,7 +3683,7 @@ def checks(mod, line: str = "") -> dict:
             raise KeyError(line)
         return {"mod": mod.name, "pairs": pairs,
                 "lines": [line_checks(edb, bl, pairs)],
-                "tree": tree_check(edb, line)}
+                "tree": tree_check(edb, line, mod=mod)}
     rollup = []
     for bl in edb.buildings:
         res = line_checks(edb, bl, pairs)
@@ -3578,7 +3691,7 @@ def checks(mod, line: str = "") -> dict:
             rollup.append({k: res[k] for k in
                            ("line", "settlement", "twin", "gaps", "dupes", "mirror")})
     return {"mod": mod.name, "pairs": pairs, "lines": rollup,
-            "tree": tree_check(edb)}
+            "tree": tree_check(edb, mod=mod)}
 
 
 def unit_instances(mod, unit: str, culture: str = "") -> dict:
