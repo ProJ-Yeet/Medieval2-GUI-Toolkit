@@ -4033,6 +4033,10 @@ def _drop_orphan_pools(rec: Dict) -> int:
     recruit and mercenary lines naming it go too (pooled by hand after the
     transfer, they would otherwise name a unit the stock engine refuses).
     Backed up beside the job's own backups. Returns how many were taken."""
+    # every kind of change is undone through here and names something in
+    # resolved_type; only a unit transfer's record carries its options
+    if rec.get("action") or "bring_animations" not in (rec.get("options") or {}):
+        return 0
     unit_type = (rec.get("resolved_type") or "").strip()
     if not unit_type or not rec.get("dest_root"):
         return 0

@@ -77,9 +77,24 @@ check("undo puts both files back byte for byte",
       (data / "export_descr_buildings.txt").read_bytes() == EDB.replace("\n", "\r\n").encode("latin-1")
       and (data / merc_rel).read_bytes() == MERC.replace("\n", "\r\n").encode("latin-1"))
 
+print("\n2) only a unit transfer's undo looks at the pools")
+from unittransfer import transfer                                   # noqa: E402
+edb_p = data / "export_descr_buildings.txt"
+ghost = '                recruit_pool "Ghost Unit"  1  0.7  6  0  requires factions { england, }\r\n'
+t = edb_p.read_bytes().decode("latin-1")
+i = t.index('                recruit_pool "Spearmen"')
+edb_p.write_bytes((t[:i] + ghost + t[i:]).encode("latin-1"))
+rec = {"resolved_type": "Ghost Unit", "dest_root": str(tmp / "M"), "backup_root": str(tmp / "bk"),
+       "options": {}}
+check("an undo of anything else (a banner, a building) leaves them alone",
+      transfer._drop_orphan_pools(rec) == 0 and "Ghost Unit" in edb_p.read_text("latin-1"))
+rec["options"] = {"bring_animations": True}
+check("a transfer's undo takes out the line naming its vanished unit",
+      transfer._drop_orphan_pools(rec) == 1 and "Ghost Unit" not in edb_p.read_text("latin-1"))
+
 crus = Path(real or "") / "mods" / "crusades"
 if (crus / "packs").is_dir():
-    print("\n2) undoing a transfer whose unit was pooled afterwards")
+    print("\n3) undoing a transfer whose unit was pooled afterwards")
     from unittransfer.transfer import plan_transfer, apply_transfer, TransferOptions  # noqa: E402
     edit.apply_edit(plan_delete())            # the mod without it, as kirsi was
     plan = plan_transfer(Mod(crus), "Greek Firethrower", Mod(tmp / "M"),
@@ -104,7 +119,7 @@ if (crus / "packs").is_dir():
           and "unit Spearmen," in (data / merc_rel).read_text("latin-1"))
     check("  and the record says how many", out.get("refs_dropped") == 2)
 else:
-    print("\n2) skipped: the base game's crusades campaign is not installed")
+    print("\n3) skipped: the base game's crusades campaign is not installed")
 
 print(f"\n{sum(ok)}/{len(ok)} passed")
 sys.exit(0 if all(ok) else 1)
