@@ -17,6 +17,10 @@ under the GNU General Public License v3.0:
 Those parts are used under the GPLv3, and each file that holds one names the
 editor's file it comes from. They are:
 
+    main/unittransfer/data/addons/avoid_growth.nut
+    main/unittransfer/data/addons/player_diplomacy.nut
+    main/unittransfer/data/addons/raze_settlement.nut
+    main/unittransfer/data/addons/sack_settlement.nut
     main/unittransfer/scriptaddons.py
     main/unittransfer/scriptbuilder.py
     main/unittransfer/scriptcompat.py
