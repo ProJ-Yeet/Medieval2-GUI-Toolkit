@@ -19,7 +19,6 @@ editor's file it comes from. They are:
 
     main/unittransfer/artrecolour.py
     main/unittransfer/bannermaker.py
-    main/unittransfer/factionbring.py
     main/unittransfer/scriptaddons.py
     main/unittransfer/scriptbuilder.py
     main/unittransfer/scriptcompat.py
