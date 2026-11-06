@@ -33,10 +33,12 @@ not create is a tool nobody uses twice.
 the game runs) and ``note`` (worth knowing, not wrong). Only ``fatal`` blocks,
 and only when it is not in the baseline.
 
-Two of Geomod's debugger's three auto-fixes::
+Two of Geomod's debugger's three auto-fixes, and a move for a resource in
+the sea::
 
     heights_black       ambiguous (0,0,0) altitudes on land -> (1,1,1)
     resource_position   a resource that is off the grid or in the sea, deleted
+    resource_move       a resource in the sea -> its calculated nearest land
 
 The third, deleting a second identical resource line on one tile, is not here.
 The engine loads every copy onto the tile and into its province's resources,
@@ -67,9 +69,10 @@ import hashlib
 import json
 import re
 import time
+from collections.abc import Mapping
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Callable, Dict, Iterable, List, Optional, Sequence, Set, Tuple
+from typing import Callable, Dict, Iterable, List, Optional, Sequence, Set, Tuple, Union
 
 from PIL import Image, ImageChops
 
@@ -128,6 +131,10 @@ class Finding:
     what: str = ""
     #: the auto-fix that would clear this, or ``""``
     fix: str = ""
+    #: for a resource in the sea, the nearest land in game coordinates - which
+    #: is what offers Move - or None. The tile a move writes is chosen when it
+    #: is planned (:func:`_plan_resource_moves`), and the plan shows it.
+    move: Optional[Tuple[int, int]] = None
     #: how many identical faults this row stands for, when a rule folded them
     count: int = 1
     #: filled in by :func:`run` from the mod's stamped baseline
@@ -142,7 +149,8 @@ class Finding:
         out = {"code": self.code, "severity": self.severity,
                "message": self.message, "file": self.file, "line": self.line,
                "tile": list(self.tile) if self.tile else None,
-               "game": None, "fix": self.fix, "count": self.count,
+               "game": None, "fix": self.fix,
+               "move": list(self.move) if self.move else None, "count": self.count,
                "baseline": self.baseline, "key": self.key}
         if self.tile and cm is not None:
             out["game"] = list(cm.game_xy(*self.tile))
@@ -352,7 +360,7 @@ def _r_layer_size(ck: Check) -> Iterable[Finding]:
     for line in ck.cm.check_layers():
         name = line.split(":", 1)[0]
         yield Finding("layer.size", "fatal", line,
-                      file=ck.rel(name) if name.endswith(".tga") else "",
+                      file=ck.rel(name) if name.endswith((".tga", ".txt")) else "",
                       what=line)
 
 
@@ -563,9 +571,13 @@ def _r_orphan_markers(ck: Check) -> Iterable[Finding]:
     # A port with no sea at all beside it is also undecidable - the dock rule
     # needs water on one side - but "nobody owns it" is the vaguer half of that
     # and `port.inland` says the sharper half. Reported once, by the rule that
-    # names the actual fault.
+    # names the actual fault. With no sea mask neither half can be told apart,
+    # and the sea mask's absence is already reported as a skip.
+    sea = ck.sea
+    if sea is None:
+        return
     for at in idx.undecided_ports[:ROW_MAX]:
-        if not _has_sea_beside(ck, at):
+        if not _has_sea_beside(ck.cm, sea, at):
             continue
         yield Finding(
             "marker.orphan", "warn",
@@ -1409,6 +1421,7 @@ def _r_resource_position(ck: Check) -> Iterable[Finding]:
                 _i18n.msg("eng.mapcheck.resource_is_tail_unreachable", "`{name}` is {tail} Nothing on land can reach it.{land}", name=n.name, tail=f['tail'], land=_land_clause(f, (x, gy))),
                 file=ck.strat_rel, line=n.start + 1,
                 tile=None if off else (x, iy), fix="resource_position",
+                move=f["near"] if f["code"] == "sea" else None,
                 what=f"{n.name.lower()}|{x},{gy}|{f['code']}")
 
 
@@ -1887,9 +1900,14 @@ def clear_baseline(mod) -> bool:
 # ---------------------------------------------------------------------------
 # the auto-fixes
 #
-# Geomod's three debugger actions, and nothing invented beside them. Each one is
-# derived from the findings of exactly one rule, so a fix can never act on
-# something the report did not show the user first.
+# Two of Geomod's debugger actions and three of ours. Each one is derived from
+# the findings of exactly one rule, so a fix can never act on something the
+# report did not show the user first. A resource in the sea is the one finding
+# with two: Delete, Geomod's, and Move, which used to be left out because any
+# target would have been a guess. It is not one any more: the move takes the
+# tile the strat-objects panel would (:meth:`stratobj.Vocabulary.snap` - land
+# an army can walk onto, inside a province, nothing of the same name on it),
+# and the plan names that tile before anything is written.
 
 FIXES: Dict[str, dict] = {
     "heights_black": {
@@ -1931,8 +1949,19 @@ FIXES: Dict[str, dict] = {
         "label": "Delete resources that are off the map or in the sea",
         "rule": "strat.resource_position",
         "file": "",
-        "what": "A resource nothing on land can reach is removed. There is no "
-                "position to move it to that would not be a guess.",
+        "what": "A resource nothing on land can reach is removed. One in the "
+                "sea can be moved to its nearest land instead.",
+    },
+    "resource_move": {
+        "label": "Move resources in the sea to the nearest land they can be traded from",
+        "rule": "strat.resource_position",
+        "file": "",
+        "what": "Each resource in the sea moves to the nearest tile it can be "
+                "traded from: land an army can walk onto, inside a province, "
+                "in its own province when one is close, and not beside another "
+                "resource of the same name. The plan names every tile before "
+                "anything is written. A resource off the map can only be "
+                "deleted.",
     },
 }
 
@@ -1951,31 +1980,72 @@ class FixPlan:
     errors: List[str] = field(default_factory=list)
     #: the findings this plan would clear, for the answer and the log
     cleared: List[Finding] = field(default_factory=list)
+    #: fix code -> how many findings it acts on, for the log
+    counts: Dict[str, int] = field(default_factory=dict)
 
     def summary(self) -> str:
         head = (f"fix {getattr(self.mod, 'name', '?')}'s campaign map "
                 f"({len(self.codes)} fix(es), {len(self.cleared)} finding(s))")
         return "\n".join([head] + [f"  {c}" for c in self.changes])
 
+    def digest(self) -> str:
+        """A fingerprint of exactly what the plan would write.
+
+        The browser shows a plan and sends this back with Write; the apply
+        re-plans against the map as it is then, and refuses when the two
+        differ - a move target nobody saw is never written.
+        """
+        h = hashlib.sha1()
+        for rel in sorted(self.data):
+            h.update(rel.encode("utf-8") + b"\0" + self.data[rel] + b"\0")
+        for rel in sorted(self.text):
+            h.update(rel.encode("utf-8") + b"\0"
+                     + self.text[rel].encode("utf-8", "surrogatepass") + b"\0")
+        return h.hexdigest()[:16]
+
     def payload(self) -> dict:
         return {"codes": list(self.codes), "changes": list(self.changes),
                 "warnings": list(self.warnings), "errors": list(self.errors),
                 "cleared": len(self.cleared),
                 "files": sorted(list(self.data) + list(self.text)),
+                "digest": self.digest() if self.data or self.text else "",
                 "ok": not self.errors and bool(self.data or self.text)}
 
 
+def _finding_keys(keys) -> Tuple[Optional[Set[str]], Optional[Dict[str, Set[str]]]]:
+    """``keys`` as the browser sent it, checked: ``(one set, None)`` for a list,
+    ``(None, {fix: set})`` for a mapping, ``(None, None)`` for every finding.
+    Anything else is refused rather than read as characters or as "all"."""
+    def names(v, where: str) -> Set[str]:
+        if isinstance(v, (str, bytes)) or not isinstance(v, (list, tuple, set)) \
+                or not all(isinstance(k, str) for k in v):
+            raise ValueError(_i18n.msg(
+                "eng.mapcheck.keys_must_be_a_list", "keys{where} must be a list of finding keys",
+                where=where))
+        return set(v)
+    if keys is None:
+        return None, None
+    if isinstance(keys, Mapping):
+        return None, {str(c): names(v, f" for {c}") for c, v in keys.items()}
+    return names(keys, ""), None
+
+
 def plan_fix(mod, codes: Sequence[str], cm: Optional[CampaignMap] = None,
-             campaign: str = "", keys: Optional[Sequence[str]] = None
+             campaign: str = "",
+             keys: Optional[Union[Sequence[str], Mapping[str, Sequence[str]]]] = None
              ) -> FixPlan:
     """What the chosen fixes would write.
 
     The rules are re-run here rather than trusting a report the browser sent
     back: a fix acts on the map as it is at the moment of the fix, and a stale
     finding list is how a tool ends up deleting the wrong line. ``keys`` narrows
-    it to particular findings; without it, a fix takes every finding its rule
-    produces.
+    it to particular findings; a mapping gives each action its own finding keys,
+    so one plan can move some resources and delete others. Without it, a fix
+    takes every finding its rule produces. A resource chosen for both Move
+    and Delete is refused: there is no order of the two that means anything.
+    Malformed ``keys`` raise ValueError.
     """
+    want, wants = _finding_keys(keys)
     cm = cm or CampaignMap(mod)
     p = FixPlan(mod=mod, codes=[c for c in codes if c in FIXES])
     unknown = [str(c) for c in codes if c not in FIXES]
@@ -1986,23 +2056,42 @@ def plan_fix(mod, codes: Sequence[str], cm: Optional[CampaignMap] = None,
         p.errors.append(_i18n.msg("eng.mapcheck.no_fix_was_chosen", "no fix was chosen"))
         return p
     ck = Check(mod, cm, campaign)
-    want = set(keys) if keys else None
 
+    # Each rule runs once, however many of the chosen fixes read it: Move and
+    # Delete both read strat.resource_position, and its nearest-land search
+    # is the expensive part.
+    ran: Dict[str, List[Finding]] = {}
     found: Dict[str, List[Finding]] = {}
     for code in p.codes:
         r = RULE_BY_CODE[FIXES[code]["rule"]]
-        try:
-            got = [f for f in (r.fn(ck) or ()) if f.fix == code]
-        except Exception as exc:                       # noqa: BLE001
-            p.errors.append(_i18n.msg("eng.mapcheck.could_not_be_re_checked", "{code} could not be re-checked: {exc}", code=r.code, exc=exc))
-            continue
-        if want is not None:
-            got = [f for f in got if f.key in want]
+        if r.code not in ran:
+            try:
+                ran[r.code] = list(r.fn(ck) or ())
+            except Exception as exc:                   # noqa: BLE001
+                p.errors.append(_i18n.msg("eng.mapcheck.could_not_be_re_checked", "{code} could not be re-checked: {exc}", code=r.code, exc=exc))
+                ran[r.code] = []
+                continue
+        got = ran[r.code]
+        if code == "resource_move":
+            got = [f for f in got if f.move is not None]
+        else:
+            got = [f for f in got if f.fix == code]
+        chosen = wants.get(code, set()) if wants is not None else want
+        if chosen is not None:
+            got = [f for f in got if f.key in chosen]
         found[code] = got
-        p.cleared.extend(got)
     if p.errors:
         return p
-    if not p.cleared:
+    both = ({f.key for f in found.get("resource_move", ())}
+            & {f.key for f in found.get("resource_position", ())})
+    if both:
+        p.errors.append(_i18n.msg(
+            "eng.mapcheck.resource_chosen_move_and_delete",
+            "{n} resource(s) chosen to be both moved and deleted; choose one for each",
+            n=len(both)))
+        return p
+    p.codes = [c for c in p.codes if found.get(c)]
+    if not p.codes:
         p.errors.append(_i18n.msg("eng.mapcheck.nothing_left_to_fix_the_findings", "nothing left to fix - the findings are already gone"))
         return p
 
@@ -2012,10 +2101,17 @@ def plan_fix(mod, codes: Sequence[str], cm: Optional[CampaignMap] = None,
         _plan_fords(ck, p, [f.tile for f in found["ford_none"] if f.tile])
     if found.get("crossing_smooth"):
         _plan_smooth(ck, p, [f.tile for f in found["crossing_smooth"] if f.tile])
-    drop = sorted({f.line - 1 for f in found.get("resource_position", ())
-                   if f.line > 0})
-    if drop:
-        _plan_strat(ck, p, drop)
+    if found.get("resource_move") or found.get("resource_position"):
+        found["resource_move"] = _plan_strat(
+            ck, p, found.get("resource_move", ()),
+            sorted({f.line - 1 for f in found.get("resource_position", ())
+                    if f.line > 0}))
+    for code in list(p.codes):
+        if not found.get(code):
+            p.codes.remove(code)
+            continue
+        p.counts[code] = len(found[code])
+        p.cleared.extend(found[code])
     if not p.data and not p.text and not p.errors:
         p.errors.append(_i18n.msg("eng.mapcheck.nothing_left_to_fix_the_findings", "nothing left to fix - the findings are already gone"))
     return p
@@ -2121,40 +2217,93 @@ def _plan_smooth(ck: Check, p: FixPlan, tiles: Sequence[Tuple[int, int]]) -> Non
                      f"{len(tiles):,} river crossing(s)")
 
 
-def _plan_strat(ck: Check, p: FixPlan, drop: Sequence[int]) -> None:
-    """Delete whole lines from ``descr_strat.txt``, bottom up.
+def _plan_strat(ck: Check, p: FixPlan, moves: Sequence[Finding],
+                drop: Sequence[int]) -> List[Finding]:
+    """Move resource lines and delete whole lines in ``descr_strat.txt``.
 
-    Bottom up because every index above a deleted line would otherwise be one
-    out, which is the bug every "delete these rows" routine is born with. The
-    rest of the file is untouched: this is 16b's model, lines plus an index, and
-    a deletion is a slice rather than a re-serialisation.
+    One list of lines, edited in place, serialised once. Moves first: they
+    rewrite a line's numbers and never change how many lines there are. Then
+    deletions, bottom up, because every index above a deleted line would
+    otherwise be one out - the bug every "delete these rows" routine is born
+    with. The rest of the file is untouched: this is 16b's model, lines plus
+    an index, and an edit is a slice rather than a re-serialisation.
+
+    A move's tile is :meth:`stratobj.Vocabulary.snap`'s, the strat-objects
+    panel's own search, never the bare "not sea" the validator's message
+    quotes. Each tile a move takes is marked taken before the next resource
+    looks, so a batch never stacks two of the same name on one tile. A
+    resource with no tile in reach stays where it is, and the plan says so.
+    Returns the move findings that really move.
     """
     if ck.strat is None:
         p.errors.append(_i18n.msg("eng.mapcheck.descr_strat_txt_could_not_be", "descr_strat.txt could not be read, so nothing in it can be fixed"))
-        return
-    lines = list(ck.strat.lines)
+        return []
+    from . import stratobj
+    sf = ck.strat
+    lines = list(sf.lines)
+    moved: List[Finding] = []
+    said: List[Tuple[str, int, int, int, int]] = []
+    if moves:
+        voc = stratobj.Vocabulary(ck.mod, sf, ck.cm)
+        at = stratobj.standing(sf)
+        taken = stratobj.taken_tiles(at)
+        for f in sorted(moves, key=lambda f: f.line):
+            node = sf.node_at(f.line - 1) if f.line > 0 else None
+            if node is None or node.kind != "resource":
+                p.errors.append(_i18n.msg("eng.mapcheck.resource_to_move_unreadable", "a resource to move no longer has a readable line"))
+                return []
+            x, y = node.get("x"), node.get("y")
+            if (x, y) in at:        # the tile it leaves is free of it
+                taken[(x, y)] = stratobj.taken_tiles({(x, y): at[(x, y)]},
+                                                     node)[(x, y)]
+            sec = stratobj.section_of(sf, node)
+            got = voc.snap("resource", x, y, taken, node.name,
+                           sec.name if sec is not None else "")
+            if got is None:
+                p.warnings.append(_i18n.msg(
+                    "eng.mapcheck.resource_no_tile_to_move",
+                    "`{name}` at {x},{y} has no tile within reach it could be traded from, so it stays where it is",
+                    name=node.name, x=x, y=y))
+                continue
+            (nx, ny), _where = got
+            taken.setdefault((nx, ny), set()).update(
+                {"resource", "res:" + node.name.lower()})
+            before = stratobj.read_spec(node)
+            after = stratobj.Spec(**before.payload())
+            after.x, after.y = nx, ny
+            lines[node.start] = stratobj.render_line(lines[node.start], before, after)
+            moved.append(f)
+            said.append((node.name, x, y, nx, ny))
     gone = []
     for i in sorted(set(drop), reverse=True):
         if 0 <= i < len(lines):
             gone.append(lines[i].strip())
             del lines[i]
-    if not gone:
-        return
-    sf = ck.strat
-    p.text[ck.strat_rel] = (sf.newline.join(lines)
-                            + (sf.newline if sf.trailing_newline else ""))
-    p.changes.append(f"{campstrat.STRAT_NAME}: {len(gone)} line(s) deleted "
-                     + ", ".join(f"`{g}`" for g in gone[:4])
-                     + ("…" if len(gone) > 4 else ""))
+    if said:
+        p.changes.append(
+            f"{campstrat.STRAT_NAME}: {len(said)} resource(s) moved to land "
+            + ", ".join(f"`{name}` {x},{y} -> {nx},{ny}"
+                        for name, x, y, nx, ny in said[:4])
+            + ("…" if len(said) > 4 else ""))
+    if gone:
+        p.changes.append(f"{campstrat.STRAT_NAME}: {len(gone)} line(s) deleted "
+                         + ", ".join(f"`{g}`" for g in gone[:4])
+                         + ("…" if len(gone) > 4 else ""))
+    if said or gone:
+        p.text[ck.strat_rel] = (sf.newline.join(lines)
+                                + (sf.newline if sf.trailing_newline else ""))
+    return moved
 
 
-def apply_fix(p: FixPlan) -> dict:
+def apply_fix(p: FixPlan, expect: Optional[str] = None) -> dict:
     """Write the fixes, with the backups and the log entry every job gets.
 
     Same route as :func:`campaint.apply_paint`, deliberately: one backup set,
     one log record, ``map.rwm`` deleted when a layer moved, and therefore one
     Undo in the Log that puts every fixed file back byte for byte. "Every
-    auto-fix is undoable" is this function and nothing else.
+    auto-fix is undoable" is this function and nothing else. ``expect`` is the
+    :meth:`FixPlan.digest` the user was shown; a plan that no longer matches
+    it is refused rather than written.
     """
     import shutil
 
@@ -2166,6 +2315,10 @@ def apply_fix(p: FixPlan) -> dict:
         raise ValueError(_i18n.msg("eng.mapcheck.cannot_apply", "cannot apply: {why}", why="; ".join(p.errors)))
     if not p.data and not p.text:
         raise ValueError(_i18n.msg("eng.mapcheck.nothing_to_fix", "nothing to fix"))
+    if expect is not None and expect != p.digest():
+        raise ValueError(_i18n.msg(
+            "eng.mapcheck.plan_changed_since_shown",
+            "the map changed since this plan was shown, so it would now write something else; plan it again"))
     mod = p.mod
     tid = config.new_transfer_id()
     backup_root = config.backup_root_for(tid)
@@ -2208,7 +2361,10 @@ def apply_fix(p: FixPlan) -> dict:
             file_op("DELETE", rwm, "stale compiled map - the game would load it "
                                    "instead")
 
-    what = ", ".join(FIXES[c]["label"] for c in p.codes)
+    # each fix with how many findings it acted on: a Move of one resource
+    # beside a Delete of another must not read as both done to every one
+    what = ", ".join(f"{FIXES[c]['label']} ({p.counts.get(c, 0)})"
+                     for c in p.codes)
     rec = {
         "id": tid,
         "when": time.strftime("%Y-%m-%d %H:%M:%S"),
@@ -2216,7 +2372,7 @@ def apply_fix(p: FixPlan) -> dict:
         "source": mod.name, "source_root": str(mod.root),
         "dest": mod.name, "dest_root": str(mod.root),
         "unit_type": what, "resolved_type": what,
-        "options": {"fixes": list(p.codes)}, "applied": True, "undone": False,
+        "options": {"fixes": list(p.codes), "counts": dict(p.counts)}, "applied": True, "undone": False,
         "note": "", "summary": p.summary(), "warnings": list(p.warnings),
         "manifest": manifest, "backup_root": str(backup_root),
     }
