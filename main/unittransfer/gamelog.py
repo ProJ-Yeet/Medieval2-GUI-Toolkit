@@ -1,24 +1,12 @@
-"""The game's own ``system.log.txt`` in plain words (96e2).
+"""Reads Medieval II's own system.log.txt (what the game said on its last run)
+and turns it into data for the Health screen's "Game log" panel: a crash
+verdict, every error and warning grouped so a repeated complaint is one row,
+a plain-English explanation where the cause is known, and, for a Script Error,
+the line of the mod's file as it is now and where in the toolkit it is fixed.
+It only reads; it writes nothing.
 
-Taken from the Pfadfinder-Adam (formerly MasterOogwayHomebrew) RTW / M2TW
-Campaign Editor's ``gamelog.py`` and ``report.py``, with its author's
-permission, and fitted to this toolkit: the result is data for the Health
-screen rather than a block of text, and every explanation is a catalogue
-string.
-
-Health checks the mod's files against the crashes we know. This reads what the
-game itself said on its last run: the crash first (the engine's own line after
-a fatal one, else the Script Error just before it), then every error and
-warning, grouped so a hundred lines that say the same thing of a hundred units
-are one row, the most frequent first. A Script Error names a file and a line;
-that line is shown as the mod has it now, since it may have been fixed since.
-
-Read only - nothing is written. The log lines explained were seen in real logs.
-
-**Where the log is.** The game writes it where the ``[log] to =`` line of the
-``.cfg`` it started with says, relative to the game folder; failing that, in the
-mod's folder or the game's, or a ``logs`` folder under either. The newest one
-the mod could have written is read.
+Written independently from a description of the behaviour (2026-11-06); the
+feature follows Pfadfinder-Adam's campaign editor.
 """
 from __future__ import annotations
 
@@ -30,334 +18,344 @@ from typing import Dict, List, Optional, Tuple
 
 from . import i18n as _i18n
 
-RE_LINE = re.compile(r"^\d\d:\d\d:\d\d(?:\.\d+)?\s+\[([^\]]+)\]\s+\[(fatal|error|warning|warn)\]\s*(.*)$", re.I)
-RE_ANY = re.compile(r"^\d\d:\d\d:\d\d(?:\.\d+)?\s+\[")
-RE_SCRIPT = re.compile(r"(Script Error|Trigger parsing warning) in (.+?), at line (\d+), column (\d+)", re.I)
-RE_LOG_TO = re.compile(r"^\s*to\s*=\s*(.+?)\s*$", re.I | re.M)
-
-#: a log bigger than this is read from its newest part
+# A log bigger than this is read from its newest bytes.
 CAP = 40 * 1024 * 1024
+ORDER = {"fatal": 0, "error": 1, "warning": 2}
 
+_TIMED = re.compile(r"^\s*\d\d:\d\d:\d\d(?:\.\d+)?\s+\[")
+_ENTRY = re.compile(r"^\s*\d\d:\d\d:\d\d(?:\.\d+)?\s+\[([^\]]*)\]\s+\[([^\]]*)\]\s*(.*)$")
+_SCRIPT = re.compile(
+    r"(?:Script Error|Trigger parsing warning) in (.+?), at line (\d+), column (\d+)")
+_CODE_PLACE = re.compile(
+    r"(?:ASSERT FAILED|ERROR|DATA):\s*src[\\/]([^\s(]+)\((\d+)\)(?::\s*(.*))?")
+_PATHISH = re.compile(
+    r"[\w\-./\\]+\.(?:txt|tga|dds|texture|cas|mesh|xml|lnt|db|modeldb|spr)\b", re.I)
+_CLOSED = ("sprites_close()", "libs called display_close")
 
-#: (pattern, plain words) - the pattern's groups fill {a}, {b}, {c}
-KNOWN: List[Tuple[str, object]] = [
-    (r"Script Error in (.+?), at line (\d+), column (\d+)", lambda *g: _i18n.msg("eng.gamelog.known_script_error", "The game could not read line {b} of {a} (at character {c}): a word or a number there is not what the game expects. The line is shown below as the file has it now.", a=g[0], b=g[1], c=g[2])),
-    (r"unknown attribute '(.+?)'", lambda *g: _i18n.msg("eng.gamelog.known_unknown_attribute", "A unit's attributes line has a word the game does not know: {a}. Check its spelling in the Unit Editor's Attributes, or take it out.", a=g[0])),
-    (r"year_founded", lambda *g: _i18n.msg("eng.gamelog.known_1", "A town's founding year (descr_strat.txt, year_founded) is later than the campaign's start year, and the game stops here. Set it to the start year or earlier.")),
-    (r"Character '(.+?)' is placed on an invalid tile", lambda *g: _i18n.msg("eng.gamelog.known_2", "{a} stands on a tile no one may stand on (the sea, a river, mountains, dense forest, off the map), so the game leaves him out. Move him on the campaign map.", a=g[0])),
-    (r"unit\((.+?)\) does not match up to the ownership for faction\((.+?)\)", lambda *g: _i18n.msg("eng.gamelog.known_3", "A building lets {b} recruit {a}, but the unit's ownership in export_descr_unit.txt does not name {b}, so the game drops that recruit line. Give {b} the unit in the Unit Editor, or take {b} off the line in Buildings.", a=g[0], b=g[1])),
-    (r"invalid tile\((\d+), (\d+)\) for the settlement of (.+?)\.", lambda *g: _i18n.msg("eng.gamelog.known_4", "The town {c} sits on tile {a}, {b}, which nothing can reach (water, a blocked tile or off the map). Armies cannot get to it. Move it on the campaign map, or check the map's size.", a=g[0], b=g[1], c=g[2])),
-    (r"Target building level not allowed: (.+?), (\w+) -> (\w+)", lambda *g: _i18n.msg("eng.gamelog.known_5", "When a {b} of {a} turns into a {c} (a city made a castle or back), its buildings change by their chains' convert_to lines, here into a level {a} may not build. Check those levels' requires lines in Buildings, or the convert_to lines.", a=g[0], b=g[1], c=g[2])),
-    (r"FactionType: faction not found", lambda *g: _i18n.msg("eng.gamelog.known_6", "A file or a script names a faction this mod does not have. The vanilla prologue scripts do this too (harmless there); otherwise look for a removed or renamed faction in the scripts and descr_strat.txt.")),
-    (r"open: (.+?) is missing", lambda *g: _i18n.msg("eng.gamelog.known_7", "The game looked for {a} and did not find it. Often harmless (it falls back to something else); a missing picture shows blank or as a default one.", a=g[0])),
-    (r"Cannot find the portrait path: (.+?),", lambda *g: _i18n.msg("eng.gamelog.known_8", "No portrait pictures in {a}, so the game uses the culture's default ones.", a=g[0])),
-    (r"Unresolved sprite definition\((.+?)\)", lambda *g: _i18n.msg("eng.gamelog.known_9", "An interface picture {a} is not on its sprite page, so the game draws another in its place (often a faction logo missing for a new faction).", a=g[0])),
-    (r"Game selection invalid - is the path '(.*?)' ok", lambda *g: _i18n.msg("eng.gamelog.known_10", "The engine could not tell which game or mod to run: the path it read ({a}) makes no sense, either letters it reads wrong on the way to the game, or the game started away from its own folder. Start the mod with its .bat from the mod's folder.", a=g[0])),
-    (r"skeleton\.cpp\(\d+\): adata != 0", lambda *g: _i18n.msg("eng.gamelog.known_11", "A battle skeleton names an animation the game cannot find, in no animation pack and no loose .cas file, so the game stops while it loads the animations, before the menu. Units brought from another mod are the usual cause: copy the missing .cas from that mod, or bring the unit again.")),
-    (r"Condition eval: (\w+) needs a (\w+)", lambda *g: _i18n.msg("eng.gamelog.known_12", "A script condition {a} asks about a {b}, but the event it runs on gives none, so the game takes it as false and the trigger never fires. Not a crash.", a=g[0], b=g[1])),
-    (r"encountered an unspecified error", lambda *g: _i18n.msg("eng.gamelog.known_13", "The game crashed. The lines just before this one in the log name what it was doing.")),
-    (r"DATA: src.(.+?)\((\d+)\)", lambda *g: _i18n.msg("eng.gamelog.known_14", "The game's own check failed in its code ({a}, line {b}) while reading data; the lines before it say what it was reading.", a=g[0], b=g[1])),
-    (r"does not exist|not found|unknown", lambda *g: _i18n.msg("eng.gamelog.known_15", "The game met a name it does not know.")),
+# (pattern, generic, message builder). The first match wins.
+# Captures fill {a}, {b}, {c} in order.
+_SITUATIONS = [
+    (r"Script Error in (.+?), at line (\d+), column (\d+)", False, lambda **p: _i18n.msg("eng.gamelog.known_script_error", 'The game could not read line {b} of {a} (at character {c}): a word or a number there is not what the game expects. The line is shown below as the file has it now.', **p)),
+    (r"unknown attribute '([^']*)'", False, lambda **p: _i18n.msg("eng.gamelog.known_unknown_attribute", "A unit's attributes line has a word the game does not know: {a}. Check its spelling in the Unit Editor's Attributes, or take it out.", **p)),
+    (r"year_founded", False, lambda **p: _i18n.msg("eng.gamelog.known_1", "A town's founding year (descr_strat.txt, year_founded) is later than the campaign's start year, and the game stops here. Set it to the start year or earlier.", **p)),
+    (r"Character '([^']*)' is placed on an invalid tile", False, lambda **p: _i18n.msg("eng.gamelog.known_2", '{a} stands on a tile no one may stand on (the sea, a river, mountains, dense forest, off the map), so the game leaves him out. Move him on the campaign map.', **p)),
+    (r"unit\(([^)]*)\) does not match up to the ownership for faction\(([^)]*)\)", False, lambda **p: _i18n.msg("eng.gamelog.known_3", "A building lets {b} recruit {a}, but the unit's ownership in export_descr_unit.txt does not name {b}, so the game drops that recruit line. Give {b} the unit in the Unit Editor, or take {b} off the line in Buildings.", **p)),
+    (r"invalid tile\((\d+), (\d+)\) for the settlement of (.+?)\.", False, lambda **p: _i18n.msg("eng.gamelog.known_4", "The town {c} sits on tile {a}, {b}, which nothing can reach (water, a blocked tile or off the map). Armies cannot get to it. Move it on the campaign map, or check the map's size.", **p)),
+    (r"Target building level not allowed: ([^,]*), (\w+) -> (\w+)", False, lambda **p: _i18n.msg("eng.gamelog.known_5", "When a {b} of {a} turns into a {c} (a city made a castle or back), its buildings change by their chains' convert_to lines, here into a level {a} may not build. Check those levels' requires lines in Buildings, or the convert_to lines.", **p)),
+    (r"FactionType: faction not found", False, lambda **p: _i18n.msg("eng.gamelog.known_6", 'A file or a script names a faction this mod does not have. The vanilla prologue scripts do this too (harmless there); otherwise look for a removed or renamed faction in the scripts and descr_strat.txt.', **p)),
+    (r"open: (.+?) is missing", False, lambda **p: _i18n.msg("eng.gamelog.known_7", 'The game looked for {a} and did not find it. Often harmless (it falls back to something else); a missing picture shows blank or as a default one.', **p)),
+    (r"Cannot find the portrait path: ([^,]*),", False, lambda **p: _i18n.msg("eng.gamelog.known_8", "No portrait pictures in {a}, so the game uses the culture's default ones.", **p)),
+    (r"Unresolved sprite definition\(([^)]*)\)", False, lambda **p: _i18n.msg("eng.gamelog.known_9", 'An interface picture {a} is not on its sprite page, so the game draws another in its place (often a faction logo missing for a new faction).', **p)),
+    (r"Game selection invalid - is the path '([^']*)' ok", False, lambda **p: _i18n.msg("eng.gamelog.known_10", "The engine could not tell which game or mod to run: the path it read ({a}) makes no sense, either letters it reads wrong on the way to the game, or the game started away from its own folder. Start the mod with its .bat from the mod's folder.", **p)),
+    (r"skeleton\.cpp\(\d+\): adata != 0", False, lambda **p: _i18n.msg("eng.gamelog.known_11", 'A battle skeleton names an animation the game cannot find, in no animation pack and no loose .cas file, so the game stops while it loads the animations, before the menu. Units brought from another mod are the usual cause: copy the missing .cas from that mod, or bring the unit again.', **p)),
+    (r"Condition eval: (\w+) needs a (\w+)", False, lambda **p: _i18n.msg("eng.gamelog.known_12", 'A script condition {a} asks about a {b}, but the event it runs on gives none, so the game takes it as false and the trigger never fires. Not a crash.', **p)),
+    (r"encountered an unspecified error", True, lambda **p: _i18n.msg("eng.gamelog.known_13", 'The game crashed. The lines just before this one in the log name what it was doing.', **p)),
+    (r"DATA: src.([^(\s]+)\((\d+)\)", True, lambda **p: _i18n.msg("eng.gamelog.known_14", "The game's own check failed in its code ({a}, line {b}) while reading data; the lines before it say what it was reading.", **p)),
+    (r"does not exist|not found|unknown", True, lambda **p: _i18n.msg("eng.gamelog.known_15", 'The game met a name it does not know.', **p)),
 ]
-_GENERIC = {15, 16, 17}
+_SITUATIONS = [(re.compile(p, re.I), g, t) for p, g, t in _SITUATIONS]
+_LETTERS = "XYZW"
 
 
-def parse(text: str) -> List[Dict]:
-    """Every error and warning line: ``{level, area, msg, why, file, line, col}``,
-    a Script Error's reason (the untimed lines after it) in ``why``."""
-    out = []
+def _situation(text: str):
+    for sit in _SITUATIONS:
+        m = sit[0].search(text)
+        if m:
+            return sit, m
+    return None
+
+
+def _timed(line: str) -> bool:
+    return bool(_TIMED.match(line))
+
+
+def parse(text: str) -> List[dict]:
     lines = text.splitlines()
-    for i, line in enumerate(lines):
-        m = RE_LINE.match(line)
+    out = []
+    for i, raw in enumerate(lines):
+        m = _ENTRY.match(raw)
         if not m:
             continue
-        area, level, msg = m.group(1), m.group(2).lower(), m.group(3).strip()
-        e = {"level": {"fatal": "fatal", "error": "error"}.get(level, "warning"), "area": area,
-             "msg": msg, "why": "", "file": None, "line": None, "col": None}
-        s = RE_SCRIPT.search(msg)
+        area, level, msg = m.group(1), m.group(2).strip().lower(), m.group(3).strip()
+        if level == "warn":
+            level = "warning"
+        if level not in ORDER:
+            continue
+        e = {"level": level, "area": area, "msg": msg, "why": "",
+             "file": None, "line": None, "col": None}
+        s = _SCRIPT.search(msg)
         if s:
-            e["file"], e["line"], e["col"] = s.group(2).replace("\\", "/"), int(s.group(3)), int(s.group(4))
-            why = []
-            for k in range(i + 1, min(i + 6, len(lines))):
-                if RE_ANY.match(lines[k]) or not lines[k].strip():
+            e["file"] = s.group(1).replace("\\", "/")
+            e["line"], e["col"] = int(s.group(2)), int(s.group(3))
+            extra = []
+            for nxt in lines[i + 1:i + 6]:
+                if not nxt.strip() or _timed(nxt):
                     break
-                why.append(lines[k].strip())
-            e["why"] = " ".join(why)
+                extra.append(nxt.strip())
+            e["why"] = " ".join(extra)
         out.append(e)
     return out
 
 
-def _known(text: str) -> Tuple[int, Optional[re.Match], object]:
-    for n, (pattern, words) in enumerate(KNOWN, 1):
-        m = re.search(pattern, text, re.I)
-        if m:
-            return n, m, words
-    return 0, None, None
-
-
-def explain(text: str, generic: bool = False) -> str:
-    """Plain words for a log message, or ''. ``generic``: the group's lines name
-    different things, so the names become X, Y and the rows below name them."""
-    n, m, words = _known(text)
-    if not m:
+def explain(text: str, generic: bool = False):
+    found = _situation(text)
+    if not found:
         return ""
-    if generic and m.groups():
-        return words(*"XYZW"[:len(m.groups())])
-    return words(*m.groups())
+    (_rx, _gen, say), m = found
+    parts = [g or "" for g in m.groups()]
+    if generic and parts:
+        parts = list(_LETTERS[:len(parts)])
+    return say(**dict(zip("abc", parts)))
 
 
-def _key(e: Dict) -> Tuple:
-    """Entries that say the same thing of different lines or names count as one."""
-    s = re.sub(r"\([^)]*\)", "()", e["why"] or e["msg"])
-    s = re.sub(r"'[^']*'", "''", s)
-    s = re.sub(r"\d+", "N", s)
-    return (e["level"], e["file"], s[:120])
+def _names(text: str) -> str:
+    found = _situation(text)
+    if not found:
+        return ""
+    return " \u00b7 ".join(g for g in found[1].groups() if g)
 
 
-ORDER = {"fatal": 0, "error": 1, "warning": 2}
+def _squash(t: str) -> str:
+    t = re.sub(r"\([^)]*\)", "()", t)
+    t = re.sub(r"'[^']*'", "''", t)
+    t = re.sub(r"\d+", "N", t)
+    return t[:120]
 
 
-def summary(entries: List[Dict]) -> List[List]:
-    """``[entry, count, [(line, reason or the line's own message)]]`` grouped: a
-    crash first, then errors, the most frequent first."""
-    groups: Dict[Tuple, List] = {}
+def summary(entries: List[dict]) -> list:
+    groups: Dict[tuple, list] = {}
     for e in entries:
-        g = groups.setdefault(_key(e), [e, 0, []])
+        said = e["why"] or e["msg"]
+        key = (e["level"], e["file"], _squash(said))
+        g = groups.get(key)
+        if g is None:
+            g = groups[key] = [e, 0, []]
         g[1] += 1
         if len(g[2]) < 6:
-            g[2].append((e["line"], e["why"] or e["msg"]))
+            g[2].append((e["line"], said))
     return sorted(groups.values(), key=lambda g: (ORDER[g[0]["level"]], -g[1]))
 
 
-def mod_line(game, rel: Optional[str], line: Optional[int]) -> Optional[str]:
-    """Line ``line`` of the file the log names (relative to the game folder)."""
+def mod_line(game, rel, line) -> Optional[str]:
     if not game or not rel or not line:
         return None
-    path = os.path.join(str(game), *rel.split("/"))
-    if not os.path.isfile(path):
-        return None
     try:
-        with open(path, encoding="latin-1") as fh:
-            for n, t in enumerate(fh, 1):
+        p = Path(game) / rel
+        if not p.is_file():
+            return None
+        with open(p, "r", encoding="latin-1", newline="") as f:
+            for n, raw in enumerate(f, 1):
                 if n == line:
-                    return t.rstrip("\r\n")
+                    return raw.rstrip("\r\n")
     except OSError:
-        return None
+        pass
     return None
 
 
-_RE_TYPE = re.compile(r"^\s*type\s+(.+?)\s*$")
-_RE_BUILDING = re.compile(r"^\s*building\s+(\S+)")
-
-
-def fix_target(game, rel: Optional[str], line: Optional[int]) -> Optional[Dict]:
-    """Where in the toolkit the line a Script Error names is fixed: the unit
-    whose block holds it (export_descr_unit.txt), the building line that holds
-    it (export_descr_buildings.txt), or the file as text. None without a file."""
+def fix_target(game, rel, line) -> Optional[dict]:
     if not game or not rel:
         return None
-    name = rel.rsplit("/", 1)[-1].lower()
-    path = os.path.join(str(game), *rel.split("/"))
-    if line and os.path.isfile(path) and name in ("export_descr_unit.txt", "export_descr_buildings.txt"):
-        want = _RE_TYPE if name == "export_descr_unit.txt" else _RE_BUILDING
-        found = None
+    p = Path(game) / rel
+    base = os.path.basename(rel).lower()
+    if line and p.is_file() and base in ("export_descr_unit.txt", "export_descr_buildings.txt"):
+        unit = base == "export_descr_unit.txt"
+        rx = re.compile(r"^\s*type\s+(.*)$" if unit else r"^\s*building\s+(\S+)")
         try:
-            with open(path, encoding="latin-1") as fh:
-                for n, t in enumerate(fh, 1):
-                    if n > line:
-                        break
-                    m = want.match(t)
-                    if m:
-                        found = m.group(1).strip()
+            rows = p.read_text(encoding="latin-1").splitlines()[:line]
         except OSError:
-            found = None
-        if found:
-            return {"kind": "unit" if name == "export_descr_unit.txt" else "building", "name": found}
+            rows = []
+        for row in reversed(rows):
+            m = rx.match(row)
+            if m:
+                return {"kind": "unit" if unit else "building", "name": m.group(1).strip()}
     return {"kind": "file", "name": rel}
 
 
-RE_FATAL = re.compile(r"\[fatal\]|encountered an unspecified error", re.I)
-RE_STOP = re.compile(r"ASSERT FAILED|encountered an unspecified error", re.I)
-RE_CLOSED = re.compile(r"sprites_close\(\)|libs called display_close", re.I)
-RE_CODE = re.compile(r"(?:ASSERT FAILED|ERROR|DATA):\s*src[\\/](\S+?)\((\d+)\)(?::\s*(.*))?", re.I)
-RE_PATH = re.compile(r"((?:data/)?[\w\-./\\]+\.(?:txt|tga|dds|texture|cas|mesh|xml|lnt|db|modeldb|spr))", re.I)
-
-
-def fatal_events(lines: List[str]) -> List[Tuple[int, str, str]]:
-    """``(index, the fatal line, its detail)`` - the engine writes what went wrong
-    on the lines after a fatal one, before its call stack."""
+def fatal_events(lines: List[str]) -> list:
     out = []
-    for i, line in enumerate(lines):
-        if not RE_FATAL.search(line):
+    for i, raw in enumerate(lines):
+        low = raw.lower()
+        if "[fatal]" not in low and "encountered an unspecified error" not in low:
             continue
         detail = []
-        for t in lines[i + 1:i + 6]:
-            if not t.strip():
+        for nxt in lines[i + 1:i + 6]:
+            if not nxt.strip():
                 continue
-            if t.lstrip().startswith("at ") or RE_ANY.match(t):
+            if nxt.lstrip().startswith("at ") or _timed(nxt):
                 break
-            detail.append(t.strip())
-        out.append((i, line.strip(), " ".join(detail)))
+            detail.append(nxt.strip())
+        out.append((i, raw.strip(), " ".join(detail)))
     return out
 
 
-def _words(line: str, detail: str) -> Tuple[str, bool]:
-    """A known line's plain words, else the engine's own detail, else its code.
-    The bool is True when only the code was there to go on."""
-    for text in (detail, line):
-        if not text:
-            continue
-        n, m, _ = _known(text)
-        if m and n not in _GENERIC:
-            return explain(text), False
+def _plain(line: str, detail: str):
+    """Plain words for a fatal event, and whether only the code place was known."""
+    for t in (detail, line):
+        found = _situation(t) if t else None
+        if found and not found[0][1]:
+            return explain(t), False
     if detail:
-        return _i18n.msg("eng.gamelog.the_game_says", "the game says: {detail}", detail=detail[:220]), False
-    m = RE_CODE.search(line)
+        return _i18n.msg("eng.gamelog.the_game_says", 'the game says: {detail}', detail=detail[:220]), False
+    m = _CODE_PLACE.search(line)
     if m:
+        extra = ": " + m.group(3).strip() if m.group(3) and m.group(3).strip() else ""
         return _i18n.msg("eng.gamelog.check_failed", "the game's own check {file} line {line} failed{x}",
-                         file=m.group(1).replace("\\", "/"), line=m.group(2),
-                         x=": " + m.group(3) if m.group(3) else ""), True
+                         file=m.group(1).replace("\\", "/"), line=m.group(2), x=extra), True
     return "", False
 
 
-def verdict(text: str, game=None) -> Optional[Dict]:
-    """The crash doctor's word on the last run: ``{stopped, headline, lines,
-    serious, file, line, now}``, or None for a log with nothing to say. A stop is
-    an ASSERT FAILED or an unspecified error; a fatal line the game went on after
-    is serious, not the stop."""
+def _is_stop(line: str) -> bool:
+    return "ASSERT FAILED" in line or "encountered an unspecified error" in line.lower()
+
+
+def verdict(text: str, game=None) -> Optional[dict]:
     lines = text.splitlines()
     events = fatal_events(lines)
-    stops = [e for e in events if RE_STOP.search(e[1])]
-    serious: List[str] = []
-    for i, line, detail in events:
-        if stops and i == stops[-1][0]:
+    stops = [e for e in events if _is_stop(e[1])]
+    last = stops[-1] if stops else None
+
+    serious = []
+    for e in events:
+        if e is last:
             continue
-        w = _words(line, detail)[0]
-        if w and w not in serious:
-            serious.append(w)
-    closed = any(RE_CLOSED.search(t) for t in lines[-60:])
-    if not stops:
+        words = _plain(e[1], e[2])[0]
+        if words and words not in serious:
+            serious.append(words)
+    serious = serious[:5]
+
+    if last is None:
+        closed = any(any(c in ln for c in _CLOSED) for ln in lines[-60:])
         if not events and not closed:
             return None
-        head = (_i18n.msg("eng.gamelog.no_crash_closed", "No crash: the game was closed in the usual way.")
-                if closed else _i18n.msg("eng.gamelog.no_crash", "No crash in the game's log."))
-        return {"stopped": False, "headline": head, "lines": [], "serious": serious[:5],
+        head = (_i18n.msg("eng.gamelog.no_crash_closed", 'No crash: the game was closed in the usual way.') if closed
+                else _i18n.msg("eng.gamelog.no_crash", "No crash in the game's log."))
+        return {"stopped": False, "headline": head, "lines": [], "serious": serious,
                 "file": None, "line": None, "now": None}
-    at, first, detail = stops[-1]
-    why, only_code = _words(first, detail)
-    rel = line_no = None
-    paths = RE_PATH.findall(detail or "")
-    if paths:
-        rel = paths[0].replace("\\", "/")
-    before = [t for t in lines[max(0, at - 30):at] if t.strip()]
-    for e in reversed(parse("\n".join(before))):          # a Script Error just before it
-        if e["file"]:
-            if rel is None:
-                rel, line_no = e["file"], e["line"]
-            if not why or only_code:
-                why = f"{e['file']} line {e['line']}: {(e['why'] or e['msg'])[:200]}"
-            break
-    head = _i18n.msg("eng.gamelog.stopped", "The game stopped: {why}",
-                     why=why or _i18n.msg("eng.gamelog.no_cause", "the log names no cause; the lines before the stop are shown below"))
+
+    idx, stop_line, detail = last
+    why, only_code = _plain(stop_line, detail)
+    m = _PATHISH.search(detail)
+    file = m.group(0).replace("\\", "/") if m else None
+    line_no = None
+    recent = lines[max(0, idx - 30):idx]
+    before = [ln for ln in recent if ln.strip()]
+    entries = [e for e in parse("\n".join(recent)) if e["file"]]
+    if file is None and entries:
+        e = entries[-1]
+        file, line_no = e["file"], e["line"]
+        if not why or only_code:
+            why = "%s line %s: %s" % (file, line_no, (e["why"] or e["msg"])[:200])
     col = None
-    for e in reversed(parse("\n".join(before))):
-        if e["file"] == rel and e["line"] == line_no:
+    for e in entries:
+        if e["file"] == file and e["line"] == line_no:
             col = e["col"]
-            break
-    return {"stopped": True, "headline": head, "why": why, "lines": before[-8:] + [first] + ([detail] if detail else []),
-            "serious": serious[:5], "file": rel, "line": line_no, "col": col,
-            "now": mod_line(game, rel, line_no) if rel and line_no else None,
-            "fix": fix_target(game, rel, line_no) if rel else None}
+    shown = why or _i18n.msg("eng.gamelog.no_cause", 'the log names no cause; the lines before the stop are shown below')
+    return {
+        "stopped": True,
+        "headline": _i18n.msg("eng.gamelog.stopped", 'The game stopped: {why}', why=shown),
+        "why": why,
+        "lines": before[-8:] + [stop_line] + ([detail] if detail else []),
+        "serious": serious,
+        "file": file, "line": line_no, "col": col,
+        "now": mod_line(game, file, line_no) if file and line_no else None,
+        "fix": fix_target(game, file, line_no) if file else None,
+    }
 
 
-# ---------------------------------------------------------------------------
-# where the log is
+# ---- finding the log -------------------------------------------------------
 
-
-def _root(mod) -> Path:
-    """The mod folder from a Mod or a path (a Path's own ``.root`` is its drive)."""
-    return Path(mod) if isinstance(mod, (str, Path)) else Path(mod.root)
-
-
-def _game_of(mod) -> Optional[Path]:
-    root = _root(mod)
+def _dirs(mod) -> Tuple[Path, Optional[Path]]:
+    """The mod's folder and the game folder it sits in (or the saved one)."""
+    root = Path(mod if isinstance(mod, (str, os.PathLike)) else mod.root)
     if root.parent.name.lower() == "mods":
-        return root.parent.parent
+        return root, root.parent.parent
     from . import config
     saved = config.get_med2_root()
-    return Path(saved) if saved else None
+    return root, (Path(saved) if saved else None)
 
 
 def candidates(mod) -> List[Path]:
-    """Every system.log.txt this mod's game could have written, the mod's first."""
-    root = _root(mod)
-    game = _game_of(mod)
-    out: List[Path] = []
-    for cfg in sorted(root.glob("*.cfg")) if root.is_dir() else []:
+    root, game = _dirs(mod)
+    found: List[Path] = []
+    for cfg in sorted(root.glob("*.cfg"), key=lambda p: p.name):
         try:
-            text = cfg.read_text(encoding="latin-1", errors="replace")
+            rows = cfg.read_text(encoding="latin-1").splitlines()
         except OSError:
             continue
-        for to in RE_LOG_TO.findall(text):
-            to = to.strip().strip('"')
-            for base in ([game] if game else []) + [root]:
-                out.append(Path(base) / to)
-    for folder in [root] + ([game] if game else []):
-        out += [folder / "system.log.txt", folder / "logs" / "system.log.txt"]
-    seen, uniq = set(), []
-    for p in out:
+        for row in rows:
+            m = re.match(r"\s*to\s*=\s*(.*?)\s*$", row, re.I)
+            if not m:
+                continue
+            val = m.group(1).strip().strip('"')
+            if not val:
+                continue
+            if game:
+                found.append(game / val)
+            found.append(root / val)
+    for base in (root, game):
+        if base:
+            found += [base / "system.log.txt", base / "logs" / "system.log.txt"]
+    out, seen = [], set()
+    for p in found:
         k = os.path.normcase(os.path.abspath(p))
         if k not in seen:
             seen.add(k)
-            uniq.append(p)
-    return uniq
+            out.append(p)
+    return out
 
 
 def find(mod) -> Optional[Path]:
-    """The newest log the mod could have written."""
-    have = [p for p in candidates(mod) if p.is_file()]
-    return max(have, key=lambda p: p.stat().st_mtime) if have else None
+    best, best_t = None, -1.0
+    for p in candidates(mod):
+        try:
+            if p.is_file() and p.stat().st_mtime > best_t:
+                best, best_t = p, p.stat().st_mtime
+        except OSError:
+            pass
+    return best
 
 
-def read(mod, path=None, limit: int = 60) -> Dict:
-    """Health's Game log panel: the verdict, the counts and the groups."""
+def _group(g: list, game) -> dict:
+    e, count, seen = g
+    text = seen[0][1] if seen else (e["why"] or e["msg"])
+    varied = len({w for _, w in seen}) > 1
+    file = e["file"]
+    return {
+        "level": e["level"], "area": e["area"], "file": file, "msg": e["msg"][:300],
+        "count": count,
+        "plain": explain(text, generic=varied),
+        "plain_first": explain(text) if varied else "",
+        "names": list(dict.fromkeys(n for n in (_names(w) for _, w in seen) if n))[:6],
+        "known": _situation(text) is not None,
+        "fix": fix_target(game, file, seen[0][0]) if file and seen else None,
+        "seen": [{"line": ln, "why": w[:240],
+                  "now": (mod_line(game, file, ln) or "")[:240] if file else ""}
+                 for ln, w in seen],
+    }
+
+
+def read(mod, path=None, limit: int = 60) -> dict:
+    _root, game = _dirs(mod)
     p = Path(path) if path else find(mod)
-    game = _game_of(mod)
     if p is None or not p.is_file():
-        return {"found": False, "looked": [str(x) for x in candidates(mod)][:8],
-                "howto": _i18n.msg("eng.gamelog.howto", "The game writes system.log.txt only while its log is on; M2EX keeps it on. For the original game, put these lines under [log] in the .cfg the mod starts with, start the game again and do what went wrong:\n[log]\nto = logs/system.log.txt\nlevel = * error")}
-    size = p.stat().st_size
-    with open(p, "rb") as fh:
+        return {"found": False,
+                "looked": [str(c) for c in candidates(mod)[:8]],
+                "howto": _i18n.msg("eng.gamelog.howto", 'The game writes system.log.txt only while its log is on; M2EX keeps it on. For the original game, put these lines under [log] in the .cfg the mod starts with, start the game again and do what went wrong:\n[log]\nto = logs/system.log.txt\nlevel = * error')}
+    st = p.stat()
+    size = st.st_size
+    with open(p, "rb") as f:
         if size > CAP:
-            fh.seek(size - CAP)
-        data = fh.read()
-    text = data.decode("utf-8", "replace")
+            f.seek(size - CAP)
+        raw = f.read(CAP)
+    text = raw.decode("utf-8", errors="replace")
     entries = parse(text)
     groups = summary(entries)
-    out = []
-    for e, n, seen in groups[:limit]:
-        generic = len({w for _, w in seen}) > 1
-        # the names each line of the group is about (a unit and a faction, a
-        # file...), so the page can say "the same for Spearmen (france)" rather
-        # than an explanation in X and Y
-        names = []
-        for _ln, w in seen:
-            _n, m, _w = _known(w or "")
-            if m and m.groups():
-                t = " · ".join(x for x in m.groups() if x)
-                if t and t not in names:
-                    names.append(t)
-        out.append({"level": e["level"], "area": e["area"], "file": e["file"], "msg": e["msg"][:300],
-                    "count": n, "plain": explain(e["why"] or e["msg"], generic=generic),
-                    "plain_first": explain(e["why"] or e["msg"]) if generic else "",
-                    "names": names[:6], "known": bool(_known(e["why"] or e["msg"])[1]),
-                    "fix": fix_target(game, e["file"], seen[0][0] if seen else None) if e["file"] else None,
-                    "seen": [{"line": ln, "why": (w or "")[:240],
-                              "now": (mod_line(game, e["file"], ln) or "")[:240] if e["file"] else ""}
-                             for ln, w in seen]})
-    errors = sum(1 for e in entries if e["level"] != "warning")
-    return {"found": True, "path": str(p), "size": size, "cut": size > CAP,
-            "age": int(max(0, time.time() - p.stat().st_mtime)),
-            "verdict": verdict(text, game),
-            "errors": errors, "warnings": len(entries) - errors,
-            "groups": out, "more": max(0, len(groups) - limit)}
+    return {
+        "found": True, "path": str(p), "size": size, "cut": size > CAP,
+        "age": max(0, int(time.time() - st.st_mtime)),
+        "verdict": verdict(text, game),
+        "errors": sum(1 for e in entries if e["level"] != "warning"),
+        "warnings": sum(1 for e in entries if e["level"] == "warning"),
+        "groups": [_group(g, game) for g in groups[:limit]],
+        "more": max(0, len(groups) - limit),
+    }
