@@ -110,7 +110,7 @@ def plan(base_root, name, game=False):
         if base.parent.name.lower() != "mods":
             errors.append(_i18n.msg("eng.modfork.not_in_mods", "{base} is not in a mods folder", base=str(base)))
     if not game and name.lower() == base.name.lower():
-        errors.append(_i18n.msg("eng.modfork.same_name", "the new mod needs a name other than its base"))
+        errors.append(_i18n.msg("eng.modfork.same_name", "give the copy its own name, not the name of the mod it starts from"))
     elif target.exists():
         errors.append(_i18n.msg("eng.modfork.exists", "{target} already exists - pick another name",
                                 target=str(target)))

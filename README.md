@@ -636,8 +636,9 @@ their code**
 * [Bare Geomod](https://www.moddb.com/mods/bare-geomod-and-tools) by Sinople and Gigantus
 * [TWMapReader](https://www.twcenter.net/threads/tw-map-reader-v2-24-1-jul-2015-update.438278/) by Withwnar
 * [Armory Studio 3D](https://github.com/muhamadridhomm/armorystudio3d) by Mreedmm
-* [Rome and Medieval Campaign Editor](https://github.com/Pfadfinder-Adam/RTW-M2TW-Campaign-Editor) by Pfadfinder-Adam (Master Oogway): parts of its code are used under the GPLv3,
-  listed in [NOTICE](NOTICE), and its report relay is what Report a problem follows
+* [Rome and Medieval Campaign Editor](https://github.com/Pfadfinder-Adam/RTW-M2TW-Campaign-Editor) by Pfadfinder-Adam (Master Oogway): the design of several features
+  (the script builder, the family tree, the game log, the report relay among them) follows it;
+  versions up to v2.4.11 used parts of its code under the GPLv3, see [NOTICE](NOTICE)
 
 **Sponsored by** FeatherLeaf and Lupinemaverick
 
@@ -649,8 +650,8 @@ taught everyone, this tool included, how these files actually work.
 ## License
 
 The toolkit is free software under the GNU General Public License v3.0: see
-[LICENSE](LICENSE). [NOTICE](NOTICE) names the parts that come from other
-GPLv3 projects and their authors.
+[LICENSE](LICENSE). [NOTICE](NOTICE) names the GPLv3 projects earlier versions
+took code from, and their authors.
 
 ## Changelog
 

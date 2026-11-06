@@ -1,19 +1,6 @@
-"""What the script builder and the add-ons, ported from the Pfadfinder-Adam
-(formerly MasterOogwayHomebrew) campaign editor, ask of their own editor,
-answered from this toolkit (96e1).
+"""Connect script editing to paths, game readers, backups and Undo.
 
-:mod:`scriptdocs`, :mod:`scriptbuilder` and :mod:`scriptaddons` are that
-editor's ``enginedocs.py``, ``modbuilder.py`` and ``addons.py``, taken with its
-author's permission and kept close to the original so later versions can be
-taken again. Every call they made into the rest of that editor comes here:
-case-blind file lookup, the game folder, which game this is (always Medieval
-II here), where the tool's reference files are, the mod's buildings, units,
-towns, traits and text tables, and the ``Plan`` its writers fill.
-
-A :class:`Plan` collects files to write and to delete, and notes; :meth:`run`
-writes them as one job, each file backed up first and one record in the Log,
-so Undo takes the whole job back - inside the mod's ``data/`` the usual way,
-and a file in the game's ``script/modules`` with its own backup path.
+Written independently from a description of the behaviour (2026-11-06); the feature follows Pfadfinder-Adam's campaign editor.
 """
 from __future__ import annotations
 
@@ -21,218 +8,181 @@ import os
 import shutil
 import time
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
 
-from . import config, gamepack
-from . import i18n as _i18n
-from .logutil import file_op, log
-
-TEST_MARK = "// @put_in_by CE_Test - the editor's test mod (Add-ons > Scripts in the game takes it out)"
+from . import config, i18n as _i18n
+from .logutil import log, file_op
 
 
-def _ci(folder, name):
-    """``folder/name`` whatever its case, as a str, or None."""
-    if not folder:
-        return None
-    p = os.path.join(folder, name)
-    if os.path.exists(p):
-        return p
-    low = name.lower()
+def existing(base, *parts):
+    """Resolve existing names without assuming filename case."""
+    path = Path(base)
+    for part in parts:
+        direct = path / part
+        if not direct.exists() and path.is_dir():
+            direct = next((p for p in path.iterdir() if p.name.casefold() == part.casefold()), direct)
+        path = direct
+    return path
+
+
+def game_root(mod):
+    root = Path(mod.root).absolute()
+    if root.parent.name.casefold() == 'mods':
+        return root.parent.parent
+    from . import gamepack
+    saved = gamepack.game_root_of(mod)
+    return Path(saved) if saved else Path(mod.data).parent
+
+
+def loader(root):
     try:
-        for n in os.listdir(folder):
-            if n.lower() == low:
-                return os.path.join(folder, n)
+        return b'listModules' in existing(root, 'script', 'main.nut').read_bytes()
     except OSError:
-        return None
-    return None
+        return False
 
 
-def ci_path(data, rel):
-    cur = data
-    for part in rel.replace("\\", "/").split("/"):
-        cur = _ci(cur, part) if cur else None
-    return cur
+def destination(mod, filename):
+    game = game_root(mod)
+    root = Path(mod.root) if loader(mod.root) else game
+    if not loader(mod.root) and not loader(game) and not existing(game, 'script').is_dir():
+        root = Path(mod.root)
+    return existing(root, 'script', 'modules', filename)
 
 
-def game_of(data_dir) -> str:
-    """The game folder a mod's data folder belongs to."""
-    data = Path(data_dir)
-    root = data.parent
-    if root.parent.name.lower() == "mods":
-        return str(root.parent.parent)
-    got = gamepack.game_root_of(None)
-    return str(got) if got else str(root)
+def library():
+    if config.CONFIG_DIR is None:
+        raise ValueError(_i18n.msg('eng.scriptaddons.the_tool_has_no_folder_of',
+                                  'the tool needs its own folder to store add-ons'))
+    path = Path(config.CONFIG_DIR) / 'script_modules'
+    path.mkdir(parents=True, exist_ok=True)
+    return path
 
 
-def game_kind(mod) -> str:
-    return "medieval2"
-
-
-def reference_dir() -> str:
-    return str(Path(__file__).resolve().parent / "data")
-
-
-def tool_dir() -> Path:
-    """The toolkit's own folder for the user's modules and add-ons."""
-    d = Path(config.CONFIG_DIR) / "script_modules"
-    d.mkdir(parents=True, exist_ok=True)
-    return d
-
-
-class _Named:
-    def __init__(self, name, levels=()):
-        self.name = name
-        self.levels = list(levels)
-
-
-def read_buildings(mod) -> List[_Named]:
-    from . import buildings
-    e = buildings.parse_file(Path(mod.data) / "export_descr_buildings.txt")
-    out = []
-    for b in e.buildings:
-        out.append(_Named(b.name, [_Named(getattr(lv, "name", "")) for lv in b.levels]))
+def names(mod):
+    out = {k: [] for k in ('factions', 'units', 'chains', 'levels', 'traits', 'ancillaries', 'towns', 'regions', 'characters')}
+    if mod is None:
+        return out
+    def collect(key, read):
+        try:
+            out[key] = list(dict.fromkeys(read()))
+        except (OSError, ValueError, AttributeError, KeyError):
+            pass
+    collect('factions', lambda: [p[0] for p in mod.factions() if p[0] != 'slave'] if hasattr(mod, 'factions')
+            else [k for k in mod.faction_cultures if k != 'slave'])
+    collect('units', lambda: [u.type for u in mod.edu.units])
+    collect('chains', lambda: [b.name for b in mod.edb.buildings])
+    collect('levels', lambda: [v for b in mod.edb.buildings for v in b.levels])
+    from . import traits, ancillaries, campstrat
+    collect('traits', lambda: [r['name'] for r in traits.overview(mod)['traits']])
+    collect('ancillaries', lambda: [r['name'] for r in ancillaries.overview(mod)['ancillaries']])
+    try:
+        campaigns = campstrat.campaign_paths(mod)
+        campaign = 'imperial_campaign' if 'imperial_campaign' in campaigns else next(iter(campaigns))
+        nodes = campstrat.read_strat(mod, campaign).nodes
+        out['towns'] = list(dict.fromkeys(str(n.get('region') or n.name) for n in nodes if n.kind == 'settlement'))
+        out['regions'] = list(out['towns'])
+        out['characters'] = [n.name for n in nodes if n.kind in ('character', 'character_record')]
+    except (OSError, ValueError, StopIteration):
+        pass
     return out
 
 
-def read_units(mod):
-    return list(mod.edu.units)
-
-
-def towns(mod, campaign) -> List[Dict]:
-    from . import campstrat
+def town_names(mod):
+    """Translate campaign region picks into console/Settlement identifiers."""
+    if mod is None:
+        return {}
+    from . import campmap
     try:
-        sf = campstrat.read_strat(mod, campaign)
-    except Exception:  # noqa: BLE001 - a campaign that will not read has no towns to offer
-        return []
-    return [{"name": s.get("region") or s.name, "region": s.get("region") or s.name}
-            for s in sf.of_kind("settlement")]
-
-
-def campaigns(mod) -> List[str]:
-    from . import campfiles, campstrat
-    try:
-        got = campfiles.campaigns(mod)
-    except Exception:  # noqa: BLE001
-        got = []
-    if campstrat.DEFAULT_CAMPAIGN in got:
-        got = [campstrat.DEFAULT_CAMPAIGN] + [c for c in got if c != campstrat.DEFAULT_CAMPAIGN]
-    return got
-
-
-def trait_names(mod, kind: str) -> List[str]:
-    """Trait or ancillary names of the mod."""
-    try:
-        if kind == "ancillaries":
-            from . import ancillaries
-            return [a["name"] for a in ancillaries.overview(mod).get("ancillaries", [])]
-        from . import traits
-        return [t["name"] for t in traits.overview(mod).get("traits", [])]
-    except Exception:  # noqa: BLE001
-        return []
-
-
-def faction_names(mod) -> List[str]:
-    from . import factions
-    try:
-        return factions.faction_slots(mod)
-    except Exception:  # noqa: BLE001
-        return []
+        return {r.name: r.settlement for r in campmap.read_regions(mod).records if r.settlement}
+    except (OSError, ValueError, AttributeError):
+        return {}
 
 
 class Plan:
-    """Files to write and to delete, and the notes that say why."""
-
     def __init__(self, mod):
         self.mod = mod
-        self.writes: Dict[str, bytes] = {}
-        self.deletes: Dict[str, str] = {}
-        self.notes: List[Tuple[Optional[str], str]] = []
+        self.writes = {}
+        self.deletions = {}
+        self.notes = []
 
-    def binary(self, path, data: bytes) -> None:
-        self.writes[os.path.abspath(path)] = bytes(data)
-        self.deletes.pop(os.path.abspath(path), None)
+    def binary(self, path, data):
+        key = os.path.abspath(path)
+        self.writes[key] = data
+        self.deletions.pop(key, None)
 
-    def delete(self, path, why: str = "") -> None:
-        self.deletes[os.path.abspath(path)] = why
-        self.writes.pop(os.path.abspath(path), None)
+    def delete(self, path, why=''):
+        key = os.path.abspath(path)
+        self.deletions[key] = why
+        self.writes.pop(key, None)
 
-    def note(self, _file, text: str) -> None:
-        self.notes.append((None, text))
+    def note(self, _file, text):
+        self.notes.append(text)
 
-    def stored(self, path) -> Optional[bytes]:
-        p = os.path.abspath(path)
-        if p in self.writes:
-            return self.writes[p]
+    def stored(self, path):
+        key = os.path.abspath(path)
+        if key in self.writes:
+            return self.writes[key]
         try:
-            return Path(p).read_bytes()
+            return Path(key).read_bytes()
         except OSError:
             return None
 
-    def words(self) -> List[str]:
-        out = [t for _f, t in self.notes]
-        out += [_i18n.msg("eng.scriptcompat.writes", "write {path}", path=self._show(p)) for p in self.writes]
-        out += [_i18n.msg("eng.scriptcompat.deletes", "take out {path}{why}", path=self._show(p),
-                          why=f" ({w})" if w else "") for p, w in self.deletes.items()]
-        return out
+    def display(self, path):
+        path = Path(path).absolute()
+        for root, prefix in ((Path(self.mod.data).absolute(), 'data/'), (game_root(self.mod).absolute(), '<game>/')):
+            try:
+                return prefix + path.relative_to(root).as_posix()
+            except ValueError:
+                pass
+        return str(path)
 
-    def _show(self, p: str) -> str:
-        data = os.path.abspath(self.mod.data)
-        game = os.path.abspath(game_of(self.mod.data))
-        for base, tag in ((data, "data"), (game, "<game>")):
-            if p.startswith(base + os.sep):
-                return tag + "/" + os.path.relpath(p, base).replace("\\", "/")
-        return p
+    def words(self):
+        return list(self.notes) + [
+            _i18n.msg('eng.scriptcompat.writes', 'write {path}', path=self.display(p)) for p in self.writes
+        ] + [_i18n.msg('eng.scriptcompat.deletes', 'take out {path}{why}', path=self.display(p),
+                      why=f' ({why})' if why else '') for p, why in self.deletions.items()]
 
-    def run(self, action: str, who: str, summary: str) -> Dict:
-        """Write it all, each file backed up first, as one job the Log can undo."""
-        if not self.writes and not self.deletes:
-            raise ValueError(_i18n.msg("eng.scriptcompat.nothing", "nothing to change"))
-        mod = self.mod
+    def run(self, action, who, summary):
+        if not self.writes and not self.deletions:
+            raise ValueError(_i18n.msg('eng.scriptcompat.nothing', 'nothing to change'))
         tid = config.new_transfer_id()
-        backup_root = config.backup_root_for(tid)
-        manifest: Dict[str, list] = {"backed_up": [], "created": [], "outside_backed_up": [],
-                                     "outside_created": []}
-        data = os.path.abspath(mod.data)
-        n = 0
-
-        def keep(path: str) -> None:
-            nonlocal n
-            inside = path.startswith(data + os.sep)
-            if os.path.exists(path):
-                if inside:
-                    rel = os.path.relpath(path, data).replace("\\", "/")
-                    b = backup_root / "data" / rel
-                    manifest["backed_up"].append(rel)
+        backup = config.backup_root_for(tid)
+        manifest = dict(backed_up=[], created=[], outside_backed_up=[], outside_created=[])
+        data_root = Path(self.mod.data).absolute()
+        def preserve(path, writing):
+            try:
+                rel = path.relative_to(data_root).as_posix()
+            except ValueError:
+                rel = None
+            if path.exists():
+                saved = backup / 'data' / rel if rel is not None else backup / 'outside' / f'{len(manifest["outside_backed_up"]) + 1:03d}_{path.name}'
+                saved.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copy2(path, saved)
+                if rel is None:
+                    manifest['outside_backed_up'].append([str(path), str(saved)])
                 else:
-                    n += 1
-                    b = backup_root / "outside" / f"{n:03d}_{os.path.basename(path)}"
-                    manifest["outside_backed_up"].append([path, str(b)])
-                b.parent.mkdir(parents=True, exist_ok=True)
-                shutil.copy2(path, b)
-                file_op("BACKUP", Path(path), f"-> {b}")
-            elif inside:
-                manifest["created"].append(os.path.relpath(path, data).replace("\\", "/"))
-            else:
-                manifest["outside_created"].append(path)
-
-        for path, raw in self.writes.items():
-            keep(path)
-            os.makedirs(os.path.dirname(path), exist_ok=True)
-            tmp = path + ".new"
-            with open(tmp, "xb") as fh:
-                fh.write(raw)
-            os.replace(tmp, path)
-            file_op("WRITE", Path(path), action)
-        for path in self.deletes:
-            if os.path.exists(path):
-                keep(path)
-                os.remove(path)
-                file_op("DELETE", Path(path), action)
-        rec = {"id": tid, "when": time.strftime("%Y-%m-%d %H:%M:%S"), "mode": "scripts",
-               "action": action, "source": mod.name, "source_root": str(mod.root),
-               "dest": mod.name, "dest_root": str(mod.root), "unit_type": who, "resolved_type": who,
-               "options": {}, "applied": True, "undone": False, "note": "", "summary": summary,
-               "warnings": [], "manifest": manifest, "backup_root": str(backup_root)}
+                    manifest['backed_up'].append(rel)
+                file_op('BACKUP', path, f'-> {saved}')
+            elif writing:
+                manifest['created' if rel is not None else 'outside_created'].append(rel if rel is not None else str(path))
+        for filename, blob in self.writes.items():
+            path = Path(filename)
+            path.parent.mkdir(parents=True, exist_ok=True)
+            temp = Path(filename + '.new')
+            with temp.open('xb') as stream:
+                stream.write(blob)
+            preserve(path, True)
+            os.replace(temp, path)
+            file_op('WRITE', path, action)
+        for filename in self.deletions:
+            path = Path(filename)
+            preserve(path, False)
+            if path.exists():
+                path.unlink()
+                file_op('DELETE', path, action)
+        rec = dict(id=tid, when=time.strftime('%Y-%m-%d %H:%M:%S'), mode='scripts', action=action,
+                   source=self.mod.name, dest=self.mod.name, source_root=str(self.mod.root), dest_root=str(self.mod.root),
+                   unit_type=who, resolved_type=who, options={}, applied=True, undone=False, note='', summary=summary,
+                   warnings=[], manifest=manifest, backup_root=str(backup))
         config.append_log(rec)
-        log.info("SCRIPTS %s %s in %s, id=%s", action, who, mod.name, tid)
+        log.info('SCRIPTS %s %s in %s, id=%s', action, who, self.mod.name, tid)
         return rec

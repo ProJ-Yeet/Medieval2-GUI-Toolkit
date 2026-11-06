@@ -1,258 +1,161 @@
-/* family.js - the faction's family tree drawn and edited; portraits (96e3)
+/* Editable campaign family tree and portraits. Written independently from a description of the behaviour (2026-11-06); the feature follows Pfadfinder-Adam's campaign editor. */
 
-   Part of the Medieval 2 GUI Toolkit UI. These files are plain
-   <script> tags sharing ONE global scope, loaded in the order set in
-   index.html - there is no build step and no module system. Two rules
-   follow from that: a top-level name must be unique across all of
-   them, and a file's top-level side effects may not depend on a file
-   loaded after it. */
-/* =====================================================================
-   The Family tab of the characters panel. descr_strat.txt holds one
-   `relative` line per father - his wife, then his children - and the game
-   draws its tree from those lines alone; this draws the same tree: a couple
-   side by side, their children below, the leader and the heir marked, a
-   person off the map (a character_record) dashed, the dead greyed.
-
-   Every change is an operation on the server's stratfamily module - set a
-   father's line, add a person off the map, take either out - staged here,
-   planned (the sentences shown) and written as one job the Log can undo.
-   A son, a daughter, a father or a sibling is a person off the map plus the
-   line that ties him in, so each is two operations. From the Pfadfinder-Adam
-   campaign editor's family tree, ported with its author's permission.
-   Every name here starts `fm`.
-   ===================================================================== */
-
-async function fmLoad(){
-  const k = state.cx;
-  if(!k || !k.d) return;
-  k.fam = {busy: true, ops: [], pick: ''};
-  cxPaint();
-  let r, lib;
-  const q = `mod=${enc(k.mod)}&campaign=${enc(k.d.campaign || '')}&faction=${enc(k.faction)}`;
-  try{ r = await api.get('/api/family?' + q); }catch(e){ r = {error: errText(e)}; }
-  try{ lib = await api.get('/api/portraits?' + q); }catch(e){ lib = {error: errText(e)}; }
-  if(state.cx !== k) return;
-  k.fam = Object.assign({ops: [], pick: '', lib}, r);
-  cxPaint();
+function fmBody(k){ return {mod: k.mod, campaign: k.d.campaign, faction: k.faction}; }
+function fmSame(k, f){ return state.cx === k && k.fam === f; }
+function fmReload(){ if(state.cx){ state.cx.fam = null; cxPaint(); } }
+async function fmLoad(k, f){
+  const query = Object.entries(fmBody(k)).map(([n,v]) => n + '=' + enc(v)).join('&');
+  const read = async url => { try{ return await api.get(url + '?' + query); }catch(e){ return {error: errText(e)}; } };
+  const results = await Promise.all([read('/api/family'), read('/api/portraits')]);
+  if(!fmSame(k, f)) return;
+  f.data = results[0]; f.library = results[1]; f.loading = false; cxPaint();
 }
-
-function fmPerson(name){
-  const f = state.cx.fam;
-  return (f.people || []).find(p => p.name.toLowerCase() === String(name).toLowerCase());
-}
-
-/* the tree as it will be after the staged operations, so the drawing shows them */
-function fmStaged(){
-  const f = state.cx.fam;
-  const people = (f.people || []).slice(), tree = (f.tree || []).map(t => Object.assign({}, t));
+function fmView(f){
+  const people = new Map((f.data.people || []).map(p => [p.name.toLowerCase(), {...p}]));
+  const tree = new Map((f.data.tree || []).map(t => [t.father.toLowerCase(), {...t, children: [...(t.children || [])]}]));
   for(const op of f.ops){
-    if(op.op === 'record') people.push({name: op.name, source: 'record', sex: op.sex, age: op.age, dead: op.dead ? 0 : null, staged: true});
-    else if(op.op === 'drop_record') { const i = people.findIndex(p => p.name === op.name); if(i >= 0) people.splice(i, 1); }
-    else if(op.op === 'family'){
-      const i = tree.findIndex(t => t.father.toLowerCase() === op.father.toLowerCase());
-      const row = {father: op.father, wife: op.wife || 'nobody', children: op.children.slice(), staged: true};
-      if(i >= 0) tree[i] = row; else tree.push(row);
-    }else if(op.op === 'drop_family'){
-      const i = tree.findIndex(t => t.father.toLowerCase() === op.father.toLowerCase());
-      if(i >= 0) tree.splice(i, 1);
-    }
+    const key = (op.name || op.father).toLowerCase();
+    if(op.op === 'record') people.set(key, {...op, source: 'record', fresh: true});
+    if(op.op === 'drop_record') people.delete(key);
+    if(op.op === 'family') tree.set(key, {...op, children: [...op.children], fresh: true});
+    if(op.op === 'drop_family') tree.delete(key);
   }
   return {people, tree};
 }
-
-function fmBox(name, people){
-  const p = people.find(x => x.name.toLowerCase() === String(name).toLowerCase());
-  const f = state.cx.fam;
-  if(!p) return `<span class="fmbox fmghost">${esc(name)}</span>`;
-  const dead = p.source === 'record' && p.dead !== null && p.dead !== undefined;
-  const mark = p.rank === 'leader' ? `<span class="fmrank">${tt('family.leader')}</span>`
-    : p.rank === 'heir' ? `<span class="fmrank">${tt('family.heir')}</span>` : '';
-  return `<button class="fmbox${p.source === 'record' ? ' fmrec' : ''}${dead ? ' fmdead' : ''}${p.sex === 'female' ? ' fmf' : ''}${
-      f.pick === p.name ? ' on' : ''}${p.staged ? ' fmnew' : ''}" onclick="fmPick('${q1(esc(p.name))}')"
-    title="${ttA(p.source === 'record' ? 'family.off_map' : 'family.on_map')}">
-    <b>${esc(p.name)}</b>${mark}<span class="count">${p.age !== undefined && p.age !== null ? tt('family.age',{age:p.age}) : ''}</span></button>`;
+function fmPersonHtml(name, view, f){
+  const key = name.toLowerCase(), p = view.people.get(key);
+  const dead = p && (p.source === 'record' ? p.dead !== null && p.dead !== undefined && p.dead !== false : !!p.dead);
+  return `<button class="fmbox${!p ? ' fmghost' : ''}${p && p.source === 'record' ? ' fmrec' : ''}${dead ? ' fmdead' : ''}${p && /^(female|f)$/i.test(p.sex) ? ' fmf' : ''}${p && p.fresh ? ' fmnew' : ''}${f.selected === key ? ' on' : ''}" onclick="fmSelect('${q1(esc(name))}')">
+    ${esc(p ? p.name : name)}${p ? `<small>${p.source === 'map' ? tt('family.on_map_short') : tt('family.off_map_short')}</small>` : ''}${p && p.age != null ? `<small>${tt('family.age', {age: esc(p.age)})}</small>` : ''}
+    ${p && /^(leader|heir)$/i.test(p.rank || '') ? `<span class="fmrank">${/^leader$/i.test(p.rank) ? tt('family.leader') : tt('family.heir')}</span>` : ''}</button>`;
 }
-
-function fmFamilyHtml(fam, byFather, people, seen){
-  if(seen.has(fam.father.toLowerCase())) return '';
-  seen.add(fam.father.toLowerCase());
-  const kids = fam.children.map(c => {
-    const own = byFather[c.toLowerCase()];
-    return `<div class="fmkid">${own ? fmFamilyHtml(own, byFather, people, seen) : fmBox(c, people)}</div>`;
-  }).join('');
-  return `<div class="fmfam${fam.staged ? ' fmnew' : ''}"><div class="fmcouple">${fmBox(fam.father, people)}${
-      fam.wife && fam.wife.toLowerCase() !== 'nobody' ? `<span class="fmand">&amp;</span>${fmBox(fam.wife, people)}` : ''}</div>
-    ${kids ? `<div class="fmkids">${kids}</div>` : ''}</div>`;
+function fmTreeHtml(view, f){
+  const used = new Set(), drawn = new Set();
+  const person = n => { used.add(n.toLowerCase()); return fmPersonHtml(n, view, f); };
+  const branch = (t, ancestors) => {
+    const key = t.father.toLowerCase();
+    if(ancestors.has(key)) return person(t.father);
+    drawn.add(key);
+    const next = new Set(ancestors); next.add(key);
+    return `<div class="fmfam${t.fresh ? ' fmnew' : ''}"><div class="fmcouple">${person(t.father)}${t.wife && t.wife.toLowerCase() !== 'nobody' ? `<span class="fmand">+</span>${person(t.wife)}` : ''}</div>
+      <div class="fmkids">${t.children.map(n => `<div class="fmkid">${view.tree.has(n.toLowerCase()) ? branch(view.tree.get(n.toLowerCase()), next) : person(n)}</div>`).join('')}</div></div>`;
+  };
+  const childNames = new Set([...view.tree.values()].flatMap(t => t.children.map(n => n.toLowerCase())));
+  let html = [...view.tree.values()].filter(t => !childNames.has(t.father.toLowerCase())).map(t => branch(t, new Set())).join('');
+  for(const [key,t] of view.tree) if(!drawn.has(key)) html += branch(t, new Set());
+  const loose = [...view.people.values()].filter(p => !used.has(p.name.toLowerCase()));
+  return `<div class="fmtree">${html || `<p>${tt('family.no_lines')}</p>`}</div>${loose.length ? `<div class="fmloose"><h4>${tt('family.not_in_tree')}</h4>${loose.map(p => person(p.name)).join('')}</div>` : ''}`;
 }
-
-function fmTreeHtml(){
-  const {people, tree} = fmStaged();
-  const byFather = {}, child = new Set(), inTree = new Set();
-  tree.forEach(t => { byFather[t.father.toLowerCase()] = t; inTree.add(t.father.toLowerCase());
-    if(t.wife) inTree.add(t.wife.toLowerCase()); t.children.forEach(c => { child.add(c.toLowerCase()); inTree.add(c.toLowerCase()); }); });
-  const roots = tree.filter(t => !child.has(t.father.toLowerCase()));
-  const seen = new Set();
-  const loose = people.filter(p => !inTree.has(p.name.toLowerCase()));
-  return `<div class="fmtree">${roots.map(r => fmFamilyHtml(r, byFather, people, seen)).join('') ||
-      `<div class="count">${tt('family.no_lines')}</div>`}</div>
-    ${loose.length ? `<div class="k">${tt('family.not_in_tree')}</div><div class="fmloose">${loose.map(p => fmBox(p.name, people)).join('')}</div>` : ''}`;
-}
-
-function fmPick(name){ state.cx.fam.pick = state.cx.fam.pick === name ? '' : name; state.cx.fam.form = null; cxPaint(); }
-
-function fmStage(...ops){
-  const f = state.cx.fam;
-  f.ops.push(...ops);
-  f.plan = null;
-  cxPaint();
-}
-
-function fmLineOf(name){
-  const {tree} = fmStaged();
-  return tree.find(t => t.father.toLowerCase() === name.toLowerCase());
-}
-function fmParentsOf(name){
-  const {tree} = fmStaged();
-  return tree.find(t => t.children.some(c => c.toLowerCase() === name.toLowerCase()));
-}
-
-/* a person off the map, and the line that ties him in */
-function fmAdd(kind){
-  const f = state.cx.fam, P = f.pick, form = f.form || {};
-  const name = (form.name || '').trim();
-  if(!name){ toast(tt('family.need_name'), 4000); return; }
-  const age = +form.age || 20, dead = !!form.dead;
-  const sex = kind === 'daughter' || kind === 'wife' ? 'female' : kind === 'sibling' ? (form.sex || 'male') : 'male';
-  const rec = {op: 'record', name, sex, age, dead};
-  if(kind === 'son' || kind === 'daughter'){
-    const line = fmLineOf(P) || {father: P, wife: 'nobody', children: []};
-    fmStage(rec, {op: 'family', father: P, wife: line.wife, children: line.children.concat([name])});
-  }else if(kind === 'wife'){
-    const line = fmLineOf(P) || {father: P, wife: 'nobody', children: []};
-    fmStage(rec, {op: 'family', father: P, wife: name, children: line.children});
-  }else if(kind === 'father'){
-    fmStage(rec, {op: 'family', father: name, wife: 'nobody', children: [P]});
-  }else if(kind === 'sibling'){
-    const par = fmParentsOf(P);
-    if(!par){ toast(tt('family.no_parents'), 5000); return; }
-    fmStage(rec, {op: 'family', father: par.father, wife: par.wife, children: par.children.concat([name])});
-  }
-  f.form = null;
-}
-
-/* 96f: a surname out of the faction's list, swapped onto the name being typed */
-function fmSurname(value){
-  const f = state.cx.fam, pool = cxPoolOf();
-  if(!f.form || !pool) return;
-  f.form.name = cxWithSurname(f.form.name, value, pool);
-  cxPaint();
-}
-
-function fmPanelHtml(){
-  const f = state.cx.fam, P = f.pick && fmPerson(f.pick) || (fmStaged().people.find(p => p.name === f.pick));
-  if(!P) return `<div class="count">${tt('family.pick_someone')}</div>`;
-  const form = f.form || (f.form = {name: '', age: 20, sex: 'male', dead: false});
-  const male = P.sex !== 'female';
-  const btn = (k, label) => `<button onclick="fmAdd('${k}')">${label}</button>`;
-  return `<div class="fmpanel"><div class="k">${esc(P.name)} · ${P.source === 'record' ? tt('family.off_map_short') : tt('family.on_map_short')}</div>
-    <div class="fmform">
-      <input placeholder="${ttA('family.new_name')}" value="${esc(form.name)}" list="fml-first" oninput="state.cx.fam.form.name=this.value">
-      ${cxNamePickHtml('fml-first', '', form.name, 'fmSurname')}
-      <input type="number" min="0" max="120" value="${esc(form.age)}" title="${ttA('family.age_title')}" oninput="state.cx.fam.form.age=this.value" style="width:64px">
-      <label class="chk"><input type="checkbox" ${form.dead ? 'checked' : ''} onchange="state.cx.fam.form.dead=this.checked"> ${tt('family.dead')}</label>
-    </div>
-    <div class="fmacts">
-      ${male ? btn('son', tt('family.add_son')) + btn('daughter', tt('family.add_daughter')) + btn('wife', tt('family.add_wife')) : ''}
-      ${btn('father', tt('family.add_father'))}
-      <select onchange="state.cx.fam.form.sex=this.value"><option value="male">${tt('family.brother')}</option><option value="female" ${form.sex === 'female' ? 'selected' : ''}>${tt('family.sister')}</option></select>${btn('sibling', tt('family.add_sibling'))}
-    </div>
-    ${male && fmLineOf(P.name) ? `<button onclick="fmStage({op:'drop_family',father:'${q1(esc(P.name))}'})">${tt('family.drop_line')}</button>` : ''}
-    ${P.source === 'record' ? `<button class="danger" onclick="fmStage({op:'drop_record',name:'${q1(esc(P.name))}'})">${tt('family.drop_record')}</button>` : ''}
-    ${P.source === 'map' ? `<div class="fmport"><label class="btn">${tt('family.portrait')}
-        <input type="file" accept="image/*,.tga" style="display:none" onchange="fmPortrait(this.files[0])"></label>
-      <span class="count">${P.portrait ? tt('family.portrait_has',{folder:esc(P.portrait)}) : tt('family.portrait_none')}</span></div>` : ''}
-  </div>`;
-}
-
-async function fmFileB64(file){
-  const buf = new Uint8Array(await file.arrayBuffer());
-  let bin = '';
-  for(let i = 0; i < buf.length; i += 0x8000) bin += String.fromCharCode.apply(null, buf.subarray(i, i + 0x8000));
-  return btoa(bin);
-}
-
-async function fmPortrait(file){
-  const k = state.cx, f = k.fam;
-  if(!file) return;
-  let r;
-  try{ r = await api.post('/api/family/portrait', {mod: k.mod, campaign: k.d.campaign, faction: k.faction,
-    name: f.pick, b64: await fmFileB64(file)}); }catch(e){ r = {error: errText(e)}; }
-  if(r.error){ toast('✗ ' + r.error, 8000); return; }
-  toast(tt('common.saved_log_can_undo_it'));
-  fmLoad();
-}
-
-async function fmPlan(){
-  const k = state.cx, f = k.fam;
-  let r;
-  try{ r = await api.post('/api/family/plan', {mod: k.mod, campaign: k.d.campaign, faction: k.faction, ops: f.ops}); }
-  catch(e){ r = {error: errText(e)}; }
-  f.plan = r;
-  cxPaint();
-}
-
-async function fmApply(){
-  const k = state.cx, f = k.fam;
-  let r;
-  try{ r = await api.post('/api/family/apply', {mod: k.mod, campaign: k.d.campaign, faction: k.faction, ops: f.ops}); }
-  catch(e){ r = {error: errText(e)}; }
-  if(r.error){ toast('✗ ' + r.error, 8000); return; }
-  toast(tt('common.saved_log_can_undo_it'));
-  fmLoad();
-}
-
-function fmLibHtml(){
-  const lib = state.cx.fam.lib;
-  if(!lib || lib.error || !lib.culture) return '';
-  const groups = Object.entries(lib.groups || {});
-  return `<div class="k">${tt('family.library',{culture:esc(lib.culture)})}</div>
-    <div class="count">${tt('family.library_note',{w:lib.size[0], h:lib.size[1]})}</div>
-    <div class="fmlib">${groups.map(([g, ages]) => `<div class="fmlibrow"><b>${esc(g)}</b>
-      <span class="count">${Object.entries(ages).map(([a, n]) => `${esc(a)} ${n}`).join(' · ')}</span>
-      <label class="btn">${tt('family.library_add')}<input type="file" accept="image/*,.tga" multiple style="display:none"
-        onchange="fmLibAdd('${q1(esc(g))}', this.files)"></label></div>`).join('')}</div>`;
-}
-
-async function fmLibAdd(group, files){
-  const k = state.cx, lib = k.fam.lib;
-  if(!files || !files.length) return;
-  const b64 = [];
-  for(const f of files) b64.push(await fmFileB64(f));
-  let r;
-  try{ r = await api.post('/api/portraits/add', {mod: k.mod, culture: lib.culture, group, files: b64}); }
-  catch(e){ r = {error: errText(e)}; }
-  if(r.error){ toast('✗ ' + r.error, 8000); return; }
-  toast(tt('family.library_added',{n:b64.length, group}));
-  fmLoad();
-}
-
 function fmHtml(){
-  const k = state.cx, f = k.fam;
-  if(!f){ setTimeout(fmLoad, 0); return `<div class="count">${tt('common.reading')}</div>`; }
-  if(f.busy) return `<div class="count">${tt('common.reading')}</div>`;
-  if(f.error) return `<div class="w-bad">✗ ${esc(f.error)}</div>`;
+  const k = state.cx;
+  if(!k.fam){ k.fam = {loading: true, ops: [], selected: '', form: {name: '', age: 20, dead: false, sex: 'male'}}; fmLoad(k, k.fam); }
+  const f = k.fam;
+  if(f.loading) return `<div>${tt('common.reading')}</div>`;
+  if(f.data.error) return `<div class="w-bad">${esc(f.data.error)}</div>`;
+  const view = fmView(f);
+  return `<div class="fmwrap"><div class="fmmain">${fmTreeHtml(view, f)}
+    ${(f.data.findings || []).map(x => `<p class="w-warn">${esc(x.message)}</p>`).join('')}${fmLibraryHtml(f.library)}</div>
+    <aside class="fmside">${fmSelectedHtml(view, f)}${fmOpsHtml(f)}</aside></div>`;
+}
+function fmSelect(name){
+  const f = state.cx.fam, key = name.toLowerCase();
+  f.selected = f.selected === key ? '' : key;
+  f.form = {name: '', age: 20, dead: false, sex: 'male'}; cxPaint();
+}
+function fmSurname(surname){
+  const f = state.cx.fam, pool = cxPoolOf();
+  if(pool) f.form.name = cxWithSurname(f.form.name, surname, pool);
+  cxPaint();
+}
+function fmSelectedHtml(view, f){
+  const p = view.people.get(f.selected);
+  if(!p) return `<div class="fmpanel">${tt('family.pick_someone')}</div>`;
+  const male = !/^(female|f)$/i.test(p.sex), w = f.form;
+  const action = (what, key) => `<button onclick="fmRelative('${what}')">${tt(key)}</button>`;
+  return `<div class="fmpanel"><h4>${esc(p.name)}</h4><p class="count">${p.source === 'map' ? tt('family.on_map') : tt('family.off_map')}</p>
+    <div class="fmform"><input list="fml-first" value="${esc(w.name)}" placeholder="${ttA('family.new_name')}" oninput="state.cx.fam.form.name=this.value">
+    ${cxNamePickHtml('fml-first', '', w.name, 'fmSurname')}
+    <input type="number" min="0" max="120" title="${ttA('family.age_title')}" value="${esc(w.age)}" oninput="state.cx.fam.form.age=this.value">
+    <label class="chk"><input type="checkbox" ${w.dead ? 'checked' : ''} onchange="state.cx.fam.form.dead=this.checked">${tt('family.dead')}</label></div>
+    <div class="fmacts">${male ? action('son','family.add_son') + action('daughter','family.add_daughter') + action('wife','family.add_wife') : ''}
+    ${action('father','family.add_father')}<select onchange="state.cx.fam.form.sex=this.value"><option value="male"${w.sex === 'male' ? ' selected' : ''}>${tt('family.brother')}</option><option value="female"${w.sex === 'female' ? ' selected' : ''}>${tt('family.sister')}</option></select>${action('sibling','family.add_sibling')}
+    ${male && view.tree.has(f.selected) ? action('drop_family','family.drop_line') : ''}${p.source === 'record' ? action('drop_record','family.drop_record') : ''}</div>
+    ${p.source === 'map' ? `<div class="fmport"><p>${p.portrait ? tt('family.portrait_has',{folder: esc(p.portrait)}) : tt('family.portrait_none')}</p><label class="btn">${tt('family.portrait')}<input type="file" accept="image/*,.tga" onchange="fmPortrait(this.files[0])"></label></div>` : ''}</div>`;
+}
+function fmRelative(action){
+  const f = state.cx.fam, v = fmView(f), p = v.people.get(f.selected);
+  if(!p) return;
+  if(action === 'drop_record') f.ops.push({op: action, name: p.name});
+  else if(action === 'drop_family') f.ops.push({op: action, father: p.name});
+  else{
+    const name = f.form.name.trim();
+    if(!name){ toast(tt('family.need_name')); return; }
+    let line = v.tree.get(f.selected) || {father: p.name, wife: 'nobody', children: []};
+    if(action === 'sibling'){
+      line = [...v.tree.values()].find(t => t.children.some(n => n.toLowerCase() === f.selected));
+      if(!line){ toast(tt('family.no_parents')); return; }
+    }
+    const sex = action === 'wife' || action === 'daughter' ? 'female' : action === 'sibling' ? f.form.sex : 'male';
+    f.ops.push({op: 'record', name, sex, age: Number(f.form.age) || 20, dead: !!f.form.dead});
+    if(action === 'father') f.ops.push({op: 'family', father: name, wife: 'nobody', children: [p.name]});
+    else f.ops.push({op: 'family', father: line.father, wife: action === 'wife' ? name : line.wife,
+      children: action === 'wife' ? [...line.children] : [...line.children, name]});
+    f.form.name = '';
+  }
+  f.plan = null; cxPaint();
+}
+function fmOpsHtml(f){
+  if(!f.ops.length) return '';
   const p = f.plan;
-  return `<div class="fmwrap">
-    <div class="fmmain">${fmTreeHtml()}</div>
-    <div class="fmside">${fmPanelHtml()}
-      ${f.ops.length ? `<div class="fmops"><div class="k">${ttN('family.staged', f.ops.length)}</div>
-        <button onclick="state.cx.fam.ops=[];state.cx.fam.plan=null;cxPaint()">${tt('common.revert')}</button>
-        <button onclick="fmPlan()">${tt('family.check')}</button>
-        ${p ? `${(p.errors || []).map(e => `<div class="w-bad">✗ ${esc(e)}</div>`).join('')}
-          ${(p.changes || []).map(c => `<div class="count">${esc(c)}</div>`).join('')}
-          ${(p.warnings || []).map(w => `<div class="w-warn">${esc(w)}</div>`).join('')}
-          ${p.ok ? `<button class="primary" onclick="fmApply()">${tt('family.write')}</button>` : ''}` : ''}</div>` : ''}
-      ${(f.findings || []).map(x => `<div class="w-warn">${esc(x.message)}</div>`).join('')}
-    </div></div>
-    ${fmLibHtml()}`;
+  return `<div class="fmops"><h4>${ttN('family.staged', f.ops.length)}</h4>
+    <button onclick="state.cx.fam.ops=[];state.cx.fam.plan=null;cxPaint()">${tt('common.revert')}</button>
+    <button ${f.busy ? 'disabled' : ''} onclick="fmWrite(false)">${tt('family.check')}</button>
+    ${p ? (p.errors || []).map(x => `<p class="w-bad">${esc(x)}</p>`).join('') + (p.changes || []).map(x => `<p>${esc(x)}</p>`).join('') + (p.warnings || []).map(x => `<p class="w-warn">${esc(x)}</p>`).join('') : ''}
+    ${p && p.ok ? `<button class="primary" ${f.busy ? 'disabled' : ''} onclick="fmWrite(true)">${tt('family.write')}</button>` : ''}</div>`;
+}
+async function fmWrite(apply){
+  const k = state.cx, f = k.fam;
+  if(f.busy || (apply && !(f.plan && f.plan.ok))) return;
+  const ops = JSON.parse(JSON.stringify(f.ops));
+  f.busy = true; cxPaint();
+  try{
+    const r = await api.post('/api/family/' + (apply ? 'apply' : 'plan'), {...fmBody(k), ops});
+    if(r.error) throw new Error(r.error);
+    if(!fmSame(k,f)) return;
+    if(apply){ toast(tt('common.saved_log_can_undo_it')); fmReload(); }
+    else if(JSON.stringify(f.ops) === JSON.stringify(ops)) f.plan = r;
+  }catch(e){ toast(errText(e)); }
+  finally{ f.busy = false; if(fmSame(k,f)) cxPaint(); }
+}
+function fmReadImage(file){
+  return new Promise((resolve,reject) => { const r = new FileReader(); r.onload = () => resolve(String(r.result).split(',')[1]); r.onerror = () => reject(r.error); r.readAsDataURL(file); });
+}
+async function fmPortrait(file){
+  if(!file) return;
+  const k = state.cx, f = k.fam, p = fmView(f).people.get(f.selected);
+  if(!p || p.source !== 'map') return;
+  try{
+    const b64 = await fmReadImage(file);
+    if(!fmSame(k,f)) return;
+    const r = await api.post('/api/family/portrait', {...fmBody(k), name: p.name, b64});
+    if(r.error) throw new Error(r.error);
+    toast(tt('common.saved_log_can_undo_it')); if(fmSame(k,f)) fmReload();
+  }catch(e){ toast(errText(e)); }
+}
+function fmLibraryHtml(lib){
+  if(!lib || lib.error) return '';
+  return `<div class="fmlib"><h4>${tt('family.library',{culture: esc(lib.culture)})}</h4>
+    <p class="count">${tt('family.library_note',{w: lib.size[0], h: lib.size[1]})}</p>
+    ${Object.entries(lib.groups || {}).map(([group, counts]) => `<div class="fmlibrow"><b>${esc(group)}</b> ${Object.entries(counts).map(([age,n]) => `${esc(age)}: ${esc(n)}`).join(' · ')}
+      <label class="btn">${tt('family.library_add')}<input type="file" accept="image/*,.tga" multiple onchange="fmLibraryAdd('${q1(esc(group))}',this.files)"></label></div>`).join('')}</div>`;
+}
+async function fmLibraryAdd(group, files){
+  const chosen = Array.from(files); if(!chosen.length) return;
+  const k = state.cx, f = k.fam, culture = f.library.culture;
+  try{
+    const data = await Promise.all(chosen.map(fmReadImage)); if(!fmSame(k,f)) return;
+    const r = await api.post('/api/portraits/add', {mod: k.mod, culture, group, files: data});
+    if(r.error) throw new Error(r.error);
+    toast(tt('family.library_added',{n: chosen.length, group})); if(fmSame(k,f)) fmReload();
+  }catch(e){ toast(errText(e)); }
 }

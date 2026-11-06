@@ -88,76 +88,81 @@ function gfVocabFor(mod){
   }).catch(()=>{});
   return GF_STATIC;
 }
-/* What each unit attribute does, in plain words, beside its tick box; and the
-   words M2EX / REX added (Pfadfinder-Adam's unitattrs.py, the engines' own
-   list, taken with his leave), offered in a fold of their own and warned
-   about on a mod not marked M2EX: an unknown word on `attributes` stops the
-   extended engine at loading, and the plain one does not know them at all. */
-const GF_ATTR_TEXT={
-  can_feign_rout:()=>tt('guided.attr_can_feign_rout'),
-  sea_faring:()=>tt('guided.attr_sea_faring'),
-  can_swim:()=>tt('guided.attr_can_swim'),
-  can_withdraw:()=>tt('guided.attr_can_withdraw'),
-  can_run_amok:()=>tt('guided.attr_can_run_amok'),
-  can_formed_charge:()=>tt('guided.attr_can_formed_charge'),
-  cannot_skirmish:()=>tt('guided.attr_cannot_skirmish'),
-  start_not_skirmishing:()=>tt('guided.attr_start_not_skirmishing'),
-  fire_by_rank:()=>tt('guided.attr_fire_by_rank'),
-  hardy:()=>tt('guided.attr_hardy'),
-  very_hardy:()=>tt('guided.attr_very_hardy'),
-  hide_forest:()=>tt('guided.attr_hide_forest'),
-  hide_improved_forest:()=>tt('guided.attr_hide_improved_forest'),
-  hide_long_grass:()=>tt('guided.attr_hide_long_grass'),
-  hide_anywhere:()=>tt('guided.attr_hide_anywhere'),
-  frighten_foot:()=>tt('guided.attr_frighten_foot'),
-  frighten_mounted:()=>tt('guided.attr_frighten_mounted'),
-  power_charge:()=>tt('guided.attr_power_charge'),
-  knight:()=>tt('guided.attr_knight'),
-  general_unit:()=>tt('guided.attr_general_unit'),
-  mercenary_unit:()=>tt('guided.attr_mercenary_unit'),
-  free_upkeep_unit:()=>tt('guided.attr_free_upkeep_unit'),
-  is_peasant:()=>tt('guided.attr_is_peasant'),
-  no_custom:()=>tt('guided.attr_no_custom'),
-  gunpowder_unit:()=>tt('guided.attr_gunpowder_unit'),
-  stakes:()=>tt('guided.attr_stakes'),
-  druid:()=>tt('guided.attr_druid'),
-  cantabrian_circle:()=>tt('guided.attr_cantabrian_circle'),
-  command:()=>tt('guided.attr_command'),
-  legionary_name:()=>tt('guided.attr_legionary_name'),
-  can_sap:()=>tt('guided.attr_can_sap'),
-  immune_arrows:()=>tt('guided.attr_immune_arrows'),
-  immune_fire:()=>tt('guided.attr_immune_fire'),
-  resistance_projectiles:()=>tt('guided.attr_resistance_projectiles'),
-  enduring_fortitude:()=>tt('guided.attr_enduring_fortitude'),
-  life_steal:()=>tt('guided.attr_life_steal'),
-  hardy_1:()=>tt('guided.attr_hardy_1'),
-  stun_immune:()=>tt('guided.attr_stun_immune'),
-  unstoppable:()=>tt('guided.attr_unstoppable'),
-  is_knockdown_immune:()=>tt('guided.attr_is_knockdown_immune'),
-  unique_unit:()=>tt('guided.attr_unique_unit'),
-  strong_against_armour:()=>tt('guided.attr_strong_against_armour'),
-  ignores_armour:()=>tt('guided.attr_ignores_armour'),
-  hp_damage_2:()=>tt('guided.attr_hp_damage_2'),
-  ap:()=>tt('guided.attr_ap'),
-  bp:()=>tt('guided.attr_bp'),
-  spear:()=>tt('guided.attr_spear'),
-  light_spear:()=>tt('guided.attr_light_spear'),
-  long_pike:()=>tt('guided.attr_long_pike'),
-  short_pike:()=>tt('guided.attr_short_pike'),
-  prec:()=>tt('guided.attr_prec'),
-  thrown:()=>tt('guided.attr_thrown'),
-  launching:()=>tt('guided.attr_launching'),
-  area:()=>tt('guided.attr_area')
+/* Unit attribute help. Written independently from a description of the behaviour (2026-11-06); the feature follows Pfadfinder-Adam's campaign editor. */
+const GF_ATTR_TEXT = {
+  'can_feign_rout': () => tt('guided.attr_can_feign_rout'),
+  'sea_faring': () => tt('guided.attr_sea_faring'),
+  'can_swim': () => tt('guided.attr_can_swim'),
+  'can_withdraw': () => tt('guided.attr_can_withdraw'),
+  'can_run_amok': () => tt('guided.attr_can_run_amok'),
+  'can_formed_charge': () => tt('guided.attr_can_formed_charge'),
+  'cannot_skirmish': () => tt('guided.attr_cannot_skirmish'),
+  'start_not_skirmishing': () => tt('guided.attr_start_not_skirmishing'),
+  'fire_by_rank': () => tt('guided.attr_fire_by_rank'),
+  'hardy': () => tt('guided.attr_hardy'),
+  'very_hardy': () => tt('guided.attr_very_hardy'),
+  'hide_forest': () => tt('guided.attr_hide_forest'),
+  'hide_improved_forest': () => tt('guided.attr_hide_improved_forest'),
+  'hide_long_grass': () => tt('guided.attr_hide_long_grass'),
+  'hide_anywhere': () => tt('guided.attr_hide_anywhere'),
+  'frighten_foot': () => tt('guided.attr_frighten_foot'),
+  'frighten_mounted': () => tt('guided.attr_frighten_mounted'),
+  'power_charge': () => tt('guided.attr_power_charge'),
+  'knight': () => tt('guided.attr_knight'),
+  'general_unit': () => tt('guided.attr_general_unit'),
+  'mercenary_unit': () => tt('guided.attr_mercenary_unit'),
+  'free_upkeep_unit': () => tt('guided.attr_free_upkeep_unit'),
+  'is_peasant': () => tt('guided.attr_is_peasant'),
+  'no_custom': () => tt('guided.attr_no_custom'),
+  'gunpowder_unit': () => tt('guided.attr_gunpowder_unit'),
+  'stakes': () => tt('guided.attr_stakes'),
+  'druid': () => tt('guided.attr_druid'),
+  'cantabrian_circle': () => tt('guided.attr_cantabrian_circle'),
+  'command': () => tt('guided.attr_command'),
+  'legionary_name': () => tt('guided.attr_legionary_name'),
+  'can_sap': () => tt('guided.attr_can_sap'),
+  'immune_arrows': () => tt('guided.attr_immune_arrows'),
+  'immune_fire': () => tt('guided.attr_immune_fire'),
+  'resistance_projectiles': () => tt('guided.attr_resistance_projectiles'),
+  'enduring_fortitude': () => tt('guided.attr_enduring_fortitude'),
+  'life_steal': () => tt('guided.attr_life_steal'),
+  'hardy_1': () => tt('guided.attr_hardy_1'),
+  'stun_immune': () => tt('guided.attr_stun_immune'),
+  'unstoppable': () => tt('guided.attr_unstoppable'),
+  'is_knockdown_immune': () => tt('guided.attr_is_knockdown_immune'),
+  'unique_unit': () => tt('guided.attr_unique_unit'),
+  'strong_against_armour': () => tt('guided.attr_strong_against_armour'),
+  'ignores_armour': () => tt('guided.attr_ignores_armour'),
+  'hp_damage_2': () => tt('guided.attr_hp_damage_2'),
+  'ap': () => tt('guided.attr_ap'),
+  'bp': () => tt('guided.attr_bp'),
+  'spear': () => tt('guided.attr_spear'),
+  'light_spear': () => tt('guided.attr_light_spear'),
+  'long_pike': () => tt('guided.attr_long_pike'),
+  'short_pike': () => tt('guided.attr_short_pike'),
+  'prec': () => tt('guided.attr_prec'),
+  'thrown': () => tt('guided.attr_thrown'),
+  'launching': () => tt('guided.attr_launching'),
+  'area': () => tt('guided.attr_area'),
 };
-const GF_ATTR_HELP=w=>{const f=GF_ATTR_TEXT[String(w).toLowerCase()]||GF_ATTR_TEXT[String(w).toLowerCase().replace(/_\d+$/,'_1')]||GF_ATTR_TEXT[String(w).toLowerCase().replace(/_\d+$/,'_2')]; return f?f():'';};
-const GF_EX_ATTRS={
-  attributes:['immune_arrows','immune_fire','resistance_projectiles','enduring_fortitude','life_steal',
-    'hardy_1','stun_immune','unstoppable','is_knockdown_immune','unique_unit'],
-  weapon:['strong_against_armour','ignores_armour','hp_damage_2'],
+function GF_ATTR_HELP(word){
+  const w = String(word).toLowerCase();
+  let help = Object.prototype.hasOwnProperty.call(GF_ATTR_TEXT, w) && GF_ATTR_TEXT[w];
+  const m = w.match(/^(.*_)\d+$/);
+  if(!help && m) help = GF_ATTR_TEXT[m[1] + '1'] || GF_ATTR_TEXT[m[1] + '2'];
+  return typeof help === 'function' ? help() : '';
+}
+const GF_EX_ATTRS = {
+  attributes: ['immune_arrows', 'immune_fire', 'resistance_projectiles', 'enduring_fortitude', 'life_steal', 'hardy_1', 'stun_immune', 'unstoppable', 'is_knockdown_immune', 'unique_unit'],
+  weapon: ['strong_against_armour', 'ignores_armour', 'hp_damage_2'],
 };
-const gfIsEx=(w,kind)=>{const l=String(w).toLowerCase();
-  return GF_EX_ATTRS[kind].some(x=>x===l||(/_\d+$/.test(x)&&l.startsWith(x.replace(/\d+$/,''))&&/\d+$/.test(l)));};
-const gfModEx=host=>{const m=host&&host.mod; return !!((state.mods||[]).find(x=>x.name===m)||{}).m2ex;};
+function gfIsEx(word, kind){
+  const w = String(word).toLowerCase();
+  return (GF_EX_ATTRS[kind] || []).some(x => x === w || (/_[0-9]+$/.test(x) && w.startsWith(x.replace(/[0-9]+$/, '')) && /[0-9]+$/.test(w)));
+}
+function gfModEx(host){
+  return !!(host && (state.mods || []).some(m => m.name === host.mod && m.m2ex));
+}
 const gfV=(host,name)=>((host.vocab||GF_STATIC)[name])||[];
 // Names a mod file actually defines, for "this points at nothing" warnings. An
 // empty list means the file is missing or unparsed - then we say nothing.

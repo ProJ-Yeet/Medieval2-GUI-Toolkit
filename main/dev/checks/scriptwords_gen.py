@@ -3,13 +3,12 @@ builder and the add-ons as a literal catalogue call (96e1).
 
     python dev/checks/scriptwords_gen.py
 
-The builder's vocabulary (scriptbuilder, scriptaddons) is the Pfadfinder-Adam
-campaign editor's, kept close to the original so later versions can be taken
-again, and it carries its words inline. The catalogue checker reads only
-literal ``_i18n.msg("id", "English")`` calls, so this writes one per word,
-keyed by what it labels; :func:`scriptwords.word` hands the page the catalogue
-message, or the English when the vocabulary has grown since. Run it again
-after a newer version of the editor's files is taken.
+The builder's vocabulary (scriptbuilder, scriptaddons) carries its words
+inline. The catalogue checker reads only literal ``_i18n.msg("id", "English")``
+calls, so this writes one per word, keyed by what it labels;
+:func:`scriptwords.word` hands the page the catalogue message, or the English
+when the vocabulary has grown since. Run it again after the vocabulary's
+wording changes.
 """
 import hashlib
 import json

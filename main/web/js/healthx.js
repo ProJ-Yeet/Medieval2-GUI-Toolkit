@@ -1,260 +1,138 @@
-/* healthx.js - Health's other three tabs (96e2): the game's own log, the
-   mod's contents in one report, and a deep check that rehearses a change set
-
-   Part of the Medieval 2 GUI Toolkit UI. These files are plain
-   <script> tags sharing ONE global scope, loaded in the order set in
-   index.html - there is no build step and no module system. Two rules
-   follow from that: a top-level name must be unique across all of
-   them, and a file's top-level side effects may not depend on a file
-   loaded after it. */
-/* =====================================================================
-   The checks tab asks the toolkit's validators about the files. These three
-   ask other things: what the game itself said on its last run
-   (/api/gamelog), what the mod holds (/api/modreport), and what a change set
-   would do to it before it is put on (/api/rehearse, on a linked copy, so
-   nothing is written). From the Pfadfinder-Adam campaign editor, ported with
-   its author's permission. Every name here starts `hx`.
-   ===================================================================== */
-
-const HX_TABS = [
-  ['checks', () => tt('healthx.tab_checks')],
-  ['log', () => tt('healthx.tab_log')],
-  ['report', () => tt('healthx.tab_report')],
-  ['deep', () => tt('healthx.tab_deep')],
-];
+const HX_TAB_KEYS = {checks:'healthx.tab_checks',log:'healthx.tab_log',report:'healthx.tab_report',deep:'healthx.tab_deep'};
+const HX_REPORT_KEYS = {c_factions:'healthx.c_factions',c_cultures:'healthx.c_cultures',c_religions:'healthx.c_religions',c_units:'healthx.c_units',c_chains:'healthx.c_chains',c_regions:'healthx.c_regions',c_towns:'healthx.c_towns',c_characters:'healthx.c_characters',c_faction:'healthx.c_faction',c_culture:'healthx.c_culture',c_religion:'healthx.c_religion',c_status:'healthx.c_status',c_armies:'healthx.c_armies',by_category:'healthx.by_category',by_class:'healthx.by_class',by_owner:'healthx.by_owner'};
+/* Health game log, contents and rehearsal panels. Written independently from a description of the behaviour (2026-11-06); the feature follows Pfadfinder-Adam's campaign editor. */
 
 function hxTabsHtml(){
-  const h = state.hl;
-  return `<div class="hxtabs">${HX_TABS.map(([id, label]) =>
-    `<button class="${(h.tab || 'checks') === id ? 'on' : ''}" onclick="hxTab('${id}')">${esc(label())}</button>`).join('')}</div>`;
+  const tab = state.hl.tab || 'checks';
+  return `<div class="hxtabs">${['checks','log','report','deep'].map(t => `<button class="${t === tab ? 'on' : ''}" onclick="hxSelect('${t}')">${tt(HX_TAB_KEYS[t])}</button>`).join('')}</div>`;
 }
-
-function hxTab(id){
+function hxSelect(tab){ state.hl.tab = tab; hlPaint(); }
+async function hxLoad(part, refresh){
   const h = state.hl;
-  h.tab = id;
-  if(id === 'log' && !h.log) hxLoad('log', '/api/gamelog?mod=' + enc(h.mod));
-  if(id === 'report' && !h.report) hxLoad('report', '/api/modreport?mod=' + enc(h.mod));
-  if(id === 'deep' && !h.sets) hxLoad('sets', '/api/rehearse/sets?mod=' + enc(h.mod));
-  hlPaint();
-}
-
-async function hxLoad(key, url){
-  const h = state.hl;
-  h[key] = {busy: true};
+  if(h[part] && !refresh) return;
+  const slot = h[part] = {loading:true, owner:h};
+  const route = {log:'/api/gamelog',report:'/api/modreport',sets:'/api/rehearse/sets'}[part];
   let r;
-  try{ r = await api.get(url); }catch(e){ r = {error: errText(e)}; }
-  if(state.hl !== h) return;
-  h[key] = r;
-  hlPaint();
+  try{ r = await api.get(route + '?mod=' + enc(h.mod)); }catch(e){ r = {error:errText(e)}; }
+  if(state.hl !== h || h[part] !== slot) return;
+  h[part] = r; if(state.mode === 'health' && state.src === h.mod) hlPaint();
 }
-
 function hxPanelHtml(){
-  const h = state.hl;
-  if(h.tab === 'log') return hxLogHtml(h.log);
-  if(h.tab === 'report') return hxReportHtml(h.report);
-  if(h.tab === 'deep') return hxDeepHtml();
-  return '';
+  const h = state.hl, tab = h.tab || 'checks';
+  if(tab === 'checks') return '';
+  const part = tab === 'deep' ? 'sets' : tab;
+  if(!h[part] || h[part].loading && h[part].owner !== h) hxLoad(part,true);
+  const r = h[part];
+  if(!r || r.loading) return `<div class="empty">${tt('healthx.reading')}</div>`;
+  if(r.error) return `<section class="bsec w-bad">${esc(r.error)} <button onclick="hxLoad('${part}',true)">${tt('health.run_again')}</button></section>`;
+  return tab === 'log' ? hxLogHtml(r) : tab === 'report' ? hxReportHtml(r) : hxDeepHtml(r);
 }
-
-const hxWait = () => `<div class="empty">${tt('healthx.reading')}</div>`;
-const hxErr = r => `<div class="bsec"><div class="w-bad">✗ ${esc(r.error)}</div></div>`;
-
-/* ---- the game's log ---- */
-function hxAge(s){
-  if(s >= 86400) return ttN('healthx.days_ago', Math.floor(s / 86400));
-  if(s >= 3600) return ttN('healthx.hours_ago', Math.floor(s / 3600));
-  if(s >= 60) return ttN('healthx.minutes_ago', Math.floor(s / 60));
+function hxAge(seconds){
+  if(seconds >= 86400) return ttN('healthx.days_ago',Math.floor(seconds/86400));
+  if(seconds >= 3600) return ttN('healthx.hours_ago',Math.floor(seconds/3600));
+  if(seconds >= 60) return ttN('healthx.minutes_ago',Math.floor(seconds/60));
   return tt('healthx.just_now');
 }
-
-/* The game's log as a player reads it (users found the old view hard: the
-   engine's own lines first, a tag like [system.run] on every row, and "a
-   building lets Y recruit X"). Now: one card saying whether the game crashed
-   and why, in plain words, with a button to the unit, building or file to fix;
-   then the problems, most frequent first, each a sentence with what it is
-   about; the usually-harmless notes folded under them; the game's own words
-   behind a fold on every row; and the lot copied for a bug report. */
-const hxRelData = rel => { const s = String(rel || '').replace(/\\/g, '/'); const i = s.toLowerCase().lastIndexOf('/data/');
-  return i >= 0 ? s.slice(i + 6) : s.replace(/^data\//i, ''); };
-const hxShortFile = rel => hxRelData(rel).split('/').pop();
-function hxFixBtn(fix, line){
+function hxFold(label, text){ return `<details class="hxraw"><summary>${label}</summary><pre class="hxpre">${esc(text)}</pre></details>`; }
+function hxNow(text){ return text ? `<div class="hxnow"><span class="count">${tt('healthx.reads_now')}</span><pre class="hxpre">${esc(text)}</pre></div>` : ''; }
+function hxFixHtml(fix,file,line){
   if(!fix) return '';
-  if(fix.kind === 'unit') return `<button class="mini primary" onclick="hxFix('unit','${q1(esc(fix.name))}')">${tt('healthx.fix_unit',{name:esc(fix.name)})}</button>`;
-  if(fix.kind === 'building') return `<button class="mini primary" onclick="hxFix('building','${q1(esc(fix.name))}')">${tt('healthx.fix_building',{name:esc(fix.name)})}</button>`;
-  return `<button class="mini" onclick="hxFix('file','${q1(esc(hxRelData(fix.name)))}',${+line || 0})">${tt('healthx.fix_file',{file:esc(hxShortFile(fix.name))})}</button>`;
+  const kind = fix.kind, name = fix.name || file || '';
+  if(!['unit','building','file'].includes(kind)) return '';
+  const label = kind === 'unit' ? tt('healthx.fix_unit',{name:esc(name)}) : kind === 'building' ? tt('healthx.fix_building',{name:esc(name)}) : tt('healthx.fix_file',{file:esc(name)});
+  return `<button class="mini" onclick="hxFix('${kind}','${q1(esc(name))}',${Number(line) || 1})">${label}</button>`;
 }
-async function hxFix(kind, name, line){
-  if(state.hl && state.hl.mod && state.src !== state.hl.mod){ state.src = state.hl.mod; }
-  if(kind === 'building'){ window.open(`/?mod=${enc(state.src)}&building=${enc(name)}`, '_blank'); return; }
-  if(kind === 'file'){ rtOpen(name, line || 0); return; }
-  setAppMode('edit');
-  for(let i = 0; i < 40 && !(state.data && state.data.units); i++) await new Promise(r => setTimeout(r, 150));
-  if(state.data && state.data.units.some(u => u.type === name)) openEditor(name);
-  else toast(tt('core.is_not_a_unit_in',{qEdit:name, src:state.src}), 4000);
-}
-function hxLogRow(g){
-  const head = (g.plain_first || g.plain) || esc(g.msg);
-  const plain = g.plain_first || g.plain;
-  const others = (g.names || []).slice(g.plain_first ? 1 : (g.names || []).length);
-  const at = g.seen[0] && g.seen[0].line ? `<span class="count">${tt('healthx.at_line',{line:g.seen[0].line})}</span>` : '';
-  const where = g.file ? `<span class="count">${esc(hxShortFile(g.file))}</span>${at}` : '';
-  return `<div class="hxrow2 ${g.level}">
-      <div class="hxrowmain">
-        <div class="hxrowtitle">${plain ? esc(head) : `<code>${esc(g.msg)}</code>`}</div>
-        ${others.length ? `<div class="count">${tt('healthx.same_for',{list:others.map(esc).join(', ')})}${g.count > (g.names || []).length ? ' …' : ''}</div>` : ''}
-        ${g.file && g.seen[0] && g.seen[0].now ? `<div class="hxnow">${tt('healthx.reads_now')} <code>${esc(g.seen[0].now)}</code></div>` : ''}
-        <div class="hxrowmeta">${g.count > 1 ? `<span class="pill">${ttN('healthx.times', g.count)}</span>` : ''}${where}
-          ${hxFixBtn(g.fix, g.seen[0] && g.seen[0].line)}</div>
-        <details class="hxraw"><summary>${tt('healthx.the_games_words')}</summary>
-          <pre class="hxpre">${esc([`[${g.level}] [${g.area}] ${g.msg}`].concat(g.seen.map(x => x.line ? `${tt('healthx.at_line',{line:x.line})} ${x.why}` : x.why)).join('\n'))}</pre></details>
-      </div></div>`;
+async function hxFix(kind,name,line){
+  const mod = state.hl.mod;
+  if(kind === 'building'){ window.open('/?mod=' + enc(mod) + '&building=' + enc(name),'_blank','noopener'); return; }
+  if(kind === 'file'){
+    let path = name.replace(/\\/g,'/');
+    const m = /(?:^|\/)data\//i.exec(path); if(m) path = path.slice(m.index + m[0].length);
+    rtOpen(path,line); return;
+  }
+  state.src = mod; setAppMode('edit');
+  await loadSource();
+  if(state.src !== mod || state.mode !== 'edit') return;
+  const units = state.data && state.data.units || [];
+  const found = units.find(u => u.type === name);
+  if(found) openEditor(found.type);
+  else toast(tt('core.is_not_a_unit_in',{qEdit:name,src:mod}));
 }
 function hxLogHtml(r){
-  if(!r || r.busy) return hxWait();
-  if(r.error) return hxErr(r);
-  if(!r.found) return `<div class="bsec"><div class="hxcard"><div class="hxcardhead">${tt('healthx.no_log')}</div>
-    <div class="trnote">${esc(r.howto).replace(/\n/g, '<br>')}</div>
-    <details><summary class="count">${tt('healthx.looked_in')}</summary><div class="count">${r.looked.map(p => `<code>${esc(p)}</code>`).join('<br>')}</div></details></div></div>`;
-  const v = r.verdict;
-  const groups = r.groups || [];
-  const stopped = v && v.stopped;
-  // the bare "the game crashed" line says what the card above already says
-  const must = groups.filter(g => g.level !== 'warning' && !(stopped && g.level === 'fatal' && /unspecified error/i.test(g.msg))),
-        notes = groups.filter(g => g.level === 'warning');
-  let card;
-  if(stopped){
-    const cause = v.file && v.line
-      ? tt('healthx.crash_after_line',{file:esc(hxShortFile(v.file)), line:v.line, col:v.col ? tt('healthx.at_col',{col:v.col}) : ''})
-      : esc(String(v.why || v.headline || '').replace(/^the game stopped:\s*/i, ''));
-    card = `<div class="hxcard stop"><div class="hxcardhead">✗ ${tt('healthx.crashed')}</div>
-      <div class="hxcardwhy">${cause}</div>
-      ${v.now ? `<div class="hxnow">${tt('healthx.reads_now')} <code>${esc(v.now)}</code></div>` : ''}
-      <div class="hxrowmeta">${hxFixBtn(v.fix, v.line)}</div>
-      ${(v.lines || []).length ? `<details class="hxraw"><summary>${tt('healthx.the_lines')}</summary><pre class="hxpre">${esc(v.lines.join('\n'))}</pre></details>` : ''}</div>`;
-  }else{
-    card = `<div class="hxcard ${must.length ? 'warn' : 'ok'}"><div class="hxcardhead">${must.length ? '⚠' : '✓'} ${v ? esc(v.headline) : tt('healthx.no_crash')}</div>
-      <div class="hxcardwhy">${must.length ? ttN('healthx.problems_to_look_at', must.length) : tt('healthx.log_clean')}</div></div>`;
-  }
-  return `<div class="bsec">
-    <div class="hxloghead"><span class="count" title="${esc(r.path)}">${tt('healthx.read_from',{age:hxAge(r.age)})}${r.cut ? ` · ${tt('healthx.log_cut')}` : ''}</span>
-      <span style="flex:1"></span>
-      <button onclick="hxCopyLog()" title="${ttA('healthx.copy_log_title')}">${tt('healthx.copy_log')}</button>
-      <button onclick="hxLoad('log','/api/gamelog?mod='+enc(state.hl.mod))">${tt('health.run_again')}</button></div>
-    ${card}
-    ${(v && (v.serious || []).length) ? `<div class="count">${v.serious.map(w => tt('healthx.serious',{w:esc(w)})).join('<br>')}</div>` : ''}
-    ${must.length ? `<h4 class="hxsect">${tt('healthx.sect_problems')} <span class="n">${must.length}</span></h4>
-      <div class="hxlist">${must.map(hxLogRow).join('')}</div>` : ''}
-    ${notes.length ? `<details class="hxnotes"${must.length ? '' : ' open'}><summary><h4 class="hxsect">${tt('healthx.sect_notes')} <span class="n">${notes.length}</span></h4>
-      <span class="count">${tt('healthx.sect_notes_hint')}</span></summary>
-      <div class="hxlist">${notes.map(hxLogRow).join('')}</div></details>` : ''}
-    ${r.more ? `<div class="count">${ttN('healthx.more_kinds', r.more)}</div>` : ''}</div>`;
+  const reload = `<button class="mini" onclick="hxLoad('log',true)">${tt('health.run_again')}</button>`;
+  if(!r.found) return `<section class="bsec"><h4>${tt('healthx.no_log')} ${reload}</h4><p style="white-space:pre-wrap">${esc(r.howto || '')}</p>${hxFold(tt('healthx.looked_in'),(r.looked || []).join('\n'))}</section>`;
+  const v = r.verdict || {}, groups = r.groups || [];
+  const problems = groups.filter(g => g.level !== 'warning' && g.level !== 'warn' && !(v.stopped && g.level === 'fatal' && /unspecified error/i.test(g.msg || '')));
+  const notes = groups.filter(g => g.level === 'warning' || g.level === 'warn');
+  let location = '';
+  if(v.file && v.line) location = tt('healthx.crash_after_line',{file:esc(v.file),line:v.line,col:v.col ? tt('healthx.at_col',{col:v.col}) : ''});
+  const problemCount = groups.length + (r.more || 0);
+  return `<section class="bsec"><div class="hxloghead" title="${esc(r.path)}">${tt('healthx.read_from',{age:esc(hxAge(r.age))})} ${r.cut ? `<span class="count">${tt('healthx.log_cut')}</span>` : ''}
+    <button class="mini" title="${ttA('healthx.copy_log_title')}" onclick="hxCopyLog()">${tt('healthx.copy_log')}</button>${reload}</div>
+    <div class="hxcard ${v.stopped ? 'stop' : problemCount ? 'warn' : 'ok'}"><div class="hxcardhead">${v.stopped ? tt('healthx.crashed') : esc(v.headline || tt('healthx.no_crash'))}</div>
+    <div class="hxcardwhy">${v.stopped ? location || esc(v.why || v.headline || '') : problemCount ? ttN('healthx.problems_to_look_at',problemCount) : tt('healthx.log_clean')}</div>
+    ${hxNow(v.now)}${hxFixHtml(v.fix,v.file,v.line)}${(v.lines || []).length ? hxFold(tt('healthx.the_lines'),v.lines.join('\n')) : ''}</div>
+    ${(v.serious || []).map(w => `<p class="w-warn">${tt('healthx.serious',{w:esc(w)})}</p>`).join('')}
+    ${problems.length ? `<h4 class="hxsect">${tt('healthx.sect_problems')}</h4><div class="hxlist">${problems.map(hxLogGroupHtml).join('')}</div>` : ''}
+    ${notes.length ? `<details class="hxnotes"${problems.length ? '' : ' open'}><summary>${tt('healthx.sect_notes')} <span class="count">${tt('healthx.sect_notes_hint')}</span></summary><div class="hxlist">${notes.map(hxLogGroupHtml).join('')}</div></details>` : ''}
+    ${r.more ? `<p class="count">${ttN('healthx.more_kinds',r.more)}</p>` : ''}</section>`;
 }
-/* The log as text for a bug report: the verdict, then each group with its
-   plain words and the game's own line. */
-async function hxCopyLog(){
-  const r = state.hl && state.hl.log;
-  if(!r || !r.found) return;
-  const v = r.verdict || {}, out = [`Game log (${state.hl.mod}) - ${r.errors} errors, ${r.warnings} warnings`];
-  if(v.headline) out.push(v.headline);
-  if(v.now) out.push(`${tt('healthx.reads_now')} ${v.now}`);
-  out.push('');
-  (r.groups || []).forEach(g => {
-    out.push(`- [${g.level}] ${(g.plain_first || g.plain || g.msg)}${g.count > 1 ? ` (x${g.count})` : ''}`);
-    out.push(`    ${g.msg}`);
-  });
-  try{ await navigator.clipboard.writeText(out.join('\n')); toast(tt('healthx.copied')); }
-  catch(e){ toast('✗ ' + errText(e), 5000); }
+function hxLogGroupHtml(g){
+  const seen = g.seen || [], first = seen[0] || {}, names = g.names || [];
+  const plain = g.plain_first || g.plain;
+  const original = [g.level,g.area,g.msg,...seen.map(s => [s.line,s.now,s.why].filter(Boolean).join(': '))].filter(Boolean).join('\n');
+  return `<div class="hxrow2 ${g.level === 'fatal' ? 'fatal' : g.level === 'warning' || g.level === 'warn' ? 'warning' : ''}"><div class="hxrowmain"><div class="hxrowtitle">${plain ? esc(plain) : `<code>${esc(g.msg)}</code>`}</div>
+    ${g.plain_first && names.length > 1 ? `<p>${tt('healthx.same_for',{list:esc(names.slice(1).join(', ') + (g.count > names.length ? ' …' : ''))})}</p>` : g.count > names.length && names.length ? '<span>…</span>' : ''}
+    ${hxNow(first.now)}<div class="hxrowmeta"><span class="count">${ttN('healthx.times',g.count || 1)}</span>
+    ${g.file ? `<code title="${esc(g.file)}">${esc(g.file.split(/[\\/]/).pop())}</code>` : ''}${first.line ? `<span>${tt('healthx.at_line',{line:first.line})}</span>` : ''}
+    ${hxFixHtml(g.fix,g.file,first.line)}</div>${hxFold(tt('healthx.the_games_words'),original)}</div></div>`;
 }
-
-/* ---- the contents report ---- */
+async function hxClipboard(text){
+  try{ await navigator.clipboard.writeText(text); toast(tt('healthx.copied')); }catch(e){ toast(errText(e)); }
+}
+function hxCopyLog(){
+  const h = state.hl, r = h.log, v = r.verdict || {};
+  hxClipboard([h.mod,`${r.errors || 0} / ${r.warnings || 0}`,v.headline || v.why || '',v.now || '',
+    ...(r.groups || []).map(g => [g.level,g.plain_first || g.plain || '',ttN('healthx.times',g.count || 1),g.msg].join('\n'))].join('\n\n'));
+}
 function hxReportHtml(r){
-  if(!r || r.busy) return hxWait();
-  if(r.error) return hxErr(r);
-  const s = r.strat || {}, by = Object.fromEntries((s.factions || []).map(f => [f.slot, f]));
-  const u = r.units, b = r.buildings;
-  const kv = o => Object.entries(o || {}).map(([k, v]) => `${esc(k)} <b>${v}</b>`).join(' · ');
-  const fails = Object.entries(r.failed || {});
-  return `<div class="bsec"><h4>${tt('healthx.report_head',{mod:esc(r.mod), campaign:esc(r.campaign || '')})}
-      <button style="margin-left:auto" onclick="hxCopyReport()">${tt('healthx.copy_markdown')}</button>
-      <a class="btn" href="/api/modreport/files?mod=${enc(state.hl.mod)}" download="mod_files.txt"
-        title="${ttA('healthx.files_title')}">${tt('healthx.files')}</a></h4>
-    <div class="trnote">${tt('healthx.report_note')}</div>
-    ${fails.map(([k, why]) => `<div class="w-bad">${tt('healthx.part_failed',{part:esc(k), why:esc(why)})}</div>`).join('')}
-    <div class="hxcounts">
-      ${[[tt('healthx.c_factions'), (r.factions || []).length], [tt('healthx.c_cultures'), (r.cultures || []).length],
-         [tt('healthx.c_religions'), (r.religions || []).length], [tt('healthx.c_units'), u ? u.count : '-'],
-         [tt('healthx.c_chains'), b ? b.chains : '-'], [tt('healthx.c_regions'), (r.regions || []).length],
-         [tt('healthx.c_towns'), (s.counts || {}).settlement || 0], [tt('healthx.c_characters'), (s.counts || {}).character || 0]]
-        .map(([l, n]) => `<div><span class="n">${n}</span><span class="count">${esc(l)}</span></div>`).join('')}
-    </div></div>
-    <div class="bsec"><h4>${tt('healthx.c_factions')}</h4><div class="hxtablewrap"><table class="hxtab">
-      <tr><th>${tt('healthx.c_faction')}</th><th>${tt('healthx.c_culture')}</th><th>${tt('healthx.c_religion')}</th>
-        <th>${tt('healthx.c_status')}</th><th>${tt('healthx.c_towns')}</th><th>${tt('healthx.c_characters')}</th><th>${tt('healthx.c_armies')}</th></tr>
-      ${(r.factions || []).map(f => { const x = by[f.slot] || {};
-        return `<tr><td>${esc(f.label)}</td><td>${esc(f.culture)}</td><td>${esc(f.religion)}</td>
-          <td>${esc(x.playable || f.special || '')}</td><td>${(x.towns || []).length}</td><td>${x.characters ?? ''}</td><td>${x.armies ?? ''}</td></tr>`; }).join('')}
-    </table></div></div>
-    ${u ? `<div class="bsec"><h4>${tt('healthx.c_units')} <span class="n">${u.count}</span></h4>
-      <div class="count">${tt('healthx.by_category')} ${kv(u.by_category)}</div>
-      <div class="count">${tt('healthx.by_class')} ${kv(u.by_class)}</div>
-      <div class="count">${tt('healthx.by_owner')} ${kv(u.by_owner)}</div></div>` : ''}
-    ${b ? `<div class="bsec"><h4>${tt('healthx.c_chains')} <span class="n">${b.chains}</span> <span class="count">${tt('healthx.levels',{n:b.levels})}</span></h4>
-      <div class="count">${b.list.map(c => `${esc(c.name)} (${c.levels})`).join(', ')}</div></div>` : ''}
-    ${(s.factions || []).length ? `<div class="bsec"><h4>${tt('healthx.towns_and_people')}</h4>
-      ${s.factions.filter(f => f.towns.length || f.named.length).map(f => `<div class="hxfac"><b>${esc(f.slot)}</b>
-        <div class="count">${f.towns.map(t => `${esc(t.region)} <i>${esc(t.level || '')}</i>`).join(', ')}</div>
-        <div class="count">${f.named.map(c => esc(c.name) + (c.rank ? ` (${esc(c.rank)})` : '')).join(', ')}</div></div>`).join('')}</div>` : ''}`;
+  const strat = r.strat || {}, sf = strat.factions || [], counts = strat.counts || {};
+  const totals = [['c_factions',(r.factions || []).length],['c_cultures',(r.cultures || []).length],['c_religions',(r.religions || []).length],['c_units',r.units ? r.units.count : '-'],['c_chains',r.buildings ? r.buildings.chains : '-'],['c_regions',(r.regions || []).length],['c_towns',counts.settlement || 0],['c_characters',counts.character || 0]];
+  return `<section class="bsec"><h4>${tt('healthx.report_head',{mod:esc(r.mod),campaign:esc(r.campaign || '-')})}</h4><p class="trnote">${tt('healthx.report_note')}</p>
+    <button class="mini" onclick="hxClipboard(state.hl.report.text)">${tt('healthx.copy_markdown')}</button>
+    <a class="btn mini" title="${ttA('healthx.files_title')}" download="mod_files.txt" href="/api/modreport/files?mod=${enc(state.hl.mod)}">${tt('healthx.files')}</a>
+    ${Object.entries(r.failed || {}).map(([part,why]) => `<p class="w-bad">${tt('healthx.part_failed',{part:esc(part),why:esc(why)})}</p>`).join('')}
+    <div class="hxcounts">${totals.map(([key,n]) => `<span><b>${esc(n)}</b> ${tt(HX_REPORT_KEYS[key])}</span>`).join('')}</div>
+    <div class="hxtablewrap"><table class="hxtab"><thead><tr>${['c_faction','c_culture','c_religion','c_status','c_towns','c_characters','c_armies'].map(k => `<th>${tt(HX_REPORT_KEYS[k])}</th>`).join('')}</tr></thead><tbody>
+    ${(r.factions || []).map(f => { const s = sf.find(s => s.slot === f.slot) || {}; return `<tr><td>${esc(f.label || f.slot)}</td><td>${esc(f.culture || '')}</td><td>${esc(f.religion || '')}</td><td>${esc(s.playable || f.special || '')}</td><td>${(s.towns || []).length}</td><td>${s.characters || 0}</td><td>${s.armies || 0}</td></tr>`; }).join('')}</tbody></table></div>
+    ${r.units ? ['by_category','by_class','by_owner'].map(k => `<div class="hxrow"><b>${tt(HX_REPORT_KEYS[k])}</b> ${Object.entries(r.units[k] || {}).map(([name,n]) => `<span>${esc(name)}: ${esc(n)}</span>`).join(' ')}</div>`).join('') : ''}
+    ${r.buildings ? `<h4>${tt('healthx.c_chains')} ${r.buildings.chains} · ${tt('healthx.levels',{n:r.buildings.levels})}</h4>${(r.buildings.list || []).map(b => `<div class="hxrow">${esc(b.name)} <span class="count">${tt('healthx.levels',{n:b.levels})}</span></div>`).join('')}` : ''}
+    ${sf.length ? `<h4>${tt('healthx.towns_and_people')}</h4>${sf.map(f => `<div class="hxfac"><b>${esc(f.slot)}</b><div>${(f.towns || []).map(t => `${esc(t.region)} (${esc(t.level)})`).join(', ')}</div><div>${(f.named || []).map(n => `${esc(n.name)}${n.rank ? ' (' + esc(n.rank) + ')' : ''}`).join(', ')}</div></div>`).join('')}` : ''}</section>`;
 }
-
-async function hxCopyReport(){
-  const r = state.hl.report;
-  if(!r || !r.text) return;
-  try{ await navigator.clipboard.writeText(r.text); toast(tt('healthx.copied')); }
-  catch(e){ toast('✗ ' + errText(e), 5000); }
+function hxDeepHtml(r){
+  if(state.hl.deep && state.hl.deep.busy && state.hl.deep.owner !== state.hl) state.hl.deep = null;
+  const h = state.hl, sets = r.sets || [], d = h.deep;
+  return `<section class="bsec"><h4>${tt('healthx.deep_head')}</h4><p class="trnote">${tt('healthx.deep_note')}</p>
+    ${sets.length ? `<label>${tt('healthx.deep_set')} <select id="hxSet">${sets.map(s => `<option value="${esc(s.name)}">${esc(s.name)}${s.mod && s.mod !== h.mod ? ' (' + esc(s.mod) + ')' : ''}</option>`).join('')}</select></label>
+    <button class="primary" ${d && d.busy ? 'disabled' : ''} onclick="hxRehearse()">${tt('healthx.deep_run')}</button>` : `<p>${tt('healthx.deep_no_sets')}</p>`}
+    ${!d ? '' : d.busy ? `<p>${tt('healthx.deep_busy',{set:esc(d.set)})}</p>` : d.error ? `<p class="w-bad">${esc(d.error)}</p>` : hxDeepResult(d)}</section>`;
 }
-
-/* ---- the deep check ---- */
-function hxDeepHtml(){
-  const h = state.hl, s = h.sets;
-  if(!s || s.busy) return hxWait();
-  if(s.error) return hxErr(s);
-  const d = h.deep;
-  const sets = s.sets || [];
-  return `<div class="bsec"><h4>${tt('healthx.deep_head')}</h4>
-    <div class="trnote">${tt('healthx.deep_note')}</div>
-    ${sets.length ? `<div class="hxrow"><label for="hxSet">${tt('healthx.deep_set')}</label>
-      <select id="hxSet">${sets.map(x => `<option value="${esc(x.name)}" ${x.mod === h.mod ? '' : ''}>${esc(x.name)}${
-        x.mod && x.mod !== x.name ? ` (${esc(x.mod)})` : ''}</option>`).join('')}</select>
-      <button class="primary" ${d && d.busy ? 'disabled' : ''} onclick="hxDeepRun()">${tt('healthx.deep_run')}</button></div>`
-      : `<div class="count">${tt('healthx.deep_no_sets')}</div>`}
-  </div>${hxDeepResultHtml(d)}`;
+function hxDeepResult(d){
+  return `<h4>${tt('healthx.deep_result',{set:esc(d.set),records:d.records,files:(d.files || []).length,s:(d.ms/1000).toFixed(1)})}</h4>
+    <pre class="hxpre">${esc((d.files || []).join('\n'))}</pre>${(d.failed || []).map(f => `<p class="w-bad">${tt('health.could_not_run',{label:esc(f.label),error:esc(f.error)})}</p>`).join('')}
+    <h4>${tt('healthx.deep_added')} <span class="count">${(d.added || []).length}</span></h4>${hxFindings(d.added,tt('healthx.deep_none_added'))}
+    <h4>${tt('healthx.deep_cleared')} <span class="count">${(d.cleared || []).length}</span></h4>${hxFindings(d.cleared,'-')}
+    <p class="count">${tt('healthx.deep_same',{n:d.same})}</p>`;
 }
-
-async function hxDeepRun(){
-  const h = state.hl, set = (document.getElementById('hxSet') || {}).value;
-  if(!set) return;
-  h.deep = {busy: true, set};
-  hlPaint();
+function hxFindings(list,empty){
+  if(!(list || []).length) return `<p>${empty}</p>`;
+  return `<div class="hllist">${list.map(f => { const sev = HL_SEV[f.severity] || HL_SEV.note; return `<div class="hlrow"><span class="hlsev ${sev[1]}" title="${esc(sev[2])}">${sev[0]}</span><div class="hlmsg">${esc(f.message)}<div class="count">${esc(f.source)} ${esc(f.file || '')}</div></div></div>`; }).join('')}</div>`;
+}
+async function hxRehearse(){
+  const h = state.hl; if(h.deep && h.deep.busy) return;
+  const set = document.getElementById('hxSet').value, slot = h.deep = {busy:true,set,owner:h}; hlPaint();
   let r;
-  try{ r = await api.post('/api/rehearse', {mod: h.mod, set}); }catch(e){ r = {error: errText(e)}; }
-  if(state.hl !== h) return;
-  h.deep = r;
-  hlPaint();
-}
-
-function hxDeepResultHtml(d){
-  if(!d) return '';
-  if(d.busy) return `<div class="empty">${tt('healthx.deep_busy',{set:esc(d.set)})}</div>`;
-  if(d.error) return hxErr(d);
-  const row = f => { const [icon, cls] = HL_SEV[f.severity] || HL_SEV.note;
-    return `<div class="hlrow"><span class="hlsev ${cls}">${icon}</span><div class="hlmsg">${esc(f.message)}
-      <div class="count">${esc(f.source)}${f.file ? ` · <code>${esc(f.file)}</code>` : ''}</div></div></div>`; };
-  return `<div class="bsec"><h4>${tt('healthx.deep_result',{set:esc(d.set), records:d.records, files:d.files.length, s:(d.ms/1000).toFixed(1)})}</h4>
-    <div class="count">${d.files.map(f => `<code>${esc(f)}</code>`).join(' ')}</div>
-    ${(d.failed || []).map(s => `<div class="w-bad">${tt('health.could_not_run',{label:esc(s.label), error:esc(s.error)})}</div>`).join('')}
-    <h4>${tt('healthx.deep_added')} <span class="n">${d.added.length}</span></h4>
-    <div class="hllist">${d.added.map(row).join('') || `<div class="trnote">${tt('healthx.deep_none_added')}</div>`}</div>
-    <h4>${tt('healthx.deep_cleared')} <span class="n">${d.cleared.length}</span></h4>
-    <div class="hllist">${d.cleared.map(row).join('') || `<div class="count">-</div>`}</div>
-    <div class="count">${tt('healthx.deep_same',{n:d.same})}</div></div>`;
+  try{ r = await api.post('/api/rehearse',{mod:h.mod,set}); }catch(e){ r = {error:errText(e)}; }
+  if(state.hl !== h || h.deep !== slot) return;
+  h.deep = r; if(state.mode === 'health' && state.src === h.mod) hlPaint();
 }

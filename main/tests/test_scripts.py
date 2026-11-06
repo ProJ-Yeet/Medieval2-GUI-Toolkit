@@ -74,10 +74,10 @@ bad = scripts.new_recipe("Empty")
 check("a recipe with nothing to do says so", scripts.preview(mod, bad)["problems"])
 
 print("\na script add-on")
-p = scripts.plan_addon(mod, "avoid_growth", "install", {})
-dest = game / "script" / "modules" / "avoid_growth.nut"
+p = scripts.plan_addon(mod, "recruit_order", "install", {})
+dest = game / "script" / "modules" / "recruit_order.nut"
 check("it goes where M2EX runs every module", str(dest.resolve()).lower() in {k.lower() for k in p.writes})
-rec = p.run("addon", "avoid_growth", "test")
+rec = p.run("addon", "recruit_order", "test")
 check("written", dest.is_file())
 transfer.undo(rec["id"])
 check("and Undo takes it away, outside data/ as it is", not dest.exists())

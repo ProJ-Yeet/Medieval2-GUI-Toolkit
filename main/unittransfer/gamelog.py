@@ -49,9 +49,9 @@ _SITUATIONS = [
     (r"Game selection invalid - is the path '([^']*)' ok", False, lambda **p: _i18n.msg("eng.gamelog.known_10", "The engine could not tell which game or mod to run: the path it read ({a}) makes no sense, either letters it reads wrong on the way to the game, or the game started away from its own folder. Start the mod with its .bat from the mod's folder.", **p)),
     (r"skeleton\.cpp\(\d+\): adata != 0", False, lambda **p: _i18n.msg("eng.gamelog.known_11", 'A battle skeleton names an animation the game cannot find, in no animation pack and no loose .cas file, so the game stops while it loads the animations, before the menu. Units brought from another mod are the usual cause: copy the missing .cas from that mod, or bring the unit again.', **p)),
     (r"Condition eval: (\w+) needs a (\w+)", False, lambda **p: _i18n.msg("eng.gamelog.known_12", 'A script condition {a} asks about a {b}, but the event it runs on gives none, so the game takes it as false and the trigger never fires. Not a crash.', **p)),
-    (r"encountered an unspecified error", True, lambda **p: _i18n.msg("eng.gamelog.known_13", 'The game crashed. The lines just before this one in the log name what it was doing.', **p)),
+    (r"encountered an unspecified error", True, lambda **p: _i18n.msg("eng.gamelog.known_13", 'This is where the game stopped. Read the lines above it: they say what the game was busy with.', **p)),
     (r"DATA: src.([^(\s]+)\((\d+)\)", True, lambda **p: _i18n.msg("eng.gamelog.known_14", "The game's own check failed in its code ({a}, line {b}) while reading data; the lines before it say what it was reading.", **p)),
-    (r"does not exist|not found|unknown", True, lambda **p: _i18n.msg("eng.gamelog.known_15", 'The game met a name it does not know.', **p)),
+    (r"does not exist|not found|unknown", True, lambda **p: _i18n.msg("eng.gamelog.known_15", 'A file names something the game has never heard of.', **p)),
 ]
 _SITUATIONS = [(re.compile(p, re.I), g, t) for p, g, t in _SITUATIONS]
 _LETTERS = "XYZW"

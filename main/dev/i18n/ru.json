@@ -164,1001 +164,7 @@
  "common.writing": "запись…",
  "i18n.for_testing": "Для тестирования",
  "i18n.language_draft": "{name} - черновик",
- "_exempt": {
-  "app.shared_cards_title": [
-   "tile"
-  ],
-  "home.mounted_pack": [
-   "mount"
-  ],
-  "settings.and_more_characters_in_the_diagnostic": [
-   "character"
-  ],
-  "settings.use_the_base_units_soldier_line": [
-   "soldier"
-  ],
-  "core.every_model_a_mod_ships_the": [
-   "ship"
-  ],
-  "core.the_tool_did_not_finish_loading": [
-   "turn"
-  ],
-  "core.the_two_pictures_per_unit_deduplicated": [
-   "mercenary"
-  ],
-  "codeview.every_string_here_is_stored_as": [
-   "character"
-  ],
-  "maplabels.character": [
-   "character"
-  ],
-  "maplabels.port": [
-   "port_verb"
-  ],
-  "maplabels.port_2": [
-   "port_verb"
-  ],
-  "voices.no_name_call": [
-   "general"
-  ],
-  "voices.own_compiled": [
-   "event"
-  ],
-  "voices.own_note": [
-   "event"
-  ],
-  "changes.turn_off": [
-   "turn"
-  ],
-  "changes.turn_off_putting_the_original_records": [
-   "turn"
-  ],
-  "changes.turn_on": [
-   "turn"
-  ],
-  "rawtext.pick_a_file_on_the_left": [
-   "model"
-  ],
-  "factions.bring_art": [
-   "frame"
-  ],
-  "factions.bring_frame_units": [
-   "frame"
-  ],
-  "ancillaries.not_found_in_data_ui_ancillaries": [
-   "ancillary"
-  ],
-  "family.on_map": [
-   "character"
-  ],
-  "transfer.merc_icons_off": [
-   "mercenary"
-  ],
-  "transfer.merc_icons_on": [
-   "mercenary"
-  ],
-  "transfer.put_the_unit_card_and_info": [
-   "mercenary"
-  ],
-  "transfer.not_a_crash_the_engine_animates": [
-   "soldier"
-  ],
-  "transfer.mounted_engine": [
-   "mount"
-  ],
-  "editor.soldier_replace": [
-   "soldier"
-  ],
-  "facaudit.world_maps_campaign": [
-   "campaign"
-  ],
-  "campbrowse.campaigns_read_in_ms": [
-   "ship"
-  ],
-  "campbrowse.every_campaign_this_mod_ships_with": [
-   "ship"
-  ],
-  "campbrowse.nothing_in_to_read_a_menu": [
-   "ship"
-  ],
-  "campbrowse.ships_map_layers": [
-   "ship"
-  ],
-  "armory.exp_free_turn_title": [
-   "turn"
-  ],
-  "eng.stringsbin.a_single_string_cannot_exceed_65535": [
-   "character"
-  ],
-  "eng.stringsbin.a_string_says_it_is_characters": [
-   "character"
-  ],
-  "campmap.building_the_composite": [
-   "building"
-  ],
-  "campmap.click_a_province_to_inspect_it": [
-   "turn"
-  ],
-  "campmap.comp_key": [
-   "terrain"
-  ],
-  "campmap.has_no_campaign_map_this_tool": [
-   "ship"
-  ],
-  "armory.frame_all": [
-   "frame"
-  ],
-  "armory.key_frame_all": [
-   "frame"
-  ],
-  "armory.key_frame_selected": [
-   "frame"
-  ],
-  "armory.head_as_one_title": [
-   "turn"
-  ],
-  "armory.look_closer_title": [
-   "turn"
-  ],
-  "buildings.level_3": [
-   "level"
-  ],
-  "buildings.level_key": [
-   "level"
-  ],
-  "buildings.its_battle_model_has_no_texture": [
-   "turn"
-  ],
-  "eng.transfer.engine_skeleton_the_mounted_engines_class": [
-   "mount"
-  ],
-  "eng.transfer.projectile_model_cas_files_were_copied": [
-   "missile"
-  ],
-  "campmap.port_marker": [
-   "port_verb"
-  ],
-  "campmap.port_pixel": [
-   "port_verb"
-  ],
-  "campmap.port_pixels_undecided": [
-   "port_verb"
-  ],
-  "campmap.region_id_tiles_settlement_at_game": [
-   "port_verb"
-  ],
-  "campmap.settlement_character_and_port_names_beside": [
-   "port_verb"
-  ],
-  "campmap.ships_its_own_so_that_layer": [
-   "ship"
-  ],
-  "campmap.the_campaign_map_as_a_surface": [
-   "turn"
-  ],
-  "campmap.the_heights_as_a_surface_with": [
-   "turn"
-  ],
-  "campmap.this_is_a_marker_pixel_and": [
-   "orphan"
-  ],
-  "armory.stamp_rot": [
-   "turn"
-  ],
-  "armory.statistics": [
-   "stats"
-  ],
-  "armory.uv_hint": [
-   "turn"
-  ],
-  "eng.ancillaries.this_ancillary_is_renaming_it_here": [
-   "orphan"
-  ],
-  "eng.codeview.length_says_but_text_is": [
-   "character"
-  ],
-  "eng.codeview.length_says_but_text_is_and_more": [
-   "character"
-  ],
-  "eng.codeview.this_ancillary_is_renaming_it_in": [
-   "orphan"
-  ],
-  "eng.codeview.this_entrys_tag_is_renaming_a": [
-   "orphan"
-  ],
-  "eng.codeview.this_faction_is_renaming_a_slot": [
-   "orphan"
-  ],
-  "eng.codeview.this_guild_is_renaming_it_in": [
-   "orphan"
-  ],
-  "eng.codeview.this_is_renaming_it_in_the": [
-   "orphan"
-  ],
-  "eng.codeview.this_region_is_renaming_it_in": [
-   "orphan"
-  ],
-  "eng.codeview.this_trait_is_renaming_it_in": [
-   "orphan"
-  ],
-  "eng.guilds.this_guild_is_renaming_it_here": [
-   "orphan"
-  ],
-  "eng.traits.this_trait_is_renaming_it_here": [
-   "orphan"
-  ],
-  "buildings.this_mod_ships_no_file_at": [
-   "ship"
-  ],
-  "buildings.units_without_battle_model_texture": [
-   "turn"
-  ],
-  "eng.guilds.has_no_levels_line_so_no": [
-   "level"
-  ],
-  "eng.guilds.levels_counts_upward": [
-   "level"
-  ],
-  "eng.guilds.levels_has_threshold_s_20_of": [
-   "level"
-  ],
-  "eng.guilds.levels_takes_whole_numbers": [
-   "level"
-  ],
-  "campaint.add_a_province_decide_its_record": [
-   "port_verb"
-  ],
-  "campaint.place_the_port_pixel_or_skip": [
-   "port_verb"
-  ],
-  "campaint.writes_layers_at_once_in_the": [
-   "port_verb"
-  ],
-  "campaint.written_into_a_settlement_the_music": [
-   "ship"
-  ],
-  "eng.heroabilities.not_in_ui_battle_sd_so": [
-   "battle"
-  ],
-  "eng.mercpools.line_a_second_regions_line_for": [
-   "region"
-  ],
-  "eng.mercpools.line_is_not_pool_regions_or": [
-   "region",
-   "unit",
-   "pool"
-  ],
-  "eng.settlemech.upgrade_is_above_max_which_the": [
-   "upgrade"
-  ],
-  "eng.settlemech.upgrade_is_not_s_base_both": [
-   "upgrade"
-  ],
-  "guided.banner_faction": [
-   "banner",
-   "faction"
-  ],
-  "guided.banner_holy": [
-   "banner"
-  ],
-  "guided.banner_unit": [
-   "banner",
-   "unit"
-  ],
-  "guided.era_0": [
-   "era"
-  ],
-  "guided.era_1": [
-   "era"
-  ],
-  "guided.era_2": [
-   "era"
-  ],
-  "guided.close": [
-   "close"
-  ],
-  "guided.close_2": [
-   "close"
-  ],
-  "guided.armour_upgrade_models_outnumber_levels": [
-   "trigger"
-  ],
-  "guided.find_an_entry_by_skeleton_by": [
-   "soldier"
-  ],
-  "guided.a_projectile_is_set_but_the_weapon_type_is_type": [
-   "missile"
-  ],
-  "eng.dupes.a_renamed_block_is_a_real": [
-   "soldier"
-  ],
-  "eng.edusort.unit_s_have_no_tier_yet": [
-   "banner"
-  ],
-  "viewer3d.art_starts_over_second": [
-   "unit"
-  ],
-  "viewer3d.art_starts_over_unit": [
-   "unit"
-  ],
-  "viewer3d.in_game_units": [
-   "unit"
-  ],
-  "viewer3d.drag_to_turn_wheel_to_zoom": [
-   "turn"
-  ],
-  "viewer3d.draw_the_texture_at_the_size": [
-   "ship"
-  ],
-  "viewer3d.drawn_at_shipped": [
-   "ship"
-  ],
-  "campcreate.new_region_name_paint_settlement_port": [
-   "port_verb"
-  ],
-  "campcreate.port": [
-   "port_verb"
-  ],
-  "campcreate.port_marker_add_or_move_on": [
-   "port_verb"
-  ],
-  "campcreate.select_a_region_first_then_choose": [
-   "port_verb"
-  ],
-  "campnew.map_layers_note": [
-   "ship"
-  ],
-  "campnew.this_mod_ships_only_the_compiled": [
-   "ship"
-  ],
-  "eng.mapcheck.second_port_pixel": [
-   "port_verb"
-  ],
-  "eng.mapcheck.second_port_pixel_for_owner": [
-   "port_verb"
-  ],
-  "eng.mapcheck.starts_with_a_and_map_regions": [
-   "port_verb"
-  ],
-  "eng.mapcheck.the_port_pixel_at_has_no": [
-   "port_verb"
-  ],
-  "eng.mapcheck.the_port_pixel_at_touches_no": [
-   "port_verb"
-  ],
-  "eng.mapcheck.the_river_crossing_at_is_at": [
-   "level"
-  ],
-  "campmark.named_character_general_admiral_port_spy": [
-   "port_verb"
-  ],
-  "campmark.port": [
-   "port_verb"
-  ],
-  "campmark.ports": [
-   "port_verb"
-  ],
-  "campmark.show_settlements_ports_and_campaign_objects": [
-   "port_verb"
-  ],
-  "campmark.this_mod_ships_its_own_picture": [
-   "ship"
-  ],
-  "v3anim.building_the_glb": [
-   "building"
-  ],
-  "v3anim.building_the_obj_zip": [
-   "building"
-  ],
-  "v3anim.not_in_the_skeleton_pack_only_loose": [
-   "ship"
-  ],
-  "v3anim.played_from_vanillas_pack_this_mod": [
-   "ship"
-  ],
-  "guided.florins_the_smith_charges_to_upgrade": [
-   "charge"
-  ],
-  "guided.florins_the_smith_charges_to_upgrade_2": [
-   "charge"
-  ],
-  "guided.heavy_light_general": [
-   "general"
-  ],
-  "guided.how_many_comes_from_the_extras": [
-   "soldier"
-  ],
-  "guided.how_many_the_unit_fields_comes_from": [
-   "soldier"
-  ],
-  "guided.how_the_weapon_is_used_melee_thrown": [
-   "melee"
-  ],
-  "guided.infantry_cavalry_siege_ship_handler": [
-   "infantry",
-   "cavalry",
-   "siege",
-   "ship"
-  ],
-  "guided.light_heavy_missile_spearmen": [
-   "missile"
-  ],
-  "guided.men_in_the_unit_at_the_largest": [
-   "ship"
-  ],
-  "guided.mercenary_unit_the_unit_card_is": [
-   "mercenary"
-  ],
-  "guided.missile_infantry_cavalry_and_siege": [
-   "missile"
-  ],
-  "guided.most_mods_leave_it_out_and_use": [
-   "mount"
-  ],
-  "eng.mapfe.the_frame_at_x_g_y": [
-   "frame"
-  ],
-  "eng.mapfe.the_frame_is_w_g_x": [
-   "frame"
-  ],
-  "eng.mapfe.the_frame_is_w_g_x_2": [
-   "frame"
-  ],
-  "guided.mounted_engine": [],
-  "guided.optional_the_effect_played_when_the_weapon": [
-   "turn"
-  ],
-  "packs.battle_model_entr_travel_with_them": [
-   "mount"
-  ],
-  "packs.soldier_of_lods_files": [
-   "soldier"
-  ],
-  "packs.soldier_only_entries_with_an_identical": [
-   "soldier"
-  ],
-  "packs.unit_soldier_line_s_are_repointed": [
-   "soldier"
-  ],
-  "eng.animloose.turns_bones_and_its_skeleton_has": [
-   "turn"
-  ],
-  "eng.casanim.turns_bones_and_the_skeleton_has": [
-   "turn"
-  ],
-  "v3anim.turn_every_key": [
-   "turn"
-  ],
-  "v3anim.turns_to": [
-   "turn"
-  ],
-  "v3anim.vanillas_skeleton_pack_this_mod_ships": [
-   "ship"
-  ],
-  "v3anim.walk_charge_die_a_file_name": [
-   "charge"
-  ],
-  "guided.the_line_goes_directly_after_soldier": [
-   "soldier"
-  ],
-  "guided.the_list_is_the_lt_holybanners_gt": [
-   "crusade",
-   "cavalry"
-  ],
-  "guided.these_entries_do_not_decide_how_the": [
-   "soldier"
-  ],
-  "guided.up_to_three_officer_lines_directly": [
-   "soldier"
-  ],
-  "guided.vanilla_ships_it_commented_out": [
-   "ship"
-  ],
-  "guided.vanilla_ships_it_commented_out_on": [
-   "ship"
-  ],
-  "guided.wagons_like_the_great_cross_count": [
-   "siege"
-  ],
-  "guided.with_two_formations_the_first_must": [
-   "horde"
-  ],
-  "osmmap.mylaes_layout_the_maps_layers_as": [
-   "port_verb"
-  ],
-  "osmmap.open_settings_to_turn_it_on": [
-   "turn"
-  ],
-  "osmmap.the_style_above_cut_to_the": [
-   "frame"
-  ],
-  "eng.campfiles.this_mod_ships_only_so_the": [
-   "ship"
-  ],
-  "eng.campnew.is_not_on_disk_and_ships": [
-   "ship"
-  ],
-  "eng.campnew.nothing_names_on_the_new_game_menu_archive": [
-   "ship"
-  ],
-  "eng.campnew.ships_map_layer_s_of_its": [
-   "ship"
-  ],
-  "minorfiles.the_culture_the_record_does_not": [
-   "port"
-  ],
-  "minorfiles.where_it_starts_every_regions_religions": [
-   "ship"
-  ],
-  "sprites.this_mod_ships_m2tweop_so_generation": [
-   "ship"
-  ],
-  "sprites.turn_the_flag_back_off": [
-   "turn"
-  ],
-  "sprites.the_bypass_flag_makes_the_next_normal": [
-   "turn"
-  ],
-  "eng.campfiles.now_has_no_music_type_and": [
-   "region"
-  ],
-  "minorfiles.port_ladder_line_s_in_the": [
-   "port",
-   "port_verb"
-  ],
-  "minorfiles.this_culture_has_no_port_lines": [
-   "port",
-   "port_verb"
-  ],
-  "stratcamp.faction_bik": [
-   "faction"
-  ],
-  "cards.gen_place_reset": [
-   "frame"
-  ],
-  "cards.gen_rig_hint": [
-   "turn"
-  ],
-  "cards.gen_turn": [
-   "turn"
-  ],
-  "cards.gen_view_hint": [
-   "turn"
-  ],
-  "eng.climatenew.a_climate_name_the_battle_map": [
-   "ship"
-  ],
-  "eng.climatenew.all_four_mods_measured_for_this": [
-   "ship"
-  ],
-  "cards.already_live_only_in_merc": [
-   "mercenary"
-  ],
-  "cards.and_more_written_into_the_merc": [
-   "mercenary"
-  ],
-  "cards.confirm_move_folded": [
-   "mercenary"
-  ],
-  "cards.copying_file_s_out_writing_into": [
-   "mercenary"
-  ],
-  "cards.merc": [
-   "mercenary"
-  ],
-  "cards.one_is_the_merc_copy": [
-   "mercenary"
-  ],
-  "mapsize.turn_the_real_world_switch_on": [
-   "turn"
-  ],
-  "eng.minorfiles.line_before_the_first_culture_line": [
-   "culture"
-  ],
-  "eng.minorfiles.line_religion_has_no_closing_brace": [
-   "religion"
-  ],
-  "eng.minorfiles.line_religions_has_no_closing_brace": [
-   "religion"
-  ],
-  "eng.minorfiles.this_cultures_port_ladder_has_lines": [
-   "port",
-   "port_verb"
-  ],
-  "eng.minorfiles.this_is_renaming_it_here_would": [
-   "orphan"
-  ],
-  "eng.minorfiles.this_text_has_no_faction_line": [
-   "faction"
-  ],
-  "cards.data_ui_units_data_ui_unit": [
-   "unit"
-  ],
-  "eng.winconds.could_not_be_read_the_stock": [
-   "ship"
-  ],
-  "eng.stratobj.is_pixel_none_of_the_800_port": [
-   "port_verb"
-  ],
-  "eng.stratobj.is_pixel_none_of_the_800_settlement": [
-   "port_verb"
-  ],
-  "eng.stratobj.there_is_no_folder_under_any": [
-   "settlement"
-  ],
-  "mapquery.building_that_map": [
-   "building"
-  ],
-  "climates.append_a_name_the_engine_does": [
-   "ship"
-  ],
-  "climates.taking_over_one_of_the_twelve": [
-   "ship"
-  ],
-  "soundbanks.has_no_data_the_game_uses": [
-   "ship"
-  ],
-  "soundbanks.event_line_sample_count": [
-   "event"
-  ],
-  "eng.campstrat.fort_line_does_not_read_as": [
-   "culture"
-  ],
-  "eng.campstrat.settlement_header_says_the_engine_knows": [
-   "castle"
-  ],
-  "eng.campstrat.should_be_armour": [
-   "armour"
-  ],
-  "eng.campstrat.unit_line_does_not_read_as": [
-   "armour"
-  ],
-  "eng.campstrat.faction_relationships_does_not_read_as": [
-   "faction"
-  ],
-  "eng.campstrat.faction_standings_does_not_read_as": [
-   "faction"
-  ],
-  "stratmap.draw_a_campaign_map_model_beside": [
-   "ship"
-  ],
-  "stratmap.file_named_by_no_model_but": [
-   "turn"
-  ],
-  "edusort.a_comment_in_this_file_starts": [
-   "banner"
-  ],
-  "edusort.a_tier_read_from_a_banner_is": [
-   "banner"
-  ],
-  "edusort.a_unit_with_no_tier_sorts_after": [
-   "banner"
-  ],
-  "edusort.read_tiers_from_the_files_own": [
-   "banner"
-  ],
-  "edusort.section_banners": [
-   "banner"
-  ],
-  "edusort.the_shape_is_fixed_so_the_next": [
-   "banner"
-  ],
-  "edusort.write_a_banner_above_each_section": [
-   "banner"
-  ],
-  "edusort.a_banner_like_gondor_tier_2": [
-   "banner",
-   "infantry"
-  ],
-  "edusort.gondor_tier_2_infantry": [
-   "tier",
-   "infantry"
-  ],
-  "edusort.gondor_tier_2_infantry_2": [
-   "tier",
-   "infantry"
-  ],
-  "edusort.line_character": [
-   "character"
-  ],
-  "eng.fileswap.this_dds_cannot_go_into_a": [
-   "texture"
-  ],
-  "battleflags.banner_faction": [
-   "banner",
-   "faction"
-  ],
-  "battleflags.banner_holy": [
-   "banner"
-  ],
-  "battleflags.banner_unit": [
-   "banner",
-   "unit"
-  ],
-  "eng.animpack.the_source_ships_no_packs_of": [
-   "ship"
-  ],
-  "eng.animslot.this_mod_ships_no_animation_packs": [
-   "ship"
-  ],
-  "eng.stratedit.a_settlement_block_opens_with_the": [
-   "castle"
-  ],
-  "eng.stratedit.the_header_says_the_engine_reads": [
-   "settlement",
-   "castle"
-  ],
-  "eng.stratedit.stays_on_the_map_with_no": [
-   "ship"
-  ],
-  "eng.stratedit.two_levels_of_stand_in_this": [
-   "ship"
-  ],
-  "eng.mapnewreal.province_s_grown_from_their_cities": [
-   "port_verb"
-  ],
-  "eng.mapnewreal.climates_is_one_ground_or_koppen": [
-   "climate"
-  ],
-  "eng.mapnewreal.rivers_is_none_or_one_of": [
-   "river"
-  ],
-  "eng.stratchar.is_not_a_rank_a_character": [
-   "leader",
-   "heir"
-  ],
-  "eng.stratchar.s_family_line_on_line_names": [
-   "character"
-  ],
-  "settlemech.level": [
-   "level"
-  ],
-  "eng.bmdb.still_names_outside_its_soldier_line": [
-   "soldier"
-  ],
-  "eng.cas.w_text_latin1": [
-   "character"
-  ],
-  "eng.armory.not_a_model_file": [
-   "mesh"
-  ],
-  "eng.armory.sheet_format": [
-   "texture"
-  ],
-  "eng.cas.w_text_long": [
-   "character"
-  ],
-  "eng.stratcamp.is_not_a_word_the_engine": [
-   "ship"
-  ],
-  "eng.namekeys.this_mod_ships_only_strings_bin": [
-   "ship"
-  ],
-  "eng.gamelog.known_5": [
-   "turn"
-  ],
-  "rebels.of_provinces_name_a_rebel_faction": [
-   "turn"
-  ],
-  "rebels.this_faction_lists_no_unit_line": [
-   "unit"
-  ],
-  "eng.gamelog.howto": [
-   "level"
-  ],
-  "map3d.building_the_mesh": [
-   "building"
-  ],
-  "map3d.frame_the_whole_map_again": [
-   "frame"
-  ],
-  "stratview.this_mod_ships_no_data_models": [
-   "ship"
-  ],
-  "mapfe.before_this_panel_the_picture_was": [
-   "frame"
-  ],
-  "mapfe.proposed_frame": [
-   "frame"
-  ],
-  "mapfe.put_the_frame_back_to_the": [
-   "frame"
-  ],
-  "mapfe.the_frame": [
-   "frame"
-  ],
-  "mapfe.the_frame_2": [
-   "frame"
-  ],
-  "mapfe.the_frame_is_which_rectangle_of": [
-   "frame"
-  ],
-  "mapfe.the_front_end_layer_is_not": [
-   "frame"
-  ],
-  "eng.modeldb.characters_left_over_after_the_entry": [
-   "character"
-  ],
-  "eng.modeldb.this_does_not_start_like_a": [
-   "archive"
-  ],
-  "eng.factions.this_faction_is_renaming_a_slot": [
-   "orphan"
-  ],
-  "eng.buildings.every_one_of_the_32_real": [
-   "religion"
-  ],
-  "eng.buildings.hidden_ceiling_note": [
-   "ship"
-  ],
-  "eng.buildings.line_building_has_no_opening_brace": [
-   "building"
-  ],
-  "eng.server.the_frame_is_not_four_numbers": [
-   "frame"
-  ],
-  "eng.campevents.is_not_one_of_the_eight": [
-   "ship"
-  ],
-  "eng.scriptwords.cond_help_game_d1e6": [
-   "trait",
-   "turn"
-  ],
-  "eng.osmmap.openstreetmap_is_off_turn_it_on": [
-   "turn"
-  ],
-  "osmworld.drag_to_pan_wheel_to_zoom": [
-   "turn"
-  ],
-  "eng.campmap.this_region_is_renaming_it_here": [
-   "orphan"
-  ],
-  "eng.scriptwords.act_help_console_3820": [
-   "battle"
-  ],
-  "mapcheck.records_what_is_wrong_now_as": [
-   "record"
-  ],
-  "eng.regiondel.already_has_a_port_of_its": [
-   "port_verb"
-  ],
-  "regiondel.already_has_a_port_and_only": [
-   "port_verb"
-  ],
-  "regiondel.has_no_port_of_its_own": [
-   "port_verb"
-  ],
-  "regiondel.its_port": [
-   "port_verb"
-  ],
-  "regiondel.the_heir": [
-   "heir"
-  ],
-  "eng.regiondel.s_go_with_the_section_because": [
-   "heir"
-  ],
-  "eng.regiondel.the_region_section_and_its_fort": [
-   "heir"
-  ],
-  "eng.campaint.is_a_marker_colour_black_is": [
-   "port_verb"
-  ],
-  "eng.campaint.is_not_a_marker_map_regions": [
-   "port_verb"
-  ],
-  "eng.campaint.settlement_or_port_pixels_left_alone": [
-   "port_verb"
-  ],
-  "eng.campaint.ships_own_so_it_does_not_see": [
-   "ship"
-  ],
-  "eng.sidefiles.line_a_symbol_sheet_before_any": [
-   "faction"
-  ],
-  "eng.scriptwords.setting_help_avoid_growth_ag_offset_x_36c9": [
-   "unit"
-  ],
-  "campcreate.add_port": [
-   "port_verb"
-  ],
-  "campcreate.give_this_region_a_port_click": [
-   "port_verb"
-  ],
-  "campcreate.has_a_port_review_save_writes": [
-   "port_verb"
-  ],
-  "campcreate.move_port": [
-   "port_verb"
-  ],
-  "campcreate.move_this_regions_port_click_the": [
-   "port_verb"
-  ],
-  "campcreate.remove_port": [
-   "port_verb"
-  ],
-  "campcreate.s_new_port": [
-   "port_verb"
-  ],
-  "campcreate.take_this_regions_port_off_the": [
-   "port_verb"
-  ],
-  "eng.server.model_file_missing": [
-   "ship"
-  ],
-  "report.state_open": [
-   "open"
-  ],
-  "bmdb.imp_button_title": [
-   "battle"
-  ],
-  "eng.modfiles.battle_models_bmdb": [
-   "battle"
-  ],
-  "editor.battle_models_bmdb": [
-   "battle"
-  ],
-  "transfer.glance_models_only": [
-   "battle"
-  ],
-  "transfer.glance_models": [
-   "battle"
-  ],
-  "modelpicker.ug_pick_entry": [
-   "battle"
-  ],
-  "cards.gen_ground": [
-   "frame"
-  ],
-  "cards.gen_game_frame": [
-   "frame"
-  ],
-  "cards.gen_painted_title": [
-   "brush"
-  ],
-  "guided.attr_fire_by_rank": [
-   "turn"
-  ],
-  "guided.attr_bp": [
-   "missile"
-  ],
-  "guided.attr_thrown": [
-   "missile"
-  ],
-  "eng.gamelog.known_script_error": [
-   "character"
-  ],
-  "healthx.at_col": [
-   "character"
-  ],
-  "armory.disk_intro": [
-   "mesh"
-  ],
-  "armory.disk_none": [
-   "mesh"
-  ],
-  "armory.nav_title": [
-   "turn"
-  ],
-  "armory.view_hint_simple": [
-   "turn",
-   "frame"
-  ],
-  "campaint.overwrite_settlement_and_port_pixels": [
-   "port_verb"
-  ],
-  "eng.edusort.the_planned_edu_contains_a_character": [
-   "character"
-  ],
-  "packs.battle_model_entries_no_unit_or": [
-   "battle"
-  ],
-  "packs.battle_model_entries_that_no_unit": [
-   "battle"
-  ],
-  "eng.stratfamily.years": [
-   "year"
-  ]
- },
+ "_exempt": {"app.shared_cards_title": ["tile"], "home.mounted_pack": ["mount"], "settings.and_more_characters_in_the_diagnostic": ["character"], "settings.use_the_base_units_soldier_line": ["soldier"], "core.every_model_a_mod_ships_the": ["ship"], "core.the_tool_did_not_finish_loading": ["turn"], "core.the_two_pictures_per_unit_deduplicated": ["mercenary"], "codeview.every_string_here_is_stored_as": ["character"], "maplabels.character": ["character"], "maplabels.port": ["port_verb"], "maplabels.port_2": ["port_verb"], "voices.no_name_call": ["general"], "voices.own_compiled": ["event"], "voices.own_note": ["event"], "changes.turn_off": ["turn"], "changes.turn_off_putting_the_original_records": ["turn"], "changes.turn_on": ["turn"], "rawtext.pick_a_file_on_the_left": ["model"], "factions.bring_art": ["frame"], "factions.bring_frame_units": ["frame"], "ancillaries.not_found_in_data_ui_ancillaries": ["ancillary"], "family.on_map": ["character"], "transfer.merc_icons_off": ["mercenary"], "transfer.merc_icons_on": ["mercenary"], "transfer.put_the_unit_card_and_info": ["mercenary"], "transfer.not_a_crash_the_engine_animates": ["soldier"], "transfer.mounted_engine": ["mount"], "editor.soldier_replace": ["soldier"], "facaudit.world_maps_campaign": ["campaign"], "campbrowse.campaigns_read_in_ms": ["ship"], "campbrowse.every_campaign_this_mod_ships_with": ["ship"], "campbrowse.nothing_in_to_read_a_menu": ["ship"], "campbrowse.ships_map_layers": ["ship"], "armory.exp_free_turn_title": ["turn"], "eng.stringsbin.a_single_string_cannot_exceed_65535": ["character"], "eng.stringsbin.a_string_says_it_is_characters": ["character"], "campmap.building_the_composite": ["building"], "campmap.click_a_province_to_inspect_it": ["turn"], "campmap.comp_key": ["terrain"], "campmap.has_no_campaign_map_this_tool": ["ship"], "armory.frame_all": ["frame"], "armory.key_frame_all": ["frame"], "armory.key_frame_selected": ["frame"], "armory.head_as_one_title": ["turn"], "armory.look_closer_title": ["turn"], "buildings.level_3": ["level"], "buildings.level_key": ["level"], "buildings.its_battle_model_has_no_texture": ["turn"], "eng.transfer.engine_skeleton_the_mounted_engines_class": ["mount"], "eng.transfer.projectile_model_cas_files_were_copied": ["missile"], "campmap.port_marker": ["port_verb"], "campmap.port_pixel": ["port_verb"], "campmap.port_pixels_undecided": ["port_verb"], "campmap.region_id_tiles_settlement_at_game": ["port_verb"], "campmap.settlement_character_and_port_names_beside": ["port_verb"], "campmap.ships_its_own_so_that_layer": ["ship"], "campmap.the_campaign_map_as_a_surface": ["turn"], "campmap.the_heights_as_a_surface_with": ["turn"], "campmap.this_is_a_marker_pixel_and": ["orphan"], "armory.stamp_rot": ["turn"], "armory.statistics": ["stats"], "armory.uv_hint": ["turn"], "eng.ancillaries.this_ancillary_is_renaming_it_here": ["orphan"], "eng.codeview.length_says_but_text_is": ["character"], "eng.codeview.length_says_but_text_is_and_more": ["character"], "eng.codeview.this_ancillary_is_renaming_it_in": ["orphan"], "eng.codeview.this_entrys_tag_is_renaming_a": ["orphan"], "eng.codeview.this_faction_is_renaming_a_slot": ["orphan"], "eng.codeview.this_guild_is_renaming_it_in": ["orphan"], "eng.codeview.this_is_renaming_it_in_the": ["orphan"], "eng.codeview.this_region_is_renaming_it_in": ["orphan"], "eng.codeview.this_trait_is_renaming_it_in": ["orphan"], "eng.guilds.this_guild_is_renaming_it_here": ["orphan"], "eng.traits.this_trait_is_renaming_it_here": ["orphan"], "buildings.this_mod_ships_no_file_at": ["ship"], "buildings.units_without_battle_model_texture": ["turn"], "eng.guilds.has_no_levels_line_so_no": ["level"], "eng.guilds.levels_counts_upward": ["level"], "eng.guilds.levels_has_threshold_s_20_of": ["level"], "eng.guilds.levels_takes_whole_numbers": ["level"], "campaint.add_a_province_decide_its_record": ["port_verb"], "campaint.place_the_port_pixel_or_skip": ["port_verb"], "campaint.writes_layers_at_once_in_the": ["port_verb"], "campaint.written_into_a_settlement_the_music": ["ship"], "eng.heroabilities.not_in_ui_battle_sd_so": ["battle"], "eng.mercpools.line_a_second_regions_line_for": ["region"], "eng.mercpools.line_is_not_pool_regions_or": ["region", "unit", "pool"], "eng.settlemech.upgrade_is_above_max_which_the": ["upgrade"], "eng.settlemech.upgrade_is_not_s_base_both": ["upgrade"], "guided.banner_faction": ["banner", "faction"], "guided.banner_holy": ["banner"], "guided.banner_unit": ["banner", "unit"], "guided.era_0": ["era"], "guided.era_1": ["era"], "guided.era_2": ["era"], "guided.close": ["close"], "guided.close_2": ["close"], "guided.armour_upgrade_models_outnumber_levels": ["trigger"], "guided.find_an_entry_by_skeleton_by": ["soldier"], "guided.a_projectile_is_set_but_the_weapon_type_is_type": ["missile"], "eng.dupes.a_renamed_block_is_a_real": ["soldier"], "eng.edusort.unit_s_have_no_tier_yet": ["banner"], "viewer3d.art_starts_over_second": ["unit"], "viewer3d.art_starts_over_unit": ["unit"], "viewer3d.in_game_units": ["unit"], "viewer3d.drag_to_turn_wheel_to_zoom": ["turn"], "viewer3d.draw_the_texture_at_the_size": ["ship"], "viewer3d.drawn_at_shipped": ["ship"], "campcreate.new_region_name_paint_settlement_port": ["port_verb"], "campcreate.port": ["port_verb"], "campcreate.port_marker_add_or_move_on": ["port_verb"], "campcreate.select_a_region_first_then_choose": ["port_verb"], "campnew.map_layers_note": ["ship"], "campnew.this_mod_ships_only_the_compiled": ["ship"], "eng.mapcheck.second_port_pixel": ["port_verb"], "eng.mapcheck.second_port_pixel_for_owner": ["port_verb"], "eng.mapcheck.starts_with_a_and_map_regions": ["port_verb"], "eng.mapcheck.the_port_pixel_at_has_no": ["port_verb"], "eng.mapcheck.the_port_pixel_at_touches_no": ["port_verb"], "eng.mapcheck.the_river_crossing_at_is_at": ["level"], "campmark.named_character_general_admiral_port_spy": ["port_verb"], "campmark.port": ["port_verb"], "campmark.ports": ["port_verb"], "campmark.show_settlements_ports_and_campaign_objects": ["port_verb"], "campmark.this_mod_ships_its_own_picture": ["ship"], "v3anim.building_the_glb": ["building"], "v3anim.building_the_obj_zip": ["building"], "v3anim.not_in_the_skeleton_pack_only_loose": ["ship"], "v3anim.played_from_vanillas_pack_this_mod": ["ship"], "guided.florins_the_smith_charges_to_upgrade": ["charge"], "guided.florins_the_smith_charges_to_upgrade_2": ["charge"], "guided.heavy_light_general": ["general"], "guided.how_many_comes_from_the_extras": ["soldier"], "guided.how_many_the_unit_fields_comes_from": ["soldier"], "guided.how_the_weapon_is_used_melee_thrown": ["melee"], "guided.infantry_cavalry_siege_ship_handler": ["infantry", "cavalry", "siege", "ship"], "guided.light_heavy_missile_spearmen": ["missile"], "guided.men_in_the_unit_at_the_largest": ["ship"], "guided.mercenary_unit_the_unit_card_is": ["mercenary"], "guided.missile_infantry_cavalry_and_siege": ["missile"], "guided.most_mods_leave_it_out_and_use": ["mount"], "eng.mapfe.the_frame_at_x_g_y": ["frame"], "eng.mapfe.the_frame_is_w_g_x": ["frame"], "eng.mapfe.the_frame_is_w_g_x_2": ["frame"], "guided.mounted_engine": [], "guided.optional_the_effect_played_when_the_weapon": ["turn"], "packs.battle_model_entr_travel_with_them": ["mount"], "packs.soldier_of_lods_files": ["soldier"], "packs.soldier_only_entries_with_an_identical": ["soldier"], "packs.unit_soldier_line_s_are_repointed": ["soldier"], "eng.animloose.turns_bones_and_its_skeleton_has": ["turn"], "eng.casanim.turns_bones_and_the_skeleton_has": ["turn"], "v3anim.turn_every_key": ["turn"], "v3anim.turns_to": ["turn"], "v3anim.vanillas_skeleton_pack_this_mod_ships": ["ship"], "v3anim.walk_charge_die_a_file_name": ["charge"], "guided.the_line_goes_directly_after_soldier": ["soldier"], "guided.the_list_is_the_lt_holybanners_gt": ["crusade", "cavalry"], "guided.these_entries_do_not_decide_how_the": ["soldier"], "guided.up_to_three_officer_lines_directly": ["soldier"], "guided.vanilla_ships_it_commented_out": ["ship"], "guided.vanilla_ships_it_commented_out_on": ["ship"], "guided.wagons_like_the_great_cross_count": ["siege"], "guided.with_two_formations_the_first_must": ["horde"], "osmmap.mylaes_layout_the_maps_layers_as": ["port_verb"], "osmmap.open_settings_to_turn_it_on": ["turn"], "osmmap.the_style_above_cut_to_the": ["frame"], "eng.campfiles.this_mod_ships_only_so_the": ["ship"], "eng.campnew.is_not_on_disk_and_ships": ["ship"], "eng.campnew.nothing_names_on_the_new_game_menu_archive": ["ship"], "eng.campnew.ships_map_layer_s_of_its": ["ship"], "minorfiles.the_culture_the_record_does_not": ["port"], "minorfiles.where_it_starts_every_regions_religions": ["ship"], "sprites.this_mod_ships_m2tweop_so_generation": ["ship"], "sprites.turn_the_flag_back_off": ["turn"], "sprites.the_bypass_flag_makes_the_next_normal": ["turn"], "eng.campfiles.now_has_no_music_type_and": ["region"], "minorfiles.port_ladder_line_s_in_the": ["port", "port_verb"], "minorfiles.this_culture_has_no_port_lines": ["port", "port_verb"], "stratcamp.faction_bik": ["faction"], "cards.gen_place_reset": ["frame"], "cards.gen_rig_hint": ["turn"], "cards.gen_turn": ["turn"], "cards.gen_view_hint": ["turn"], "eng.climatenew.a_climate_name_the_battle_map": ["ship"], "eng.climatenew.all_four_mods_measured_for_this": ["ship"], "cards.already_live_only_in_merc": ["mercenary"], "cards.and_more_written_into_the_merc": ["mercenary"], "cards.confirm_move_folded": ["mercenary"], "cards.copying_file_s_out_writing_into": ["mercenary"], "cards.merc": ["mercenary"], "cards.one_is_the_merc_copy": ["mercenary"], "mapsize.turn_the_real_world_switch_on": ["turn"], "eng.minorfiles.line_before_the_first_culture_line": ["culture"], "eng.minorfiles.line_religion_has_no_closing_brace": ["religion"], "eng.minorfiles.line_religions_has_no_closing_brace": ["religion"], "eng.minorfiles.this_cultures_port_ladder_has_lines": ["port", "port_verb"], "eng.minorfiles.this_is_renaming_it_here_would": ["orphan"], "eng.minorfiles.this_text_has_no_faction_line": ["faction"], "cards.data_ui_units_data_ui_unit": ["unit"], "eng.winconds.could_not_be_read_the_stock": ["ship"], "eng.stratobj.is_pixel_none_of_the_800_port": ["port_verb"], "eng.stratobj.is_pixel_none_of_the_800_settlement": ["port_verb"], "eng.stratobj.there_is_no_folder_under_any": ["settlement"], "mapquery.building_that_map": ["building"], "climates.append_a_name_the_engine_does": ["ship"], "climates.taking_over_one_of_the_twelve": ["ship"], "soundbanks.has_no_data_the_game_uses": ["ship"], "soundbanks.event_line_sample_count": ["event"], "eng.campstrat.fort_line_does_not_read_as": ["culture"], "eng.campstrat.settlement_header_says_the_engine_knows": ["castle"], "eng.campstrat.should_be_armour": ["armour"], "eng.campstrat.unit_line_does_not_read_as": ["armour"], "eng.campstrat.faction_relationships_does_not_read_as": ["faction"], "eng.campstrat.faction_standings_does_not_read_as": ["faction"], "stratmap.draw_a_campaign_map_model_beside": ["ship"], "stratmap.file_named_by_no_model_but": ["turn"], "edusort.a_comment_in_this_file_starts": ["banner"], "edusort.a_tier_read_from_a_banner_is": ["banner"], "edusort.a_unit_with_no_tier_sorts_after": ["banner"], "edusort.read_tiers_from_the_files_own": ["banner"], "edusort.section_banners": ["banner"], "edusort.the_shape_is_fixed_so_the_next": ["banner"], "edusort.write_a_banner_above_each_section": ["banner"], "edusort.a_banner_like_gondor_tier_2": ["banner", "infantry"], "edusort.gondor_tier_2_infantry": ["tier", "infantry"], "edusort.gondor_tier_2_infantry_2": ["tier", "infantry"], "edusort.line_character": ["character"], "eng.fileswap.this_dds_cannot_go_into_a": ["texture"], "battleflags.banner_faction": ["banner", "faction"], "battleflags.banner_holy": ["banner"], "battleflags.banner_unit": ["banner", "unit"], "eng.animpack.the_source_ships_no_packs_of": ["ship"], "eng.animslot.this_mod_ships_no_animation_packs": ["ship"], "eng.stratedit.a_settlement_block_opens_with_the": ["castle"], "eng.stratedit.the_header_says_the_engine_reads": ["settlement", "castle"], "eng.stratedit.stays_on_the_map_with_no": ["ship"], "eng.stratedit.two_levels_of_stand_in_this": ["ship"], "eng.mapnewreal.province_s_grown_from_their_cities": ["port_verb"], "eng.mapnewreal.climates_is_one_ground_or_koppen": ["climate"], "eng.mapnewreal.rivers_is_none_or_one_of": ["river"], "eng.stratchar.is_not_a_rank_a_character": ["leader", "heir"], "eng.stratchar.s_family_line_on_line_names": ["character"], "settlemech.level": ["level"], "eng.bmdb.still_names_outside_its_soldier_line": ["soldier"], "eng.cas.w_text_latin1": ["character"], "eng.armory.not_a_model_file": ["mesh"], "eng.armory.sheet_format": ["texture"], "eng.cas.w_text_long": ["character"], "eng.stratcamp.is_not_a_word_the_engine": ["ship"], "eng.namekeys.this_mod_ships_only_strings_bin": ["ship"], "eng.gamelog.known_5": ["turn"], "rebels.of_provinces_name_a_rebel_faction": ["turn"], "rebels.this_faction_lists_no_unit_line": ["unit"], "eng.gamelog.howto": ["level"], "map3d.building_the_mesh": ["building"], "map3d.frame_the_whole_map_again": ["frame"], "stratview.this_mod_ships_no_data_models": ["ship"], "mapfe.before_this_panel_the_picture_was": ["frame"], "mapfe.proposed_frame": ["frame"], "mapfe.put_the_frame_back_to_the": ["frame"], "mapfe.the_frame": ["frame"], "mapfe.the_frame_2": ["frame"], "mapfe.the_frame_is_which_rectangle_of": ["frame"], "mapfe.the_front_end_layer_is_not": ["frame"], "eng.modeldb.characters_left_over_after_the_entry": ["character"], "eng.modeldb.this_does_not_start_like_a": ["archive"], "eng.factions.this_faction_is_renaming_a_slot": ["orphan"], "eng.buildings.every_one_of_the_32_real": ["religion"], "eng.buildings.hidden_ceiling_note": ["ship"], "eng.buildings.line_building_has_no_opening_brace": ["building"], "eng.server.the_frame_is_not_four_numbers": ["frame"], "eng.campevents.is_not_one_of_the_eight": ["ship"], "eng.scriptwords.cond_help_game_d1e6": ["trait", "turn"], "eng.osmmap.openstreetmap_is_off_turn_it_on": ["turn"], "osmworld.drag_to_pan_wheel_to_zoom": ["turn"], "eng.campmap.this_region_is_renaming_it_here": ["orphan"], "eng.scriptwords.act_help_console_3820": ["battle"], "mapcheck.records_what_is_wrong_now_as": ["record"], "eng.regiondel.already_has_a_port_of_its": ["port_verb"], "regiondel.already_has_a_port_and_only": ["port_verb"], "regiondel.has_no_port_of_its_own": ["port_verb"], "regiondel.its_port": ["port_verb"], "regiondel.the_heir": ["heir"], "eng.regiondel.s_go_with_the_section_because": ["heir"], "eng.regiondel.the_region_section_and_its_fort": ["heir"], "eng.campaint.is_a_marker_colour_black_is": ["port_verb"], "eng.campaint.is_not_a_marker_map_regions": ["port_verb"], "eng.campaint.settlement_or_port_pixels_left_alone": ["port_verb"], "eng.campaint.ships_own_so_it_does_not_see": ["ship"], "eng.sidefiles.line_a_symbol_sheet_before_any": ["faction"], "eng.scriptwords.setting_help_avoid_growth_ag_offset_x_36c9": ["unit"], "campcreate.add_port": ["port_verb"], "campcreate.give_this_region_a_port_click": ["port_verb"], "campcreate.has_a_port_review_save_writes": ["port_verb"], "campcreate.move_port": ["port_verb"], "campcreate.move_this_regions_port_click_the": ["port_verb"], "campcreate.remove_port": ["port_verb"], "campcreate.s_new_port": ["port_verb"], "campcreate.take_this_regions_port_off_the": ["port_verb"], "eng.server.model_file_missing": ["ship"], "report.state_open": ["open"], "bmdb.imp_button_title": ["battle"], "eng.modfiles.battle_models_bmdb": ["battle"], "editor.battle_models_bmdb": ["battle"], "transfer.glance_models_only": ["battle"], "transfer.glance_models": ["battle"], "modelpicker.ug_pick_entry": ["battle"], "cards.gen_ground": ["frame"], "cards.gen_game_frame": ["frame"], "cards.gen_painted_title": ["brush"], "guided.attr_fire_by_rank": ["turn"], "guided.attr_bp": ["missile"], "guided.attr_thrown": ["missile"], "eng.gamelog.known_script_error": ["character"], "healthx.at_col": ["character"], "armory.disk_intro": ["mesh"], "armory.disk_none": ["mesh"], "armory.nav_title": ["turn"], "armory.view_hint_simple": ["turn", "frame"], "campaint.overwrite_settlement_and_port_pixels": ["port_verb"], "eng.edusort.the_planned_edu_contains_a_character": ["character"], "packs.battle_model_entries_no_unit_or": ["battle"], "packs.battle_model_entries_that_no_unit": ["battle"], "eng.stratfamily.years": ["year"], "eng.scriptaddons.older_moved": ["script"]},
  "home.all_present": " · все на месте",
  "home.all_settings": "⚙ Все параметры",
  "home.animation_packs": "{open} Пакеты анимаций{x}",
@@ -10012,7 +9018,7 @@
  "eng.modfork.exists": "{target} уже существует; выберите другое имя",
  "eng.modfork.not_in_mods": "Мод {base} находится вне папки mods",
  "eng.modfork.nothing_copied": "не удалось скопировать ни один файл мода {base} (первый: {rel}; причина: {why})",
- "eng.modfork.same_name": "имя нового мода должно отличаться от имени основы",
+ "eng.modfork.same_name": "дайте копии собственное имя, отличное от имени исходного мода",
  "eng.pack.carries_no_export_descr_unit_txt": "В {name} нет export_descr_unit.txt, поэтому отряды не указаны",
  "eng.pack.does_not_exist": "{zip_path} не существует",
  "eng.pack.has_no_data_folder_it_is": "В {name} нет папки data/; это не пакет отрядов",
@@ -10919,9 +9925,9 @@
  "eng.gamelog.known_10": "Движок не смог определить, какую игру или мод запускать: прочитанный путь ({a}) некорректен из-за неверно прочитанных букв в пути к игре либо запуска вне ее папки. Запускайте мод его файлом .bat из папки мода.",
  "eng.gamelog.known_11": "Скелет битвы указывает анимацию, которую игра не находит ни в пакете анимаций, ни в отдельном .cas. Игра останавливается при загрузке анимаций до меню. Обычно причина в отрядах из другого мода: скопируйте оттуда недостающий .cas или перенесите отряд заново.",
  "eng.gamelog.known_12": "Условие скрипта {a} запрашивает {b}, но событие не предоставляет это значение. Игра считает условие ложным, и триггер не срабатывает. Это не сбой.",
- "eng.gamelog.known_13": "Игра завершилась со сбоем. Строки журнала непосредственно перед этой указывают, что она делала.",
+ "eng.gamelog.known_13": "????? ???? ????????????. ?????????? ?????? ????: ? ??? ???????, ??? ?????????? ????.",
  "eng.gamelog.known_14": "Внутренняя проверка в коде игры завершилась ошибкой ({a}, строка {b}) при чтении данных; предыдущие строки указывают, что читалось.",
- "eng.gamelog.known_15": "Игра встретила неизвестное имя.",
+ "eng.gamelog.known_15": "? ????? ??????? ???-?? ??????????? ????.",
  "eng.gamelog.known_2": "{a} стоит на недоступном тайле (море, река, горы, густой лес или вне карты), поэтому игра исключает персонажа. Переместите его на карте кампании.",
  "eng.gamelog.known_3": "Здание разрешает {b} набор отряда {a}, но список владельцев в export_descr_unit.txt не содержит {b}, поэтому игра отбрасывает строку набора. Назначьте отряд {b} в редакторе отрядов либо уберите {b} из строки в разделе «Здания».",
  "eng.gamelog.known_4": "Город {c} расположен на недоступном тайле {a}, {b} (вода, заблокированный тайл или вне карты). Армии не могут до него добраться. Переместите его на карте кампании или проверьте размер карты.",
@@ -11209,23 +10215,22 @@
  },
  "eng.gamelog.howto": "Игра записывает system.log.txt только при включенном журнале; M2EX держит его включенным. Для оригинальной игры добавьте эти строки в раздел [log] файла .cfg, с которым запускается мод, затем снова запустите игру и повторите действие, вызвавшее ошибку:\n[log]\nto = logs/system.log.txt\nlevel = * error",
  "eng.scriptaddons.an_add_on_is_a_squirrel": "Дополнение является скриптом Squirrel (.nut) или zip с таким скриптом; REX и M2EX загружают их",
- "eng.scriptaddons.the_tool_has_no_folder_of": "У инструмента нет собственной папки для хранения дополнений",
- "eng.scriptbuilder.the_editor_has_no_folder_of": "У редактора нет собственной папки для хранения дополнений",
+ "eng.scriptaddons.the_tool_has_no_folder_of": "??????????? ????? ??????????? ????? ??? ???????? ??????? ????????",
+ "eng.scriptbuilder.the_editor_has_no_folder_of": "????????? ????? ??????????? ????? ??? ???????? ??????? ????????",
  "eng.scriptaddons.no_nut_script": "В {name} нет скрипта .nut",
  "eng.scriptaddons.built_in": "{name} встроен",
  "eng.scriptaddons.updated": "Обновлено {name}: {where}",
  "eng.scriptaddons.put_in": "Установлено {name}: {where}",
- "eng.scriptaddons.no_older_lua": "{entry}: больше не загружает старый Lua {old}",
  "eng.scriptaddons.over_1_mb": "{name} превышает 1 МБ; это не скрипт",
  "eng.scriptaddons.bad_script_name": "{name}: имя скрипта может содержать только буквы, цифры, _ - и .",
  "eng.scriptaddons.built_in_already": "{name} уже встроен (есть в списке)",
- "eng.scriptaddons.no_var_line": "В скрипте дополнения нет строки {var}",
+ "eng.scriptaddons.no_var_line": "скрипт не содержит объявления {var}",
  "eng.scriptaddons.settings_not_kept": "{name}: не удалось сохранить параметры ({why}); установлены значения по умолчанию этой версии",
  "eng.scriptbuilder.unknown_condition": "неизвестное условие {kind}",
- "eng.scriptbuilder.unknown_action": "неизвестное действие {kind}",
- "eng.scriptbuilder.messages_made_copy": "Создан {name} (копия собственного файла игры): сообщения модуля",
- "eng.scriptbuilder.messages_made": "Создан {name}: сообщения модуля",
- "eng.scriptbuilder.not_made_with_builder": "{name} является дополнением, созданным без конструктора; задайте модулю другое имя",
+ "eng.scriptbuilder.unknown_action": "??????????? ???????? {kind}",
+ "eng.scriptbuilder.messages_made_copy": "{name} ?????? ?? ??????? ??????? ??? ????????? ??????",
+ "eng.scriptbuilder.messages_made": "{name} ?????? ??? ????????? ??????",
+ "eng.scriptbuilder.not_made_with_builder": "{name} ??????????? ??????? ???????? ???????; ???????? ?????? ????????",
  "eng.scriptcompat.writes": "записать {path}",
  "eng.scriptcompat.deletes": "удалить {path}{why}",
  "eng.scriptcompat.nothing": "нечего менять",
@@ -11661,96 +10666,96 @@
  },
  "eng.soundscripts.whatever_played_the_engine_or_a": "Все, что воспроизводило {value}, будь то движок или скрипт, теперь ничего не воспроизводит",
  "eng.soundscripts.whatever_plays_the_engine_or_a": "Все, что воспроизводит {value}, будь то движок или скрипт, теперь ничего не воспроизводит",
- "eng.scriptwords.event_player_turn_2639": "начинается ход игрока (раз за ход)",
- "eng.scriptwords.event_help_player_turn_9c20": "раз за ход, когда начинается ваш ход (ход игрока); фракцией является игрок",
- "eng.scriptwords.event_faction_turn_2e49": "начинается ход каждой фракции (по очереди)",
- "eng.scriptwords.event_help_faction_turn_428b": "один раз для КАЖДОЙ фракции в начале ее хода, около 20 раз за раунд; для одного срабатывания за ход выберите «начинается ход игрока»",
- "eng.scriptwords.event_town_turn_ca39": "начинается ход города (каждого города)",
- "eng.scriptwords.event_help_town_turn_28fe": "один раз для каждого города каждой фракции в начале хода его фракции",
+ "eng.scriptwords.event_player_turn_2639": "ваша фракция начинает свой ход",
+ "eng.scriptwords.event_help_player_turn_9c20": "выполнить правило, когда ваша фракция начинает свой ход",
+ "eng.scriptwords.event_faction_turn_2e49": "фракция начинает свой ход",
+ "eng.scriptwords.event_help_faction_turn_428b": "выполнить правило, когда фракция начинает свой ход",
+ "eng.scriptwords.event_town_turn_ca39": "город начинает свой ход",
+ "eng.scriptwords.event_help_town_turn_28fe": "выполнить правило, когда город начинает свой ход",
  "eng.scriptwords.event_town_taken_0584": "полководец захватывает город",
- "eng.scriptwords.event_help_town_taken_1799": "фракция означает захватившую город, прежний владелец означает потерявшую его",
- "eng.scriptwords.event_building_done_18ac": "в городе завершено строительство здания",
- "eng.scriptwords.event_help_building_done_4dda": "один раз для каждого завершенного здания",
- "eng.scriptwords.event_unit_trained_a823": "в городе подготовлен отряд",
- "eng.scriptwords.event_help_unit_trained_ee74": "один раз для каждого подготовленного отряда (купленные наемники не считаются подготовленными)",
- "eng.scriptwords.event_battle_over_0df7": "битва заканчивается (для каждого полководца в ней)",
- "eng.scriptwords.event_help_battle_over_87e8": "один раз для каждого участвовавшего полководца, победителя или проигравшего",
+ "eng.scriptwords.event_help_town_taken_1799": "выполнить правило, когда полководец захватывает город",
+ "eng.scriptwords.event_building_done_18ac": "здание построено",
+ "eng.scriptwords.event_help_building_done_4dda": "выполнить правило, когда здание построено",
+ "eng.scriptwords.event_unit_trained_a823": "отряд завершает обучение",
+ "eng.scriptwords.event_help_unit_trained_ee74": "выполнить правило, когда отряд завершает обучение",
+ "eng.scriptwords.event_battle_over_0df7": "битва заканчивается",
+ "eng.scriptwords.event_help_battle_over_87e8": "выполнить правило, когда битва заканчивается",
  "eng.scriptwords.event_town_riots_ef8c": "в городе беспорядки",
- "eng.scriptwords.event_help_town_riots_50b2": "фракцией является владелец города",
+ "eng.scriptwords.event_help_town_riots_50b2": "????????? ??????? ??? ??????????? ? ??????",
  "eng.scriptwords.event_town_rebels_0728": "город переходит к повстанцам",
- "eng.scriptwords.event_help_town_rebels_f79b": "фракцией является владелец города до его отделения",
- "eng.scriptwords.event_town_grows_6b82": "город вырастает до следующего уровня",
- "eng.scriptwords.event_help_town_grows_aa31": "деревня становится городом, город становится большим городом…",
+ "eng.scriptwords.event_help_town_rebels_f79b": "выполнить правило, когда город переходит к повстанцам",
+ "eng.scriptwords.event_town_grows_6b82": "????? ????????? ?? ????????? ??????? ???????",
+ "eng.scriptwords.event_help_town_grows_aa31": "????????? ???????, ????? ????? ????????? ?? ????????? ??????? ???????",
  "eng.scriptwords.event_faction_destroyed_6ab4": "фракция уничтожена",
- "eng.scriptwords.event_help_faction_destroyed_8e82": "фракция означает уничтоженную фракцию",
- "eng.scriptwords.event_new_leader_f5f4": "у фракции появляется новый лидер",
- "eng.scriptwords.event_help_new_leader_1f3a": "полководец означает нового лидера",
- "eng.scriptwords.event_comes_of_age_b586": "сын достигает совершеннолетия",
- "eng.scriptwords.event_help_comes_of_age_f618": "полководец означает этого юношу",
- "eng.scriptwords.event_new_round_2ee3": "начинается новый раунд (номер хода увеличивается)",
- "eng.scriptwords.event_help_new_round_2989": "один раз за раунд, до действий любой фракции; для каждой фракции выберите ниже «каждая фракция»",
- "eng.scriptwords.event_character_died_ce5a": "персонаж умирает (по любой причине)",
- "eng.scriptwords.event_help_character_died_956a": "полководец, член семьи или агент навсегда покидает карту; фракцией является его собственная",
- "eng.scriptwords.event_faction_died_5aac": "фракция уничтожена (до передачи ее земель)",
- "eng.scriptwords.event_help_faction_died_7e0e": "фракция означает уничтоженную; ее города и армии пока еще принадлежат ей",
- "eng.scriptwords.event_new_campaign_77b6": "начинается новая кампания (не загрузка сохранения)",
- "eng.scriptwords.event_help_new_campaign_0292": "один раз при создании совершенно новой кампании; загрузка сохранения сюда не приводит",
- "eng.scriptwords.cond_who_15d3": "фракция:",
- "eng.scriptwords.field_who_names_66bb": "фракции",
- "eng.scriptwords.cond_money_e2a9": "ее деньги",
- "eng.scriptwords.field_money_v_22b7": "денарии",
- "eng.scriptwords.cond_towns_c2fe": "число ее городов",
- "eng.scriptwords.field_towns_v_cec2": "города",
- "eng.scriptwords.cond_turn_7d2d": "ход",
- "eng.scriptwords.cond_help_turn_7112": "номер хода кампании, начиная с 1",
- "eng.scriptwords.field_turn_v_3e50": "ход",
- "eng.scriptwords.cond_chance_dcb7": "вероятность",
- "eng.scriptwords.cond_help_chance_24fc": "случайная проверка при каждом срабатывании",
- "eng.scriptwords.field_chance_v_981a": "%",
- "eng.scriptwords.cond_people_6a9d": "население города",
- "eng.scriptwords.field_people_v_18de": "жители",
- "eng.scriptwords.cond_town_is_47e2": "город входит в список",
- "eng.scriptwords.field_town_is_names_c719": "города",
- "eng.scriptwords.cond_capital_92fe": "город является столицей фракции",
- "eng.scriptwords.cond_has_chain_b70c": "в городе есть здание из",
- "eng.scriptwords.cond_help_has_chain_2d0c": "цепочка зданий из export_descr_buildings.txt",
- "eng.scriptwords.field_has_chain_v_181a": "цепочка",
- "eng.scriptwords.cond_old_owner_95ac": "прежний владелец:",
- "eng.scriptwords.field_old_owner_names_321e": "фракции",
- "eng.scriptwords.cond_counter_1446": "запомненное число",
- "eng.scriptwords.cond_help_counter_a72a": "число, которое модуль сохраняет между ходами (его задают действия «запомнить число» / «прибавить к запомненному числу»); до задания равно 0. Движки хранят его как счетчик событий, поэтому I_EventCounter в campaign_script тоже его читает; {faction} {town} в имени создают отдельное число для каждой фракции / города",
- "eng.scriptwords.field_counter_name_e1ee": "с именем",
- "eng.scriptwords.cond_game_9e9c": "игровое условие (любое из условий движка)",
- "eng.scriptwords.cond_help_game_d1e6": "любое условие из собственного списка движков («Выбрать…» показывает все), проверяемое для только что произошедшего события; например, I_TurnNumber > 5, FactionType england, SettlementName London, Trait GoodCommander > 0. Слово 'not' в начале инвертирует условие; {town} {faction} {owner} {general} {turn} {people} подставляются",
- "eng.scriptwords.field_game_line_c2cb": "условие",
- "eng.scriptwords.act_money_2bc5": "выдать деньги",
- "eng.scriptwords.act_help_money_282b": "значение ниже 0 забирает деньги",
- "eng.scriptwords.field_money_amount_12fc": "денарии",
- "eng.scriptwords.field_money_to_17b2": "кому",
- "eng.scriptwords.act_people_5201": "добавить жителей в город",
- "eng.scriptwords.act_help_people_8ce3": "значение ниже 0 убирает жителей (население города не опускается ниже минимума его уровня)",
- "eng.scriptwords.field_people_amount_3921": "жители",
- "eng.scriptwords.act_people_pct_ad70": "город теряет долю населения",
- "eng.scriptwords.field_people_pct_pct_4b3c": "%",
- "eng.scriptwords.act_people_max_016a": "в городе остается не более",
- "eng.scriptwords.act_help_people_max_c375": "жители сверх этого числа исчезают; если их меньше, ничего не меняется (верхний предел, как в «Избегать роста»)",
- "eng.scriptwords.field_people_max_max_39ef": "жители",
- "eng.scriptwords.act_build_0a79": "построить в городе",
- "eng.scriptwords.act_help_build_b6f3": "уровень здания из export_descr_buildings.txt (его цепочка должна подходить городу)",
+ "eng.scriptwords.event_help_faction_destroyed_8e82": "выполнить правило, когда фракция уничтожена",
+ "eng.scriptwords.event_new_leader_f5f4": "персонаж становится лидером",
+ "eng.scriptwords.event_help_new_leader_1f3a": "выполнить правило, когда персонаж становится лидером",
+ "eng.scriptwords.event_comes_of_age_b586": "персонаж достигает совершеннолетия",
+ "eng.scriptwords.event_help_comes_of_age_f618": "выполнить правило, когда персонаж достигает совершеннолетия",
+ "eng.scriptwords.event_new_round_2ee3": "?????????? ????? ?????",
+ "eng.scriptwords.event_help_new_round_2989": "????????? ???????, ????? ?????????? ????? ?????",
+ "eng.scriptwords.event_character_died_ce5a": "персонаж умирает",
+ "eng.scriptwords.event_help_character_died_956a": "выполнить правило, когда персонаж умирает",
+ "eng.scriptwords.event_faction_died_5aac": "фракция вот-вот исчезнет",
+ "eng.scriptwords.event_help_faction_died_7e0e": "выполнить правило, когда фракция вот-вот исчезнет",
+ "eng.scriptwords.event_new_campaign_77b6": "начинается новая кампания",
+ "eng.scriptwords.event_help_new_campaign_0292": "выполнить правило, когда начинается новая кампания",
+ "eng.scriptwords.cond_who_15d3": "управление фракцией",
+ "eng.scriptwords.field_who_names_66bb": "выбранные фракции",
+ "eng.scriptwords.cond_money_e2a9": "???????? ?????",
+ "eng.scriptwords.field_money_v_22b7": "????? ? ?????",
+ "eng.scriptwords.cond_towns_c2fe": "????? ???????",
+ "eng.scriptwords.field_towns_v_cec2": "?????????? ???????",
+ "eng.scriptwords.cond_turn_7d2d": "ход кампании",
+ "eng.scriptwords.cond_help_turn_7112": "проверить ход кампании, считая начальный ход первым",
+ "eng.scriptwords.field_turn_v_3e50": "номер хода",
+ "eng.scriptwords.cond_chance_dcb7": "????????? ???????????",
+ "eng.scriptwords.cond_help_chance_24fc": "?????? ????????? ?????????? ??????????? ??? ?????? ???????? ???????",
+ "eng.scriptwords.field_chance_v_981a": "??????????? ? ?????????",
+ "eng.scriptwords.cond_people_6a9d": "???????? ?????????",
+ "eng.scriptwords.field_people_v_18de": "??????????? ?????????",
+ "eng.scriptwords.cond_town_is_47e2": "????????? ??????",
+ "eng.scriptwords.field_town_is_names_c719": "????????? ??????",
+ "eng.scriptwords.cond_capital_92fe": "???????",
+ "eng.scriptwords.cond_has_chain_b70c": "есть цепочка зданий",
+ "eng.scriptwords.cond_help_has_chain_2d0c": "проверить, есть ли в городе события любой уровень выбранной цепочки зданий",
+ "eng.scriptwords.field_has_chain_v_181a": "цепочка зданий",
+ "eng.scriptwords.cond_old_owner_95ac": "?????????? ??????? ??????????",
+ "eng.scriptwords.field_old_owner_names_321e": "выбранные фракции",
+ "eng.scriptwords.cond_counter_1446": "???????? ????????",
+ "eng.scriptwords.cond_help_counter_a72a": "сравнить сохраненный счетчик событий движка с выбранным значением",
+ "eng.scriptwords.field_counter_name_e1ee": "????????????? ????????",
+ "eng.scriptwords.cond_game_9e9c": "условие движка",
+ "eng.scriptwords.cond_help_game_d1e6": "проверить движком условие скрипта кампании с данными события",
+ "eng.scriptwords.field_game_line_c2cb": "строка условия",
+ "eng.scriptwords.act_money_2bc5": "???????? ?????",
+ "eng.scriptwords.act_help_money_282b": "добавить деньги в казну выбранной фракции или вычесть их отрицательной суммой",
+ "eng.scriptwords.field_money_amount_12fc": "????????? ?????",
+ "eng.scriptwords.field_money_to_17b2": "??????????",
+ "eng.scriptwords.act_people_5201": "???????? ?????????",
+ "eng.scriptwords.act_help_people_8ce3": "добавить жителей в город события или удалить их отрицательной суммой",
+ "eng.scriptwords.field_people_amount_3921": "????????? ?????????",
+ "eng.scriptwords.act_people_pct_ad70": "????????? ????????? ?? ???????",
+ "eng.scriptwords.field_people_pct_pct_4b3c": "??????? ??????????",
+ "eng.scriptwords.act_people_max_016a": "?????????? ?????????",
+ "eng.scriptwords.act_help_people_max_c375": "сократить население города события, только если оно превышает выбранный предел",
+ "eng.scriptwords.field_people_max_max_39ef": "?????? ?????????",
+ "eng.scriptwords.act_build_0a79": "добавить здание",
+ "eng.scriptwords.act_help_build_b6f3": "добавить выбранный уровень здания в город события",
  "eng.scriptwords.field_build_level_d452": "уровень здания",
- "eng.scriptwords.act_tear_down_78ec": "снести в городе",
- "eng.scriptwords.act_help_tear_down_5ab5": "всю цепочку; здания правителя (core_...) никогда не сносятся",
- "eng.scriptwords.field_tear_down_chain_1950": "цепочка",
- "eng.scriptwords.act_units_1237": "новые отряды в городе",
- "eng.scriptwords.act_help_units_9a9e": "отряды из export_descr_unit.txt присоединяются к гарнизону города",
- "eng.scriptwords.field_units_unit_c406": "отряд",
- "eng.scriptwords.field_units_count_29d7": "отряды",
- "eng.scriptwords.act_give_town_1fc1": "передать город",
- "eng.scriptwords.act_stance_5fd8": "задать отношения между",
- "eng.scriptwords.field_stance_b_06da": "и",
- "eng.scriptwords.field_stance_stance_b832": "значение",
- "eng.scriptwords.act_trait_86d5": "дать полководцу черту",
- "eng.scriptwords.field_trait_trait_c949": "черта",
+ "eng.scriptwords.act_tear_down_78ec": "удалить цепочку зданий",
+ "eng.scriptwords.act_help_tear_down_5ab5": "удалить выбранную цепочку зданий из города события",
+ "eng.scriptwords.field_tear_down_chain_1950": "??????? ??? ????????",
+ "eng.scriptwords.act_units_1237": "добавить отряды гарнизона",
+ "eng.scriptwords.act_help_units_9a9e": "создать выбранное число отрядов в гарнизоне города события",
+ "eng.scriptwords.field_units_unit_c406": "тип отряда",
+ "eng.scriptwords.field_units_count_29d7": "отряды для добавления",
+ "eng.scriptwords.act_give_town_1fc1": "переносить город",
+ "eng.scriptwords.act_stance_5fd8": "?????? ??????????????? ?????????",
+ "eng.scriptwords.field_stance_b_06da": "другая фракция",
+ "eng.scriptwords.field_stance_stance_b832": "?????????",
+ "eng.scriptwords.act_trait_86d5": "дать черту",
+ "eng.scriptwords.field_trait_trait_c949": "идентификатор черты",
  "mapcheck.already_in_the_mod": " · уже в моде",
  "mapcheck.and_more": "…и еще {n}.",
  "mapcheck.auto_fixes_geomods_debugger_actions_with": "Автоисправления <span class=\"count\">действия отладчика Geomod, с одним набором резервных копий и одной отменой в Журнале</span>",
@@ -12009,96 +11014,53 @@
  "eng.campmap.this_settlement_is_the_lookup_file": "Это поселение `{settlement}`. На это имя ссылаются файл поиска, файл текста имен поселений и скрипт кампании. Кнопка переименования рядом обновляет первые два и сообщает о третьем (19b). По проверке обоих установленных модов, descr_strat.txt НЕ входит в их число: блок поселения указывает провинцию, а не собственное имя",
  "eng.campmap.triumph_value_and_farming_level_not": "значение триумфа и уровень земледелия не указаны вместе",
  "eng.campmap.unrecognised_line_s_in_the_record": "Нераспознанных строк в записи: {x}",
- "eng.scriptwords.field_trait_level_93ee": "уровень",
- "eng.scriptwords.act_ancillary_5169": "дать полководцу члена свиты",
- "eng.scriptwords.act_counter_set_82cf": "запомнить число",
- "eng.scriptwords.act_help_counter_set_fa2a": "сохраняется между ходами и в сохраненной игре; его читает условие «запомненное число»",
- "eng.scriptwords.field_counter_set_name_5e64": "с именем",
- "eng.scriptwords.act_counter_add_af70": "прибавить к запомненному числу",
- "eng.scriptwords.act_help_counter_add_fc8e": "значение ниже 0 вычитается; еще не заданное число начинается с 0",
- "eng.scriptwords.field_counter_add_name_c7e9": "с именем",
- "eng.scriptwords.act_message_eec2": "показать сообщение",
- "eng.scriptwords.act_help_message_e547": "собственный свиток события игры, показываемый игроку",
- "eng.scriptwords.field_message_title_fe07": "заголовок",
- "eng.scriptwords.field_message_body_9108": "текст",
- "eng.scriptwords.act_log_ab22": "записать строку в журнал игры",
- "eng.scriptwords.act_help_log_44ea": "{town} {faction} {owner} {general} {turn} {people} подставляются",
- "eng.scriptwords.act_console_bfd6": "выполнить консольную команду (для опытных пользователей)",
- "eng.scriptwords.act_help_console_3820": "любая команда консоли игры («Выбрать…» показывает все), например add_money egypt 500 или kill_character \"{general}\" Battle; {town} {faction} {owner} {general} {turn} {people} подставляются",
- "eng.scriptwords.field_console_text_82a2": "команда",
- "eng.scriptwords.act_script_12c1": "выполнить команду скрипта кампании (для опытных пользователей)",
- "eng.scriptwords.act_help_script_9c96": "любая однострочная команда campaign_script.txt («Выбрать…» показывает все), например give_trait или set_event_counter; {town} {faction} {owner} {general} {turn} {people} подставляются",
- "eng.scriptwords.field_script_text_5c2a": "команда",
- "eng.scriptwords.who_player_678e": "игрок",
- "eng.scriptwords.who_computer_ce8a": "компьютерная фракция",
- "eng.scriptwords.who_these_dd41": "одна из этих фракций",
- "eng.scriptwords.to_this_2fa5": "фракции",
- "eng.scriptwords.to_old_fa5c": "прежнему владельцу",
- "eng.scriptwords.to_player_e5b4": "игроку",
+ "eng.scriptwords.field_trait_level_93ee": "уровень черты",
+ "eng.scriptwords.act_ancillary_5169": "дать приближенного",
+ "eng.scriptwords.act_counter_set_82cf": "?????? ???????",
+ "eng.scriptwords.act_help_counter_set_fa2a": "заменить сохраненный счетчик событий движка выбранным значением",
+ "eng.scriptwords.field_counter_set_name_5e64": "????????????? ????????",
+ "eng.scriptwords.act_counter_add_af70": "???????? ???????",
+ "eng.scriptwords.act_help_counter_add_fc8e": "прибавить к сохраненному счетчику событий движка или вычесть отрицательным значением",
+ "eng.scriptwords.field_counter_add_name_c7e9": "????????????? ????????",
+ "eng.scriptwords.act_message_eec2": "показать свиток события",
+ "eng.scriptwords.act_help_message_e547": "показать свиток события кампании с выбранным заголовком и текстом",
+ "eng.scriptwords.field_message_title_fe07": "????????? ??????",
+ "eng.scriptwords.field_message_body_9108": "????? ??????",
+ "eng.scriptwords.act_log_ab22": "???????? ? ?????? ????",
+ "eng.scriptwords.act_help_log_44ea": "???????? ????????? ????? ? ?????? ???? ??? ?????????? ????? ???????",
+ "eng.scriptwords.act_console_bfd6": "????????? ?????????? ???????",
+ "eng.scriptwords.act_help_console_3820": "выполнить команду консоли на карте кампании",
+ "eng.scriptwords.field_console_text_82a2": "????????? ??????",
+ "eng.scriptwords.act_script_12c1": "выполнить команду кампании",
+ "eng.scriptwords.act_help_script_9c96": "выполнить команду скрипта кампании с данными текущего события",
+ "eng.scriptwords.field_script_text_5c2a": "????????? ??????",
+ "eng.scriptwords.who_player_678e": "??? ??????????? ??????",
+ "eng.scriptwords.who_computer_ce8a": "??? ??????????? ??????????",
+ "eng.scriptwords.who_these_dd41": "выбранные фракции",
+ "eng.scriptwords.to_this_2fa5": "текущая фракция",
+ "eng.scriptwords.to_old_fa5c": "??????? ????????",
+ "eng.scriptwords.to_player_e5b4": "фракция игрока",
  "eng.scriptwords.to_rebels_631c": "повстанцам",
- "eng.scriptwords.to_named_cbc8": "этой фракции:",
- "eng.scriptwords.op_979e": "меньше",
- "eng.scriptwords.op_a13a": "больше",
- "eng.scriptwords.op_904c": "не больше",
- "eng.scriptwords.op_0299": "не меньше",
- "eng.scriptwords.op_fcb7": "равно",
- "eng.scriptwords.op_every_6d29": "кратно",
- "eng.scriptwords.stance_war_470c": "война",
- "eng.scriptwords.stance_neutral_4107": "нейтралитет",
+ "eng.scriptwords.to_named_cbc8": "выбранная фракция",
+ "eng.scriptwords.op_979e": "??????",
+ "eng.scriptwords.op_a13a": "??????",
+ "eng.scriptwords.op_904c": "?? ?????",
+ "eng.scriptwords.op_0299": "?? ?????",
+ "eng.scriptwords.op_fcb7": "?????",
+ "eng.scriptwords.op_every_6d29": "??????",
+ "eng.scriptwords.stance_war_470c": "? ????????? ?????",
+ "eng.scriptwords.stance_neutral_4107": "? ????????? ????",
  "eng.scriptwords.stance_allied_6035": "союз",
- "eng.scriptwords.match_all_4afa": "все эти условия верны",
- "eng.scriptwords.match_any_9db7": "хотя бы одно из этих условий верно",
- "eng.scriptwords.match_none_5634": "ни одно из этих условий не верно",
- "eng.scriptwords.each_fb36": "один раз (для произошедшего события)",
- "eng.scriptwords.each_town_a56c": "для каждого города фракции",
- "eng.scriptwords.each_army_c640": "для каждой армии фракции",
- "eng.scriptwords.each_faction_2c4e": "для каждой фракции",
- "eng.scriptwords.each_of_this_c718": "фракция, с которой это произошло",
- "eng.scriptwords.each_of_player_48bc": "игрок",
- "eng.scriptwords.each_of_named_ec23": "эта фракция:",
- "eng.scriptwords.example_help_when_broke_48fd": "Помощь при нехватке денег",
- "eng.scriptwords.example_loot_for_taking_a_town_be38": "Добыча за захват города",
- "eng.scriptwords.example_plague_in_big_cities_acff": "Чума в больших городах",
- "eng.scriptwords.example_a_free_unit_when_a_barracks_is_built_fb2c": "Бесплатный отряд при постройке казарм",
- "eng.scriptwords.example_gold_for_holding_the_capital_d9a8": "Золото за владение столицей",
- "eng.scriptwords.example_a_message_on_turn_10_17bf": "Сообщение на 10-м ходу",
- "eng.scriptwords.example_rebellion_punished_91b7": "Наказание за восстание",
- "eng.scriptwords.example_a_trait_for_the_conqueror_7500": "Черта для завоевателя",
- "eng.scriptwords.example_avoid_growth_for_chosen_towns_b97d": "Избегать роста в выбранных городах",
- "eng.scriptwords.addon_sack_settlement_7e36": "Разграбить поселение (Rome)",
- "eng.scriptwords.addon_help_sack_settlement_8e93": "Четвертый вариант на свитке захвата, под «Занять / Поработить / Истребить»: «Разграбить поселение». Население города истребляется штатным способом игры, все здания, кроме сохраняемых, сносятся, вы получаете награду, а руины переходят повстанцам (с гарнизоном повстанцев, который игра создает сама). Земли, которые вы не хотите удерживать, сжигаются и оставляются восстанавливаться. Разрешенные ниже компьютерные фракции разграбляют город при истреблении населения.",
- "eng.scriptwords.setting_sack_settlement_raze_enabled_38dc": "Разграбление включено",
- "eng.scriptwords.setting_help_sack_settlement_raze_enabled_db19": "при отключении файл сохраняется, но ничего не делает",
- "eng.scriptwords.setting_sack_settlement_raze_who_b8cb": "Кто может разграблять",
- "eng.scriptwords.setting_help_sack_settlement_raze_who_b7da": "игрок выбирает это на свитке захвата; разрешенная здесь компьютерная фракция разграбляет город всякий раз, когда истребляет население",
- "eng.scriptwords.choice_sack_settlement_raze_who_player_3ab0": "Только игрок (человек)",
- "eng.scriptwords.choice_sack_settlement_raze_who_everyone_cec7": "Все: игрок и каждая компьютерная фракция",
- "eng.scriptwords.choice_sack_settlement_raze_who_homeless_e262": "Только фракции без собственного города (орды, бездомные), игрок или компьютер",
- "eng.scriptwords.choice_sack_settlement_raze_who_player_and_homel_3d1d": "Игрок и компьютерные фракции без города (орды)",
- "eng.scriptwords.choice_sack_settlement_raze_who_ai_f5c6": "Только компьютерные фракции",
- "eng.scriptwords.choice_sack_settlement_raze_who_list_ff95": "Только выбранные мной фракции",
- "eng.scriptwords.setting_sack_settlement_raze_factions_e5c0": "Фракции",
- "eng.scriptwords.setting_help_sack_settlement_raze_factions_03bb": "для варианта «Только выбранные мной фракции»",
- "eng.scriptwords.setting_sack_settlement_raze_give_to_rebels_32fb": "Руины переходят повстанцам",
- "eng.scriptwords.setting_help_sack_settlement_raze_give_to_rebels_81e2": "выключено: разграбленный город остается вашим",
- "eng.scriptwords.setting_sack_settlement_raze_rebel_garrison_2b9a": "Повстанцы получают гарнизон",
- "eng.scriptwords.setting_help_sack_settlement_raze_rebel_garrison_5701": "игра создает его по типу повстанцев региона (descr_rebel_factions.txt)",
- "eng.scriptwords.setting_sack_settlement_raze_gold_per_building_1b8c": "Деньги за каждое снесенное здание",
- "eng.scriptwords.setting_help_sack_settlement_raze_gold_per_build_c4d2": "добавляются к добыче за истребление населения",
- "eng.scriptwords.setting_sack_settlement_raze_gold_per_citizen_0e6e": "Деньги за жителя",
- "eng.scriptwords.setting_help_sack_settlement_raze_gold_per_citiz_ac4b": "за каждого жителя, потерянного при разграблении",
- "eng.scriptwords.setting_sack_settlement_raze_people_left_e639": "Жителей остается в руинах",
- "eng.scriptwords.setting_help_sack_settlement_raze_people_left_e2cb": "не менее 600: город нельзя стереть с карты",
- "eng.scriptwords.setting_sack_settlement_raze_keep_chains_94c8": "Цепочки зданий, которые никогда не сносятся",
- "eng.scriptwords.setting_help_sack_settlement_raze_keep_chains_8347": "цепочка правителя (core) всегда остается, даже без указания в списке: без нее город нельзя восстановить. По умолчанию сохраняются стены и дороги; при желании уберите их. Игра читает любое здание мода, в том числе добавленное или перенесенное из другого мода",
- "eng.scriptwords.setting_sack_settlement_raze_default_rebel_units_2a1c": "Отряды повстанцев, если игра не создает их сама",
- "eng.scriptwords.setting_help_sack_settlement_raze_default_rebel__2f07": "типы отрядов из export_descr_unit.txt этого мода; пусто = нет",
- "eng.scriptwords.setting_sack_settlement_raze_button_713b": "Четвертая кнопка",
- "eng.scriptwords.setting_help_sack_settlement_raze_button_914d": "выключено: вместо этого при выборе «Истребить» появляется вопрос о разграблении с ответами «Да / Нет»",
- "eng.scriptwords.setting_sack_settlement_raze_button_label_d1bb": "Текст кнопки",
- "eng.scriptwords.setting_help_sack_settlement_raze_button_label_c3eb": "надпись на кнопке",
- "eng.scriptwords.setting_sack_settlement_raze_button_tip_1b77": "Подсказка кнопки",
- "eng.scriptwords.setting_help_sack_settlement_raze_button_tip_ff4a": "показывается при наведении мыши; {gold}, {buildings}, {people} обозначают результат разграбления и подставляются для только что захваченного города",
+ "eng.scriptwords.match_all_4afa": "??? ???????? ????????",
+ "eng.scriptwords.match_any_9db7": "???? ???????? ????????",
+ "eng.scriptwords.match_none_5634": "?? ???? ???????? ?? ????????",
+ "eng.scriptwords.each_fb36": "использовать субъекты события",
+ "eng.scriptwords.each_town_a56c": "?????? ?????",
+ "eng.scriptwords.each_army_c640": "каждая армия",
+ "eng.scriptwords.each_faction_2c4e": "каждая фракция, кроме повстанцев",
+ "eng.scriptwords.each_of_this_c718": "текущей фракции",
+ "eng.scriptwords.each_of_player_48bc": "фракции игрока",
+ "eng.scriptwords.each_of_named_ec23": "выбранной фракции",
  "eng.regiondel.already_has_a_port_of_its": "У региона {heir} уже есть свой порт, поэтому сохранение этого порта оставит два пикселя порта в одной провинции, а движок использует один из них. Проверка сообщает об этом как о втором порте.",
  "eng.regiondel.apart_of_s_tile_s_do": "Тайлы региона {name} ({apart:,}) совсем не соприкасаются с {heir}, поэтому {heir2} будет нарисован несколькими частями. Движок считает их одним регионом, но армия не сможет пройти между частями.",
  "eng.regiondel.cannot_apply": "нельзя применить: {why}",
@@ -12415,90 +11377,22 @@
   "other": "Сохранить изменения: {count}"
  },
  "eng.sidefiles.line_a_symbol_sheet_before_any": "строка {x}: лист символов указан до первой строки `factions`",
- "eng.scriptwords.addon_raze_settlement_9030": "Разграбить поселение (Medieval II)",
- "eng.scriptwords.addon_help_raze_settlement_52e3": "Четвертый вариант на свитке захвата, под «Занять / Разграбить / Истребить». Кнопка называется «Разорить поселение» (вторая штатная кнопка игры уже называется «Разграбить поселение»; надпись можно изменить ниже) и собрана из штатных элементов кнопок игры, как три кнопки над ней. Население города истребляется штатным способом игры, все здания, кроме сохраняемых, сносятся, большинство жителей исчезает, вы получаете награду, а руины переходят повстанцам с новым гарнизоном, который создает M2EX. Это аналог «Разграбить поселение» из Rome для Medieval II, использующий тот же движок скриптов. Разрешенные ниже компьютерные фракции разоряют город при истреблении населения.",
- "eng.scriptwords.setting_raze_settlement_raze_enabled_fcac": "Разорение включено",
- "eng.scriptwords.setting_help_raze_settlement_raze_enabled_b851": "при отключении файл сохраняется, но ничего не делает",
- "eng.scriptwords.setting_raze_settlement_raze_who_2f51": "Кто может разорять",
- "eng.scriptwords.setting_help_raze_settlement_raze_who_5266": "игрок выбирает это на свитке захвата; разрешенная здесь компьютерная фракция разоряет город всякий раз, когда истребляет население",
- "eng.scriptwords.choice_raze_settlement_raze_who_player_2154": "Только игрок (человек)",
- "eng.scriptwords.choice_raze_settlement_raze_who_everyone_dfa9": "Все: игрок и каждая компьютерная фракция",
- "eng.scriptwords.choice_raze_settlement_raze_who_homeless_3c26": "Только фракции без собственного города (орды, бездомные), игрок или компьютер",
- "eng.scriptwords.choice_raze_settlement_raze_who_player_and_homel_7821": "Игрок и компьютерные фракции без города (орды)",
- "eng.scriptwords.choice_raze_settlement_raze_who_ai_d7df": "Только компьютерные фракции",
- "eng.scriptwords.choice_raze_settlement_raze_who_list_9e7a": "Только выбранные мной фракции",
- "eng.scriptwords.setting_raze_settlement_raze_factions_56bf": "Фракции",
- "eng.scriptwords.setting_help_raze_settlement_raze_factions_bcab": "для варианта «Только выбранные мной фракции»",
- "eng.scriptwords.setting_raze_settlement_raze_give_to_rebels_b928": "Руины переходят повстанцам",
- "eng.scriptwords.setting_help_raze_settlement_raze_give_to_rebels_cd02": "выключено: разоренный город остается вашим",
- "eng.scriptwords.setting_raze_settlement_raze_rebel_garrison_3e15": "Повстанцы получают гарнизон",
- "eng.scriptwords.setting_help_raze_settlement_raze_rebel_garrison_86a9": "игра создает его по типу повстанцев региона (descr_rebel_factions.txt)",
- "eng.scriptwords.setting_raze_settlement_raze_gold_per_building_ecd1": "Деньги за каждое снесенное здание",
- "eng.scriptwords.setting_help_raze_settlement_raze_gold_per_build_5e02": "добавляются к добыче за истребление населения",
- "eng.scriptwords.setting_raze_settlement_raze_gold_per_citizen_d1ac": "Деньги за жителя",
- "eng.scriptwords.setting_help_raze_settlement_raze_gold_per_citiz_de5d": "за каждого жителя, потерянного при разорении",
- "eng.scriptwords.setting_raze_settlement_raze_people_left_8295": "Жителей остается в руинах",
- "eng.scriptwords.setting_help_raze_settlement_raze_people_left_3ae6": "не менее 600: город нельзя стереть с карты",
- "eng.scriptwords.setting_raze_settlement_raze_keep_chains_074b": "Цепочки зданий, которые никогда не сносятся",
- "eng.scriptwords.setting_help_raze_settlement_raze_keep_chains_918f": "цепочка правителя (core) всегда остается, даже без указания в списке: без нее город нельзя восстановить. По умолчанию сохраняются дороги (в Medieval II стены являются уровнями основных цепочек); при желании уберите их. Игра читает любое здание мода, в том числе добавленное или перенесенное из другого мода",
- "eng.scriptwords.setting_raze_settlement_raze_default_rebel_units_7066": "Отряды повстанцев, если игра не создает их сама",
- "eng.scriptwords.setting_help_raze_settlement_raze_default_rebel__d08d": "типы отрядов из export_descr_unit.txt этого мода; пусто = нет",
- "eng.scriptwords.setting_raze_settlement_raze_button_314f": "Четвертая кнопка",
- "eng.scriptwords.setting_help_raze_settlement_raze_button_3aa5": "выключено: вместо этого при выборе «Истребить» появляется вопрос о разорении с ответами «Да / Нет»",
- "eng.scriptwords.setting_raze_settlement_raze_button_label_bc92": "Текст кнопки",
- "eng.scriptwords.setting_help_raze_settlement_raze_button_label_b77d": "надпись на кнопке",
- "eng.scriptwords.setting_raze_settlement_raze_button_tip_f076": "Подсказка кнопки",
- "eng.scriptwords.setting_help_raze_settlement_raze_button_tip_75fa": "показывается при наведении мыши, как у трех штатных кнопок игры; {gold}, {buildings}, {people} обозначают результат разорения; пусто = нет",
- "eng.scriptwords.addon_avoid_growth_8f0d": "Избегать роста",
- "eng.scriptwords.addon_help_avoid_growth_697d": "Флажок на свитке поселения каждого вашего города, оформленный штатными значком и галочкой игры (в Medieval II находится в ряду штатных флажков, справа от набора). Установите его, и текущее население города станет верхним пределом: город не вырастает выше него, но по-прежнему теряет жителей обычным образом (набор, битвы, чума) и восстанавливает население только до этого предела. Пограничное поселение остается деревней, малым или большим городом: включите автоматическое управление и забудьте о нем. Снимите флажок, чтобы снова разрешить рост. Пределы хранятся в сохраненной игре; город, потерянный в пользу другой фракции, теряет флажок. Консоль: sq ::avoid_growth_list().",
- "eng.scriptwords.setting_avoid_growth_ag_enabled_6b9a": "«Избегать роста» включено",
- "eng.scriptwords.setting_help_avoid_growth_ag_enabled_4b8c": "при отключении файл сохраняется, но ничего не делает",
- "eng.scriptwords.setting_avoid_growth_ag_label_6415": "Надпись рядом с флажком",
- "eng.scriptwords.setting_help_avoid_growth_ag_label_f3b4": "текст на свитке",
- "eng.scriptwords.setting_avoid_growth_ag_tip_db18": "Подсказка",
- "eng.scriptwords.setting_help_avoid_growth_ag_tip_69af": "показывается при наведении мыши, когда флажок снят",
- "eng.scriptwords.setting_avoid_growth_ag_tip_on_7b39": "Подсказка при установленном флажке",
- "eng.scriptwords.setting_help_avoid_growth_ag_tip_on_97b5": "{cap} = верхний предел (максимальное число жителей)",
- "eng.scriptwords.setting_avoid_growth_ag_show_cap_2d19": "Также показывать предел рядом с надписью",
- "eng.scriptwords.setting_help_avoid_growth_ag_show_cap_cccb": "«(не более 5000)» рядом с надписью при установленном флажке; подсказка показывает это в любом случае",
- "eng.scriptwords.setting_avoid_growth_ag_offset_x_b29a": "Сдвиг флажка вправо",
- "eng.scriptwords.setting_avoid_growth_ag_offset_y_c92a": "Сдвиг флажка вниз",
- "eng.scriptwords.setting_help_avoid_growth_ag_offset_y_293a": "ниже 0 = вверх",
  "eng.scriptwords.addon_recruit_order_9449": "Порядок набора",
- "eng.scriptwords.addon_help_recruit_order_a577": "Фиксированный порядок на панели набора города: пехота, затем лучники / пращники / застрельщики, кавалерия, конные лучники, колесницы, слоны, боевые псы и свиньи, осадные орудия, корабли. Внутри каждого типа сначала самые дорогие (или самые дешевые). Игра сама сортирует панель по цене каждого отряда в пользовательской битве (шестое число stat_cost); во время вашего хода дополнение назначает каждому отряду это число согласно указанному порядку и возвращает настоящие значения перед каждой битвой и в конце вашего хода, поэтому ходы компьютера, битвы и автобой используют настоящие значения. В файлы мода и сохраненную игру ничего не записывается. Корабли всегда идут после сухопутных отрядов, а агенты последними: игра разделяет их. В Medieval II штатные блоки по типам отключаются настройкой. Консоль: sq ::recruit_order_list(), sq ::recruit_order_off().",
- "eng.scriptwords.setting_recruit_order_ro_enabled_6785": "«Порядок набора» включен",
- "eng.scriptwords.setting_help_recruit_order_ro_enabled_6dbd": "при отключении файл сохраняется, но ничего не делает",
- "eng.scriptwords.setting_recruit_order_ro_order_6038": "Внутри каждого типа",
- "eng.scriptwords.setting_help_recruit_order_ro_order_6384": "какие отряды идут первыми среди отрядов одного типа",
- "eng.scriptwords.choice_recruit_order_ro_order_dearest_4aab": "Сначала самые дорогие (самые сильные вверху слева)",
- "eng.scriptwords.choice_recruit_order_ro_order_cheapest_1f32": "Сначала самые дешевые",
- "eng.scriptwords.setting_recruit_order_ro_one_panel_62a6": "Medieval II: общая панель для всех типов",
- "eng.scriptwords.setting_help_recruit_order_ro_one_panel_c1ae": "штатные блоки игры по типам отключены (recruitment_sort_simple), поэтому вся панель следует заданному порядку; в Rome таких блоков нет",
- "eng.scriptwords.addon_player_diplomacy_df0c": "Дипломатия игрока",
- "eng.scriptwords.addon_help_player_diplomacy_9beb": "Компьютерные фракции перестают атаковать вас, когда в этом нет смысла: после прекращения огня они сохраняют мир несколько ходов (объявленная за это время война отменяется), зависимые королевства никогда не планируют вторжение в ваши земли, а фракции, намного слабее вас, тоже этого не делают (их союзники, уже воюющие с вами, учитываются на их стороне, поэтому большой союз все еще может напасть). Меняется только отношение компьютера к ВАМ; войны компьютерных фракций друг с другом остаются прежними. Консоль: sq ::truce_status(), sq ::truce_set(\"egypt\", 10), sq ::power(\"egypt\").",
- "eng.scriptwords.setting_player_diplomacy_truce_turns_0ad3": "Число ходов перемирия",
- "eng.scriptwords.setting_help_player_diplomacy_truce_turns_fb77": "ваши ходы; 0 = без правила перемирия",
- "eng.scriptwords.setting_player_diplomacy_truce_steer_ai_5692": "Компьютер не планирует вторжение в ваши земли во время перемирия",
- "eng.scriptwords.setting_help_player_diplomacy_truce_steer_ai_6eae": "основное правило",
- "eng.scriptwords.setting_player_diplomacy_truce_restore_peace_cb9e": "Война, объявленная во время перемирия, отменяется",
- "eng.scriptwords.setting_help_player_diplomacy_truce_restore_peac_7535": "мир восстанавливается немедленно",
- "eng.scriptwords.setting_player_diplomacy_client_never_attack_de92": "Зависимые королевства никогда вас не атакуют",
- "eng.scriptwords.setting_help_player_diplomacy_client_never_attac_1fb3": "пока они являются вашими протекторатами",
- "eng.scriptwords.setting_player_diplomacy_deter_enabled_5927": "Намного более слабые фракции вас не атакуют",
- "eng.scriptwords.setting_help_player_diplomacy_deter_enabled_2e26": "по силе, определяемой ниже",
- "eng.scriptwords.setting_player_diplomacy_deter_ratio_693f": "Во сколько раз вы сильнее",
- "eng.scriptwords.setting_help_player_diplomacy_deter_ratio_9cec": "отряды во всех армиях и гарнизонах плюс поселения, учитываемые ниже; 3.0 = в три раза",
- "eng.scriptwords.setting_player_diplomacy_strength_per_settlement_1c39": "Скольким отрядам равно поселение",
- "eng.scriptwords.setting_help_player_diplomacy_strength_per_settl_1439": "при расчете этой силы",
- "eng.scriptwords.setting_player_diplomacy_coalitions_count_ca49": "Союзники, воюющие с вами, добавляют свою силу",
- "eng.scriptwords.setting_help_player_diplomacy_coalitions_count_c6bd": "поэтому малые фракции все еще могут присоединяться к большому союзу против вас",
+ "eng.scriptwords.addon_help_recruit_order_a577": "сортировать доступные для набора войска по стоимости",
+ "eng.scriptwords.setting_recruit_order_ro_enabled_6785": "включить сортировку набора",
+ "eng.scriptwords.setting_help_recruit_order_ro_enabled_6dbd": "сортировать доступные для набора войска по стоимости набора при открытии панели набора",
+ "eng.scriptwords.setting_recruit_order_ro_order_6038": "??????? ?? ?????????",
+ "eng.scriptwords.setting_help_recruit_order_ro_order_6384": "выбрать, какие отряды показывать первыми в списке набора: дорогие или дешевые",
+ "eng.scriptwords.choice_recruit_order_ro_order_dearest_4aab": "??????? ????? ???????",
+ "eng.scriptwords.choice_recruit_order_ro_order_cheapest_1f32": "??????? ????? ???????",
+ "eng.scriptwords.setting_recruit_order_ro_one_panel_62a6": "объединить панели набора",
+ "eng.scriptwords.setting_help_recruit_order_ro_one_panel_c1ae": "показывать доступные для набора войска вместе на одной панели набора",
  "eng.scriptwords.addon_upkeep_x2_30cb": "Содержание x 2 (без огромных армий)",
- "eng.scriptwords.addon_help_upkeep_x2_24e0": "Стоимость содержания каждого отряда умножается (по умолчанию x 2) в любом моде обеих игр, без дополнительного движка. Большие армии требуют больших расходов: содержать их позволяет только высокий доход. Игра читает стоимость содержания из export_descr_unit.txt, поэтому везде показывает настоящие повышенные значения. Удаление дополнения возвращает в точности прежние числа, сохраненные в toolkit_upkeep.json рядом с этим файлом.",
- "eng.scriptwords.setting_upkeep_x2_factor_7b26": "Содержание x",
- "eng.scriptwords.setting_help_upkeep_x2_factor_0b0b": "2 удваивает, 1.5 добавляет половину, 3 утраивает",
+ "eng.scriptwords.addon_help_upkeep_x2_24e0": "умножить стоимость содержания отряда, сохранив исходные расходы",
+ "eng.scriptwords.setting_upkeep_x2_factor_7b26": "????????? ??????????",
+ "eng.scriptwords.setting_help_upkeep_x2_factor_0b0b": "умножить стоимость содержания каждого отряда на этот коэффициент; удаление дополнения восстанавливает сохраненные расходы",
  "eng.scriptwords.addon_one_recruit_grid_21e4": "Единая сетка набора (Medieval II)",
- "eng.scriptwords.addon_help_one_recruit_grid_d769": "Панель набора города становится единой сеткой, читаемой по строкам, как в Rome, вместо игровых блоков по типам (пехота, стрелковые отряды, кавалерия и так далее, каждый в своих столбцах). Работает в любой Medieval II без дополнительного движка: задает recruitment_sort_simple в descr_campaign_db.xml; удаление дополнения возвращает строку в прежний вид. В этой сетке сама игра сначала показывает агентов, затем корабли, затем сухопутные отряды; изменить их расположение можно только изменением движка.",
- "eng.scriptwords.setting_help_avoid_growth_ag_offset_x_36c9": "в единицах игровых координат 1024 x 768; ниже 0 = влево",
+ "eng.scriptwords.addon_help_one_recruit_grid_d769": "использовать один список набора",
  "armory.chan_metal": "металл",
  "armory.eyedrop_title": "Выбрать цвет в любом месте экрана, включая модель",
  "armory.eyedrop_none": "В этом браузере нет пипетки. Она есть в Chrome и Edge; или введите цвет в поле цвета.",
@@ -12784,7 +11678,7 @@
  "app.report_title": "Сообщите о проблеме или предложите идею; ответы автора придут сюда",
  "app.report_new": "🐞 Сообщить (новых: {n})",
  "report.tab_send": "Отправить",
- "report.tab_answers": "Ответы на мои сообщения",
+ "report.tab_answers": "?????? ?? ??? ?????????",
  "report.new_n": "новых: {n}",
  "report.kind_bug": "Проблема",
  "report.kind_idea": "Идея",
@@ -12807,9 +11701,9 @@
  "report.none_sent": "Из этой копии еще не отправляли сообщений.",
  "report.from_author": "Автор",
  "report.from_you": "Вы",
- "report.no_answer_yet": "Ответа пока нет.",
- "report.reply_placeholder": "Ваш ответ автору",
- "report.reply_with_logs": "с новейшими журналами",
+ "report.no_answer_yet": "???? ????? ?? ???????.",
+ "report.reply_placeholder": "???????? ??????",
+ "report.reply_with_logs": "?????????? ????????? ???????",
  "report.reply_send": "Отправить ответ",
  "report.reply_sent": "Ответ отправлен",
  "report.check_now": "Проверить сейчас",
@@ -13188,18 +12082,18 @@
  "editor.the_deleted_unit_is_taken_out_of": "его строки удаляются еще из {ref_counts_n} файлов: {ref_counts}",
  "edrecruit.upward": "Отмечать также все ступени выше выбранной",
  "edrecruit.upward_title": "Игра набирает отряды только на текущем уровне здания, поэтому отряд, добавленный на одну ступень, снова пропадет после улучшения здания. Если включено, отметка ступени также отмечает все ступени выше в той же цепочке, а снятие отметки снимает их.",
- "guided.attr_sea_faring": "может садиться на корабли",
- "guided.attr_can_swim": "может переплывать реки",
+ "guided.attr_sea_faring": "может садиться на корабли флота",
+ "guided.attr_can_swim": "переплывает реки",
  "guided.attr_can_withdraw": "может отступить из битвы до ее начала",
  "guided.attr_can_run_amok": "может выйти из-под контроля при падении боевого духа (слоны, боевые псы)",
  "guided.attr_cannot_skirmish": "не использует режим перестрелки",
- "guided.attr_start_not_skirmishing": "начинает битву с выключенным режимом перестрелки",
- "guided.attr_hardy": "медленнее устает",
+ "guided.attr_start_not_skirmishing": "режим перестрелки выключен, когда начинается битва",
+ "guided.attr_hardy": "?????? ????????? ???????????",
  "guided.attr_very_hardy": "намного медленнее устает",
  "guided.attr_hide_forest": "может скрываться в лесу",
  "guided.attr_hide_improved_forest": "лучше скрывается в лесу",
- "guided.attr_hide_long_grass": "может скрываться в высокой траве",
- "guided.attr_hide_anywhere": "может скрываться где угодно",
+ "guided.attr_hide_long_grass": "?????????? ? ??????? ?????",
+ "guided.attr_hide_anywhere": "?????????? ?? ????? ?????????",
  "guided.attr_frighten_foot": "пугает пехоту поблизости",
  "guided.attr_frighten_mounted": "пугает кавалерию поблизости",
  "guided.attr_power_charge": "усиленный натиск",
@@ -13209,7 +12103,7 @@
  "guided.attr_free_upkeep_unit": "может содержаться бесплатно в свободных слотах поселения",
  "guided.attr_is_peasant": "считается крестьянами (дешевый, слабый боевой дух)",
  "guided.attr_no_custom": "недоступен в пользовательских битвах",
- "guided.attr_gunpowder_unit": "отряд с огнестрельным оружием",
+ "guided.attr_gunpowder_unit": "сражается огнестрельным оружием",
  "guided.attr_stakes": "может устанавливать колья перед собой",
  "guided.attr_druid": "отряд наподобие друидов, повышающий боевой дух поблизости",
  "guided.attr_cantabrian_circle": "может использовать кантабрийский круг",
@@ -13236,7 +12130,7 @@
  "guided.attr_short_pike": "короткая пика",
  "guided.attr_prec": "метается прямо перед натиском (пилумы, дротики)",
  "guided.attr_launching": "подбрасывает солдат при попадании",
- "guided.attr_area": "поражает область, а не одного солдата",
+ "guided.attr_area": "???????? ????? ???????, ? ?? ?????? ???????",
  "guided.attr_on_the_wrong_line": "«{word}» должно быть в строке attributes: в строке {line} движок принимает его без предупреждения, но оно ничего не делает",
  "guided.attr_needs_m2ex": "{words}: их понимает только M2EX (или REX). Этот мод не помечен как M2EX, поэтому игра их не прочитает. Отметьте это в карточке мода на главной странице, если он работает на M2EX",
  "modelpicker.ex_attrs_on": "Только M2EX / REX (включено: {n})",
@@ -13486,5 +12380,161 @@
  "armory.check_existing_export": "Проверить существующий экспорт",
  "armory.recent_folder": "Недавние · {folder}",
  "armory.folder_choices": "Папки отрядов и недавние пути",
- "eng.server.pick_data_folder": "Выберите папку внутри data"
+ "eng.server.pick_data_folder": "Выберите папку внутри data",
+ "eng.scriptaddons.duplicate_code": "??? {title} ??? ???? ? {paths}; ?? ????? ??????????? ??????. ??????? ??????????? ??? ????? ?????????? ????? ???????? ???????.",
+ "eng.scriptaddons.setting_error": "{label}: {detail}",
+ "eng.scriptaddons.whole_number": "??????????? ????? ?????",
+ "eng.scriptaddons.nonnegative_integer": "??????????? ????? ????? ?? ?????? ????",
+ "eng.scriptaddons.unknown_names": "??? ? {file}: {names}",
+ "eng.scriptaddons.removed": "??????? ?????? {title} ??????",
+ "eng.scriptaddons.older_removed": "?????? ????? ???????? ??????? {title} ???????",
+ "eng.scriptbuilder.block_error": "{side} {index} ({block}): {detail}",
+ "eng.scriptbuilder.whole_number": "{label}: ????????? ????? ?????",
+ "eng.scriptbuilder.nonnegative": "{label}: ????????? ???????? ?? ?????? ????",
+ "eng.scriptbuilder.percent_range": "{label}: ????????? ???????? ?? 1 ?? 100",
+ "eng.scriptbuilder.text_required": "{label}: ????????? ?????",
+ "eng.scriptbuilder.pick_required": "{label}: ???????? ???? ?? ???? ???????",
+ "eng.scriptdocs.enter_an_engine_line_or_choose_one": "??????? ?????? ?????? ??? ???????? ???????",
+ "eng.scriptdocs.campaign_script_flow_belongs_in_the_module_rule_not_an_individual_command": "?????????? ??????????? campaign_script ???????? ? ??????? ??????, ? ?? ? ????????? ???????",
+ "eng.scriptdocs.name_is_not_a_known_category_identifier_for_engine": "{name}: ??????????? ????????????? ????????? {category} ??? {engine}",
+ "eng.scriptdocs.name_is_marked_as_not_implemented": "{name} ???????? ??? ???????????????",
+ "eng.scriptdocs.use_the_exact_spelling_similar": "??????????? ?????? ????????? {similar}",
+ "eng.scriptbuilder.when_give_this_module_a_title": "?????: ????? ?????? ????????",
+ "eng.scriptbuilder.when_this_title_belongs_to_a_built_in_add_on": "?????: ??? ???????? ??????????? ??????????? ???????? ???????",
+ "eng.scriptbuilder.for_each_choose_a_supported_iteration": "??? ???????: ???????? ?????????????? ???????",
+ "eng.scriptbuilder.if_choose_all_any_or_none": "????: ???????? ???, ????? ??? ?? ??????",
+ "eng.scriptbuilder.do_add_at_least_one_action": "?????????: ???????? ???? ?? ???? ????????",
+ "eng.scriptbuilder.else_add_an_if_test_so_this_branch_can_run": "?????: ???????? ???????? ????, ????? ??? ????? ????? ???????????",
+ "eng.scriptbuilder.do_exposed_setting_path_does_not_point_to_an_eligible_field": "?????????: ????????? ????????? {path} ?? ????????? ?? ?????????? ????",
+ "eng.scriptbuilder.counter_names_allow_letters_digits_faction_and_town": "????? ????????? ????? ????????? ?????, ?????, _, {faction} ? {town}",
+ "eng.scriptaddons.use_a_number_of_zero_or_more": "??????????? ????? ?? ?????? ????",
+ "eng.scriptaddons.choose_one_of_the_offered_values": "???????? ???? ?? ???????????? ????????",
+ "eng.scriptaddons.use_a_list_of_names": "??????????? ?????? ????",
+ "eng.scriptaddons.names_must_start_with_a_letter_or_underscore_and_contain_letters_digits_or_underscores": "????? ?????? ?????????? ? ????? ??? ????????????? ? ????????? ?????, ????? ??? ?????????????",
+ "eng.scriptbuilder.when": "????? {event}",
+ "eng.scriptbuilder.readback_actions": "{when}: {actions}",
+ "eng.scriptbuilder.readback_end": "{rule}.",
+ "eng.scriptbuilder.denarii": "????????",
+ "eng.scriptbuilder.florins": "????????",
+ "eng.scriptbuilder.for_each": "{when}, ??? {scope}",
+ "eng.scriptbuilder.no_actions": "???? ??????",
+ "eng.scriptbuilder.readback_else": "{rule}, ?????: {actions}",
+ "eng.scriptbuilder.negated": "???????, ??? {condition}",
+ "eng.scriptbuilder.iteration_owner": "{scope} {owner}",
+ "eng.scriptbuilder.if_none": "{when}, ???? ?? ????????? ?? ???? ?? ???????: {conditions}",
+ "eng.scriptbuilder.validation_errors": "{errors}",
+ "eng.scriptbuilder.rebuild_message_cache": "???? ??????? ??? ?????? ?? ??????",
+ "eng.scriptbuilder.no_town": "(????? ?? ??????)",
+ "eng.scriptbuilder.iteration_named": "{scope} {faction}",
+ "eng.scriptbuilder.if_any": "{when}, ???? {conditions}",
+ "eng.scriptbuilder.if_all": "{when}, ???? {conditions}",
+ "eng.scriptbuilder.action_money": "???????? ????? ??????? {faction} ?? {amount} {currency}",
+ "eng.scriptbuilder.action_people": "???????? ????????? ?? {amount}",
+ "eng.scriptbuilder.action_people_pct": "??????? {percent} ????????? ?????????",
+ "eng.scriptbuilder.action_people_max": "?????????? ????????? ?? {maximum}",
+ "eng.scriptbuilder.action_build": "????????? {level}",
+ "eng.scriptbuilder.action_units": "???????? ? ???????? ?????? {unit} ? ?????????? {count}",
+ "eng.scriptbuilder.action_give_town": "???????? ????? ??????? {faction}",
+ "eng.scriptbuilder.action_stance": "?????? ????????? ????? {first} ? {second}: {stance}",
+ "eng.scriptbuilder.action_ancillary": "???? ????????????? {ancillary}",
+ "eng.scriptbuilder.action_counter_set": "?????? ???????? {name} ???????? {value}",
+ "eng.scriptbuilder.action_counter_add": "???????? ??????? {name} ?? {value}",
+ "eng.scriptbuilder.action_message": "???????? ?????? {title}",
+ "eng.scriptbuilder.action_console": "????????? ?????????? ?????? {line}",
+ "eng.scriptbuilder.test_old_control": "??????? ???????? {control}",
+ "eng.scriptbuilder.test_treasury": "????? {op} {amount} {currency}",
+ "eng.scriptbuilder.test_towns": "????? ??????? {op} {count}",
+ "eng.scriptbuilder.test_chance": "???????? ? ???????????? {percent} ????????? ???????",
+ "eng.scriptbuilder.test_people": "????????? {op} {population}",
+ "eng.scriptbuilder.test_selected_towns": "????? ?????? ? ?????? {towns}",
+ "eng.scriptbuilder.test_capital": "????? ???????? ????????",
+ "eng.scriptbuilder.test_chain": "? ?????? ???? {chain}",
+ "eng.scriptbuilder.test_counter": "??????? {name} {op} {value}",
+ "eng.scriptbuilder.test_engine": "?????? ????????? {line}",
+ "eng.scriptbuilder.former_owner": "??????? ????????",
+ "eng.scriptbuilder.human_control": "??? ??????????? ??????",
+ "eng.scriptbuilder.computer_control": "??? ??????????? ??????????",
+ "eng.scriptbuilder.no_chain": "(??????? ?? ???????)",
+ "eng.scriptbuilder.no_heading": "(????????? ???? ???)",
+ "eng.scriptbuilder.no_text": "(?????? ???? ???)",
+ "eng.scriptbuilder.no_command": "(??????? ?? ???????)",
+ "eng.scriptbuilder.or_separator": " ??? ",
+ "eng.scriptbuilder.and_separator": " ? ",
+ "eng.scriptaddons.validation_errors": "{errors}",
+ "eng.scriptwords.cond_help_old_owner_19ef": "?????????, ??? ???????? ??????? ?? ???????",
+ "eng.scriptwords.field_who_v_75fc": "????????",
+ "eng.scriptwords.field_money_op_d767": "?????????",
+ "eng.scriptwords.field_towns_op_97bf": "?????????",
+ "eng.scriptwords.field_turn_op_d946": "?????????",
+ "eng.scriptwords.field_people_op_035f": "?????????",
+ "eng.scriptwords.field_old_owner_v_ead0": "????????",
+ "eng.scriptwords.field_counter_op_dc15": "?????????",
+ "eng.scriptwords.field_counter_v_6522": "????????",
+ "eng.scriptwords.field_give_town_to_0233": "??????????",
+ "eng.scriptwords.field_counter_set_v_55e7": "????????",
+ "eng.scriptwords.field_counter_add_v_0f88": "????????",
+ "eng.scriptwords.field_log_text_98e9": "?????",
+ "eng.scriptbuilder.exposed_label": "{block} - {field}",
+ "eng.scriptwords.example_a_modest_reserve_50b4": "???????? ?????",
+ "eng.scriptwords.example_crowded_streets_18bf": "?????? ?????",
+ "eng.scriptwords.example_a_new_reign_3b52": "????? ?????????",
+ "eng.scriptwords.example_campaign_milestone_f1ff": "Бесплатный отряд при постройке казарм",
+ "eng.scriptwords.example_quiet_growth_9266": "????????? ????",
+ "eng.scriptwords.example_border_watch_487a": "??????????? ?????",
+ "eng.scriptwords.example_record_the_victories_0637": "Наказание за восстание",
+ "eng.scriptwords.example_a_winter_allowance_d16b": "?????? ???????",
+ "eng.scriptwords.example_civic_works_24a4": "????????? ??????",
+ "voices.no_orders_no_accent": "В этом классе нет приказов; для этого отряда не выбран акцент голоса.",
+ "eng.scriptbuilder.missing_subject": "событие не предоставляет {subject}",
+ "eng.scriptbuilder.unknown_names": "не найдено в этом моде: {names}",
+ "eng.scriptdocs.enter_a_condition_after_not": "введите условие после not",
+ "eng.scriptdocs.name_is_unavailable_on_the_campaign_map": "{name} недоступно на карте кампании",
+ "eng.scriptdocs.name_is_only_available_in_battles": "{name} доступно только в битвах",
+ "eng.scriptdocs.name_needs_event_data_missing": "для {name} нужны данные события: {missing}",
+ "eng.scriptbuilder.when_choose_a_recognized_event": "КОГДА: выберите распознаваемое событие",
+ "eng.scriptbuilder.when_this_event_is_unavailable_in_the_selected_engine_s": "КОГДА: это событие недоступно в выбранных движках",
+ "eng.scriptbuilder.for_each_this_event_supplies_no_faction_to_iterate": "ДЛЯ КАЖДОЙ: событие не предоставляет фракцию для перебора",
+ "eng.scriptbuilder.for_each_pick_the_faction_to_iterate": "ДЛЯ КАЖДОЙ: выберите фракцию для перебора",
+ "eng.scriptbuilder.the_event_supplies_no_former_owner": "событие не предоставляет прежнего владельца",
+ "eng.scriptbuilder.unknown_block": "неизвестный блок {kind}",
+ "eng.scriptbuilder.readback_once": "{rule} Только один раз за кампанию.",
+ "eng.scriptbuilder.readback_only_with": "{rule} Только в кампании, где есть фракция {faction}.",
+ "eng.scriptbuilder.no_faction": "(фракция не выбрана)",
+ "eng.scriptbuilder.no_event": "(событие не выбрано)",
+ "eng.scriptbuilder.a_faction": "фракция",
+ "eng.scriptbuilder.action_tear_down": "удалить {chain}",
+ "eng.scriptbuilder.action_trait": "дать {trait}, уровень {level}",
+ "eng.scriptbuilder.action_log": "записать в журнал {text}",
+ "eng.scriptbuilder.action_script": "выполнить строку кампании {line}",
+ "eng.scriptbuilder.test_control": "фракция: {control}",
+ "eng.scriptbuilder.test_turn": "ход: {op} {turn}",
+ "eng.scriptbuilder.current_faction": "текущая фракция",
+ "eng.scriptbuilder.human_faction": "фракция игрока",
+ "eng.scriptbuilder.rebels": "повстанцы",
+ "eng.scriptbuilder.no_level": "(уровень не выбран)",
+ "eng.scriptbuilder.no_unit": "(отряд не выбран)",
+ "eng.scriptbuilder.no_trait": "(черта не выбрана)",
+ "eng.scriptbuilder.no_ancillary": "(приближенный не выбран)",
+ "eng.scriptbuilder.no_condition": "(условие не выбрано)",
+ "eng.scriptwords.cond_help_who_6987": "проверить, управляет ли фракцией события игрок, компьютер или это одна из выбранных фракций",
+ "eng.scriptwords.cond_help_money_366a": "сравнить казну фракции события с выбранной суммой",
+ "eng.scriptwords.cond_help_towns_7967": "сравнить число поселений фракции события",
+ "eng.scriptwords.cond_help_people_de45": "сравнить население города события с выбранным числом",
+ "eng.scriptwords.cond_help_town_is_bca1": "ограничить правило выбранными поселениями кампании",
+ "eng.scriptwords.cond_help_capital_5f8f": "проверить, является ли город события столицей своей фракции",
+ "eng.scriptwords.act_help_people_pct_c1d3": "удалить выбранный процент населения города события",
+ "eng.scriptwords.act_help_give_town_10a7": "переносить право владения городом события к выбранной фракции",
+ "eng.scriptwords.act_help_stance_1f28": "установить войну, мир или союз между двумя выбранными фракциями",
+ "eng.scriptwords.act_help_trait_f782": "дать полководцу события выбранную черту на выбранном уровне",
+ "eng.scriptwords.act_help_ancillary_a951": "дать полководцу события выбранного приближенного",
+ "eng.scriptwords.field_money_faction_1b69": "идентификатор фракции",
+ "eng.scriptwords.field_give_town_faction_aca7": "идентификатор фракции",
+ "eng.scriptwords.field_stance_a_0669": "первая фракция",
+ "eng.scriptwords.field_stance_faction_e040": "идентификатор фракции",
+ "eng.scriptwords.field_stance_faction_b_cfe8": "идентификатор другой фракции",
+ "eng.scriptwords.field_ancillary_anc_9f69": "идентификатор приближенного",
+ "eng.scriptaddons.script_summary": "скрипт дополнения ({name})",
+ "eng.scriptaddons.module_enabled_help": "выполнить это правило кампании при наступлении его события; отключение оставляет модуль установленным",
+ "eng.scriptaddons.module_once_help": "остановить это правило после первого успешного выполнения в кампании",
+ "eng.scriptaddons.older_moved": "старая копия {title} вне script/modules запускалась бы дважды; теперь дополнение находится в {path}"
 }

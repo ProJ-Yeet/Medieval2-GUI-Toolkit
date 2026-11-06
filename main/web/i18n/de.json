@@ -3,1008 +3,7 @@
   "lang": "de",
   "status": "draft"
  },
- "_exempt": {
-  "campbrowse.campaigns_read_in_ms": [
-   "ship"
-  ],
-  "campbrowse.every_campaign_this_mod_ships_with": [
-   "ship"
-  ],
-  "campbrowse.nothing_in_to_read_a_menu": [
-   "ship"
-  ],
-  "campbrowse.ships_map_layers": [
-   "ship"
-  ],
-  "campcreate.new_region_name_paint_settlement_port": [
-   "port_verb"
-  ],
-  "campcreate.port": [
-   "port_verb"
-  ],
-  "campcreate.port_marker_add_or_move_on": [
-   "port_verb"
-  ],
-  "campcreate.select_a_region_first_then_choose": [
-   "port_verb"
-  ],
-  "codeview.every_string_here_is_stored_as": [
-   "character"
-  ],
-  "campmark.named_character_general_admiral_port_spy": [
-   "port_verb"
-  ],
-  "campmark.port": [
-   "port_verb"
-  ],
-  "eng.campaint.is_a_marker_colour_black_is": [
-   "port_verb"
-  ],
-  "climates.append_a_name_the_engine_does": [
-   "ship"
-  ],
-  "climates.taking_over_one_of_the_twelve": [
-   "ship"
-  ],
-  "edusort.line_character": [
-   "character"
-  ],
-  "eng.animloose.turns_bones_and_its_skeleton_has": [
-   "turn"
-  ],
-  "eng.casanim.turns_bones_and_the_skeleton_has": [
-   "turn"
-  ],
-  "campmark.this_mod_ships_its_own_picture": [
-   "ship"
-  ],
-  "eng.buildings.is_still_used_province_s_carry": [
-   "gate"
-  ],
-  "cards.data_ui_units_data_ui_unit": [
-   "unit"
-  ],
-  "eng.buildings.hidden_ceiling_note": [
-   "ship"
-  ],
-  "eng.codeview.length_says_but_text_is": [
-   "character"
-  ],
-  "eng.codeview.length_says_but_text_is_and_more": [
-   "character"
-  ],
-  "eng.campaint.is_not_a_marker_map_regions": [
-   "port_verb"
-  ],
-  "eng.campaint.settlement_or_port_pixels_left_alone": [
-   "port_verb"
-  ],
-  "eng.campaint.ships_own_so_it_does_not_see": [
-   "ship"
-  ],
-  "eng.campevents.an_event_line_needs_a_category": [
-   "event"
-  ],
-  "eng.campevents.an_event_line_needs_a_disaster": [
-   "event"
-  ],
-  "eng.campevents.an_event_line_needs_a_label": [
-   "event"
-  ],
-  "eng.campevents.an_event_line_with_no_type": [
-   "event"
-  ],
-  "eng.campevents.is_not_one_of_the_eight": [
-   "ship"
-  ],
-  "eng.campevents.line_event_takes_a_category_and": [
-   "event"
-  ],
-  "eng.campevents.line_is_before_the_first_event": [
-   "event"
-  ],
-  "eng.climatenew.a_climate_name_the_battle_map": [
-   "ship"
-  ],
-  "eng.climatenew.all_four_mods_measured_for_this": [
-   "ship"
-  ],
-  "eng.dupes.a_renamed_block_is_a_real": [
-   "soldier"
-  ],
-  "maplabels.port": [
-   "port_verb"
-  ],
-  "maplabels.port_2": [
-   "port_verb"
-  ],
-  "eng.heroabilities.not_in_ui_battle_sd_so": [
-   "battle"
-  ],
-  "facaudit.world_maps_campaign": [
-   "campaign"
-  ],
-  "maplabels.character": [
-   "character"
-  ],
-  "eng.mercpools.line_is_not_pool_regions_or": [
-   "unit"
-  ],
-  "eng.minorfiles.this_cultures_port_ladder_has_lines": [
-   "port_verb"
-  ],
-  "mapcheck.records_what_is_wrong_now_as": [
-   "record"
-  ],
-  "eng.namekeys.this_mod_ships_only_strings_bin": [
-   "ship"
-  ],
-  "eng.soundscripts.line_end_with_no_open_event": [
-   "event"
-  ],
-  "eng.winconds.could_not_be_read_the_stock": [
-   "ship"
-  ],
-  "eng.stratedit.a_settlement_block_opens_with_the": [
-   "castle"
-  ],
-  "eng.stratedit.stays_on_the_map_with_no": [
-   "ship"
-  ],
-  "eng.stratedit.the_header_says_the_engine_reads": [
-   "settlement",
-   "castle"
-  ],
-  "eng.stratedit.two_levels_of_stand_in_this": [
-   "ship"
-  ],
-  "eng.stringsbin.a_single_string_cannot_exceed_65535": [
-   "character"
-  ],
-  "eng.stringsbin.a_string_says_it_is_characters": [
-   "character"
-  ],
-  "eng.traits.trigger_affects_which_this_file_does": [
-   "trait"
-  ],
-  "core.every_model_a_mod_ships_the": [
-   "ship"
-  ],
-  "core.the_tool_did_not_finish_loading": [
-   "turn"
-  ],
-  "regiondel.already_has_a_port_and_only": [
-   "port_verb"
-  ],
-  "regiondel.has_no_port_of_its_own": [
-   "port_verb"
-  ],
-  "regiondel.its_port": [
-   "port_verb"
-  ],
-  "settlemech.a_levels_upgrade_is_the_population": [
-   "upgrade"
-  ],
-  "settlemech.level": [
-   "level"
-  ],
-  "traits.hidden": [
-   "hide"
-  ],
-  "traits.hidden_2": [
-   "hide"
-  ],
-  "soundbanks.has_no_data_the_game_uses": [
-   "ship"
-  ],
-  "buildings.borrowed_from_the_unpacked_vanilla_ui": [
-   "ship"
-  ],
-  "v3anim.building_the_glb": [
-   "building"
-  ],
-  "v3anim.building_the_obj_zip": [
-   "building"
-  ],
-  "v3anim.played_from_vanillas_pack_this_mod": [
-   "ship"
-  ],
-  "v3anim.the_weapon_skeletons_move_the_weapon": [
-   "shield"
-  ],
-  "v3anim.turn_every_key": [
-   "turn"
-  ],
-  "v3anim.turns_to": [
-   "turn"
-  ],
-  "buildings.every_gate_at_once_of_regions": [
-   "gate"
-  ],
-  "buildings.every_resource_gate_at_once_from": [
-   "gate"
-  ],
-  "buildings.no_region_passes_every_gate": [
-   "gate"
-  ],
-  "buildings.every_rule_over_the_shape_of": [
-   "upgrade"
-  ],
-  "buildings.hidden": [
-   "hide"
-  ],
-  "buildings.its_battle_model_has_no_texture": [
-   "turn"
-  ],
-  "buildings.level_3": [
-   "level"
-  ],
-  "buildings.level_key": [
-   "level"
-  ],
-  "guided.a_projectile_is_set_but_the_weapon_type_is_type": [
-   "missile"
-  ],
-  "guided.added_to_defence_when_the_attacker": [
-   "mount"
-  ],
-  "guided.added_to_the_attack_factor_when": [
-   "mount"
-  ],
-  "guided.armour_0_armour_1_armour_2": [
-   "shield",
-   "armour",
-   "missile",
-   "melee",
-   "defence"
-  ],
-  "guided.armour_defence_skill_hit_sound": [
-   "armour",
-   "defence"
-  ],
-  "guided.armour_defence_skill_shield_hit_sound": [
-   "shield",
-   "armour",
-   "defence"
-  ],
-  "guided.armour_upgrade_models_outnumber_levels": [
-   "trigger"
-  ],
-  "guided.attack_bonus_vs_mounted_defence_bonus": [
-   "mount",
-   "armour",
-   "attack",
-   "defence"
-  ],
-  "guided.attack_charge_projectile_range_ammo_weapon": [
-   "weapon",
-   "projectile",
-   "charge",
-   "attack",
-   "skeleton"
-  ],
-  "guided.attack_vs_mounted": [
-   "mount"
-  ],
-  "guided.banner_faction": [
-   "faction"
-  ],
-  "guided.banner_unit": [
-   "unit"
-  ],
-  "guided.can_run_amok_only_does_anything": [
-   "mount"
-  ],
-  "guided.close": [
-   "close"
-  ],
-  "guided.close_2": [
-   "close"
-  ],
-  "guided.defence_vs_mounted": [
-   "mount"
-  ],
-  "guided.faction_faction": [
-   "faction"
-  ],
-  "guided.faction_faction_culture": [
-   "faction",
-   "culture"
-  ],
-  "guided.find_an_entry_by_skeleton_by": [
-   "soldier"
-  ],
-  "guided.florins_the_smith_charges_to_upgrade": [
-   "charge"
-  ],
-  "guided.florins_the_smith_charges_to_upgrade_2": [
-   "charge"
-  ],
-  "sprites.flag_turned_off": [
-   "turn"
-  ],
-  "sprites.turn_the_flag_back_off": [
-   "turn"
-  ],
-  "sprites.the_bypass_flag_makes_the_next_normal": [
-   "turn"
-  ],
-  "sprites.this_mod_ships_m2tweop_so_generation": [
-   "ship"
-  ],
-  "buildings.province_s_carry_it_clause_s": [
-   "gate"
-  ],
-  "buildings.selected": [
-   "select"
-  ],
-  "buildings.take_off_the_line_shows_what": [
-   "gate"
-  ],
-  "buildings.the_hidden_resources_line_at_the": [
-   "gate"
-  ],
-  "viewer3d.shield": [
-   "shield"
-  ],
-  "viewer3d.shield_2": [
-   "shield"
-  ],
-  "viewer3d.shield_2_carried": [
-   "shield"
-  ],
-  "viewer3d.shield_2_slung": [
-   "shield"
-  ],
-  "viewer3d.shield_carried": [
-   "shield"
-  ],
-  "viewer3d.shield_slung": [
-   "shield"
-  ],
-  "viewer3d.drag_to_turn_wheel_to_zoom": [
-   "turn"
-  ],
-  "viewer3d.drawn_at_shipped": [
-   "ship"
-  ],
-  "guided.how_much_of_a_mounted_targets": [
-   "mount"
-  ],
-  "guided.infantry_cavalry_siege_ship_handler": [
-   "ship",
-   "siege",
-   "cavalry",
-   "infantry"
-  ],
-  "guided.level_level_level": [
-   "level"
-  ],
-  "guided.light_heavy_missile_spearmen": [
-   "missile"
-  ],
-  "guided.man_mount_animal": [
-   "mount",
-   "animal"
-  ],
-  "guided.melee_attack_missile_attack_defence": [
-   "missile",
-   "melee",
-   "attack",
-   "defence"
-  ],
-  "guided.model_men_extras_mass_radius_height": [
-   "model"
-  ],
-  "guided.model_model_model": [
-   "model"
-  ],
-  "guided.optional_the_effect_played_when_the_weapon": [
-   "turn"
-  ],
-  "guided.optional_the_formation_the_unit_can_toggle": [
-   "wall"
-  ],
-  "guided.optional_three_factors_that_apply_only": [
-   "mount"
-  ],
-  "guided.parrying_skill_it_is_ignored_when": [
-   "shield"
-  ],
-  "guided.prec_a_missile_unit_throws_one": [
-   "charge"
-  ],
-  "buildings.then_give_it_to_provinces_in": [
-   "gate"
-  ],
-  "buildings.this_mod_ships_no_file_at": [
-   "ship"
-  ],
-  "buildings.unconditional_the_rest_need_every_gate": [
-   "gate"
-  ],
-  "buildings.units_without_battle_model_texture": [
-   "turn"
-  ],
-  "buildings.with_no_ownership_to_gate_to": [
-   "gate"
-  ],
-  "viewer3d.32_checker_cells_to_a_sheet": [
-   "sprite_sheet"
-  ],
-  "viewer3d.attach_sheet": [
-   "sprite_sheet"
-  ],
-  "viewer3d.attachment_sheet": [
-   "sprite_sheet"
-  ],
-  "viewer3d.attachment_slot_main_again": [
-   "sprite_sheet"
-  ],
-  "viewer3d.attachment_slot_missing": [
-   "sprite_sheet"
-  ],
-  "viewer3d.both_sheets": [
-   "sprite_sheet"
-  ],
-  "viewer3d.groups_reach_attachment": [
-   "sprite_sheet"
-  ],
-  "viewer3d.groups_reach_right_half": [
-   "sprite_sheet"
-  ],
-  "viewer3d.main_sheet": [
-   "sprite_sheet"
-  ],
-  "viewer3d.no_attachment_whole_space": [
-   "sprite_sheet"
-  ],
-  "viewer3d.right_half_of_the_sheet": [
-   "sprite_sheet"
-  ],
-  "viewer3d.runs_outside_the_sheet_it_was": [
-   "sprite_sheet"
-  ],
-  "viewer3d.sheet": [
-   "sprite_sheet"
-  ],
-  "viewer3d.the_same_sheet_again": [
-   "sprite_sheet"
-  ],
-  "viewer3d.the_sheet": [
-   "sprite_sheet"
-  ],
-  "viewer3d.title_open_the_uv_layout_beside": [
-   "sprite_sheet"
-  ],
-  "viewer3d.title_paint_the_uv_coordinate_instead": [
-   "sprite_sheet"
-  ],
-  "viewer3d.uv_self_key": [
-   "sprite_sheet"
-  ],
-  "viewer3d.uv_single_key": [
-   "sprite_sheet"
-  ],
-  "viewer3d.x_a_placeholder_not_a_sheet": [
-   "sprite_sheet"
-  ],
-  "viewer3d.draw_the_texture_at_the_size": [
-   "sprite_sheet",
-   "ship"
-  ],
-  "guided.shield": [
-   "shield"
-  ],
-  "guided.shield_factor_against_melee_attacks_from": [
-   "shield"
-  ],
-  "guided.shield_factor_against_missile_fire_this": [
-   "shield"
-  ],
-  "guided.shield_factor_only_applies_to_attacks": [
-   "shield"
-  ],
-  "guided.shield_melee": [
-   "shield"
-  ],
-  "guided.shield_missile": [
-   "shield"
-  ],
-  "guided.shield_only_counts_against_attacks_from": [
-   "shield"
-  ],
-  "guided.splits_the_shield_into_one_value": [
-   "shield"
-  ],
-  "guided.there_is_no_shield_slot_here": [
-   "shield"
-  ],
-  "guided.vanilla_ships_it_commented_out": [
-   "ship"
-  ],
-  "guided.vanilla_ships_it_commented_out_on": [
-   "ship"
-  ],
-  "guided.turns_recruit_upkeep_weapon_ug_armour": [
-   "battle",
-   "recruit",
-   "weapon",
-   "armour",
-   "turn"
-  ],
-  "v3anim.vanillas_skeleton_pack_this_mod_ships": [
-   "ship"
-  ],
-  "v3anim.walk_charge_die_a_file_name": [
-   "charge"
-  ],
-  "campaint.add_a_province_decide_its_record": [
-   "port_verb"
-  ],
-  "campaint.place_the_port_pixel_or_skip": [
-   "port_verb"
-  ],
-  "campmap.building_the_composite": [
-   "building"
-  ],
-  "campmap.click_a_province_to_inspect_it": [
-   "turn"
-  ],
-  "campmap.comp_key": [
-   "terrain"
-  ],
-  "campmap.draw_the_ground_the_way_the": [
-   "terrain"
-  ],
-  "campmap.has_no_campaign_map_this_tool": [
-   "ship"
-  ],
-  "campmap.hidden": [
-   "hide"
-  ],
-  "changes.turn_off": [
-   "turn"
-  ],
-  "changes.turn_on": [
-   "turn"
-  ],
-  "changes.turn_off_putting_the_original_records": [
-   "turn"
-  ],
-  "campnew.map_layers_note": [
-   "ship"
-  ],
-  "campnew.this_mod_ships_only_the_compiled": [
-   "ship"
-  ],
-  "campmap.port_marker": [
-   "port_verb"
-  ],
-  "campmap.port_pixel": [
-   "port_verb"
-  ],
-  "campmap.port_pixels_undecided": [
-   "port_verb"
-  ],
-  "campmap.region_id_tiles_settlement_at_game": [
-   "port_verb"
-  ],
-  "campmap.settlement_character_and_port_names_beside": [
-   "port_verb"
-  ],
-  "campmap.tiles_regions_settlements_ports": [
-   "port_verb"
-  ],
-  "campmap.ships_its_own_so_that_layer": [
-   "ship"
-  ],
-  "campmap.the_campaign_map_as_a_surface": [
-   "turn"
-  ],
-  "campmap.the_heights_as_a_surface_with": [
-   "turn"
-  ],
-  "campmap.tab_osm_title": [
-   "turn"
-  ],
-  "eng.campfiles.this_mod_ships_only_so_the": [
-   "ship"
-  ],
-  "eng.campstrat.faction_relationships_does_not_read_as": [
-   "faction"
-  ],
-  "eng.campstrat.faction_standings_does_not_read_as": [
-   "faction"
-  ],
-  "eng.campstrat.fort_line_does_not_read_as": [
-   "culture"
-  ],
-  "eng.campstrat.settlement_header_says_the_engine_knows": [
-   "castle"
-  ],
-  "eng.campstrat.should_be_armour": [
-   "armour"
-  ],
-  "eng.campstrat.unit_line_does_not_read_as": [
-   "armour"
-  ],
-  "eng.characters.has_strat_model_s_a_named": [
-   "heir",
-   "leader"
-  ],
-  "eng.animslot.this_mod_ships_no_animation_packs": [
-   "ship"
-  ],
-  "eng.campnew.ships_map_layer_s_of_its": [
-   "ship"
-  ],
-  "eng.campnew.is_not_on_disk_and_ships": [
-   "ship"
-  ],
-  "eng.mapnewreal.climates_is_one_ground_or_koppen": [
-   "ground",
-   "climate"
-  ],
-  "eng.mapnewreal.land_and_sea_from_the_real": [
-   "ground",
-   "level"
-  ],
-  "eng.mapnewreal.province_s_grown_from_their_cities": [
-   "port_verb"
-  ],
-  "eng.mapnewreal.rivers_is_none_or_one_of": [
-   "river"
-  ],
-  "eng.mapnewreal.the_highest_ground_peak_0f_m": [
-   "ground"
-  ],
-  "eng.campnew.nothing_names_on_the_new_game_menu_archive": [
-   "ship"
-  ],
-  "eng.soundbanks.line_end_with_no_open_event": [
-   "event"
-  ],
-  "eng.stratcamp.is_not_a_word_the_engine": [
-   "ship"
-  ],
-  "eng.mapcheck.second_port_pixel": [
-   "port_verb"
-  ],
-  "eng.mapcheck.second_port_pixel_for_owner": [
-   "port_verb"
-  ],
-  "eng.mapcheck.starts_with_a_and_map_regions": [
-   "port_verb"
-  ],
-  "eng.mapcheck.the_port_pixel_at_has_no": [
-   "port_verb"
-  ],
-  "eng.mapcheck.the_port_pixel_at_touches_no": [
-   "port_verb"
-  ],
-  "eng.regiondel.already_has_a_port_of_its": [
-   "port_verb"
-  ],
-  "eng.mapcheck.the_river_crossing_at_is_at": [
-   "level",
-   "ground"
-  ],
-  "eng.modeldb.characters_left_over_after_the_entry": [
-   "character"
-  ],
-  "eng.osmmap.openstreetmap_is_off_turn_it_on": [
-   "turn"
-  ],
-  "mapgen.the_real_ground_under_the_maps": [
-   "ground"
-  ],
-  "stratview.this_mod_ships_no_data_models": [
-   "ship"
-  ],
-  "eng.settlemech.upgrade_is_above_max_which_the": [
-   "upgrade"
-  ],
-  "eng.settlemech.upgrade_is_not_s_base_both": [
-   "upgrade"
-  ],
-  "eng.sidefiles.line_a_symbol_sheet_before_any": [
-   "faction"
-  ],
-  "eng.sidefiles.units_carry_an_undeclared_animal": [
-   "animal"
-  ],
-  "eng.sounds.line_end_with_no_open_event": [
-   "event"
-  ],
-  "eng.transfer.engine_skeleton_the_mounted_engines_class": [
-   "mount"
-  ],
-  "eng.transfer.projectile_model_cas_files_were_copied": [
-   "missile"
-  ],
-  "campaint.writes_layers_at_once_in_the": [
-   "port_verb"
-  ],
-  "campaint.written_into_a_settlement_the_music": [
-   "ship"
-  ],
-  "mapsize.the_map_is_the_real_ground": [
-   "ground"
-  ],
-  "mapsize.tiles_to_add_on_each_edge": [
-   "ground"
-  ],
-  "mapsize.turn_the_real_world_switch_on": [
-   "turn"
-  ],
-  "home.mounted_pack": [
-   "mount"
-  ],
-  "map3d.building_the_mesh": [
-   "building"
-  ],
-  "map3d.frame_the_whole_map_again": [
-   "frame"
-  ],
-  "osmworld.drag_to_pan_wheel_to_zoom": [
-   "turn"
-  ],
-  "osmmap.mylaes_layout_the_maps_layers_as": [
-   "port_verb"
-  ],
-  "osmmap.open_settings_to_turn_it_on": [
-   "turn"
-  ],
-  "osmmap.the_style_above_cut_to_the": [
-   "frame"
-  ],
-  "mapquery.building_that_map": [
-   "building"
-  ],
-  "mapquery.more_than_a_spreadsheet_holds_in": [
-   "sprite_sheet"
-  ],
-  "rebels.of_provinces_name_a_rebel_faction": [
-   "turn"
-  ],
-  "stratmap.draw_a_campaign_map_model_beside": [
-   "ship"
-  ],
-  "stratmap.file_named_by_no_model_but": [
-   "turn"
-  ],
-  "minorfiles.port_ladder_line_s_in_the": [
-   "port_verb"
-  ],
-  "minorfiles.this_culture_has_no_port_lines": [
-   "port_verb"
-  ],
-  "minorfiles.where_it_starts_every_regions_religions": [
-   "ship"
-  ],
-  "eng.animpack.the_source_ships_no_packs_of": [
-   "ship"
-  ],
-  "packs.battle_model_entr_travel_with_them": [
-   "mount"
-  ],
-  "editor.selected": [
-   "select"
-  ],
-  "editor.soldier_replace": [
-   "soldier"
-  ],
-  "settings.and_more_characters_in_the_diagnostic": [
-   "character"
-  ],
-  "settings.start_the_soldier_row_on_base": [
-   "building"
-  ],
-  "settings.use_the_base_units_soldier_line": [
-   "soldier"
-  ],
-  "transfer.mounted_engine": [
-   "mount"
-  ],
-  "stratcamp.faction_bik": [
-   "faction"
-  ],
-  "eng.stratobj.is_pixel_none_of_the_800_port": [
-   "port_verb"
-  ],
-  "eng.stratobj.is_pixel_none_of_the_800_settlement": [
-   "port_verb"
-  ],
-  "transfer.added": [
-   "add"
-  ],
-  "eng.cas.w_text_latin1": [
-   "character"
-  ],
-  "eng.cas.w_text_long": [
-   "character"
-  ],
-  "buildings.copied_pool_open_another_building": [
-   "header"
-  ],
-  "armory.frame_all": [
-   "frame"
-  ],
-  "armory.frame_all_title": [
-   "frame"
-  ],
-  "armory.mat_bone": [
-   "bone"
-  ],
-  "armory.weights_own": [
-   "transfer"
-  ],
-  "armory.prefix_add": [
-   "add"
-  ],
-  "armory.head_as_one_title": [
-   "turn"
-  ],
-  "armory.key_frame_selected": [
-   "frame"
-  ],
-  "armory.key_frame_all": [
-   "frame"
-  ],
-  "armory.statistics": [
-   "stats"
-  ],
-  "armory.key_rotate": [
-   "turn"
-  ],
-  "armory.rotate": [
-   "turn"
-  ],
-  "armory.stamp_rot": [
-   "turn"
-  ],
-  "cards.gen_turn": [
-   "turn"
-  ],
-  "cards.gen_view_hint": [
-   "turn"
-  ],
-  "cards.gen_place_reset": [
-   "frame"
-  ],
-  "cards.gen_rig_hint": [
-   "turn"
-  ],
-  "eng.gamelog.howto": [
-   "level"
-  ],
-  "eng.gamelog.known_5": [
-   "turn"
-  ],
-  "voices.no_name_call": [
-   "general"
-  ],
-  "voices.own_note": [
-   "event"
-  ],
-  "voices.own_compiled": [
-   "event"
-  ],
-  "family.on_map": [
-   "character"
-  ],
-  "eng.scriptwords.cond_help_game_d1e6": [
-   "trait",
-   "turn"
-  ],
-  "eng.scriptwords.act_help_console_3820": [
-   "battle"
-  ],
-  "eng.scriptfiles.grid_in": [
-   "recruit"
-  ],
-  "eng.scriptfiles.grid_copy": [
-   "recruit"
-  ],
-  "eng.scriptfiles.grid_not_in": [
-   "recruit"
-  ],
-  "eng.scriptwords.addon_sack_settlement_7e36": [
-   "settlement"
-  ],
-  "eng.scriptwords.addon_help_sack_settlement_8e93": [
-   "settlement"
-  ],
-  "eng.scriptwords.addon_raze_settlement_9030": [
-   "settlement"
-  ],
-  "eng.scriptwords.addon_help_raze_settlement_52e3": [
-   "settlement"
-  ],
-  "eng.scriptwords.addon_recruit_order_9449": [
-   "recruit"
-  ],
-  "eng.scriptwords.setting_recruit_order_ro_enabled_6785": [
-   "recruit"
-  ],
-  "eng.scriptwords.addon_one_recruit_grid_21e4": [
-   "recruit"
-  ],
-  "armory.exp_free_turn_title": [
-   "turn"
-  ],
-  "armory.look_closer_title": [
-   "turn"
-  ],
-  "armory.uv_hint": [
-   "turn"
-  ],
-  "eng.modfiles.mounted_engines": [
-   "mount"
-  ],
-  "eng.server.model_file_missing": [
-   "ship"
-  ],
-  "campcreate.add_port": [
-   "port_verb"
-  ],
-  "campcreate.give_this_region_a_port_click": [
-   "port_verb"
-  ],
-  "campcreate.has_a_port_review_save_writes": [
-   "port_verb"
-  ],
-  "campcreate.move_port": [
-   "port_verb"
-  ],
-  "campcreate.move_this_regions_port_click_the": [
-   "port_verb"
-  ],
-  "campcreate.remove_port": [
-   "port_verb"
-  ],
-  "campcreate.s_new_port": [
-   "port_verb"
-  ],
-  "campcreate.take_this_regions_port_off_the": [
-   "port_verb"
-  ],
-  "cards.gen_ground": [
-   "frame"
-  ],
-  "cards.gen_game_frame": [
-   "frame"
-  ],
-  "guided.attr_fire_by_rank": [
-   "turn"
-  ],
-  "guided.attr_bp": [
-   "missile"
-  ],
-  "guided.attr_thrown": [
-   "missile"
-  ],
-  "eng.gamelog.known_script_error": [
-   "character"
-  ],
-  "healthx.at_col": [
-   "character"
-  ],
-  "armory.nav_title": [
-   "turn"
-  ],
-  "armory.view_hint_simple": [
-   "turn",
-   "frame"
-  ],
-  "campaint.overwrite_settlement_and_port_pixels": [
-   "port_verb"
-  ],
-  "eng.edusort.the_planned_edu_contains_a_character": [
-   "character"
-  ]
- },
+ "_exempt": {"campbrowse.campaigns_read_in_ms": ["ship"], "campbrowse.every_campaign_this_mod_ships_with": ["ship"], "campbrowse.nothing_in_to_read_a_menu": ["ship"], "campbrowse.ships_map_layers": ["ship"], "campcreate.new_region_name_paint_settlement_port": ["port_verb"], "campcreate.port": ["port_verb"], "campcreate.port_marker_add_or_move_on": ["port_verb"], "campcreate.select_a_region_first_then_choose": ["port_verb"], "codeview.every_string_here_is_stored_as": ["character"], "campmark.named_character_general_admiral_port_spy": ["port_verb"], "campmark.port": ["port_verb"], "eng.campaint.is_a_marker_colour_black_is": ["port_verb"], "climates.append_a_name_the_engine_does": ["ship"], "climates.taking_over_one_of_the_twelve": ["ship"], "edusort.line_character": ["character"], "eng.animloose.turns_bones_and_its_skeleton_has": ["turn"], "eng.casanim.turns_bones_and_the_skeleton_has": ["turn"], "campmark.this_mod_ships_its_own_picture": ["ship"], "eng.buildings.is_still_used_province_s_carry": ["gate"], "cards.data_ui_units_data_ui_unit": ["unit"], "eng.buildings.hidden_ceiling_note": ["ship"], "eng.codeview.length_says_but_text_is": ["character"], "eng.codeview.length_says_but_text_is_and_more": ["character"], "eng.campaint.is_not_a_marker_map_regions": ["port_verb"], "eng.campaint.settlement_or_port_pixels_left_alone": ["port_verb"], "eng.campaint.ships_own_so_it_does_not_see": ["ship"], "eng.campevents.an_event_line_needs_a_category": ["event"], "eng.campevents.an_event_line_needs_a_disaster": ["event"], "eng.campevents.an_event_line_needs_a_label": ["event"], "eng.campevents.an_event_line_with_no_type": ["event"], "eng.campevents.is_not_one_of_the_eight": ["ship"], "eng.campevents.line_event_takes_a_category_and": ["event"], "eng.campevents.line_is_before_the_first_event": ["event"], "eng.climatenew.a_climate_name_the_battle_map": ["ship"], "eng.climatenew.all_four_mods_measured_for_this": ["ship"], "eng.dupes.a_renamed_block_is_a_real": ["soldier"], "maplabels.port": ["port_verb"], "maplabels.port_2": ["port_verb"], "eng.heroabilities.not_in_ui_battle_sd_so": ["battle"], "facaudit.world_maps_campaign": ["campaign"], "maplabels.character": ["character"], "eng.mercpools.line_is_not_pool_regions_or": ["unit"], "eng.minorfiles.this_cultures_port_ladder_has_lines": ["port_verb"], "mapcheck.records_what_is_wrong_now_as": ["record"], "eng.namekeys.this_mod_ships_only_strings_bin": ["ship"], "eng.soundscripts.line_end_with_no_open_event": ["event"], "eng.winconds.could_not_be_read_the_stock": ["ship"], "eng.stratedit.a_settlement_block_opens_with_the": ["castle"], "eng.stratedit.stays_on_the_map_with_no": ["ship"], "eng.stratedit.the_header_says_the_engine_reads": ["settlement", "castle"], "eng.stratedit.two_levels_of_stand_in_this": ["ship"], "eng.stringsbin.a_single_string_cannot_exceed_65535": ["character"], "eng.stringsbin.a_string_says_it_is_characters": ["character"], "eng.traits.trigger_affects_which_this_file_does": ["trait"], "core.every_model_a_mod_ships_the": ["ship"], "core.the_tool_did_not_finish_loading": ["turn"], "regiondel.already_has_a_port_and_only": ["port_verb"], "regiondel.has_no_port_of_its_own": ["port_verb"], "regiondel.its_port": ["port_verb"], "settlemech.a_levels_upgrade_is_the_population": ["upgrade"], "settlemech.level": ["level"], "traits.hidden": ["hide"], "traits.hidden_2": ["hide"], "soundbanks.has_no_data_the_game_uses": ["ship"], "buildings.borrowed_from_the_unpacked_vanilla_ui": ["ship"], "v3anim.building_the_glb": ["building"], "v3anim.building_the_obj_zip": ["building"], "v3anim.played_from_vanillas_pack_this_mod": ["ship"], "v3anim.the_weapon_skeletons_move_the_weapon": ["shield"], "v3anim.turn_every_key": ["turn"], "v3anim.turns_to": ["turn"], "buildings.every_gate_at_once_of_regions": ["gate"], "buildings.every_resource_gate_at_once_from": ["gate"], "buildings.no_region_passes_every_gate": ["gate"], "buildings.every_rule_over_the_shape_of": ["upgrade"], "buildings.hidden": ["hide"], "buildings.its_battle_model_has_no_texture": ["turn"], "buildings.level_3": ["level"], "buildings.level_key": ["level"], "guided.a_projectile_is_set_but_the_weapon_type_is_type": ["missile"], "guided.added_to_defence_when_the_attacker": ["mount"], "guided.added_to_the_attack_factor_when": ["mount"], "guided.armour_0_armour_1_armour_2": ["shield", "armour", "missile", "melee", "defence"], "guided.armour_defence_skill_hit_sound": ["armour", "defence"], "guided.armour_defence_skill_shield_hit_sound": ["shield", "armour", "defence"], "guided.armour_upgrade_models_outnumber_levels": ["trigger"], "guided.attack_bonus_vs_mounted_defence_bonus": ["mount", "armour", "attack", "defence"], "guided.attack_charge_projectile_range_ammo_weapon": ["weapon", "projectile", "charge", "attack", "skeleton"], "guided.attack_vs_mounted": ["mount"], "guided.banner_faction": ["faction"], "guided.banner_unit": ["unit"], "guided.can_run_amok_only_does_anything": ["mount"], "guided.close": ["close"], "guided.close_2": ["close"], "guided.defence_vs_mounted": ["mount"], "guided.faction_faction": ["faction"], "guided.faction_faction_culture": ["faction", "culture"], "guided.find_an_entry_by_skeleton_by": ["soldier"], "guided.florins_the_smith_charges_to_upgrade": ["charge"], "guided.florins_the_smith_charges_to_upgrade_2": ["charge"], "sprites.flag_turned_off": ["turn"], "sprites.turn_the_flag_back_off": ["turn"], "sprites.the_bypass_flag_makes_the_next_normal": ["turn"], "sprites.this_mod_ships_m2tweop_so_generation": ["ship"], "buildings.province_s_carry_it_clause_s": ["gate"], "buildings.selected": ["select"], "buildings.take_off_the_line_shows_what": ["gate"], "buildings.the_hidden_resources_line_at_the": ["gate"], "viewer3d.shield": ["shield"], "viewer3d.shield_2": ["shield"], "viewer3d.shield_2_carried": ["shield"], "viewer3d.shield_2_slung": ["shield"], "viewer3d.shield_carried": ["shield"], "viewer3d.shield_slung": ["shield"], "viewer3d.drag_to_turn_wheel_to_zoom": ["turn"], "viewer3d.drawn_at_shipped": ["ship"], "guided.how_much_of_a_mounted_targets": ["mount"], "guided.infantry_cavalry_siege_ship_handler": ["ship", "siege", "cavalry", "infantry"], "guided.level_level_level": ["level"], "guided.light_heavy_missile_spearmen": ["missile"], "guided.man_mount_animal": ["mount", "animal"], "guided.melee_attack_missile_attack_defence": ["missile", "melee", "attack", "defence"], "guided.model_men_extras_mass_radius_height": ["model"], "guided.model_model_model": ["model"], "guided.optional_the_effect_played_when_the_weapon": ["turn"], "guided.optional_the_formation_the_unit_can_toggle": ["wall"], "guided.optional_three_factors_that_apply_only": ["mount"], "guided.parrying_skill_it_is_ignored_when": ["shield"], "guided.prec_a_missile_unit_throws_one": ["charge"], "buildings.then_give_it_to_provinces_in": ["gate"], "buildings.this_mod_ships_no_file_at": ["ship"], "buildings.unconditional_the_rest_need_every_gate": ["gate"], "buildings.units_without_battle_model_texture": ["turn"], "buildings.with_no_ownership_to_gate_to": ["gate"], "viewer3d.32_checker_cells_to_a_sheet": ["sprite_sheet"], "viewer3d.attach_sheet": ["sprite_sheet"], "viewer3d.attachment_sheet": ["sprite_sheet"], "viewer3d.attachment_slot_main_again": ["sprite_sheet"], "viewer3d.attachment_slot_missing": ["sprite_sheet"], "viewer3d.both_sheets": ["sprite_sheet"], "viewer3d.groups_reach_attachment": ["sprite_sheet"], "viewer3d.groups_reach_right_half": ["sprite_sheet"], "viewer3d.main_sheet": ["sprite_sheet"], "viewer3d.no_attachment_whole_space": ["sprite_sheet"], "viewer3d.right_half_of_the_sheet": ["sprite_sheet"], "viewer3d.runs_outside_the_sheet_it_was": ["sprite_sheet"], "viewer3d.sheet": ["sprite_sheet"], "viewer3d.the_same_sheet_again": ["sprite_sheet"], "viewer3d.the_sheet": ["sprite_sheet"], "viewer3d.title_open_the_uv_layout_beside": ["sprite_sheet"], "viewer3d.title_paint_the_uv_coordinate_instead": ["sprite_sheet"], "viewer3d.uv_self_key": ["sprite_sheet"], "viewer3d.uv_single_key": ["sprite_sheet"], "viewer3d.x_a_placeholder_not_a_sheet": ["sprite_sheet"], "viewer3d.draw_the_texture_at_the_size": ["sprite_sheet", "ship"], "guided.shield": ["shield"], "guided.shield_factor_against_melee_attacks_from": ["shield"], "guided.shield_factor_against_missile_fire_this": ["shield"], "guided.shield_factor_only_applies_to_attacks": ["shield"], "guided.shield_melee": ["shield"], "guided.shield_missile": ["shield"], "guided.shield_only_counts_against_attacks_from": ["shield"], "guided.splits_the_shield_into_one_value": ["shield"], "guided.there_is_no_shield_slot_here": ["shield"], "guided.vanilla_ships_it_commented_out": ["ship"], "guided.vanilla_ships_it_commented_out_on": ["ship"], "guided.turns_recruit_upkeep_weapon_ug_armour": ["battle", "recruit", "weapon", "armour", "turn"], "v3anim.vanillas_skeleton_pack_this_mod_ships": ["ship"], "v3anim.walk_charge_die_a_file_name": ["charge"], "campaint.add_a_province_decide_its_record": ["port_verb"], "campaint.place_the_port_pixel_or_skip": ["port_verb"], "campmap.building_the_composite": ["building"], "campmap.click_a_province_to_inspect_it": ["turn"], "campmap.comp_key": ["terrain"], "campmap.draw_the_ground_the_way_the": ["terrain"], "campmap.has_no_campaign_map_this_tool": ["ship"], "campmap.hidden": ["hide"], "changes.turn_off": ["turn"], "changes.turn_on": ["turn"], "changes.turn_off_putting_the_original_records": ["turn"], "campnew.map_layers_note": ["ship"], "campnew.this_mod_ships_only_the_compiled": ["ship"], "campmap.port_marker": ["port_verb"], "campmap.port_pixel": ["port_verb"], "campmap.port_pixels_undecided": ["port_verb"], "campmap.region_id_tiles_settlement_at_game": ["port_verb"], "campmap.settlement_character_and_port_names_beside": ["port_verb"], "campmap.tiles_regions_settlements_ports": ["port_verb"], "campmap.ships_its_own_so_that_layer": ["ship"], "campmap.the_campaign_map_as_a_surface": ["turn"], "campmap.the_heights_as_a_surface_with": ["turn"], "campmap.tab_osm_title": ["turn"], "eng.campfiles.this_mod_ships_only_so_the": ["ship"], "eng.campstrat.faction_relationships_does_not_read_as": ["faction"], "eng.campstrat.faction_standings_does_not_read_as": ["faction"], "eng.campstrat.fort_line_does_not_read_as": ["culture"], "eng.campstrat.settlement_header_says_the_engine_knows": ["castle"], "eng.campstrat.should_be_armour": ["armour"], "eng.campstrat.unit_line_does_not_read_as": ["armour"], "eng.characters.has_strat_model_s_a_named": ["heir", "leader"], "eng.animslot.this_mod_ships_no_animation_packs": ["ship"], "eng.campnew.ships_map_layer_s_of_its": ["ship"], "eng.campnew.is_not_on_disk_and_ships": ["ship"], "eng.mapnewreal.climates_is_one_ground_or_koppen": ["ground", "climate"], "eng.mapnewreal.land_and_sea_from_the_real": ["ground", "level"], "eng.mapnewreal.province_s_grown_from_their_cities": ["port_verb"], "eng.mapnewreal.rivers_is_none_or_one_of": ["river"], "eng.mapnewreal.the_highest_ground_peak_0f_m": ["ground"], "eng.campnew.nothing_names_on_the_new_game_menu_archive": ["ship"], "eng.soundbanks.line_end_with_no_open_event": ["event"], "eng.stratcamp.is_not_a_word_the_engine": ["ship"], "eng.mapcheck.second_port_pixel": ["port_verb"], "eng.mapcheck.second_port_pixel_for_owner": ["port_verb"], "eng.mapcheck.starts_with_a_and_map_regions": ["port_verb"], "eng.mapcheck.the_port_pixel_at_has_no": ["port_verb"], "eng.mapcheck.the_port_pixel_at_touches_no": ["port_verb"], "eng.regiondel.already_has_a_port_of_its": ["port_verb"], "eng.mapcheck.the_river_crossing_at_is_at": ["level", "ground"], "eng.modeldb.characters_left_over_after_the_entry": ["character"], "eng.osmmap.openstreetmap_is_off_turn_it_on": ["turn"], "mapgen.the_real_ground_under_the_maps": ["ground"], "stratview.this_mod_ships_no_data_models": ["ship"], "eng.settlemech.upgrade_is_above_max_which_the": ["upgrade"], "eng.settlemech.upgrade_is_not_s_base_both": ["upgrade"], "eng.sidefiles.line_a_symbol_sheet_before_any": ["faction"], "eng.sidefiles.units_carry_an_undeclared_animal": ["animal"], "eng.sounds.line_end_with_no_open_event": ["event"], "eng.transfer.engine_skeleton_the_mounted_engines_class": ["mount"], "eng.transfer.projectile_model_cas_files_were_copied": ["missile"], "campaint.writes_layers_at_once_in_the": ["port_verb"], "campaint.written_into_a_settlement_the_music": ["ship"], "mapsize.the_map_is_the_real_ground": ["ground"], "mapsize.tiles_to_add_on_each_edge": ["ground"], "mapsize.turn_the_real_world_switch_on": ["turn"], "home.mounted_pack": ["mount"], "map3d.building_the_mesh": ["building"], "map3d.frame_the_whole_map_again": ["frame"], "osmworld.drag_to_pan_wheel_to_zoom": ["turn"], "osmmap.mylaes_layout_the_maps_layers_as": ["port_verb"], "osmmap.open_settings_to_turn_it_on": ["turn"], "osmmap.the_style_above_cut_to_the": ["frame"], "mapquery.building_that_map": ["building"], "mapquery.more_than_a_spreadsheet_holds_in": ["sprite_sheet"], "rebels.of_provinces_name_a_rebel_faction": ["turn"], "stratmap.draw_a_campaign_map_model_beside": ["ship"], "stratmap.file_named_by_no_model_but": ["turn"], "minorfiles.port_ladder_line_s_in_the": ["port_verb"], "minorfiles.this_culture_has_no_port_lines": ["port_verb"], "minorfiles.where_it_starts_every_regions_religions": ["ship"], "eng.animpack.the_source_ships_no_packs_of": ["ship"], "packs.battle_model_entr_travel_with_them": ["mount"], "editor.selected": ["select"], "editor.soldier_replace": ["soldier"], "settings.and_more_characters_in_the_diagnostic": ["character"], "settings.start_the_soldier_row_on_base": ["building"], "settings.use_the_base_units_soldier_line": ["soldier"], "transfer.mounted_engine": ["mount"], "stratcamp.faction_bik": ["faction"], "eng.stratobj.is_pixel_none_of_the_800_port": ["port_verb"], "eng.stratobj.is_pixel_none_of_the_800_settlement": ["port_verb"], "transfer.added": ["add"], "eng.cas.w_text_latin1": ["character"], "eng.cas.w_text_long": ["character"], "buildings.copied_pool_open_another_building": ["header"], "armory.frame_all": ["frame"], "armory.frame_all_title": ["frame"], "armory.mat_bone": ["bone"], "armory.weights_own": ["transfer"], "armory.prefix_add": ["add"], "armory.head_as_one_title": ["turn"], "armory.key_frame_selected": ["frame"], "armory.key_frame_all": ["frame"], "armory.statistics": ["stats"], "armory.key_rotate": ["turn"], "armory.rotate": ["turn"], "armory.stamp_rot": ["turn"], "cards.gen_turn": ["turn"], "cards.gen_view_hint": ["turn"], "cards.gen_place_reset": ["frame"], "cards.gen_rig_hint": ["turn"], "eng.gamelog.howto": ["level"], "eng.gamelog.known_5": ["turn"], "voices.no_name_call": ["general"], "voices.own_note": ["event"], "voices.own_compiled": ["event"], "family.on_map": ["character"], "eng.scriptwords.cond_help_game_d1e6": ["trait", "turn"], "eng.scriptwords.act_help_console_3820": ["battle"], "eng.scriptfiles.grid_in": ["recruit"], "eng.scriptfiles.grid_copy": ["recruit"], "eng.scriptfiles.grid_not_in": ["recruit"], "eng.scriptwords.addon_sack_settlement_7e36": ["settlement"], "eng.scriptwords.addon_help_sack_settlement_8e93": ["settlement"], "eng.scriptwords.addon_raze_settlement_9030": ["settlement"], "eng.scriptwords.addon_help_raze_settlement_52e3": ["settlement"], "eng.scriptwords.addon_recruit_order_9449": ["recruit"], "eng.scriptwords.setting_recruit_order_ro_enabled_6785": ["recruit"], "eng.scriptwords.addon_one_recruit_grid_21e4": ["recruit"], "armory.exp_free_turn_title": ["turn"], "armory.look_closer_title": ["turn"], "armory.uv_hint": ["turn"], "eng.modfiles.mounted_engines": ["mount"], "eng.server.model_file_missing": ["ship"], "campcreate.add_port": ["port_verb"], "campcreate.give_this_region_a_port_click": ["port_verb"], "campcreate.has_a_port_review_save_writes": ["port_verb"], "campcreate.move_port": ["port_verb"], "campcreate.move_this_regions_port_click_the": ["port_verb"], "campcreate.remove_port": ["port_verb"], "campcreate.s_new_port": ["port_verb"], "campcreate.take_this_regions_port_off_the": ["port_verb"], "cards.gen_ground": ["frame"], "cards.gen_game_frame": ["frame"], "guided.attr_fire_by_rank": ["turn"], "guided.attr_bp": ["missile"], "guided.attr_thrown": ["missile"], "eng.gamelog.known_script_error": ["character"], "healthx.at_col": ["character"], "armory.nav_title": ["turn"], "armory.view_hint_simple": ["turn", "frame"], "campaint.overwrite_settlement_and_port_pixels": ["port_verb"], "eng.edusort.the_planned_edu_contains_a_character": ["character"], "eng.scriptaddons.older_moved": ["script"]},
  "ancillaries.a_character_holds_one_ancillary_per": "Ein Charakter hat pro Typ ein Gefolgsmitglied; das ist also das, was ein neues ersetzt",
  "ancillaries.a_new_ancillary_needs_a_name": "Ein neues Gefolgsmitglied braucht einen Namen",
  "ancillaries.a_script_names_it": " (ein Skript nennt es)",
@@ -11116,7 +10115,7 @@
  "core.vanilla_reset_title": "Den eigenen Wert des Grundspiels, {value}, wiederherstellen; Speichern schreibt ihn",
  "eng.modfork.bad_name": "ein Mod-Ordnername darf nur Buchstaben, Ziffern, _ und - enthalten",
  "eng.modfork.not_in_mods": "{base} liegt nicht in einem mods-Ordner",
- "eng.modfork.same_name": "die neue Mod braucht einen anderen Namen als ihre Basis",
+ "eng.modfork.same_name": "der Kopie einen eigenen Namen geben, nicht den der ursprünglichen Mod",
  "eng.modfork.nothing_copied": "keine Datei von {base} konnte kopiert werden (die erste: {rel} - {why})",
  "eng.modfork.exists": "{target} existiert bereits - wählen Sie einen anderen Namen",
  "home.fork": "Neue Mod aus dieser",
@@ -11144,9 +10143,9 @@
  "eng.gamelog.known_10": "Die Engine konnte nicht erkennen, welches Spiel oder welche Mod laufen soll: Der gelesene Pfad ({a}) ergibt keinen Sinn, entweder Buchstaben, die sie auf dem Weg zum Spiel falsch liest, oder das Spiel wurde außerhalb seines eigenen Ordners gestartet. Starten Sie die Mod mit ihrer .bat aus dem Ordner der Mod.",
  "eng.gamelog.known_11": "Ein Schlacht-Skelett nennt eine Animation, die das Spiel nicht findet, in keinem Animationspaket und in keiner losen .cas-Datei, daher hält das Spiel beim Laden der Animationen an, vor dem Menü. Die übliche Ursache sind Einheiten aus einer anderen Mod: Kopieren Sie die fehlende .cas aus dieser Mod oder holen Sie die Einheit erneut.",
  "eng.gamelog.known_12": "Eine Skript-Bedingung {a} fragt nach einem {b}, aber das Ereignis, bei dem sie läuft, liefert keines, daher wertet das Spiel sie als falsch und der Trigger löst nie aus. Kein Absturz.",
- "eng.gamelog.known_13": "Das Spiel ist abgestürzt. Die Zeilen direkt davor im Protokoll nennen, was es gerade tat.",
+ "eng.gamelog.known_13": "Hier ist das Spiel stehen geblieben. Lesen Sie die Zeilen darüber: Sie zeigen, womit das Spiel beschäftigt war.",
  "eng.gamelog.known_14": "Die eigene Prüfung des Spiels ist in seinem Code fehlgeschlagen ({a}, Zeile {b}), während es Daten las; die Zeilen davor sagen, was es las.",
- "eng.gamelog.known_15": "Das Spiel ist auf einen Namen gestoßen, den es nicht kennt.",
+ "eng.gamelog.known_15": "Eine Datei nennt etwas, das das Spiel nicht kennt.",
  "eng.modreport.campaign": "Kampagne: {campaign}",
  "eng.modreport.h_cultures": "Kulturen",
  "eng.modreport.h_religions": "Religionen",
@@ -11377,144 +10376,143 @@
  "family.write": "Familie schreiben",
  "family.on_map": "Auf der Karte (eine character-Zeile)",
  "family.portrait_none": "Aus dem Pool der Kultur",
- "eng.scriptwords.event_player_turn_2639": "die Runde des Spielers beginnt (einmal pro Runde)",
- "eng.scriptwords.event_help_player_turn_9c20": "einmal pro Runde, wenn Ihre eigene Runde (die des Spielers) beginnt - die Fraktion ist der Spieler",
- "eng.scriptwords.event_faction_turn_2e49": "die Runde einer Fraktion beginnt (jeder Fraktion)",
- "eng.scriptwords.event_help_faction_turn_428b": "einmal für JEDE Fraktion zu Beginn ihrer Runde - etwa 20-mal pro Runde; für einmal pro Runde nehmen Sie 'die Runde des Spielers beginnt'",
- "eng.scriptwords.event_town_turn_ca39": "die Runde einer Stadt beginnt (jeder Stadt)",
- "eng.scriptwords.event_help_town_turn_28fe": "einmal für jede Stadt jeder Fraktion, zu Beginn der Runde ihrer Fraktion",
+ "eng.scriptwords.event_player_turn_2639": "die eigene Fraktion beginnt ihre Runde",
+ "eng.scriptwords.event_help_player_turn_9c20": "die Regel ausführen, wenn die eigene Fraktion ihre Runde beginnt",
+ "eng.scriptwords.event_faction_turn_2e49": "eine Fraktion beginnt ihre Runde",
+ "eng.scriptwords.event_help_faction_turn_428b": "die Regel ausführen, wenn eine Fraktion ihre Runde beginnt",
+ "eng.scriptwords.event_town_turn_ca39": "eine Stadt beginnt ihre Runde",
+ "eng.scriptwords.event_help_town_turn_28fe": "die Regel ausführen, wenn eine Stadt ihre Runde beginnt",
  "eng.scriptwords.event_town_taken_0584": "ein General nimmt eine Stadt ein",
- "eng.scriptwords.event_help_town_taken_1799": "die Fraktion ist die, die sie eingenommen hat, der alte Besitzer die, die sie verloren hat",
- "eng.scriptwords.event_building_done_18ac": "ein Gebäude in einer Stadt wird fertiggestellt",
- "eng.scriptwords.event_help_building_done_4dda": "einmal für jedes fertiggestellte Gebäude",
- "eng.scriptwords.event_unit_trained_a823": "eine Einheit wird in einer Stadt ausgebildet",
- "eng.scriptwords.event_help_unit_trained_ee74": "einmal für jede ausgebildete Einheit (angeworbene Söldner werden nicht ausgebildet)",
- "eng.scriptwords.event_battle_over_0df7": "eine Schlacht endet (für jeden General darin)",
- "eng.scriptwords.event_help_battle_over_87e8": "einmal für jeden General, der gekämpft hat, ob Sieger oder Verlierer",
+ "eng.scriptwords.event_help_town_taken_1799": "die Regel ausführen, wenn ein General eine Stadt einnimmt",
+ "eng.scriptwords.event_building_done_18ac": "ein Gebäude wird fertiggestellt",
+ "eng.scriptwords.event_help_building_done_4dda": "die Regel ausführen, wenn ein Gebäude fertiggestellt wird",
+ "eng.scriptwords.event_unit_trained_a823": "die Ausbildung einer Einheit endet",
+ "eng.scriptwords.event_help_unit_trained_ee74": "die Regel ausführen, wenn die Ausbildung einer Einheit endet",
+ "eng.scriptwords.event_battle_over_0df7": "eine Schlacht endet",
+ "eng.scriptwords.event_help_battle_over_87e8": "die Regel ausführen, wenn eine Schlacht endet",
  "eng.scriptwords.event_town_riots_ef8c": "in einer Stadt kommt es zu Unruhen",
- "eng.scriptwords.event_help_town_riots_50b2": "der Besitzer der Stadt ist die Fraktion",
+ "eng.scriptwords.event_help_town_riots_50b2": "die Regel ausführen, wenn in einer Stadt Unruhen ausbrechen",
  "eng.scriptwords.event_town_rebels_0728": "eine Stadt erhebt sich in Rebellion",
- "eng.scriptwords.event_help_town_rebels_f79b": "der Besitzer der Stadt (bevor sie abfällt) ist die Fraktion",
- "eng.scriptwords.event_town_grows_6b82": "eine Stadt wächst auf ihre nächste Stufe",
- "eng.scriptwords.event_help_town_grows_aa31": "aus einem Dorf wird eine Stadt, aus einer Stadt eine große Stadt ...",
+ "eng.scriptwords.event_help_town_rebels_f79b": "die Regel ausführen, wenn eine Stadt rebelliert",
+ "eng.scriptwords.event_town_grows_6b82": "eine Stadt erreicht die nächste Größenstufe",
+ "eng.scriptwords.event_help_town_grows_aa31": "die Regel ausführen, wenn eine Stadt die nächste Größenstufe erreicht",
  "eng.scriptwords.event_faction_destroyed_6ab4": "eine Fraktion wird vernichtet",
- "eng.scriptwords.event_help_faction_destroyed_8e82": "die Fraktion ist die, die untergegangen ist",
- "eng.scriptwords.event_new_leader_f5f4": "eine Fraktion bekommt einen neuen Anführer",
- "eng.scriptwords.event_help_new_leader_1f3a": "der General ist der neue Anführer",
- "eng.scriptwords.event_comes_of_age_b586": "ein Sohn wird volljährig",
- "eng.scriptwords.event_help_comes_of_age_f618": "der General ist der junge Mann",
- "eng.scriptwords.event_new_round_2ee3": "eine neue Runde beginnt (die Rundenzahl steigt)",
- "eng.scriptwords.event_help_new_round_2989": "einmal pro Runde, bevor eine Fraktion zieht - für jede Fraktion nehmen Sie weiter unten 'jede Fraktion'",
- "eng.scriptwords.event_character_died_ce5a": "ein Charakter stirbt (aus beliebigem Grund)",
- "eng.scriptwords.event_help_character_died_956a": "ein General, Familienmitglied oder Agent verlässt die Karte für immer - die Fraktion ist seine eigene",
- "eng.scriptwords.event_faction_died_5aac": "eine Fraktion wird ausgelöscht (bevor ihr Land weitergegeben wird)",
- "eng.scriptwords.event_help_faction_died_7e0e": "die Fraktion ist die, die untergegangen ist; ihre Städte und Armeen gehören hier noch ihr",
- "eng.scriptwords.event_new_campaign_77b6": "eine neue Kampagne beginnt (kein geladener Spielstand)",
- "eng.scriptwords.event_help_new_campaign_0292": "einmal, wenn eine ganz neue Kampagne aufgebaut wird - ein geladener Spielstand kommt hier nicht vorbei",
- "eng.scriptwords.cond_who_15d3": "die Fraktion ist",
- "eng.scriptwords.field_who_names_66bb": "Fraktionen",
- "eng.scriptwords.cond_money_e2a9": "ihr Geld",
- "eng.scriptwords.field_money_v_22b7": "Denare",
- "eng.scriptwords.cond_towns_c2fe": "ihre Anzahl an Städten",
- "eng.scriptwords.field_towns_v_cec2": "Städte",
- "eng.scriptwords.cond_turn_7d2d": "die Runde",
- "eng.scriptwords.cond_help_turn_7112": "die Rundenzahl der Kampagne, ab 1",
- "eng.scriptwords.field_turn_v_3e50": "Runde",
- "eng.scriptwords.cond_chance_dcb7": "eine Wahrscheinlichkeit von",
- "eng.scriptwords.cond_help_chance_24fc": "ein Würfelwurf bei jedem Eintreten",
- "eng.scriptwords.field_chance_v_981a": "%",
- "eng.scriptwords.cond_people_6a9d": "die Einwohner der Stadt",
- "eng.scriptwords.field_people_v_18de": "Einwohner",
- "eng.scriptwords.cond_town_is_47e2": "die Stadt ist eine von",
- "eng.scriptwords.field_town_is_names_c719": "Städte",
- "eng.scriptwords.cond_capital_92fe": "die Stadt ist die Hauptstadt der Fraktion",
- "eng.scriptwords.cond_has_chain_b70c": "die Stadt hat ein Gebäude aus",
- "eng.scriptwords.cond_help_has_chain_2d0c": "eine Gebäudekette aus export_descr_buildings.txt",
- "eng.scriptwords.field_has_chain_v_181a": "Kette",
- "eng.scriptwords.cond_old_owner_95ac": "der alte Besitzer ist",
- "eng.scriptwords.field_old_owner_names_321e": "Fraktionen",
- "eng.scriptwords.cond_counter_1446": "eine gemerkte Zahl",
- "eng.scriptwords.cond_help_counter_a72a": "eine Zahl, die das Modul zwischen den Runden behält (DO 'eine Zahl merken' / 'zu einer gemerkten Zahl addieren' setzen sie) - 0, solange nichts gesetzt ist; die Engines führen sie als Ereigniszähler, daher liest auch I_EventCounter in campaign_script sie; {faction} und {town} im Namen ergeben je eine Zahl pro Fraktion / Stadt",
- "eng.scriptwords.field_counter_name_e1ee": "mit dem Namen",
- "eng.scriptwords.cond_game_9e9c": "eine Spielbedingung (eine beliebige der Engine)",
- "eng.scriptwords.field_game_line_c2cb": "Bedingung",
- "eng.scriptwords.act_money_2bc5": "Geld geben",
- "eng.scriptwords.act_help_money_282b": "unter 0 wird Geld genommen",
- "eng.scriptwords.field_money_amount_12fc": "Denare",
- "eng.scriptwords.field_money_to_17b2": "an",
- "eng.scriptwords.act_people_5201": "der Stadt Einwohner hinzufügen",
- "eng.scriptwords.act_help_people_8ce3": "unter 0 werden Einwohner genommen (die Stadt fällt nie unter das Minimum ihrer Stufe)",
- "eng.scriptwords.field_people_amount_3921": "Einwohner",
- "eng.scriptwords.act_people_pct_ad70": "die Stadt verliert einen Anteil ihrer Einwohner",
- "eng.scriptwords.field_people_pct_pct_4b3c": "%",
- "eng.scriptwords.act_people_max_016a": "die Stadt behält höchstens",
- "eng.scriptwords.act_help_people_max_c375": "Einwohner darüber verschwinden; weniger bleiben, wie sie sind (eine Obergrenze, wie Avoid Growth)",
- "eng.scriptwords.field_people_max_max_39ef": "Einwohner",
- "eng.scriptwords.act_build_0a79": "in der Stadt bauen",
- "eng.scriptwords.act_help_build_b6f3": "eine Gebäudestufe aus export_descr_buildings.txt (ihre Kette muss zur Stadt passen)",
+ "eng.scriptwords.event_help_faction_destroyed_8e82": "die Regel ausführen, wenn eine Fraktion vernichtet wird",
+ "eng.scriptwords.event_new_leader_f5f4": "ein Charakter wird Anführer",
+ "eng.scriptwords.event_help_new_leader_1f3a": "die Regel ausführen, wenn ein Charakter Anführer wird",
+ "eng.scriptwords.event_comes_of_age_b586": "ein Charakter wird volljährig",
+ "eng.scriptwords.event_help_comes_of_age_f618": "die Regel ausführen, wenn ein Charakter volljährig wird",
+ "eng.scriptwords.event_new_round_2ee3": "eine neue Runde beginnt",
+ "eng.scriptwords.event_help_new_round_2989": "die Regel ausführen, wenn eine neue Runde beginnt",
+ "eng.scriptwords.event_character_died_ce5a": "ein Charakter stirbt",
+ "eng.scriptwords.event_help_character_died_956a": "die Regel ausführen, wenn ein Charakter stirbt",
+ "eng.scriptwords.event_faction_died_5aac": "eine Fraktion steht vor dem Untergang",
+ "eng.scriptwords.event_help_faction_died_7e0e": "die Regel ausführen, wenn eine Fraktion vor dem Untergang steht",
+ "eng.scriptwords.event_new_campaign_77b6": "eine neue Kampagne beginnt",
+ "eng.scriptwords.event_help_new_campaign_0292": "die Regel ausführen, wenn eine neue Kampagne beginnt",
+ "eng.scriptwords.cond_who_15d3": "Steuerung der Fraktion",
+ "eng.scriptwords.field_who_names_66bb": "ausgewählte Fraktionen",
+ "eng.scriptwords.cond_money_e2a9": "Schatzkammer prüfen",
+ "eng.scriptwords.field_money_v_22b7": "Betrag in der Schatzkammer",
+ "eng.scriptwords.cond_towns_c2fe": "Stadtanzahl",
+ "eng.scriptwords.field_towns_v_cec2": "Anzahl der Städte",
+ "eng.scriptwords.cond_turn_7d2d": "Kampagnenrunde",
+ "eng.scriptwords.cond_help_turn_7112": "die Kampagnenrunde prüfen; die erste Runde zählt als eins",
+ "eng.scriptwords.field_turn_v_3e50": "Rundennummer",
+ "eng.scriptwords.cond_chance_dcb7": "Zufallschance",
+ "eng.scriptwords.cond_help_chance_24fc": "bei jeder Prüfung der Regel eine neue prozentuale Chance auswürfeln",
+ "eng.scriptwords.field_chance_v_981a": "Chance in Prozent",
+ "eng.scriptwords.cond_people_6a9d": "Bevölkerung prüfen",
+ "eng.scriptwords.field_people_v_18de": "Einwohnerzahl",
+ "eng.scriptwords.cond_town_is_47e2": "ausgewählte Städte",
+ "eng.scriptwords.field_town_is_names_c719": "ausgewählte Städte",
+ "eng.scriptwords.cond_capital_92fe": "Hauptstadt",
+ "eng.scriptwords.cond_has_chain_b70c": "Gebäudekette vorhanden",
+ "eng.scriptwords.cond_help_has_chain_2d0c": "prüfen, ob die Stadt des Ereignisses eine beliebige Stufe der gewählten Gebäudekette enthält",
+ "eng.scriptwords.field_has_chain_v_181a": "Gebäudekette",
+ "eng.scriptwords.cond_old_owner_95ac": "Steuerung des Vorbesitzers",
+ "eng.scriptwords.field_old_owner_names_321e": "ausgewählte Fraktionen",
+ "eng.scriptwords.cond_counter_1446": "Zähler prüfen",
+ "eng.scriptwords.cond_help_counter_a72a": "einen gespeicherten Ereigniszähler der Engine mit dem gewählten Wert vergleichen",
+ "eng.scriptwords.field_counter_name_e1ee": "Zählerkennung",
+ "eng.scriptwords.cond_game_9e9c": "Engine-Bedingung",
+ "eng.scriptwords.field_game_line_c2cb": "Bedingungszeile",
+ "eng.scriptwords.act_money_2bc5": "Schatzkammer ändern",
+ "eng.scriptwords.act_help_money_282b": "der Schatzkammer der gewählten Fraktion Geld hinzufügen oder mit einem negativen Betrag abziehen",
+ "eng.scriptwords.field_money_amount_12fc": "Geldänderung",
+ "eng.scriptwords.field_money_to_17b2": "Empfänger",
+ "eng.scriptwords.act_people_5201": "Bevölkerung ändern",
+ "eng.scriptwords.act_help_people_8ce3": "der Stadt des Ereignisses Einwohner hinzufügen oder mit einem negativen Betrag entfernen",
+ "eng.scriptwords.field_people_amount_3921": "Bevölkerungsänderung",
+ "eng.scriptwords.act_people_pct_ad70": "Bevölkerung prozentual verringern",
+ "eng.scriptwords.field_people_pct_pct_4b3c": "entfernter Prozentsatz",
+ "eng.scriptwords.act_people_max_016a": "Bevölkerung begrenzen",
+ "eng.scriptwords.act_help_people_max_c375": "die Bevölkerung der Stadt des Ereignisses nur verringern, wenn sie die gewählte Obergrenze überschreitet",
+ "eng.scriptwords.field_people_max_max_39ef": "Bevölkerungsobergrenze",
+ "eng.scriptwords.act_build_0a79": "ein Gebäude hinzufügen",
+ "eng.scriptwords.act_help_build_b6f3": "die gewählte Gebäudestufe zur Stadt des Ereignisses hinzufügen",
  "eng.scriptwords.field_build_level_d452": "Gebäudestufe",
- "eng.scriptwords.act_tear_down_78ec": "in der Stadt abreißen",
- "eng.scriptwords.act_help_tear_down_5ab5": "die ganze Kette; die Gebäude des Statthalters (core_...) werden nie abgerissen",
- "eng.scriptwords.field_tear_down_chain_1950": "Kette",
- "eng.scriptwords.act_units_1237": "neue Einheiten in der Stadt",
- "eng.scriptwords.act_help_units_9a9e": "Einheiten aus export_descr_unit.txt stoßen zur Garnison der Stadt",
- "eng.scriptwords.field_units_unit_c406": "Einheit",
- "eng.scriptwords.field_units_count_29d7": "Einheiten",
- "eng.scriptwords.act_give_town_1fc1": "die Stadt geben an",
- "eng.scriptwords.act_stance_5fd8": "Beziehungen festlegen zwischen",
- "eng.scriptwords.field_stance_b_06da": "und",
- "eng.scriptwords.field_stance_stance_b832": "auf",
- "eng.scriptwords.act_trait_86d5": "dem General eine Eigenschaft geben",
- "eng.scriptwords.field_trait_trait_c949": "Eigenschaft",
- "eng.scriptwords.field_trait_level_93ee": "Stufe",
- "eng.scriptwords.act_ancillary_5169": "dem General ein Gefolgsmitglied geben",
- "eng.scriptwords.act_counter_set_82cf": "eine Zahl merken",
- "eng.scriptwords.act_help_counter_set_fa2a": "bleibt zwischen den Runden und im gespeicherten Spiel erhalten; IF 'eine gemerkte Zahl' liest sie",
- "eng.scriptwords.field_counter_set_name_5e64": "mit dem Namen",
- "eng.scriptwords.act_counter_add_af70": "zu einer gemerkten Zahl addieren",
- "eng.scriptwords.act_help_counter_add_fc8e": "unter 0 wird abgezogen; eine nie gesetzte Zahl beginnt bei 0",
- "eng.scriptwords.field_counter_add_name_c7e9": "mit dem Namen",
- "eng.scriptwords.act_message_eec2": "eine Nachricht anzeigen",
- "eng.scriptwords.act_help_message_e547": "die eigene Ereignisschriftrolle des Spiels, an den Spieler",
- "eng.scriptwords.field_message_title_fe07": "Titel",
- "eng.scriptwords.field_message_body_9108": "Text",
- "eng.scriptwords.act_log_ab22": "eine Zeile in das Protokoll des Spiels schreiben",
- "eng.scriptwords.act_help_log_44ea": "{town}, {faction}, {owner}, {general}, {turn} und {people} werden ersetzt",
- "eng.scriptwords.act_console_bfd6": "einen Konsolenbefehl ausführen (für Fortgeschrittene)",
- "eng.scriptwords.field_console_text_82a2": "Befehl",
- "eng.scriptwords.act_script_12c1": "einen Kampagnenskript-Befehl ausführen (für Fortgeschrittene)",
- "eng.scriptwords.act_help_script_9c96": "ein beliebiger einzeiliger Befehl aus campaign_script.txt (Auswählen... zeigt alle), etwa give_trait oder set_event_counter - {town}, {faction}, {owner}, {general}, {turn} und {people} werden ersetzt",
- "eng.scriptwords.field_script_text_5c2a": "Befehl",
- "eng.scriptwords.who_player_678e": "der Spieler",
- "eng.scriptwords.who_computer_ce8a": "eine Computerfraktion",
- "eng.scriptwords.who_these_dd41": "eine dieser Fraktionen",
- "eng.scriptwords.to_this_2fa5": "die Fraktion",
- "eng.scriptwords.to_old_fa5c": "der alte Besitzer",
- "eng.scriptwords.to_player_e5b4": "der Spieler",
+ "eng.scriptwords.act_tear_down_78ec": "eine Gebäudekette entfernen",
+ "eng.scriptwords.act_help_tear_down_5ab5": "die gewählte Gebäudekette aus der Stadt des Ereignisses entfernen",
+ "eng.scriptwords.field_tear_down_chain_1950": "zu entfernende Kette",
+ "eng.scriptwords.act_units_1237": "Garnisonseinheiten hinzufügen",
+ "eng.scriptwords.act_help_units_9a9e": "die gewählte Anzahl an Einheiten in der Garnison der Stadt des Ereignisses erstellen",
+ "eng.scriptwords.field_units_unit_c406": "Einheitentyp",
+ "eng.scriptwords.field_units_count_29d7": "hinzuzufügende Einheiten",
+ "eng.scriptwords.act_give_town_1fc1": "eine Stadt übertragen",
+ "eng.scriptwords.act_stance_5fd8": "diplomatische Beziehungen festlegen",
+ "eng.scriptwords.field_stance_b_06da": "andere Fraktion",
+ "eng.scriptwords.field_stance_stance_b832": "Beziehung",
+ "eng.scriptwords.act_trait_86d5": "eine Eigenschaft verleihen",
+ "eng.scriptwords.field_trait_trait_c949": "Eigenschaftskennung",
+ "eng.scriptwords.field_trait_level_93ee": "Eigenschaftsstufe",
+ "eng.scriptwords.act_ancillary_5169": "ein Gefolge verleihen",
+ "eng.scriptwords.act_counter_set_82cf": "einen Zähler setzen",
+ "eng.scriptwords.act_help_counter_set_fa2a": "den gespeicherten Ereigniszähler der Engine durch den gewählten Wert ersetzen",
+ "eng.scriptwords.field_counter_set_name_5e64": "Zählerkennung",
+ "eng.scriptwords.act_counter_add_af70": "einen Zähler ändern",
+ "eng.scriptwords.act_help_counter_add_fc8e": "zum gespeicherten Ereigniszähler der Engine addieren oder mit einem negativen Wert davon abziehen",
+ "eng.scriptwords.field_counter_add_name_c7e9": "Zählerkennung",
+ "eng.scriptwords.act_message_eec2": "eine Ereignisschriftrolle anzeigen",
+ "eng.scriptwords.act_help_message_e547": "eine Kampagnenereignis-Schriftrolle mit der gewählten Überschrift und dem gewählten Text anzeigen",
+ "eng.scriptwords.field_message_title_fe07": "Überschrift der Schriftrolle",
+ "eng.scriptwords.field_message_body_9108": "Text der Schriftrolle",
+ "eng.scriptwords.act_log_ab22": "ins Spielprotokoll schreiben",
+ "eng.scriptwords.act_help_log_44ea": "den gewählten Text beim Ausführen dieser Regel ins Spielprotokoll schreiben",
+ "eng.scriptwords.act_console_bfd6": "einen Konsolenbefehl ausführen",
+ "eng.scriptwords.field_console_text_82a2": "Befehlszeile",
+ "eng.scriptwords.act_script_12c1": "einen Kampagnenbefehl ausführen",
+ "eng.scriptwords.act_help_script_9c96": "einen Befehl im Skript der Kampagne mit den aktuellen Daten zum Ereignis ausf?hren",
+ "eng.scriptwords.field_script_text_5c2a": "Befehlszeile",
+ "eng.scriptwords.who_player_678e": "vom Menschen gesteuert",
+ "eng.scriptwords.who_computer_ce8a": "vom Computer gesteuert",
+ "eng.scriptwords.who_these_dd41": "ausgewählte Fraktionen",
+ "eng.scriptwords.to_this_2fa5": "die aktuelle Fraktion",
+ "eng.scriptwords.to_old_fa5c": "der Vorbesitzer",
+ "eng.scriptwords.to_player_e5b4": "die menschliche Fraktion",
  "eng.scriptwords.to_rebels_631c": "die Rebellen",
- "eng.scriptwords.to_named_cbc8": "diese Fraktion:",
- "eng.scriptwords.op_979e": "ist kleiner als",
- "eng.scriptwords.op_a13a": "ist größer als",
- "eng.scriptwords.cond_help_game_d1e6": "eine beliebige Bedingung aus der eigenen Liste der Engines (Auswählen... zeigt alle), geprüft gegen das, was gerade geschehen ist - etwa I_TurnNumber > 5, FactionType england, SettlementName London, Trait GoodCommander > 0; 'nicht' davor kehrt sie um; {town}, {faction}, {owner}, {general}, {turn} und {people} werden ersetzt",
- "eng.scriptwords.act_help_console_3820": "ein beliebiger Befehl der Konsole des Spiels (Auswählen... zeigt alle), etwa add_money egypt 500 oder kill_character \"{general}\" Battle - {town}, {faction}, {owner}, {general}, {turn} und {people} werden ersetzt",
+ "eng.scriptwords.to_named_cbc8": "eine ausgewählte Fraktion",
+ "eng.scriptwords.op_979e": "kleiner als",
+ "eng.scriptwords.op_a13a": "größer als",
+ "eng.scriptwords.cond_help_game_d1e6": "die Engine bitten, eine Bedingung im Skript der Kampagne mit den Daten zum Ereignis auszuwerten",
+ "eng.scriptwords.act_help_console_3820": "einen Konsolenbefehl auf der Kampagnenkarte ausführen",
  "eng.scriptaddons.an_add_on_is_a_squirrel": "Ein Add-on ist ein Squirrel-Skript (.nut) oder eine Zip-Datei mit einem solchen - REX und M2EX laden sie",
- "eng.scriptaddons.the_tool_has_no_folder_of": "Das Werkzeug hat keinen eigenen Ordner, in dem es Add-ons aufbewahren könnte",
+ "eng.scriptaddons.the_tool_has_no_folder_of": "das Tool braucht einen eigenen Ordner zum Speichern von Add-ons",
  "eng.scriptaddons.no_nut_script": "Kein .nut-Skript in {name}",
  "eng.scriptaddons.built_in": "{name} ist eingebaut",
  "eng.scriptaddons.updated": "Update für {name}: {where}",
  "eng.scriptaddons.put_in": "{name} eingefügt: {where}",
- "eng.scriptaddons.no_older_lua": "{entry}: lädt das ältere Lua {old} nicht mehr",
  "eng.scriptaddons.over_1_mb": "{name} ist größer als 1 MB - kein Skript",
  "eng.scriptaddons.bad_script_name": "{name}: Der Name eines Skripts darf nur Buchstaben, Ziffern, _ - und . enthalten",
  "eng.scriptaddons.built_in_already": "{name} ist bereits eingebaut (es steht in der Liste)",
- "eng.scriptaddons.no_var_line": "Das Skript des Add-ons hat keine Zeile {var}",
+ "eng.scriptaddons.no_var_line": "im Skript fehlt die Deklaration für {var}",
  "eng.scriptaddons.settings_not_kept": "{name}: Seine Einstellungen konnten nicht beibehalten werden ({why}) - eingefügt mit den Standardwerten dieser Version",
- "eng.scriptbuilder.the_editor_has_no_folder_of": "Der Editor hat keinen eigenen Ordner, in dem er Add-ons aufbewahren könnte",
- "eng.scriptbuilder.unknown_condition": "Unbekannte Bedingung {kind}",
- "eng.scriptbuilder.unknown_action": "Unbekannte Aktion {kind}",
- "eng.scriptbuilder.messages_made_copy": "{name} erstellt (eine Kopie der Datei des Spiels): die Meldungen des Moduls",
- "eng.scriptbuilder.messages_made": "{name} erstellt: die Meldungen des Moduls",
- "eng.scriptbuilder.not_made_with_builder": "{name} ist ein Add-on, das nicht mit dem Builder erstellt wurde - geben Sie dem Modul einen anderen Namen",
+ "eng.scriptbuilder.the_editor_has_no_folder_of": "der Editor braucht einen eigenen Ordner zum Speichern von Add-ons",
+ "eng.scriptbuilder.unknown_condition": "unbekannte Bedingung {kind}",
+ "eng.scriptbuilder.unknown_action": "unbekannte Aktion {kind}",
+ "eng.scriptbuilder.messages_made_copy": "{name} aus der Spieltabelle für Modulnachrichten erstellt",
+ "eng.scriptbuilder.messages_made": "{name} für Modulnachrichten erstellt",
+ "eng.scriptbuilder.not_made_with_builder": "{name} gehört zu einem anderen Add-on; wählen Sie einen anderen Titel",
  "eng.scriptcompat.writes": "{path} schreiben",
  "eng.scriptcompat.deletes": "{path}{why} entfernen",
  "eng.scriptcompat.nothing": "Nichts zu ändern",
@@ -11562,150 +10560,39 @@
  "eng.scriptfiles.grid_in": "One Recruitment Grid ist bereits in dieser Mod",
  "eng.scriptfiles.grid_copy": "Die Kopie, die One Recruitment Grid eingefügt hat",
  "eng.scriptfiles.grid_not_in": "One Recruitment Grid ist nicht in dieser Mod",
- "eng.scriptwords.op_904c": "ist höchstens",
- "eng.scriptwords.op_0299": "ist mindestens",
- "eng.scriptwords.op_fcb7": "ist",
- "eng.scriptwords.op_every_6d29": "ist ein Vielfaches von",
- "eng.scriptwords.stance_war_470c": "Krieg",
- "eng.scriptwords.stance_neutral_4107": "neutral",
+ "eng.scriptwords.op_904c": "höchstens",
+ "eng.scriptwords.op_0299": "mindestens",
+ "eng.scriptwords.op_fcb7": "gleich",
+ "eng.scriptwords.op_every_6d29": "ein Vielfaches von",
+ "eng.scriptwords.stance_war_470c": "im Krieg",
+ "eng.scriptwords.stance_neutral_4107": "im Frieden",
  "eng.scriptwords.stance_allied_6035": "verbündet",
- "eng.scriptwords.match_all_4afa": "alle diese treffen zu",
- "eng.scriptwords.match_any_9db7": "irgendeine dieser trifft zu",
- "eng.scriptwords.match_none_5634": "keine dieser trifft zu",
- "eng.scriptwords.each_fb36": "einmal (was geschehen ist)",
- "eng.scriptwords.each_town_a56c": "für jede Stadt von",
- "eng.scriptwords.each_army_c640": "für jede Armee von",
- "eng.scriptwords.each_faction_2c4e": "für jede Fraktion",
- "eng.scriptwords.each_of_this_c718": "die Fraktion, der es geschehen ist",
- "eng.scriptwords.each_of_player_48bc": "der Spieler",
- "eng.scriptwords.each_of_named_ec23": "diese Fraktion:",
- "eng.scriptwords.example_help_when_broke_48fd": "Hilfe bei Geldnot",
- "eng.scriptwords.example_loot_for_taking_a_town_be38": "Beute für die Einnahme einer Stadt",
- "eng.scriptwords.example_plague_in_big_cities_acff": "Seuche in großen Städten",
- "eng.scriptwords.example_a_free_unit_when_a_barracks_is_built_fb2c": "Eine Gratis-Einheit, wenn eine Kaserne gebaut wird",
- "eng.scriptwords.example_gold_for_holding_the_capital_d9a8": "Gold für das Halten der Hauptstadt",
- "eng.scriptwords.example_a_message_on_turn_10_17bf": "Eine Nachricht in Runde 10",
- "eng.scriptwords.example_rebellion_punished_91b7": "Rebellion bestraft",
- "eng.scriptwords.example_a_trait_for_the_conqueror_7500": "Eine Eigenschaft für den Eroberer",
- "eng.scriptwords.example_avoid_growth_for_chosen_towns_b97d": "Avoid Growth für ausgewählte Städte",
- "eng.scriptwords.setting_sack_settlement_raze_enabled_38dc": "Plündern an",
- "eng.scriptwords.setting_help_sack_settlement_raze_enabled_db19": "aus behält die Datei, bewirkt aber nichts",
- "eng.scriptwords.setting_sack_settlement_raze_who_b8cb": "Wer plündern darf",
- "eng.scriptwords.setting_help_sack_settlement_raze_who_b7da": "der Spieler wählt es auf der Eroberungsschriftrolle; eine hier zugelassene Computerfraktion plündert jedes Mal, wenn sie eine Stadt ausrottet",
- "eng.scriptwords.choice_sack_settlement_raze_who_player_3ab0": "Nur der Spieler (der Mensch)",
- "eng.scriptwords.choice_sack_settlement_raze_who_everyone_cec7": "Alle - der Spieler und jede Computerfraktion",
- "eng.scriptwords.choice_sack_settlement_raze_who_homeless_e262": "Nur Fraktionen ohne eigene Stadt (Horden, Heimatlose) - Spieler oder Computer",
- "eng.scriptwords.choice_sack_settlement_raze_who_player_and_homel_3d1d": "Der Spieler und Computerfraktionen ohne Stadt (Horden)",
- "eng.scriptwords.choice_sack_settlement_raze_who_ai_f5c6": "Nur die Fraktionen des Computers",
- "eng.scriptwords.choice_sack_settlement_raze_who_list_ff95": "Nur die Fraktionen, die ich auswähle",
- "eng.scriptwords.setting_sack_settlement_raze_factions_e5c0": "Die Fraktionen",
- "eng.scriptwords.setting_help_sack_settlement_raze_factions_03bb": "für 'Nur die Fraktionen, die ich auswähle'",
- "eng.scriptwords.setting_sack_settlement_raze_give_to_rebels_32fb": "Ruinen gehen an die Rebellen",
- "eng.scriptwords.setting_help_sack_settlement_raze_give_to_rebels_81e2": "aus: die geplünderte Stadt bleibt bei Ihnen",
- "eng.scriptwords.setting_sack_settlement_raze_rebel_garrison_2b9a": "Rebellen bekommen eine Garnison",
- "eng.scriptwords.setting_help_sack_settlement_raze_rebel_garrison_5701": "das Spiel stellt sie aus dem Rebellentyp der Region auf (descr_rebel_factions.txt)",
- "eng.scriptwords.setting_sack_settlement_raze_gold_per_building_1b8c": "Geld pro abgerissenem Gebäude",
- "eng.scriptwords.setting_help_sack_settlement_raze_gold_per_build_c4d2": "zusätzlich zu dem der Ausrottung",
- "eng.scriptwords.setting_sack_settlement_raze_gold_per_citizen_0e6e": "Geld pro Einwohner",
- "eng.scriptwords.setting_help_sack_settlement_raze_gold_per_citiz_ac4b": "für jede Person, die das Plündern entfernt",
- "eng.scriptwords.setting_sack_settlement_raze_people_left_e639": "Einwohner, die in den Ruinen bleiben",
- "eng.scriptwords.setting_help_sack_settlement_raze_people_left_e2cb": "mindestens 600 - eine Stadt kann nicht von der Karte getilgt werden",
- "eng.scriptwords.setting_sack_settlement_raze_keep_chains_94c8": "Gebäudeketten, die nie abgerissen werden",
- "eng.scriptwords.setting_help_sack_settlement_raze_keep_chains_8347": "die Kette des Statthalters (core) bleibt immer, ob aufgeführt oder nicht - ohne sie kann die Stadt nie wieder aufgebaut werden; standardmäßig Mauern und Straßen, nehmen Sie sie heraus, wenn Sie möchten. Jedes Gebäude der Mod wird im Spiel gelesen, auch eines, das hinzugefügt oder aus einer anderen Mod geholt wurde",
- "eng.scriptwords.setting_sack_settlement_raze_default_rebel_units_2a1c": "Rebelleneinheiten, falls das Spiel keine aufstellt",
- "eng.scriptwords.setting_help_sack_settlement_raze_default_rebel__2f07": "Einheitentypen aus der export_descr_unit.txt dieser Mod; leer = keine",
- "eng.scriptwords.setting_sack_settlement_raze_button_713b": "Die 4. Schaltfläche",
- "eng.scriptwords.setting_help_sack_settlement_raze_button_914d": "aus: Exterminate fragt stattdessen mit Ja / Nein, ob geplündert werden soll",
- "eng.scriptwords.setting_sack_settlement_raze_button_label_d1bb": "Text der Schaltfläche",
- "eng.scriptwords.setting_help_sack_settlement_raze_button_label_c3eb": "die Worte auf der Schaltfläche",
- "eng.scriptwords.setting_sack_settlement_raze_button_tip_1b77": "QuickInfo der Schaltfläche",
- "eng.scriptwords.setting_help_sack_settlement_raze_button_tip_ff4a": "wird angezeigt, wenn die Maus darüber steht; {gold}, {buildings}, {people} = was dieses Plündern einbringt, für die gerade eingenommene Stadt eingesetzt",
- "eng.scriptwords.setting_raze_settlement_raze_enabled_fcac": "Schleifen an",
- "eng.scriptwords.setting_help_raze_settlement_raze_enabled_b851": "aus behält die Datei, bewirkt aber nichts",
- "eng.scriptwords.setting_raze_settlement_raze_who_2f51": "Wer schleifen darf",
- "eng.scriptwords.setting_help_raze_settlement_raze_who_5266": "der Spieler wählt es auf der Eroberungsschriftrolle; eine hier zugelassene Computerfraktion schleift jedes Mal, wenn sie eine Stadt ausrottet",
- "eng.scriptwords.choice_raze_settlement_raze_who_player_2154": "Nur der Spieler (der Mensch)",
- "eng.scriptwords.choice_raze_settlement_raze_who_everyone_dfa9": "Alle - der Spieler und jede Computerfraktion",
- "eng.scriptwords.choice_raze_settlement_raze_who_homeless_3c26": "Nur Fraktionen ohne eigene Stadt (Horden, Heimatlose) - Spieler oder Computer",
- "eng.scriptwords.choice_raze_settlement_raze_who_player_and_homel_7821": "Der Spieler und Computerfraktionen ohne Stadt (Horden)",
- "eng.scriptwords.choice_raze_settlement_raze_who_ai_d7df": "Nur die Fraktionen des Computers",
- "eng.scriptwords.choice_raze_settlement_raze_who_list_9e7a": "Nur die Fraktionen, die ich auswähle",
- "eng.scriptwords.setting_raze_settlement_raze_factions_56bf": "Die Fraktionen",
- "eng.scriptwords.setting_help_raze_settlement_raze_factions_bcab": "für 'Nur die Fraktionen, die ich auswähle'",
- "eng.scriptwords.setting_raze_settlement_raze_give_to_rebels_b928": "Ruinen gehen an die Rebellen",
- "eng.scriptwords.setting_help_raze_settlement_raze_give_to_rebels_cd02": "aus: die geschleifte Stadt bleibt bei Ihnen",
- "eng.scriptwords.setting_raze_settlement_raze_rebel_garrison_3e15": "Rebellen bekommen eine Garnison",
- "eng.scriptwords.setting_help_raze_settlement_raze_rebel_garrison_86a9": "das Spiel stellt sie aus dem Rebellentyp der Region auf (descr_rebel_factions.txt)",
- "eng.scriptwords.setting_raze_settlement_raze_gold_per_building_ecd1": "Geld pro abgerissenem Gebäude",
- "eng.scriptwords.setting_help_raze_settlement_raze_gold_per_build_5e02": "zusätzlich zu dem der Ausrottung",
- "eng.scriptwords.setting_raze_settlement_raze_gold_per_citizen_d1ac": "Geld pro Einwohner",
- "eng.scriptwords.setting_help_raze_settlement_raze_gold_per_citiz_de5d": "für jede Person, die das Schleifen entfernt",
- "eng.scriptwords.setting_raze_settlement_raze_people_left_8295": "Einwohner, die in den Ruinen bleiben",
- "eng.scriptwords.setting_help_raze_settlement_raze_people_left_3ae6": "mindestens 600 - eine Stadt kann nicht von der Karte getilgt werden",
- "eng.scriptwords.setting_raze_settlement_raze_keep_chains_074b": "Gebäudeketten, die nie abgerissen werden",
- "eng.scriptwords.setting_help_raze_settlement_raze_keep_chains_918f": "die Kette des Statthalters (core) bleibt immer, ob aufgeführt oder nicht - ohne sie kann die Stadt nie wieder aufgebaut werden; standardmäßig Straßen (die Mauern sind in Medieval II Stufen der core-Ketten), nehmen Sie sie heraus, wenn Sie möchten. Jedes Gebäude der Mod wird im Spiel gelesen, auch eines, das hinzugefügt oder aus einer anderen Mod geholt wurde",
- "eng.scriptwords.setting_raze_settlement_raze_default_rebel_units_7066": "Rebelleneinheiten, falls das Spiel keine aufstellt",
- "eng.scriptwords.setting_help_raze_settlement_raze_default_rebel__d08d": "Einheitentypen aus der export_descr_unit.txt dieser Mod; leer = keine",
- "eng.scriptwords.setting_raze_settlement_raze_button_314f": "Die 4. Schaltfläche",
- "eng.scriptwords.setting_help_raze_settlement_raze_button_3aa5": "aus: Exterminate fragt stattdessen mit Ja / Nein, ob geschleift werden soll",
- "eng.scriptwords.setting_raze_settlement_raze_button_label_bc92": "Text der Schaltfläche",
- "eng.scriptwords.setting_help_raze_settlement_raze_button_label_b77d": "die Worte auf der Schaltfläche",
- "eng.scriptwords.setting_raze_settlement_raze_button_tip_f076": "QuickInfo der Schaltfläche",
- "eng.scriptwords.setting_help_raze_settlement_raze_button_tip_75fa": "wird angezeigt, wenn die Maus darüber steht, wie bei den drei Schaltflächen des Spiels; {gold}, {buildings}, {people} = was dieses Schleifen einbringt; leer = keine",
- "eng.scriptwords.addon_avoid_growth_8f0d": "Avoid Growth",
- "eng.scriptwords.addon_help_avoid_growth_697d": "Ein Kontrollkästchen auf der Siedlungsschriftrolle jeder Ihrer Städte, gezeichnet mit dem kleinen Kästchen und Häkchen des Spiels (in Medieval II in der Reihe der eigenen Häkchen, rechts von Recruitment). Setzen Sie das Häkchen, und die Einwohner, die die Stadt jetzt hat, werden ihre Obergrenze: Sie wächst nie darüber hinaus, verliert aber weiterhin Einwohner auf die übliche Weise (Rekrutierung, Schlachten, Seuche) und wächst wieder nach - nur bis zur Obergrenze. Eine Grenzstadt bleibt das Dorf, die Stadt oder die große Stadt, die sie ist: stellen Sie sie auf automatische Verwaltung und vergessen Sie sie. Entfernen Sie das Häkchen, damit sie wieder wachsen kann. Die Obergrenzen werden im gespeicherten Spiel aufbewahrt; eine an eine andere Fraktion verlorene Stadt verliert ihr Häkchen. Konsole: sq ::avoid_growth_list().",
- "eng.scriptwords.setting_avoid_growth_ag_enabled_6b9a": "Avoid Growth an",
- "eng.scriptwords.setting_help_avoid_growth_ag_enabled_4b8c": "aus behält die Datei, bewirkt aber nichts",
- "eng.scriptwords.setting_avoid_growth_ag_label_6415": "Worte neben dem Häkchen",
- "eng.scriptwords.setting_help_avoid_growth_ag_label_f3b4": "was die Schriftrolle sagt",
- "eng.scriptwords.setting_avoid_growth_ag_tip_db18": "QuickInfo",
- "eng.scriptwords.setting_help_avoid_growth_ag_tip_69af": "wird angezeigt, wenn die Maus darüber steht, ohne Häkchen",
- "eng.scriptwords.setting_avoid_growth_ag_tip_on_7b39": "QuickInfo mit Häkchen",
- "eng.scriptwords.setting_help_avoid_growth_ag_tip_on_97b5": "{cap} = die Obergrenze (die Einwohner, die sie höchstens behält)",
- "eng.scriptwords.setting_avoid_growth_ag_show_cap_2d19": "Die Obergrenze auch neben den Worten zeigen",
- "eng.scriptwords.setting_help_avoid_growth_ag_show_cap_cccb": "'(höchstens 5000)' neben den Worten bei gesetztem Häkchen - die QuickInfo sagt es ohnehin",
- "eng.scriptwords.setting_avoid_growth_ag_offset_x_b29a": "Das Häkchen nach rechts verschieben",
- "eng.scriptwords.setting_help_avoid_growth_ag_offset_x_36c9": "in den 1024 x 768 Einheiten des Spiels; unter 0 = links",
- "eng.scriptwords.setting_avoid_growth_ag_offset_y_c92a": "Das Häkchen nach unten verschieben",
- "eng.scriptwords.setting_help_avoid_growth_ag_offset_y_293a": "unter 0 = oben",
- "eng.scriptwords.addon_help_recruit_order_a577": "Das Rekrutierungsfenster einer Stadt in fester Reihenfolge: Infanterie, dann Bogenschützen / Schleuderer / Plänkler, Kavallerie, berittene Bogenschützen, Streitwagen, Elefanten, Kriegshunde und Schweine, Belagerung, Schiffe - in jeder Art die teuerste zuerst (oder die billigste). Das Spiel sortiert das Fenster selbst nach dem Preis jeder Einheit im benutzerdefinierten Gefecht (die 6. Zahl von stat_cost); während Ihrer Runde gibt das Add-on jeder Einheit diese Zahl in der obigen Reihenfolge und setzt die echten Zahlen vor jeder Schlacht und am Ende Ihrer Runde wieder ein, sodass die Runden des Computers, Schlachten und die automatische Berechnung die echten Werte behalten. In die Dateien der Mod oder in das gespeicherte Spiel wird nichts geschrieben. Schiffe stehen immer nach den Landeinheiten und Agenten zuletzt - das Spiel hält sie getrennt; in Medieval II sind die eigenen Artenblöcke des Spiels abgeschaltet (eine Einstellung). Konsole: sq ::recruit_order_list(), sq ::recruit_order_off().",
- "eng.scriptwords.setting_help_recruit_order_ro_enabled_6dbd": "aus behält die Datei, bewirkt aber nichts",
- "eng.scriptwords.setting_recruit_order_ro_order_6038": "In jeder Art",
- "eng.scriptwords.setting_help_recruit_order_ro_order_6384": "welche Einheiten innerhalb derselben Art zuerst stehen",
- "eng.scriptwords.choice_recruit_order_ro_order_dearest_4aab": "Die teuerste zuerst (die stärkste oben links)",
- "eng.scriptwords.choice_recruit_order_ro_order_cheapest_1f32": "Die billigste zuerst",
- "eng.scriptwords.setting_recruit_order_ro_one_panel_62a6": "Medieval II: ein Fenster für jede Art",
- "eng.scriptwords.setting_help_recruit_order_ro_one_panel_c1ae": "die eigenen Artenblöcke des Spiels aus (recruitment_sort_simple), sodass das ganze Fenster der Reihenfolge folgt; Rome hat keine Blöcke",
- "eng.scriptwords.addon_player_diplomacy_df0c": "Player Diplomacy",
- "eng.scriptwords.addon_help_player_diplomacy_9beb": "Die Fraktionen des Computers hören auf, Sie anzugreifen, wenn es keinen Sinn ergibt: Nach einem Waffenstillstand halten sie einige Runden lang Frieden (ein Krieg, den sie in dieser Zeit erklären, wird rückgängig gemacht), Ihre Vasallenreiche planen nie, Sie anzugreifen, und eine Fraktion, die weit schwächer ist als Sie, tut es ebenfalls nicht (ihre Verbündeten, die schon mit Ihnen im Krieg sind, zählen auf ihre Seite, sodass ein großes Bündnis trotzdem kommt). Nur wie der Computer SIE behandelt, ändert sich; seine Kriege untereinander bleiben, wie sie sind. Die Konsole: sq ::truce_status(), sq ::truce_set(\"egypt\", 10), sq ::power(\"egypt\").",
- "eng.scriptwords.setting_player_diplomacy_truce_turns_0ad3": "Runden, die ein Waffenstillstand hält",
- "eng.scriptwords.setting_help_player_diplomacy_truce_turns_fb77": "Ihre Runden; 0 = keine Waffenstillstandsregel",
- "eng.scriptwords.setting_player_diplomacy_truce_steer_ai_5692": "Der Computer plant im Waffenstillstand keinen Angriff auf Sie",
- "eng.scriptwords.setting_help_player_diplomacy_truce_steer_ai_6eae": "die Hauptregel",
- "eng.scriptwords.setting_player_diplomacy_truce_restore_peace_cb9e": "Ein im Waffenstillstand erklärter Krieg wird rückgängig gemacht",
- "eng.scriptwords.setting_help_player_diplomacy_truce_restore_peac_7535": "der Frieden wird sofort wiederhergestellt",
- "eng.scriptwords.setting_help_player_diplomacy_client_never_attac_1fb3": "solange sie Ihre Schutzgebiete sind",
- "eng.scriptwords.setting_help_player_diplomacy_deter_enabled_2e26": "nach der Stärke unten",
- "eng.scriptwords.setting_player_diplomacy_deter_ratio_693f": "Sie sind so viel mal stärker",
- "eng.scriptwords.setting_help_player_diplomacy_deter_ratio_9cec": "Einheiten in allen Armeen und Garnisonen, plus die Siedlungen unten; 3.0 = dreimal so stark",
- "eng.scriptwords.setting_player_diplomacy_strength_per_settlement_1c39": "Eine Siedlung zählt als Einheiten",
- "eng.scriptwords.setting_help_player_diplomacy_strength_per_settl_1439": "in dieser Stärke",
- "eng.scriptwords.setting_player_diplomacy_coalitions_count_ca49": "Mit Ihnen im Krieg befindliche Verbündete fügen ihre Stärke hinzu",
- "eng.scriptwords.setting_help_player_diplomacy_coalitions_count_c6bd": "damit sich kleine Fraktionen weiterhin einem großen Bündnis gegen Sie anschließen",
+ "eng.scriptwords.match_all_4afa": "alle Prüfungen bestanden",
+ "eng.scriptwords.match_any_9db7": "eine Prüfung bestanden",
+ "eng.scriptwords.match_none_5634": "keine Prüfung bestanden",
+ "eng.scriptwords.each_fb36": "die Betroffenen des Ereignisses verwenden",
+ "eng.scriptwords.each_town_a56c": "jede Stadt",
+ "eng.scriptwords.each_army_c640": "jede Armee",
+ "eng.scriptwords.each_faction_2c4e": "jede Fraktion außer den Rebellen",
+ "eng.scriptwords.each_of_this_c718": "der aktuellen Fraktion",
+ "eng.scriptwords.each_of_player_48bc": "der menschlichen Fraktion",
+ "eng.scriptwords.each_of_named_ec23": "einer ausgewählten Fraktion",
+ "eng.scriptwords.addon_help_recruit_order_a577": "verf?gbare Einheiten, die sich rekrutieren lassen, nach Kosten sortieren",
+ "eng.scriptwords.setting_help_recruit_order_ro_enabled_6dbd": "verfügbare Rekruten beim Öffnen des Rekrutierungsfensters nach ihren Rekrutierungskosten sortieren",
+ "eng.scriptwords.setting_recruit_order_ro_order_6038": "Kostenreihenfolge",
+ "eng.scriptwords.setting_help_recruit_order_ro_order_6384": "wählen, ob teure oder günstige Einheiten zuerst in der Rekrutierungsliste stehen",
+ "eng.scriptwords.choice_recruit_order_ro_order_dearest_4aab": "höchste Kosten zuerst",
+ "eng.scriptwords.choice_recruit_order_ro_order_cheapest_1f32": "niedrigste Kosten zuerst",
+ "eng.scriptwords.setting_recruit_order_ro_one_panel_62a6": "Rekrutierungsfenster zusammenlegen",
+ "eng.scriptwords.setting_help_recruit_order_ro_one_panel_c1ae": "verfügbare Rekruten gemeinsam in einem Rekrutierungsfenster anzeigen",
  "eng.scriptwords.addon_upkeep_x2_30cb": "Upkeep x 2 (keine riesigen Armeen)",
- "eng.scriptwords.addon_help_upkeep_x2_24e0": "Der Unterhalt jeder Einheit wird vervielfacht (standardmäßig x 2), in jeder Mod beider Spiele - keine Engine nötig. Große Armeen kosten, was sie sollten: Nur ein großes Einkommen hält sie. Das Spiel liest den Unterhalt aus export_descr_unit.txt, daher zeigt es überall die echten, höheren Zahlen. Das Entfernen setzt genau die alten Zahlen wieder ein (aufbewahrt in toolkit_upkeep.json neben dieser Datei).",
- "eng.scriptwords.setting_upkeep_x2_factor_7b26": "Unterhalt x",
- "eng.scriptwords.setting_help_upkeep_x2_factor_0b0b": "2 verdoppelt ihn, 1.5 fügt die Hälfte hinzu, 3 verdreifacht ihn",
- "eng.scriptwords.addon_help_one_recruit_grid_d769": "Das Rekrutierungsfenster einer Stadt als ein Raster, das wie in Rome Zeile für Zeile gelesen wird, statt der Blöcke des Spiels nach Art (Infanterie, Fernkampf, Kavallerie ... jede in eigenen Spalten). Jedes Medieval II, keine Engine nötig: Es setzt recruitment_sort_simple in descr_campaign_db.xml; Entfernen setzt die Zeile wie zuvor zurück. In diesem Raster zeigt das Spiel selbst zuerst die Agenten, dann die Schiffe, dann die Landeinheiten - nur eine Änderung der Engine kann das ändern.",
- "eng.scriptwords.addon_sack_settlement_7e36": "Sack Settlement (Rome)",
- "eng.scriptwords.addon_help_sack_settlement_8e93": "Eine vierte Wahl auf der Eroberungsschriftrolle, unter Occupy / Enslave / Exterminate: Sack Settlement. Die Stadt wird auf die eigene Art des Spiels ausgerottet, jedes Gebäude außer den behaltenen wird abgerissen, Sie erhalten eine Belohnung, und die Ruinen gehen an die Rebellen (mit einer Rebellengarnison, die das Spiel selbst aufstellt) - Land, das Sie nicht halten wollen, wird niedergebrannt und der Natur überlassen. Die unten zugelassenen Computerfraktionen plündern, wenn sie ausrotten.",
- "eng.scriptwords.addon_raze_settlement_9030": "Sack Settlement (Medieval II)",
- "eng.scriptwords.addon_help_raze_settlement_52e3": "Eine vierte Wahl auf der Eroberungsschriftrolle, unter Occupy / Sack / Exterminate - ihre Schaltfläche heißt Raze Settlement (die zweite Schaltfläche des Spiels heißt schon Sack Settlement; ändern Sie die Worte unten), gezeichnet aus den eigenen Schaltflächenteilen des Spiels wie die drei darüber. Die Stadt wird auf die eigene Art des Spiels ausgerottet, jedes Gebäude außer den behaltenen wird abgerissen, die meisten Einwohner sind fort, Sie erhalten eine Belohnung, und die Ruinen gehen an die Rebellen mit einer frischen Rebellengarnison, die M2EX selbst aufstellt - das Gegenstück zu Sack Settlement von Rome für Medieval II, dieselbe Skript-Engine. Die unten zugelassenen Computerfraktionen schleifen, wenn sie ausrotten.",
+ "eng.scriptwords.addon_help_upkeep_x2_24e0": "Einheitenunterhalt vervielfachen und die ursprünglichen Kosten aufbewahren",
+ "eng.scriptwords.setting_upkeep_x2_factor_7b26": "Unterhaltsmultiplikator",
+ "eng.scriptwords.setting_help_upkeep_x2_factor_0b0b": "den Unterhalt jeder Einheit mit diesem Faktor multiplizieren; Entfernen des Add-ons stellt die gespeicherten Kosten wieder her",
+ "eng.scriptwords.addon_help_one_recruit_grid_d769": "eine einzige Rekrutierungsliste verwenden",
  "eng.scriptwords.addon_recruit_order_9449": "Recruitment Order",
- "eng.scriptwords.setting_recruit_order_ro_enabled_6785": "Recruitment Order an",
+ "eng.scriptwords.setting_recruit_order_ro_enabled_6785": "Sortierung f?r Einheiten aktivieren, die sich rekrutieren lassen",
  "eng.scriptwords.addon_one_recruit_grid_21e4": "One Recruitment Grid (Medieval II)",
- "eng.scriptwords.setting_player_diplomacy_client_never_attack_de92": "Vasallenreiche führen nie einen Angriff auf Sie",
- "eng.scriptwords.setting_player_diplomacy_deter_enabled_5927": "Weit schwächere Fraktionen führen keinen Angriff auf Sie",
  "eng.factionbring.culture_missing": "Die Kultur {culture} von {faction} gibt es in dieser Mod nicht, daher behält {new} die von {frame} ({theirs}).",
  "eng.factionbring.frame_art_left": "{n} Bild(er), von denen {faction} in {mod} keines hat, sind die von {frame}, wie bei einem Klon: {list}",
  "eng.factionbring.laid_art": "{n} Grafikelement(e) von {faction}, {files} Datei(en), anstelle derer von {frame}",
@@ -12238,7 +11125,7 @@
  "app.report": "🐞 Melden",
  "app.report_title": "Ein Problem melden oder eine Idee vorschlagen; die Antworten des Autors erscheinen hier",
  "report.tab_send": "Senden",
- "report.tab_answers": "Antworten auf meine Berichte",
+ "report.tab_answers": "Antworten auf meine Nachrichten",
  "report.new_n": "{n} neu",
  "report.kind_bug": "Ein Problem",
  "report.kind_idea": "Eine Idee",
@@ -12259,9 +11146,9 @@
  "report.none_sent": "Von dieser Kopie wurde noch kein Bericht gesendet.",
  "report.from_author": "Der Autor",
  "report.from_you": "Du",
- "report.no_answer_yet": "Noch keine Antwort.",
- "report.reply_placeholder": "Deine Antwort an den Autor",
- "report.reply_with_logs": "mit den neuesten Logs",
+ "report.no_answer_yet": "Noch niemand hat geantwortet.",
+ "report.reply_placeholder": "Dem Autor antworten",
+ "report.reply_with_logs": "die neuesten Protokolle anhängen",
  "report.reply_send": "Antwort senden",
  "report.reply_sent": "Antwort gesendet",
  "report.check_now": "Jetzt prüfen",
@@ -12395,18 +11282,18 @@
  "editor.the_deleted_unit_is_taken_out_of": "ihre Zeilen werden aus {ref_counts_n} weiteren Dateien entfernt: {ref_counts}",
  "edrecruit.upward": "Eine angehakte Ausbaustufe wählt alle höheren mit aus",
  "edrecruit.upward_title": "Das Spiel rekrutiert nur auf der aktuellen Stufe eines Gebäudes. Eine Einheit, die nur einer Ausbaustufe zugewiesen ist, verschwindet daher nach der Aufrüstung wieder. Ist dies aktiviert, werden beim Anhaken einer Ausbaustufe alle höheren derselben Gebäudelinie mit angehakt und beim Abwählen ebenfalls abgewählt.",
- "guided.attr_sea_faring": "kann Schiffe betreten",
- "guided.attr_can_swim": "kann Flüsse durchschwimmen",
+ "guided.attr_sea_faring": "darf an Bord einer Flotte gehen",
+ "guided.attr_can_swim": "überquert Flüsse schwimmend",
  "guided.attr_can_withdraw": "kann sich vor Beginn einer Schlacht zurückziehen",
  "guided.attr_can_run_amok": "kann bei zusammenbrechender Moral außer Kontrolle geraten (Elefanten, Kriegshunde)",
  "guided.attr_cannot_skirmish": "verwendet nie den Plänklermodus",
- "guided.attr_start_not_skirmishing": "beginnt eine Schlacht mit ausgeschaltetem Plänklermodus",
- "guided.attr_hardy": "ermüdet langsamer",
+ "guided.attr_start_not_skirmishing": "Plänklermodus ist zu Schlachtbeginn aus",
+ "guided.attr_hardy": "ermüdet langsamer als die meisten",
  "guided.attr_very_hardy": "ermüdet deutlich langsamer",
  "guided.attr_hide_forest": "kann sich im Wald verstecken",
  "guided.attr_hide_improved_forest": "versteckt sich besser im Wald",
- "guided.attr_hide_long_grass": "kann sich in hohem Gras verstecken",
- "guided.attr_hide_anywhere": "kann sich überall verstecken",
+ "guided.attr_hide_long_grass": "versteckt sich in hohem Gras",
+ "guided.attr_hide_anywhere": "versteckt sich auf jedem Gelände",
  "guided.attr_frighten_foot": "ängstigt Infanterie in der Nähe",
  "guided.attr_frighten_mounted": "ängstigt Kavallerie in der Nähe",
  "guided.attr_power_charge": "stärkerer Ansturm",
@@ -12415,7 +11302,7 @@
  "guided.attr_mercenary_unit": "eine Söldnereinheit: wird aus Söldner-Pools angeworben",
  "guided.attr_is_peasant": "zählt als Bauern (günstig, schwache Moral)",
  "guided.attr_no_custom": "in eigenen Schlachten nicht verfügbar",
- "guided.attr_gunpowder_unit": "eine Schießpulvereinheit",
+ "guided.attr_gunpowder_unit": "kämpft mit Schießpulverwaffen",
  "guided.attr_stakes": "kann Pfähle vor sich aufstellen",
  "guided.attr_druid": "eine druidenartige Einheit, die die Moral in der Nähe erhöht",
  "guided.attr_cantabrian_circle": "kann den kantabrischen Kreis reiten",
@@ -12442,7 +11329,7 @@
  "guided.attr_short_pike": "eine kurze Pike",
  "guided.attr_prec": "wird kurz vor dem Ansturm abgefeuert (Pila, Wurfspeere)",
  "guided.attr_launching": "schleudert getroffene Soldaten in die Luft",
- "guided.attr_area": "trifft eine Fläche statt eines einzelnen Soldaten",
+ "guided.attr_area": "trifft eine ganze Fläche statt eines einzelnen Mannes",
  "guided.attr_on_the_wrong_line": "„{word}“ gehört in die Zeile attributes: In {line} nimmt die Engine es kommentarlos an, es hat dort aber keine Wirkung",
  "guided.attr_needs_m2ex": "{words}: Diese kennt nur M2EX (oder REX). Diese Mod ist nicht als M2EX markiert, daher liest das Spiel sie nicht. Markieren Sie die Mod auf ihrer Karte auf der Startseite, wenn sie mit M2EX läuft",
  "modelpicker.ex_attrs_on": "Nur M2EX / REX ({n} aktiv)",
@@ -12666,5 +11553,161 @@
  "armory.check_existing_export": "Vorhandenen Export prüfen",
  "armory.recent_folder": "Zuletzt verwendet · {folder}",
  "armory.folder_choices": "Einheitenordner und zuletzt verwendete Pfade",
- "eng.server.pick_data_folder": "Wähle einen Ordner unter data"
+ "eng.server.pick_data_folder": "Wähle einen Ordner unter data",
+ "voices.no_orders_no_accent": "Keine Befehle in dieser Klasse; für diese Einheit ist kein Akzent für die Sprachausgabe gewählt.",
+ "eng.scriptaddons.duplicate_code": "Der Code von {title} ist bereits in {paths}; er würde zweimal ausgeführt. Entfernen Sie den eingefügten Code vor der Installation dieses Add-ons.",
+ "eng.scriptaddons.setting_error": "{label}: {detail}",
+ "eng.scriptaddons.whole_number": "eine ganze Zahl verwenden",
+ "eng.scriptaddons.nonnegative_integer": "eine ganze Zahl ab null verwenden",
+ "eng.scriptaddons.unknown_names": "nicht in {file}: {names}",
+ "eng.scriptaddons.removed": "das Add-on {title} entfernt",
+ "eng.scriptaddons.older_removed": "eine ältere Kopie des Add-ons {title} entfernt",
+ "eng.scriptbuilder.block_error": "{side} {index} ({block}): {detail}",
+ "eng.scriptbuilder.missing_subject": "das Ereignis liefert kein Objekt vom Typ {subject}",
+ "eng.scriptbuilder.whole_number": "{label} muss eine ganze Zahl sein",
+ "eng.scriptbuilder.nonnegative": "{label} muss null oder größer sein",
+ "eng.scriptbuilder.percent_range": "{label} muss zwischen 1 und 100 liegen",
+ "eng.scriptbuilder.text_required": "{label} braucht einen Text",
+ "eng.scriptbuilder.pick_required": "{label} braucht mindestens eine Auswahl",
+ "eng.scriptbuilder.unknown_names": "in dieser Mod nicht gefunden: {names}",
+ "eng.scriptdocs.enter_an_engine_line_or_choose_one": "eine Engine-Zeile eingeben oder auswählen",
+ "eng.scriptdocs.enter_a_condition_after_not": "eine Bedingung nach not eingeben",
+ "eng.scriptdocs.campaign_script_flow_belongs_in_the_module_rule_not_an_individual_command": "die Ablaufsteuerung von campaign_script gehört in die Modulregel, nicht in einen einzelnen Befehl",
+ "eng.scriptdocs.name_is_not_a_known_category_identifier_for_engine": "{name} ist keine bekannte Kennung der Kategorie {category} für {engine}",
+ "eng.scriptdocs.name_is_marked_as_not_implemented": "{name} ist als nicht implementiert markiert",
+ "eng.scriptdocs.name_is_unavailable_on_the_campaign_map": "{name} ist auf der Kampagnenkarte nicht verfügbar",
+ "eng.scriptdocs.use_the_exact_spelling_similar": "die genaue Schreibweise {similar} verwenden",
+ "eng.scriptdocs.name_is_only_available_in_battles": "{name} ist nur in Schlachten verfügbar",
+ "eng.scriptdocs.name_needs_event_data_missing": "{name} braucht Ereignisdaten: {missing}",
+ "eng.scriptbuilder.when_give_this_module_a_title": "WENN: diesem Modul einen Titel geben",
+ "eng.scriptbuilder.when_this_title_belongs_to_a_built_in_add_on": "WENN: dieser Titel gehört zu einem eingebauten Add-on",
+ "eng.scriptbuilder.when_choose_a_recognized_event": "WENN: ein bekanntes Ereignis wählen",
+ "eng.scriptbuilder.for_each_choose_a_supported_iteration": "FÜR JEDES: eine unterstützte Wiederholung wählen",
+ "eng.scriptbuilder.if_choose_all_any_or_none": "FALLS: alle, eine oder keine wählen",
+ "eng.scriptbuilder.do_add_at_least_one_action": "AUSFÜHREN: mindestens eine Aktion hinzufügen",
+ "eng.scriptbuilder.else_add_an_if_test_so_this_branch_can_run": "SONST: eine FALLS-Prüfung hinzufügen, damit dieser Zweig ausgeführt werden kann",
+ "eng.scriptbuilder.when_this_event_is_unavailable_in_the_selected_engine_s": "WENN: dieses Ereignis ist in den gewählten Engines nicht verfügbar",
+ "eng.scriptbuilder.for_each_this_event_supplies_no_faction_to_iterate": "FÜR JEDES: dieses Ereignis liefert keine Fraktion für die Wiederholung",
+ "eng.scriptbuilder.for_each_pick_the_faction_to_iterate": "FÜR JEDES: die Fraktion für die Wiederholung wählen",
+ "eng.scriptbuilder.do_exposed_setting_path_does_not_point_to_an_eligible_field": "AUSFÜHREN: die freigegebene Einstellung {path} verweist auf kein geeignetes Feld",
+ "eng.scriptbuilder.counter_names_allow_letters_digits_faction_and_town": "Zählernamen erlauben Buchstaben, Ziffern, _, {faction} und {town}",
+ "eng.scriptbuilder.the_event_supplies_no_former_owner": "das Ereignis liefert keinen Vorbesitzer",
+ "eng.scriptaddons.use_a_number_of_zero_or_more": "eine Zahl ab null verwenden",
+ "eng.scriptaddons.choose_one_of_the_offered_values": "einen der angebotenen Werte wählen",
+ "eng.scriptaddons.use_a_list_of_names": "eine Liste von Namen verwenden",
+ "eng.scriptaddons.names_must_start_with_a_letter_or_underscore_and_contain_letters_digits_or_underscores": "Namen müssen mit einem Buchstaben oder Unterstrich beginnen und dürfen Buchstaben, Ziffern oder Unterstriche enthalten",
+ "eng.scriptbuilder.when": "Wenn {event}",
+ "eng.scriptbuilder.readback_actions": "{when}: {actions}",
+ "eng.scriptbuilder.readback_end": "{rule}.",
+ "eng.scriptbuilder.unknown_block": "unbekannter Block {kind}",
+ "eng.scriptbuilder.denarii": "Denare",
+ "eng.scriptbuilder.florins": "Florin",
+ "eng.scriptbuilder.for_each": "{when}, für {scope}",
+ "eng.scriptbuilder.no_actions": "noch nichts",
+ "eng.scriptbuilder.readback_else": "{rule}, sonst: {actions}",
+ "eng.scriptbuilder.readback_once": "{rule} Nur einmal pro Kampagne.",
+ "eng.scriptbuilder.readback_only_with": "{rule} Nur in einer Kampagne mit der Fraktion {faction}.",
+ "eng.scriptbuilder.negated": "es trifft nicht zu, dass {condition}",
+ "eng.scriptbuilder.iteration_owner": "{scope} {owner}",
+ "eng.scriptbuilder.if_none": "{when}, falls nichts davon zutrifft: {conditions}",
+ "eng.scriptbuilder.validation_errors": "{errors}",
+ "eng.scriptbuilder.rebuild_message_cache": "das Spiel erstellt ihn erneut aus dem Text",
+ "eng.scriptbuilder.no_town": "(keine Stadt gewählt)",
+ "eng.scriptbuilder.no_faction": "(keine Fraktion gewählt)",
+ "eng.scriptbuilder.no_event": "(kein Ereignis gewählt)",
+ "eng.scriptbuilder.iteration_named": "{scope} {faction}",
+ "eng.scriptbuilder.if_any": "{when}, falls {conditions}",
+ "eng.scriptbuilder.if_all": "{when}, falls {conditions}",
+ "eng.scriptbuilder.a_faction": "eine Fraktion",
+ "eng.scriptbuilder.action_money": "Schatzkammer von {faction} um {amount} {currency} ändern",
+ "eng.scriptbuilder.action_people": "Bevölkerung um {amount} ändern",
+ "eng.scriptbuilder.action_people_pct": "{percent} Prozent der Bevölkerung entfernen",
+ "eng.scriptbuilder.action_people_max": "Bevölkerung auf {maximum} begrenzen",
+ "eng.scriptbuilder.action_build": "{level} bauen",
+ "eng.scriptbuilder.action_tear_down": "{chain} entfernen",
+ "eng.scriptbuilder.action_units": "{count} Einheiten vom Typ {unit} zur Garnison hinzufügen",
+ "eng.scriptbuilder.action_give_town": "die Stadt an {faction} übergeben",
+ "eng.scriptbuilder.action_stance": "Beziehungen zwischen {first} und {second} auf {stance} setzen",
+ "eng.scriptbuilder.action_trait": "{trait} auf Stufe {level} verleihen",
+ "eng.scriptbuilder.action_ancillary": "{ancillary} verleihen",
+ "eng.scriptbuilder.action_counter_set": "Zähler {name} auf {value} setzen",
+ "eng.scriptbuilder.action_counter_add": "Zähler {name} um {value} ändern",
+ "eng.scriptbuilder.action_message": "die Schriftrolle {title} anzeigen",
+ "eng.scriptbuilder.action_log": "{text} protokollieren",
+ "eng.scriptbuilder.action_console": "Konsolenzeile {line} ausführen",
+ "eng.scriptbuilder.action_script": "Kampagnenzeile {line} ausführen",
+ "eng.scriptbuilder.test_control": "die Fraktion ist {control}",
+ "eng.scriptbuilder.test_old_control": "der Vorbesitzer ist {control}",
+ "eng.scriptbuilder.test_treasury": "der Schatzkammerinhalt ist {op} {amount} {currency}",
+ "eng.scriptbuilder.test_towns": "die Stadtanzahl ist {op} {count}",
+ "eng.scriptbuilder.test_turn": "die Runde ist {op} {turn}",
+ "eng.scriptbuilder.test_chance": "eine Chance von {percent} Prozent trifft ein",
+ "eng.scriptbuilder.test_people": "die Bevölkerung ist {op} {population}",
+ "eng.scriptbuilder.test_selected_towns": "die Stadt gehört zu {towns}",
+ "eng.scriptbuilder.test_capital": "die Stadt ist die Hauptstadt",
+ "eng.scriptbuilder.test_chain": "die Stadt hat {chain}",
+ "eng.scriptbuilder.test_counter": "Zähler {name} ist {op} {value}",
+ "eng.scriptbuilder.test_engine": "die Engine akzeptiert {line}",
+ "eng.scriptbuilder.current_faction": "die aktuelle Fraktion",
+ "eng.scriptbuilder.former_owner": "der Vorbesitzer",
+ "eng.scriptbuilder.human_faction": "die menschliche Fraktion",
+ "eng.scriptbuilder.rebels": "die Rebellen",
+ "eng.scriptbuilder.human_control": "vom Menschen gesteuert",
+ "eng.scriptbuilder.computer_control": "vom Computer gesteuert",
+ "eng.scriptbuilder.no_level": "(keine Stufe gewählt)",
+ "eng.scriptbuilder.no_chain": "(keine Kette gewählt)",
+ "eng.scriptbuilder.no_unit": "(keine Einheit gewählt)",
+ "eng.scriptbuilder.no_trait": "(keine Eigenschaft gewählt)",
+ "eng.scriptbuilder.no_ancillary": "(kein Gefolge gewählt)",
+ "eng.scriptbuilder.no_heading": "(noch keine Überschrift)",
+ "eng.scriptbuilder.no_text": "(noch kein Text)",
+ "eng.scriptbuilder.no_command": "(kein Befehl gewählt)",
+ "eng.scriptbuilder.or_separator": " oder ",
+ "eng.scriptbuilder.and_separator": " und ",
+ "eng.scriptbuilder.no_condition": "(keine Bedingung gewählt)",
+ "eng.scriptaddons.validation_errors": "{errors}",
+ "eng.scriptwords.cond_help_who_6987": "prüfen, ob die Fraktion des Ereignisses vom Menschen oder Computer gesteuert wird oder zu den ausgewählten Fraktionen gehört",
+ "eng.scriptwords.cond_help_money_366a": "den Schatzkammerinhalt der Fraktion des Ereignisses mit dem gewählten Betrag vergleichen",
+ "eng.scriptwords.cond_help_towns_7967": "die Anzahl der Siedlungen im Besitz der Fraktion des Ereignisses vergleichen",
+ "eng.scriptwords.cond_help_people_de45": "die Bevölkerung der Stadt des Ereignisses mit der gewählten Zahl vergleichen",
+ "eng.scriptwords.cond_help_town_is_bca1": "die Regel auf die gewählten Kampagnensiedlungen beschränken",
+ "eng.scriptwords.cond_help_capital_5f8f": "prüfen, ob die Stadt des Ereignisses die Hauptstadt ihrer Fraktion ist",
+ "eng.scriptwords.cond_help_old_owner_19ef": "prüfen, wer die Stadt vor ihrer Eroberung kontrollierte",
+ "eng.scriptwords.act_help_people_pct_c1d3": "den gewählten Prozentsatz der Bevölkerung der Stadt des Ereignisses entfernen",
+ "eng.scriptwords.act_help_give_town_10a7": "die Stadt des Ereignisses der gewählten Fraktion übertragen",
+ "eng.scriptwords.act_help_stance_1f28": "Krieg, Frieden oder Bündnis zwischen den beiden gewählten Fraktionen festlegen",
+ "eng.scriptwords.act_help_trait_f782": "dem General des Ereignisses die gewählte Eigenschaft auf der gewählten Stufe verleihen",
+ "eng.scriptwords.act_help_ancillary_a951": "dem General des Ereignisses das gewählte Gefolge verleihen",
+ "eng.scriptwords.field_who_v_75fc": "Wert",
+ "eng.scriptwords.field_money_op_d767": "Vergleich",
+ "eng.scriptwords.field_towns_op_97bf": "Vergleich",
+ "eng.scriptwords.field_turn_op_d946": "Vergleich",
+ "eng.scriptwords.field_people_op_035f": "Vergleich",
+ "eng.scriptwords.field_old_owner_v_ead0": "Wert",
+ "eng.scriptwords.field_counter_op_dc15": "Vergleich",
+ "eng.scriptwords.field_counter_v_6522": "Wert",
+ "eng.scriptwords.field_money_faction_1b69": "Fraktionskennung",
+ "eng.scriptwords.field_give_town_to_0233": "Empfänger",
+ "eng.scriptwords.field_give_town_faction_aca7": "Fraktionskennung",
+ "eng.scriptwords.field_stance_a_0669": "erste Fraktion",
+ "eng.scriptwords.field_stance_faction_e040": "Fraktionskennung",
+ "eng.scriptwords.field_stance_faction_b_cfe8": "Kennung der anderen Fraktion",
+ "eng.scriptwords.field_ancillary_anc_9f69": "Gefolgekennung",
+ "eng.scriptwords.field_counter_set_v_55e7": "Wert",
+ "eng.scriptwords.field_counter_add_v_0f88": "Wert",
+ "eng.scriptwords.field_log_text_98e9": "Text",
+ "eng.scriptbuilder.exposed_label": "{block} - {field}",
+ "eng.scriptaddons.script_summary": "ein Add-on-Skript ({name})",
+ "eng.scriptaddons.module_enabled_help": "diese Kampagnenregel ausführen, wenn ihr Ereignis eintritt; Ausschalten lässt das Modul installiert",
+ "eng.scriptaddons.module_once_help": "diese Regel nach ihrer ersten erfolgreichen Ausführung in der Kampagne stoppen",
+ "eng.scriptwords.example_a_modest_reserve_50b4": "Eine bescheidene Reserve",
+ "eng.scriptwords.example_crowded_streets_18bf": "Volle Straßen",
+ "eng.scriptwords.example_a_new_reign_3b52": "Eine neue Herrschaft",
+ "eng.scriptwords.example_campaign_milestone_f1ff": "Meilenstein der Kampagne",
+ "eng.scriptwords.example_quiet_growth_9266": "Ruhiges Wachstum",
+ "eng.scriptwords.example_border_watch_487a": "Grenzwache",
+ "eng.scriptwords.example_record_the_victories_0637": "Rebellion bestraft",
+ "eng.scriptwords.example_a_winter_allowance_d16b": "Ein Winterzuschuss",
+ "eng.scriptwords.example_civic_works_24a4": "Städtische Bauvorhaben",
+ "eng.scriptaddons.older_moved": "eine ?ltere Kopie von {title} au?erhalb von script/modules - sie w?rde zweimal ausgef?hrt; das Add-on ist jetzt in {path}"
 }

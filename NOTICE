@@ -7,32 +7,17 @@ Foundation, either version 3 of the License, or (at your option) any later
 version. It is distributed WITHOUT ANY WARRANTY; see the LICENSE file for the
 full text of the GNU General Public License version 3.
 
-Parts of this program are taken from, or based on, the RTW / M2TW Campaign
-Editor (now the Rome and Medieval Campaign Editor) by Pfadfinder (Adam),
-https://github.com/Pfadfinder-Adam/RTW-M2TW-Campaign-Editor, versions released
-under the GNU General Public License v3.0:
+Versions of this toolkit up to and including v2.4.11 contain parts taken
+from, or based on, the RTW / M2TW Campaign Editor (now the Rome and Medieval
+Campaign Editor) by Pfadfinder (Adam),
+https://github.com/Pfadfinder-Adam/RTW-M2TW-Campaign-Editor, from versions
+released under the GNU General Public License v3.0:
 
     Copyright (C) 2026 Pfadfinder (Adam)
 
-Those parts are used under the GPLv3, and each file that holds one names the
-editor's file it comes from. They are:
-
-    main/unittransfer/data/addons/avoid_growth.nut
-    main/unittransfer/data/addons/player_diplomacy.nut
-    main/unittransfer/data/addons/raze_settlement.nut
-    main/unittransfer/data/addons/sack_settlement.nut
-    main/unittransfer/scriptaddons.py
-    main/unittransfer/scriptbuilder.py
-    main/unittransfer/scriptcompat.py
-    main/unittransfer/scriptdocs.py
-    main/unittransfer/scripts.py
-    main/web/js/cardgen.js
-    main/web/js/family.js
-    main/web/js/guided.js (unit attributes)
-    main/web/js/healthx.js
-    main/web/js/scripts.js
-    main/web/js/voices.js
-
-Files once taken from it and since rewritten independently, from a
-description of their behaviour alone, no longer hold its code. Versions of
-this toolkit released before each rewrite still do, under the GPLv3.
+Those versions use them under the GPLv3. Since then every such part has been
+written again independently, from a description of its behaviour alone, or
+removed (the Sack Settlement, Raze Settlement, Avoid Growth and Player
+Diplomacy add-on scripts). No file in this version holds the editor's code.
+Several features still follow the editor's design and are credited to it in
+the files that hold them.
