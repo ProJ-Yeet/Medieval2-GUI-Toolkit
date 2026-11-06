@@ -537,6 +537,9 @@ def write_docs(stage: Path, portable: bool) -> None:
     (stage / "Install-Dependencies.bat").write_text(
         (REPO / "Install-Dependencies.bat").read_text(encoding="utf-8"),
         encoding="utf-8")
+    # The GPLv3 asks for its text and the copyright notices to go with every copy.
+    for name in ("LICENSE", "NOTICE"):
+        (stage / name).write_text((REPO / name).read_text(encoding="utf-8"), encoding="utf-8")
     note = ("Nothing else to install - Python and the image library are already\n"
             "inside this folder (`runtime\\`)."
             if portable else
