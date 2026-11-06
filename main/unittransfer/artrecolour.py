@@ -1,718 +1,937 @@
-"""Recolour a faction's pictures from the colours they are painted in to new ones (96e6).
+"""Move a faction's pictures from one pair of faction colours to another, keeping light and shade.
 
-A cloned faction keeps its donor's colours in every picture it copied: the unit
-cards, the battle textures, the symbols. This moves the parts painted in one
-pair of colours (a faction's primary and secondary in descr_sm_factions.txt)
-to another pair, the light and shade kept.
+Written independently from a description of the behaviour (2026-11-06); the feature follows Pfadfinder-Adam's campaign editor.
 
-The finding and the painting are the Pfadfinder-Adam (formerly
-MasterOogwayHomebrew) RTW / M2TW Campaign Editor's ``recolour.py``, taken
-verbatim with its author's permission (from ``RE_RGB`` to ``recolour``). How a
-part is found: a pixel is a colour part when it is coloured and its hue is near
-the source colour; where the same picture exists in other factions' colours
-(the same unit card or texture), only the pixels that differ between them
-count, so faces, metal and leather stay. The new colour takes the target's
-hue, its saturation and brightness moved by the ratio between the two colours,
-so a dark fold of a red cloak becomes a dark fold of a blue one.
+A faction's pictures are its unit cards, its unit-info pictures, its battle
+textures (found through its records in the modeldb) and its symbols. The module
+has three steps, all on a request body naming the mod, the faction, the colours
+the pictures are in now (``source``) and the colours they should take
+(``target``):
 
-What is this toolkit's: which pictures are the faction's (its unit-card and
-unit-info folders, the battle textures its modeldb records name, its symbols),
-the plan that shows a few before and after, and the write. A texture other
-factions also wear is not painted over: the faction gets its own copy,
-``<name>_<faction>.texture``, and its records in battle_models.modeldb point
-at it. Backups and a log record, so Undo works.
+``plan``
+    Writes nothing. Counts the pictures and shows a few before and after.
+``sample``
+    One picture again, with the hand touch-ups (an area clicked and given to the
+    primary, the secondary, or "keep as it is").
+``apply``
+    Writes the pictures, with a backup of every file overwritten and a record
+    in the log so Undo puts every byte back. A texture another faction also
+    wears is never painted over: the faction gets a copy of its own, and only
+    its own modeldb records are pointed at it.
+
+Finding what is faction colour is the hard part. The hue says where the colour
+is; the same picture in another faction's colours (the "comparison copies")
+says what is not faction colour at all (faces, metal, wood); a click by hand
+settles what both got wrong.
 """
 from __future__ import annotations
 
 import base64
-import colorsys
 import io
+import os
 import re
 import shutil
 import time
-from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from pathlib import Path, PurePosixPath
+from typing import Dict, List, Optional, Sequence, Tuple
 
-from . import config, modeldb
+import numpy as np
+from PIL import Image, ImageFilter
+
+from . import config, factions, modeldb, modeltext
 from . import i18n as _i18n
-from . import modeltext
 from .logutil import file_op, log
 
-RE_RGB = re.compile(r"red\s+(\d+)\s*,\s*green\s+(\d+)\s*,\s*blue\s+(\d+)", re.I)
-SAT_MIN = 0.28          # below: grey, white, skin - not a faction colour
-SAT_REL = 0.5           # a part must be at least this share as saturated as the source colour
-VAL_MIN = 0.10          # below: shadow
-HUE_GAP = 0.10          # how far (of the colour wheel, 0..0.5) a pixel's hue may lie from the source colour
-DIFF = 40               # a pixel that differs from the other factions' copy by more counts as a colour part
-DIFF_MOST = 0.45        # over this share of differing pixels the copies are different pictures: hue alone
+#: how far, summed over R, G and B, a pixel may be from the one clicked and
+#: still count as the same patch of colour
+ALIKE = 32
+#: what a click can do: give the area to the primary, the secondary, or keep it
+AREA_MODES = ("p", "s", "keep")
+#: the most comparison pictures one picture is shown against
+OTHERS_MAX = 6
 
+_PICTURE_SUFFIXES = (".tga", ".dds", ".png")
+_MODELDB_REL = "unit_models/battle_models.modeldb"
+_SPACE_MARGIN = 50_000_000
 
-
-def hsv(rgb):
-    return colorsys.rgb_to_hsv(*[c / 255.0 for c in rgb])
-
-
-def coloured(rgb):
-    """Whether a colour has a hue to look for (not white, grey or black)."""
-    h, s, v = hsv(rgb)
-    return s >= SAT_MIN and v >= VAL_MIN
-
-
-def _hue_dist_lut(h0):
-    """A lookup table: Pillow hue (0..255) -> distance to h0 on the wheel, 0..128."""
-    c = int(round(h0 * 255))
-    return [min(abs(h - c), 256 - abs(h - c)) for h in range(256)]
-
-
-def _near(a, b):
-    """Whether two colours have hues near each other (both coloured)."""
-    if not a or not b or not coloured(a) or not coloured(b):
-        return False
-    d = abs(hsv(a)[0] - hsv(b)[0]) % 1.0
-    return min(d, 1 - d) <= HUE_GAP * 1.5
-
-
-
-def _plain(rgb):
-    """A colour with no hue to look for: 'dark' (black, near black), 'light' (white, near white), 'grey', or None."""
-    if not rgb or coloured(rgb):
-        return None
-    v = hsv(rgb)[2]
-    return "dark" if v < 0.35 else "light" if v > 0.7 else "grey"
-
-
-def _like(a, b):
-    """Whether two faction colours look alike (near hues, or both black / both white / both grey)."""
-    pa = _plain(a)
-    return _near(a, b) or (pa is not None and pa == _plain(b))
-
-
-def _plain_mask(S, V, kind):
-    """Where a pixel could be painted in a colour of that kind: dark and dull, light and dull, or mid grey."""
-    from PIL import ImageChops
-    dull = S.point(lambda s: 255 if s < 0.30 * 255 else 0)
-    if kind == "dark":
-        val = V.point(lambda v: 255 if v < 0.42 * 255 else 0)
-    elif kind == "light":
-        val = V.point(lambda v: 255 if v > 0.58 * 255 else 0)
-    else:
-        val = V.point(lambda v: 255 if 0.25 * 255 < v < 0.8 * 255 else 0)
-    return ImageChops.multiply(dull, val)
-
-
-def masks(im, source, others=(), plain=True):
-    """[mask of the primary's parts, mask of the secondary's parts] ('L' images, 255 = recolour) of a picture.
-    source = (primary, secondary); a source colour without a hue gives an empty mask. others: [(the same picture in
-    another faction's colours, that faction's (primary, secondary))] - a pixel counts only where it differs from
-    every other copy whose faction does not wear a colour like it (Denmark's red says nothing about England's red)."""
-    from PIL import ImageChops
-    rgb = im.convert("RGB")
-    H, S, V = rgb.convert("HSV").split()
-    lit = V.point(lambda v: 255 if v >= VAL_MIN * 255 else 0)
-    diffs = []
-    # how far a pixel must differ: DIFF in the light, less in the shade (a dark green and a dark blue fold are
-    # near in numbers though plainly other colours - the shaded half of a cloak stayed in the old colour)
-    need = V.point(lambda v: max(12, min(DIFF, int(v * 0.4))))
-    for o, cols in others:
-        if o is None or o.size != im.size:
-            continue
-        d = ImageChops.difference(rgb, o.convert("RGB")).split()
-        d = ImageChops.lighter(ImageChops.lighter(d[0], d[1]), d[2])
-        d = ImageChops.subtract(d, need).point(lambda x: 255 if x > 0 else 0)
-        diffs.append((d, cols or ()))
-    gap = int(HUE_GAP * 255)
-    dists = [H.point(_hue_dist_lut(hsv(c)[0])) if c and coloured(c) else None for c in source]
-    out = []
-    for k, d in enumerate(dists):
-        if d is None:
-            out.append(_plain_part(im.size, S, V, source[k], diffs if plain else []))
-            continue
-        smin = max(SAT_MIN, hsv(source[k])[1] * SAT_REL) * 255     # a dull brown is not a bright red
-        hue = ImageChops.multiply(lit, d.point(lambda x: 255 if x <= gap else 0))
-        m = ImageChops.multiply(hue, S.point(lambda s: 255 if s >= smin else 0))
-        # a ruddy face is not a red coat: with no copies to compare (a texture only this faction wears) every skin
-        # and hair tone is kept; with copies only the paler skin (an orange-red caparison is the faction's)
-        informative = any(not any(_like(source[k], c) for c in cols) for _, cols in diffs)
-        skin = None if _skin_colour(source[k]) else _skin(H, S, V, broad=not informative)
-        use = [dd for dd, cols in diffs if not any(_like(source[k], c) for c in cols)]
-        proven = None                            # differs from every such copy: the faction's colour
-        if use:
-            proven = use[0]
-            for dd in use[1:]:
-                proven = ImageChops.multiply(proven, dd)
-            if not 0 < proven.histogram()[255] / float(im.size[0] * im.size[1]) <= DIFF_MOST:
-                proven = None                    # the copies are other pictures: they prove nothing
-        if skin is not None and proven is not None:
-            # a face is the same in every copy; what differs in all of them is cloth in the faction's colour, also
-            # where its shade is skin-like (a red hood's brown folds stayed red in a black recolour: speckles)
-            skin = ImageChops.subtract(skin, proven)
-        if skin is not None:
-            m = ImageChops.subtract(m, skin)
-        # any coloured pixel of the hue - taken only where the other factions' copies show it is the faction's
-        # colour (an artist often paints a duller green than the faction's colour says: the cloak came out in patches)
-        loose = ImageChops.multiply(hue, S.point(lambda s: 255 if s >= SAT_MIN * 255 else 0))
-        if skin is not None:
-            loose = ImageChops.subtract(loose, skin)       # faces and hands stay (they differ by the man)
-        other = dists[1 - k] if len(dists) > 1 else None
-        closer = None
-        if other is not None:                    # near both: the nearer one takes it (the primary on a tie)
-            closer = ImageChops.subtract(d, other) if k == 0 else ImageChops.subtract(d, other, 1, -1)
-            closer = closer.point(lambda x: 255 if x == 0 else 0)
-            m = ImageChops.multiply(m, closer)
-            loose = ImageChops.multiply(loose, closer)
-        same = None
-        strict = m
-        if use:
-            diff = proven if proven is not None else use[0]
-            if proven is None:
-                for dd in use[1:]:
-                    diff = ImageChops.multiply(diff, dd)
-            share = diff.histogram()[255] / float(im.size[0] * im.size[1])
-            if 0 < share <= DIFF_MOST:
-                # differs from most copies (two in three): one other faction whose cloak happens to be of a like
-                # shade in places must not leave patches of the old colour
-                if len(use) >= 3:
-                    many = None
-                    for dd in use:
-                        one = dd.point(lambda x: 1 if x else 0)
-                        many = one if many is None else ImageChops.add(many, one)
-                    need = (2 * len(use) + 2) // 3
-                    diff = many.point(lambda v: 255 if v >= need else 0)
-                m = ImageChops.multiply(loose, diff)
-                strict = loose
-            # what is the same as in a faction that does not wear this colour is never the faction's colour (a
-            # bronze star, a wooden pole, a face) - kept even when most of the picture differs
-            # (by most of them: one other faction with a like part by chance must not keep a speck of the old colour)
-            votes = None
-            for dd in use:
-                one = dd.point(lambda x: 0 if x else 1)
-                votes = one if votes is None else ImageChops.add(votes, one)
-            need = max(1, (len(use) + 1) // 2)
-            same = votes.point(lambda v: 255 if v >= need else 0)
-            m = ImageChops.subtract(m, same)
-            # a cloak another faction happens to wear in a like shade in places would come out in patches: what the
-            # comparison kept spreads over the rest of its own colour next to it (never into what most copies share)
-            m = _spread(m, ImageChops.subtract(strict, same))
-        g = _grow(m, H, S, V, d, gap, closer)
-        if skin is not None:
-            g = ImageChops.subtract(g, skin)        # the rim grown in never takes a face either
-        out.append(ImageChops.subtract(g, same) if same is not None else g)
-    if len(out) > 1:                             # grown into each other: the primary keeps its own
-        from PIL import ImageChops as _C
-        out[1] = _C.subtract(out[1], out[0])
-    return out
-
-
-def _skin_colour(rgb):
-    """Whether a faction colour is itself of a skin tone (orange, brown) - then skin cannot be told apart by hue."""
-    if not rgb or not coloured(rgb):
-        return False
-    h, sat, v = hsv(rgb)
-    return 0.02 <= h <= 0.11 and sat < 0.75
-
-
-def _skin(H, S, V, broad=True):
-    """Pixels of a skin tone: orange-brown hue, not strongly coloured. broad: hair and the shaded skin too."""
-    from PIL import ImageChops
-    smax, vmin = (0.62, 0.12) if broad else (0.5, 0.3)
-    h = H.point(lambda x: 255 if 0.02 * 255 <= x <= 0.11 * 255 else 0)
-    return ImageChops.multiply(ImageChops.multiply(h, S.point(lambda x: 255 if x < smax * 255 else 0)),
-                               V.point(lambda x: 255 if x > vmin * 255 else 0))
-
-
-def _spread(m, inside, rounds=8):
-    """m grown step by step over the pixels of 'inside' that touch it (a flood bounded to some pixels a round)."""
-    from PIL import ImageChops, ImageFilter
-    if not m.getbbox():
-        return m
-    for _ in range(rounds):
-        nxt = ImageChops.lighter(m, ImageChops.multiply(m.filter(ImageFilter.MaxFilter(3)), inside))
-        if nxt.histogram()[255] == m.histogram()[255]:
-            break
-        m = nxt
-    return m
-
-
-def _plain_part(size, S, V, colour, diffs):
-    """The parts in a black / white / grey faction colour. No hue tells them apart from iron, cloth or a face, so
-    they are found only where the same picture of other factions exists: dull pixels of that lightness that differ
-    from every copy whose faction does not wear such a colour too, and not the same as in most of them. Without
-    such copies (or when the copies are other pictures) nothing is taken - a black outline is not a black coat."""
-    from PIL import Image, ImageChops
-    kind = _plain(colour)
-    use = [dd for dd, cols in diffs if not any(_like(colour, c) for c in cols)]
-    if not kind or not use:
-        return Image.new("L", size, 0)
-    diff = use[0]
-    for dd in use[1:]:
-        diff = ImageChops.multiply(diff, dd)
-    share = diff.histogram()[255] / float(size[0] * size[1])
-    if not 0 < share <= DIFF_MOST:
-        return Image.new("L", size, 0)
-    from PIL import ImageFilter
-    could = _plain_mask(S, V, kind)
-    m = ImageChops.multiply(could, diff)
-    # specks taken away (a dark shadow pixel that happens to differ is not a black coat), then the parts grown
-    # over the rest of the same plain colour next to them (a black field found in pieces is filled)
-    m = m.filter(ImageFilter.MinFilter(3)).filter(ImageFilter.MaxFilter(3))
-    for _ in range(3):
-        m = ImageChops.lighter(m, ImageChops.multiply(m.filter(ImageFilter.MaxFilter(3)), could))
-    return m
-
-
-def _grow(m, H, S, V, dist, gap, closer=None, rounds=2):
-    """The edges a strict test leaves (a dull or dark rim of a red stripe, a pixel blended with its neighbour)
-    taken in: neighbours of the found parts that are somewhat coloured and of a hue somewhat near, twice."""
-    from PIL import ImageChops, ImageFilter
-    if not m.getbbox():
-        return m
-    loose = ImageChops.multiply(S.point(lambda s: 255 if s >= SAT_MIN * 0.5 * 255 else 0),
-                                V.point(lambda v: 255 if v >= VAL_MIN * 0.6 * 255 else 0))
-    loose = ImageChops.multiply(loose, dist.point(lambda x: 255 if x <= gap * 1.5 else 0))
-    # past the strict hue gap only a rim is taken - dull or dark pixels; a bright clean colour of its own (the gold
-    # of a wreath next to red) stays (a tester's emblem: its gold wolf and laurel turned red)
-    rim = ImageChops.lighter(S.point(lambda s: 255 if s < 0.55 * 255 else 0),
-                             V.point(lambda v: 255 if v < 0.55 * 255 else 0))
-    loose = ImageChops.multiply(loose, ImageChops.lighter(dist.point(lambda x: 255 if x <= gap else 0), rim))
-    if closer is not None:                       # never into the other colour's parts (a gold lion on red)
-        loose = ImageChops.multiply(loose, closer)
-    for _ in range(rounds):
-        m = ImageChops.lighter(m, ImageChops.multiply(m.filter(ImageFilter.MaxFilter(3)), loose))
-    return m
-
-
-def _shift(im, src, dst):
-    """The whole picture moved from colour src to colour dst (hue set, saturation and brightness scaled)."""
-    from PIL import Image
-    H, S, V = im.convert("RGB").convert("HSV").split()
-    sh, ss, sv = hsv(src)
-    th, ts, tv = hsv(dst)
-    ks = ts / max(ss, 0.05)
-    kv = tv / max(sv, 0.05)
-    H = Image.new("L", im.size, int(round(th * 255)) % 256)
-    S = S.point(lambda s: min(255, int(s * ks)))
-    V = V.point(lambda v: min(255, int(v * kv)))
-    return Image.merge("HSV", (H, S, V)).convert("RGB")
-
-
-PLAIN_LIGHT = {"dark": 0.22, "light": 0.77}      # the lightness the games' artists give a black / a white part
-
-
-def _to_plain(im, mask, dst, src=None):
-    """A part made black / white / grey (dst has no hue) the way the games' own textures do it: no hue, the part's
-    average light set to the artists' black (0.22) or white (0.77) - grey: dst's own - and every fold kept (each pixel
-    as far from the average as it was). A flat black (lightness scaled to near 0) lost every fold: black shields and
-    hoods like holes in battle. A white part as lit as its source colour (a flat card) is as light as dst itself (the
-    artists' 0.77 made a flat white card grey)."""
-    from PIL import Image, ImageStat
-    H, S, V = im.convert("RGB").convert("HSV").split()
-    kind = _plain(dst)
-    goal = PLAIN_LIGHT.get(kind, hsv(dst)[2]) * 255.0
-    ref = max(ImageStat.Stat(V, mask).mean[0], 12.0)
-    if kind == "light" and src:
-        lit = min(1.0, ref / max(hsv(src)[2] * 255.0, 12.0))     # how lit the part is against its own colour
-        goal = max(goal, hsv(dst)[2] * 255.0 * lit)
-    S = Image.new("L", im.size, 0)
-    if kind == "dark":       # measured against the HRE's own copies: the light scaled down is nearest the artists' black
-        k = goal / ref
-        V = V.point(lambda v: max(8, min(255, int(v * k))))
-    else:                    # against Poland's: the folds kept as they were (moved up) is nearest their white
-        add = goal - ref
-        V = V.point(lambda v: max(8, min(255, int(v + add))))
-    return Image.merge("HSV", (H, S, V)).convert("RGB")
-
-
-def _shift_plain(im, mask, dst):
-    """A black / white / grey part moved to colour dst: dst's hue and saturation, its brightness set by the pixel's
-    light against the part's average light (the folds kept; a black coat does not stay black when made red)."""
-    from PIL import Image, ImageStat
-    H, S, V = im.convert("RGB").convert("HSV").split()
-    th, ts, tv = hsv(dst)
-    ref = max(ImageStat.Stat(V, mask).mean[0], 12.0)
-    H = Image.new("L", im.size, int(round(th * 255)) % 256)
-    S = Image.new("L", im.size, int(round(ts * 255)))
-    k = tv * 255.0 / ref
-    V = V.point(lambda v: min(255, int(v * k)))
-    return Image.merge("HSV", (H, S, V)).convert("RGB")
-
-
-def recolour(im, source, target, others=(), edits=None, plain=True):
-    """(new picture, share of pixels changed): im with the parts in the source colours (primary, secondary) in the
-    target colours, alpha kept. edits: the hand touch-ups {'p': mask, 's': mask, 'keep': mask} ('L', the picture's
-    size) - painted as the new primary / secondary, or kept as they were. plain: black / white / grey faction colours
-    are looked for too (only when the other copies are the same drawing - unit cards and textures, not symbols)."""
-    from PIL import ImageChops
-    ms = masks(im, source, others, plain)
-    if edits:
-        keep = edits.get("keep")
-        for k, key in ((0, "p"), (1, "s")):
-            e = edits.get(key)
-            if e is not None:
-                ms[k] = ImageChops.lighter(ms[k], e)
-                ms[1 - k] = ImageChops.subtract(ms[1 - k], e)
-            if keep is not None:
-                ms[k] = ImageChops.subtract(ms[k], keep)
-    rgb = im.convert("RGB")
-    out = rgb.copy()
-    n = 0
-    for m, src, dst in zip(ms, source, target):
-        if not dst or not m.getbbox():
-            continue
-        if _plain(dst):
-            if _plain(src) == _plain(dst):
-                continue                         # white to white: the artist's own white stays as it is
-            part = _to_plain(rgb, m, dst, src)
-        elif _plain(src):
-            part = _shift_plain(rgb, m, dst)
-        else:
-            part = _shift(rgb, src or dst, dst)
-        out.paste(part, (0, 0), m)
-        n += m.histogram()[255]
-    if im.mode in ("RGBA", "LA", "P"):
-        a = im.convert("RGBA").split()[3]
-        out = out.convert("RGBA")
-        out.putalpha(a)
-    return out, n / float(im.size[0] * im.size[1])
-
-
-
-# ---------------------------------------------------------------------------
-# this toolkit's side: which pictures, a plan, the write
+# tuning of the colour finding (see recolour)
+_HUE_NEAR = 0.07            # how close a pixel's hue is to the source hue
+_HUE_ALIKE = 0.06           # how close two factions' hues must be to be "like"
+_RIM_HUE = 0.12             # a looser hue for the rim beside a found part
+_SAT_MIN = 0.20             # below this a pixel is not "clearly coloured"
+_VAL_MIN = 0.12             # below this a pixel is shadow-black
+_PLAIN_SAT = 0.28           # at or above this (and bright enough) a colour has a hue
+_PLAIN_VAL = 0.10
+_DARK, _LIGHT = 0.35, 0.70
+_DIFF_MOST = 0.60           # more of the picture than this differs: the copies are other drawings
+_SAME_COPY = 0.002          # a copy differing less than this is the same picture
+_RIM_DEPTH = 2
+_PLAIN_NEAR = 45            # how near the source's own colour a plain part's pixel is
+_ALPHA_MIN = 16
 
 
 class RecolourError(Exception):
-    def __init__(self, message: str):
+    def __init__(self, message):
         super().__init__(message)
         self.message = message
 
 
-#: at most this many pictures of the faction are compared against, per picture
-OTHERS_MAX = 6
+# ---------------------------------------------------------------------------
+# colour arithmetic
 
 
-def faction_colours(mod) -> Dict[str, Tuple[Optional[Tuple[int, int, int]], Optional[Tuple[int, int, int]]]]:
-    """``{slot: (primary, secondary)}`` from descr_sm_factions.txt."""
-    from . import factions as fa
-    out = {}
+def _hsv(rgb):
+    """``(..., 3)`` array of 0..255 -> h, s, v arrays, each 0..1."""
+    a = np.asarray(rgb, dtype=np.float32) / 255.0
+    r, g, b = a[..., 0], a[..., 1], a[..., 2]
+    mx = a.max(axis=-1)
+    mn = a.min(axis=-1)
+    d = mx - mn
+    safe = np.where(d > 0, d, 1.0)
+    h = np.zeros_like(mx)
+    h = np.where(mx == r, ((g - b) / safe) % 6.0, h)
+    h = np.where((mx == g) & (mx != r), (b - r) / safe + 2.0, h)
+    h = np.where((mx == b) & (mx != r) & (mx != g), (r - g) / safe + 4.0, h)
+    h = np.where(d > 0, h / 6.0, 0.0)
+    s = np.where(mx > 0, d / np.where(mx > 0, mx, 1.0), 0.0)
+    return h.astype(np.float32), s.astype(np.float32), mx.astype(np.float32)
+
+
+def _rgb_of(h, s, v):
+    """h, s, v arrays (0..1) -> ``(..., 3)`` uint8."""
+    h = np.asarray(h, dtype=np.float32) % 1.0
+    s = np.clip(s, 0.0, 1.0)
+    v = np.clip(v, 0.0, 1.0)
+    i = np.floor(h * 6.0)
+    f = h * 6.0 - i
+    p = v * (1 - s)
+    q = v * (1 - f * s)
+    t = v * (1 - (1 - f) * s)
+    i = i.astype(np.int32) % 6
+    r = np.choose(i, [v, q, p, p, t, v])
+    g = np.choose(i, [t, v, v, q, p, p])
+    b = np.choose(i, [p, p, t, v, v, q])
+    out = np.stack([r, g, b], axis=-1) * 255.0
+    return np.clip(np.rint(out), 0, 255).astype(np.uint8)
+
+
+def _hsv1(c) -> Tuple[float, float, float]:
+    h, s, v = _hsv(np.array([[c[0], c[1], c[2]]], dtype=np.float32))
+    return float(h[0]), float(s[0]), float(v[0])
+
+
+def _kind(c) -> str:
+    """``hue`` for a colour with a hue, else ``dark`` / ``light`` / ``grey``."""
+    h, s, v = _hsv1(c)
+    if s >= _PLAIN_SAT and v >= _PLAIN_VAL:
+        return "hue"
+    if v < _DARK:
+        return "dark"
+    if v > _LIGHT:
+        return "light"
+    return "grey"
+
+
+def _hdist(h, h0):
+    d = np.abs(h - h0)
+    return np.minimum(d, 1.0 - d)
+
+
+def _like(a, b) -> bool:
+    """Do two faction colours look alike (so one cannot tell the other apart)?"""
+    ka, kb = _kind(a), _kind(b)
+    if ka != kb:
+        return False
+    if ka != "hue":
+        return True
+    return float(_hdist(_hsv1(a)[0], _hsv1(b)[0])) < _HUE_ALIKE
+
+
+def _wears_like(cols, c) -> bool:
+    return any(oc and _like(oc, c) for oc in (cols or ()))
+
+
+def _skin_like(c) -> bool:
+    h, s, _v = _hsv1(c)
+    return 0.02 <= h <= 0.15 and 0.2 <= s <= 0.8
+
+
+# ---------------------------------------------------------------------------
+# small image helpers
+
+
+def _has_alpha(im) -> bool:
+    if im.mode in ("RGBA", "LA", "RGBa", "La", "PA"):
+        return True
+    return im.mode == "P" and "transparency" in im.info
+
+
+def _rgba(im):
+    return np.array(im.convert("RGBA"))
+
+
+def _grow(mask):
+    """The mask one pixel wider all round (3x3)."""
+    im = Image.fromarray(mask.astype(np.uint8) * 255, "L")
+    return np.array(im.filter(ImageFilter.MaxFilter(3))) > 127
+
+
+def _shrink(mask):
+    im = Image.fromarray(mask.astype(np.uint8) * 255, "L")
+    return np.array(im.filter(ImageFilter.MinFilter(3))) > 127
+
+
+def _as_mask(m, size):
+    if m is None:
+        return None
+    if not isinstance(m, Image.Image):
+        return np.asarray(m) > 127
+    if m.size != size:
+        return None
+    return np.array(m.convert("L")) > 127
+
+
+def _mask_image(m):
+    return Image.fromarray(m.astype(np.uint8) * 255, "L")
+
+
+# ---------------------------------------------------------------------------
+# the area of like colour under a click
+
+
+def _flood(cand, x, y):
+    """The 4-connected patch of ``cand`` (a bool array) holding (x, y)."""
+    hgt, wid = cand.shape
+    seen = np.zeros_like(cand)
+    if not cand[y, x]:
+        return seen
+    rows = [cand[i].tobytes() for i in range(hgt)]
+    stack = [(x, y)]
+    while stack:
+        px, py = stack.pop()
+        if seen[py, px] or not cand[py, px]:
+            continue
+        row = rows[py]
+        left = row.rfind(b"\x00", 0, px) + 1
+        right = row.find(b"\x00", px)
+        if right < 0:
+            right = wid
+        seen[py, left:right] = True
+        for ny in (py - 1, py + 1):
+            if ny < 0 or ny >= hgt:
+                continue
+            seg = cand[ny, left:right] & ~seen[ny, left:right]
+            if not seg.any():
+                continue
+            starts = seg & ~np.concatenate(([False], seg[:-1]))
+            for s0 in np.flatnonzero(starts):
+                stack.append((left + int(s0), ny))
+    return seen
+
+
+def _num(v, default=0.0):
     try:
-        rf = fa.parse_file(fa.path_for(mod))
-    except OSError:
-        return out
-    for r in rf.records:
-        out[fa.slot_of(r.name)] = (fa.parse_colour(r.get("primary_colour")),
-                                   fa.parse_colour(r.get("secondary_colour")))
+        return float(v)
+    except (TypeError, ValueError):
+        return default
+
+
+def _area(im, fx, fy, alike=ALIKE):
+    a = _rgba(im)
+    hgt, wid = a.shape[:2]
+    x = min(max(int(_num(fx) * wid), 0), wid - 1)
+    y = min(max(int(_num(fy) * hgt), 0), hgt - 1)
+    try:
+        alike = int(alike)
+    except (TypeError, ValueError):
+        alike = ALIKE
+    alike = min(max(alike, 0), 255)
+    rgb = a[..., :3].astype(np.int32)
+    diff = np.abs(rgb - rgb[y, x]).sum(axis=-1)
+    cand = (diff <= alike) & (a[..., 3] >= _ALPHA_MIN)
+    return _flood(cand, x, y)
+
+
+def area_mask(im, fx, fy, alike=ALIKE):
+    """The patch of like colour joined to the point (fx, fy), as an 'L' mask."""
+    return _mask_image(_area(im, fx, fy, alike))
+
+
+def touch_edits(im, clicks):
+    """The hand touch-ups of a picture as ``{"p", "s", "keep"}`` masks, or None."""
+    if not clicks:
+        return None
+    wid, hgt = im.size
+    masks = {k: np.zeros((hgt, wid), dtype=bool) for k in AREA_MODES}
+    for c in clicks:
+        if not isinstance(c, dict):
+            continue
+        mode = c.get("mode", "p")
+        if mode not in AREA_MODES:
+            continue
+        area = _area(im, _num(c.get("x", 0)), _num(c.get("y", 0)), c.get("alike", ALIKE))
+        for k in AREA_MODES:
+            if k == mode:
+                masks[k] |= area
+            else:
+                masks[k] &= ~area
+    return {k: _mask_image(m) for k, m in masks.items()}
+
+
+# ---------------------------------------------------------------------------
+# finding and painting the faction colour
+
+
+class _Look:
+    """One picture's colour features, computed once."""
+
+    def __init__(self, rgba):
+        self.rgb = rgba[..., :3].astype(np.float32)
+        self.alpha = rgba[..., 3]
+        self.opaque = self.alpha >= _ALPHA_MIN
+        self.h, self.s, self.v = _hsv(self.rgb)
+        # the room for a difference to be noise: wider in the dark
+        self.tol = 40.0 + 60.0 * (1.0 - np.minimum(1.0, self.v / 0.5))
+
+
+def _differs(look, other_rgb):
+    diff = np.abs(look.rgb - other_rgb).sum(axis=-1)
+    return diff > look.tol
+
+
+def _copies(look, others, size):
+    """``[(rgb array, colours)]`` for each usable comparison picture."""
+    out = []
+    for pic, cols in others or ():
+        if pic is None or getattr(pic, "size", None) != size:
+            continue
+        out.append((_rgba(pic)[..., :3].astype(np.float32), cols))
     return out
 
 
-def _read(path: Path):
+def _informative(look, copies, colour):
+    """The ``differs`` arrays of the copies whose faction wears nothing like ``colour``,
+    or [] when the copies turn out to be other drawings."""
+    diffs = []
+    for rgb, cols in copies:
+        if _wears_like(cols, colour):
+            continue
+        d = _differs(look, rgb)
+        frac = d[look.opaque].mean() if look.opaque.any() else 0.0
+        if _SAME_COPY <= frac <= _DIFF_MOST:          # not a twin, not another drawing
+            diffs.append(d)
+    return diffs
+
+
+def _most(diffs):
+    """Where the picture differs from most (half or more) of the copies."""
+    n = len(diffs)
+    count = np.sum(diffs, axis=0)
+    return count * 2 >= n
+
+
+def _skin(look, diffs, src, strict=False):
+    """Skin and hair tones that are kept (see the module notes). ``strict``
+    (a card or unit-info picture) keeps every lit skin tone, whatever the colour."""
+    if strict:
+        return ((look.h >= 0.02) & (look.h <= 0.15) & (look.s >= 0.2) & (look.s <= 0.7)
+                & (look.v >= 0.45))
+    if _skin_like(src):
+        return np.zeros_like(look.opaque)
+    keep = ((look.h >= 0.02) & (look.h <= 0.12) & (look.s >= 0.2) & (look.s <= 0.7)
+            & (look.v >= 0.25))
+    if diffs:
+        keep &= look.v >= 0.6
+        keep &= ~np.all(diffs, axis=0)
+    return keep
+
+
+def _hue_part(look, src, diffs, strict=False):
+    """(mask, score) of the pixels that are the chromatic colour ``src``."""
+    sh, ss, sv = _hsv1(src)
+    hd = _hdist(look.h, sh)
+    core = (look.opaque & (look.s >= (_SAT_MIN if diffs else max(_SAT_MIN, 0.5 * ss))) & ((look.v >= _VAL_MIN) | ((look.s >= 0.6) & (look.v >= 0.04)))
+            & (hd <= _HUE_NEAR))
+    core &= ~_skin(look, diffs, src, strict)
+    if diffs:
+        core &= _most(diffs)
+    score = hd * 3.0 + np.maximum(0.0, ss - look.s) + np.abs(look.v - sv) * 0.5
+    return core, score
+
+
+def _plain_part(look, src, diffs):
+    """The pixels of the plain (black, white or grey) colour ``src``, which only
+    the comparison copies can tell from the rest."""
+    k = _kind(src)
+    dull = look.opaque & ((look.s < _PLAIN_SAT) | (look.v < _PLAIN_VAL))
+    if k == "dark":
+        like = look.v < _DARK
+    elif k == "light":
+        like = look.v > _LIGHT
+    else:
+        like = (look.v >= _DARK) & (look.v <= _LIGHT)
+    near = np.abs(look.rgb - np.array(src, dtype=np.float32)).sum(axis=-1) <= _PLAIN_NEAR
+    cand = dull & like & near & _most(diffs)
+    # only a broad flat area: it must survive a 5 px erosion
+    core = _shrink(_shrink(cand))
+    if not core.any():
+        return np.zeros_like(cand)
+    part = core
+    for _ in range(2):
+        part = _grow(part) & cand
+    return _solid(part)
+
+
+def _box_mean(mask, r):
+    """Fraction of set pixels in the (2r+1) square round each pixel."""
+    a = np.pad(mask.astype(np.float32), r, mode="constant")
+    c = np.cumsum(np.cumsum(a, axis=0), axis=1)
+    c = np.pad(c, ((1, 0), (1, 0)))
+    n = 2 * r + 1
+    tot = c[n:, n:] - c[:-n, n:] - c[n:, :-n] + c[:-n, :-n]
+    return tot / float(n * n)
+
+
+def _solid(mask, per=25000):
+    """The mask without specks: a connected piece smaller than a few pixels
+    (scaled to the picture) goes, a thin stroke that is joined up stays."""
+    if not mask.any():
+        return mask
+    hgt, wid = mask.shape
+    least = max(5, (hgt * wid) // per)
+    parent: List[int] = []
+    size: List[int] = []
+
+    def find(a):
+        while parent[a] != a:
+            parent[a] = parent[parent[a]]
+            a = parent[a]
+        return a
+
+    runs = []                                  # per row: (starts, ends, first id)
+    for y in range(hgt):
+        row = mask[y].astype(np.int8)
+        d = np.diff(np.concatenate(([0], row, [0])))
+        st, en = np.flatnonzero(d == 1), np.flatnonzero(d == -1)
+        first = len(parent)
+        for a0, b0 in zip(st, en):
+            parent.append(len(parent))
+            size.append(int(b0 - a0))
+        runs.append((st, en, first))
+        if y and len(st) and len(runs[y - 1][0]):
+            pst, pen, pfirst = runs[y - 1]
+            # 8-connected: runs overlap when they come within one pixel
+            lo = np.searchsorted(pen, st - 1, side="right")       # first prev run ending at >= st
+            hi = np.searchsorted(pst, en + 1, side="left")        # prev runs starting < en + 1
+            for k in range(len(st)):
+                for j in range(int(lo[k]), int(hi[k])):
+                    ra, rb = find(first + k), find(pfirst + j)
+                    if ra != rb:
+                        parent[rb] = ra
+                        size[ra] += size[rb]
+    out = np.zeros_like(mask)
+    for y, (st, en, first) in enumerate(runs):
+        for k in range(len(st)):
+            if size[find(first + k)] >= least:
+                out[y, st[k]:en[k]] = True
+    return out
+
+
+def _rim(look, part, other, src, diffs, taken, strict=False):
+    """The dull, dark or anti-aliased pixels beside a found part."""
+    sh = _hsv1(src)[0]
+    clean = (look.s >= 0.5) & (look.v >= 0.4)
+    cand = (look.opaque & ~taken & ~other & (look.s >= 0.15) & (look.v >= 0.08)
+            & (_hdist(look.h, sh) <= _RIM_HUE) & ~clean)
+    cand &= ~_skin(look, diffs, src, strict)
+    if diffs:
+        cand &= _most(diffs)
+    out = part.copy()
+    for _ in range(_RIM_DEPTH):
+        out |= _grow(out) & cand
+    return out
+
+
+def _paint(out, look, mask, src, tgt):
+    """Write the target colour over the masked pixels of ``out`` (uint8 RGB)."""
+    if not mask.any():
+        return
+    th, ts, tv = _hsv1(tgt)
+    tk = _kind(tgt)
+    sk = _kind(src) if src else None
+    v = look.v[mask]
+    vm = float(v.mean())
+    if tk == "hue":
+        if sk == "hue":
+            _sh, ss, sv = _hsv1(src)
+            ns = look.s[mask] * (ts / max(ss, 0.05))
+            nv = v * (tv / max(sv, 0.05))
+        else:
+            ns = np.full_like(v, ts)
+            nv = v * (tv / max(vm, 0.05))
+        rgb = _rgb_of(np.full_like(v, th), ns, nv)
+    else:
+        if tk == "dark":
+            m = 0.22
+        elif tk == "light":
+            m = tv if (src and vm >= _hsv1(src)[2] - 0.05) else 0.77
+        else:
+            m = tv
+        nv = np.clip(v - vm + m, 0.0, 1.0)
+        rgb = _rgb_of(np.zeros_like(v), np.zeros_like(v), nv)
+    out[mask] = rgb
+
+
+def recolour(im, source, target, others=(), edits=None, plain=True, kind=""):
+    """``im`` with the faction colour moved from ``source`` to ``target``.
+
+    Returns ``(image, share)``: the new picture (RGB, or RGBA with the original
+    alpha) and the fraction of its pixels that were changed.
+    """
+    rgba = _rgba(im)
+    hgt, wid = rgba.shape[:2]
+    alpha_out = _has_alpha(im)
+    look = _Look(rgba)
+    src = tuple(source or (None, None))[:2]
+    src = src + (None,) * (2 - len(src))
+    tgt = tuple(target or (None, None))[:2]
+    tgt = tgt + (None,) * (2 - len(tgt))
+    copies = _copies(look, others, im.size)
+    strict = kind in ("card", "info")      # faces and hands are never recoloured
+
+    found: List[Optional[np.ndarray]] = [None, None]
+    scores: List[Optional[np.ndarray]] = [None, None]
+    diffs_of: List[list] = [[], []]
+    for i in (0, 1):
+        sc, tc = src[i], tgt[i]
+        if not sc or not tc:
+            continue
+        sk, tk = _kind(sc), _kind(tc)
+        if sk != "hue" and sk == tk:
+            continue                                   # white to white keeps the artist's white
+        diffs = _informative(look, copies, sc) if copies else []
+        diffs_of[i] = diffs
+        if sk == "hue":
+            found[i], scores[i] = _hue_part(look, sc, diffs, strict)
+        elif plain and diffs:
+            found[i] = _plain_part(look, sc, diffs)
+
+    none = np.zeros((hgt, wid), dtype=bool)
+    p = found[0] if found[0] is not None else none
+    s = found[1] if found[1] is not None else none
+    if scores[0] is not None and scores[1] is not None:
+        both = p & s
+        p_wins = scores[0] <= scores[1]
+        p = p & (~both | p_wins)
+        s = s & ~(both & p_wins) & ~p
+    s = s & ~p
+    per = 6000 if kind == "texture" else 25000          # a model sheet's patches are big
+    p, s = _solid(p, per) if found[0] is not None else p, _solid(s, per) if found[1] is not None else s
+    # the rim beside the found chromatic parts
+    for i in (0, 1):
+        if found[i] is not None and scores[i] is not None:
+            part, other = (p, s) if i == 0 else (s, p)
+            grown = _rim(look, part, other, src[i], diffs_of[i], p | s, strict)
+            if i == 0:
+                p = grown
+            else:
+                s = grown
+    s = s & ~p
+
+    ed = edits or {}
+    ep = _as_mask(ed.get("p"), im.size)
+    es = _as_mask(ed.get("s"), im.size)
+    ek = _as_mask(ed.get("keep"), im.size)
+    if ep is not None:
+        p = p | ep
+        s = s & ~ep
+    if es is not None:
+        s = s | es
+        p = p & ~es
+    if ek is not None:
+        p = p & ~ek
+        s = s & ~ek
+    if not tgt[0]:
+        p = none
+    if not tgt[1]:
+        s = none
+
+    out = rgba[..., :3].copy()
+    _paint(out, look, p, src[0], tgt[0])
+    _paint(out, look, s, src[1], tgt[1])
+    share = float(p.sum() + s.sum()) / float(wid * hgt) if wid * hgt else 0.0
+    if alpha_out:
+        res = Image.fromarray(np.dstack([out, rgba[..., 3]]), "RGBA")
+    else:
+        res = Image.fromarray(out, "RGB")
+    return res, min(share, 1.0)
+
+
+# ---------------------------------------------------------------------------
+# a faction's colours and pictures
+
+
+def faction_colours(mod) -> Dict[str, tuple]:
+    """``{slot: (primary, secondary)}`` from the mod's own ``descr_sm_factions.txt``."""
+    try:
+        rf = factions.parse_file(factions.path_for(mod))
+    except OSError:
+        return {}
+    out = {}
+    for rec in rf.records:
+        out[factions.slot_of(rec.name)] = (
+            factions.parse_colour(rec.get("primary_colour")),
+            factions.parse_colour(rec.get("secondary_colour")))
+    return out
+
+
+def _norm_path(p: str) -> str:
+    p = (p or "").replace("\\", "/")
+    if p.lower().startswith("data/"):
+        p = p[5:]
+    return p
+
+
+def _pictures_in(mod, folder: str, slot: str, kind: str, cols) -> List[dict]:
+    d = Path(mod.data) / folder / slot
+    if not d.is_dir():
+        return []
+    parent = d.parent
+    sibs = sorted((x.name for x in parent.iterdir() if x.is_dir()), key=str)
+    rows = []
+    for f in sorted((x for x in d.iterdir() if x.is_file() and x.suffix.lower() in _PICTURE_SUFFIXES),
+                    key=lambda x: x.name.lower()):
+        others = []
+        for sib in sibs:
+            if len(others) >= OTHERS_MAX:
+                break
+            if sib.lower() == slot.lower() or sib.lower() not in cols:
+                continue
+            if (parent / sib / f.name).is_file():
+                others.append((f"{folder}/{sib}/{f.name}", sib))
+        rows.append({"rel": f"{folder}/{slot}/{f.name}", "kind": kind,
+                     "others": others, "shared": [], "entries": []})
+    return rows
+
+
+def _texture_rows(mod, slot: str, cols) -> List[dict]:
+    try:
+        entries = list(mod.modeldb.entries)
+    except Exception:
+        return []
+    low = slot.lower()
+    found: Dict[str, dict] = {}
+    for e in entries:
+        recs = [t for t in e.main_textures if t.texture]
+        for mine in recs:
+            if mine.faction.lower() != low:
+                continue
+            path = _norm_path(mine.texture)
+            row = found.get(path.lower())
+            if row is None:
+                row = found[path.lower()] = {"rel": path, "kind": "texture", "others": [],
+                                             "shared": [], "entries": []}
+            if e.name not in row["entries"]:
+                row["entries"].append(e.name)
+            for t in recs:
+                f = t.faction.lower()
+                if f == low:
+                    continue
+                p = _norm_path(t.texture)
+                if p.lower() == path.lower():
+                    if f not in row["shared"]:
+                        row["shared"].append(f)
+                elif (len(row["others"]) < OTHERS_MAX and f in cols
+                      and f not in [o[1] for o in row["others"]]):
+                    row["others"].append((p, f))
+    return list(found.values())
+
+
+def targets(mod, slot: str) -> List[dict]:
+    """Every picture of the faction, cards first, then info, textures, symbols."""
+    cols = faction_colours(mod)
+    rows = _pictures_in(mod, "ui/units", slot, "card", cols)
+    rows += _pictures_in(mod, "ui/unit_info", slot, "info", cols)
+    rows += _texture_rows(mod, slot, cols)
+    for rel in (f"ui/faction_symbols/{slot}.tga",
+                f"menu/symbols/fe_symbols_80/{slot}.tga",
+                f"loading_screen/symbols/symbol128_{slot}.tga"):
+        rows.append({"rel": rel, "kind": "symbol", "others": [], "shared": [], "entries": []})
+    data = Path(mod.data)
+    return [r for r in rows if (data / r["rel"]).is_file()]
+
+
+# ---------------------------------------------------------------------------
+# one picture
+
+
+def _read(path):
     from .bannermaker import read_picture
     return read_picture(path)
 
 
-def _write(path: Path, im) -> bytes:
-    """The bytes of ``im`` in ``path``'s own format."""
-    from . import armbake, sprites
-    suf = path.suffix.lower()
-    if suf == ".texture":
-        return sprites.dds_to_texture(armbake.dds_with_mipmaps(im))
-    if suf == ".dds":
-        return armbake.dds_with_mipmaps(im)
-    buf = io.BytesIO()
-    im.save(buf, "PNG" if suf == ".png" else "TGA")
-    return buf.getvalue()
-
-
-def targets(mod, slot: str) -> List[Dict]:
-    """Every picture of the faction: ``{rel, kind, others: [(rel, faction)], shared: [faction]}``."""
-    data = Path(mod.data)
-    cols = faction_colours(mod)
-    out: List[Dict] = []
-    for folder, kind in (("ui/units", "card"), ("ui/unit_info", "info")):
-        base = data / folder
-        mine = base / slot
-        if not mine.is_dir():
-            continue
-        others = [d for d in base.iterdir() if d.is_dir() and d.name.lower() != slot.lower()
-                  and d.name.lower() in cols]
-        for f in sorted(mine.iterdir()):
-            if f.suffix.lower() not in (".tga", ".dds", ".png"):
-                continue
-            same = [(f"{folder}/{d.name}/{f.name}", d.name) for d in others if (d / f.name).is_file()]
-            out.append({"rel": f"{folder}/{slot}/{f.name}", "kind": kind,
-                        "others": same[:OTHERS_MAX], "shared": [], "entries": []})
-    seen: Dict[str, Dict] = {}
-    try:
-        entries = mod.modeldb.entries
-    except Exception:  # noqa: BLE001 - a mod whose modeldb will not read has no textures to give
-        entries = []
-    for e in entries:
-        recs = {t.faction.lower(): t.texture.replace("\\", "/") for t in e.main_textures if t.texture}
-        mine_tex = recs.get(slot.lower())
-        if not mine_tex:
-            continue
-        rel = mine_tex[5:] if mine_tex.lower().startswith("data/") else mine_tex
-        row = seen.get(rel.lower())
-        if row is None:
-            row = seen[rel.lower()] = {"rel": rel, "kind": "texture", "others": [], "shared": [], "entries": []}
-            out.append(row)
-        row["entries"].append(e.name)
-        for f, t in recs.items():
-            if f == slot.lower():
-                continue
-            t = t[5:] if t.lower().startswith("data/") else t
-            if t.lower() == rel.lower():
-                if f not in row["shared"]:
-                    row["shared"].append(f)
-            elif len(row["others"]) < OTHERS_MAX and f in cols and (t, f) not in row["others"]:
-                row["others"].append((t, f))
-    for rel in (f"ui/faction_symbols/{slot}.tga", f"menu/symbols/fe_symbols_80/{slot}.tga",
-                f"loading_screen/symbols/symbol128_{slot}.tga"):
-        if (data / rel).is_file():
-            out.append({"rel": rel, "kind": "symbol", "others": [], "shared": [], "entries": []})
-    return [t for t in out if (data / t["rel"]).is_file()]
-
-
-def _colours(body: dict, mod, key: str):
-    cols = faction_colours(mod)
-    def one(v):
-        if not v:
-            return None
-        v = str(v).strip().lstrip("#")
-        if not re.fullmatch(r"[0-9a-fA-F]{6}", v):
-            raise RecolourError(_i18n.msg("eng.artrecolour.bad_colour", "{c} is not a colour like #c81e1e", c=v))
-        return int(v[0:2], 16), int(v[2:4], 16), int(v[4:6], 16)
-    got = body.get(key)
-    if isinstance(got, str) and got in cols:
-        return cols[got]
-    if isinstance(got, (list, tuple)):
-        p, s = (list(got) + [None, None])[:2]
-        return one(p), one(s)
-    raise RecolourError(_i18n.msg("eng.artrecolour.no_colours", "say which colours the pictures are in now and which they should take"))
-
-
-#: 96f: how far a colour may lie from the clicked one and still be the same
-#: area, the difference summed over red, green and blue - the touch-up's *alike*
-ALIKE = 32
-#: what a click does to the area it takes
-AREA_MODES = ("p", "s", "keep")
-
-
-def area_mask(im, fx: float, fy: float, alike: int = ALIKE):
-    """96f: the patch of like colour joined to the point ``(fx, fy)`` (0..1 of
-    the picture's width and height), as an 'L' mask: a hood, a shield's
-    field. Taken from the original picture, so the same click finds the same
-    area whatever colours are being painted."""
-    from PIL import ImageChops, ImageDraw
-    rgb = im.convert("RGB")
-    w, h = rgb.size
-    x = min(w - 1, max(0, int(fx * w)))
-    y = min(h - 1, max(0, int(fy * h)))
-    seed = rgb.getpixel((x, y))
-    # filled with a colour unlike the seed's, then read back as what changed
-    mark = tuple(255 - c if abs(255 - 2 * c) > 60 else (c + 128) % 256 for c in seed)
-    filled = rgb.copy()
-    ImageDraw.floodfill(filled, (x, y), mark, thresh=max(0, min(255, int(alike))))
-    diff = ImageChops.difference(filled, rgb).convert("L")
-    m = diff.point(lambda v: 255 if v else 0)
-    if im.mode in ("RGBA", "LA", "P"):
-        clear = im.convert("RGBA").split()[3].point(lambda v: 255 if v >= 16 else 0)
-        m = ImageChops.darker(m, clear)
-    return m
-
-
-def touch_edits(im, clicks) -> Optional[Dict]:
-    """The touch-ups ``recolour`` takes, from a picture's clicks, in order: a
-    later click wins over an earlier one where their areas meet."""
-    from PIL import Image, ImageChops
-    if not clicks:
-        return None
-    out = {k: Image.new("L", im.size, 0) for k in AREA_MODES}
-    for c in clicks:
-        mode = str(c.get("mode") or "p")
-        if mode not in AREA_MODES:
-            continue
-        m = area_mask(im, float(c.get("x", 0)), float(c.get("y", 0)), int(c.get("alike", ALIKE)))
-        for k in AREA_MODES:
-            out[k] = ImageChops.lighter(out[k], m) if k == mode else ImageChops.subtract(out[k], m)
-    return out
-
-
-def _one(mod, row: Dict, source, target, cols, clicks=None):
+def _one(mod, row, source, target, cols, clicks=None):
     data = Path(mod.data)
     im = _read(data / row["rel"])
     others = []
-    for rel, f in row["others"]:
+    for rel, name in row.get("others") or ():
         try:
-            others.append((_read(data / rel), cols.get(f)))
-        except Exception:  # noqa: BLE001 - a copy that will not read is simply not compared against
+            pic = _read(data / rel)
+        except Exception:
             continue
-    return recolour(im, source, target, others, edits=touch_edits(im, clicks),
-                    plain=row["kind"] != "symbol")
+        others.append((pic, cols.get(name) or cols.get(str(name).lower())))
+    edits = touch_edits(im, clicks)
+    return recolour(im, source, target, others, edits, plain=(row["kind"] != "symbol"), kind=row["kind"])
 
 
-def _touches(body: dict) -> Dict[str, list]:
-    t = body.get("touch") or {}
-    return {str(k).lower(): list(v) for k, v in t.items() if isinstance(v, list)} if isinstance(t, dict) else {}
-
-
-def sample(mod, body: dict) -> Dict:
-    """96f: one picture again, with its touch-ups, for the preview."""
-    slot = str(body.get("faction") or "").strip()
-    rel = str(body.get("rel") or "")
-    row = next((r for r in targets(mod, slot) if r["rel"].lower() == rel.lower()), None)
-    if row is None:
-        raise RecolourError(_i18n.msg("eng.artrecolour.not_its_picture", "{rel} is not one of {faction}'s pictures", rel=rel, faction=slot))
-    source, target = _colours(body, mod, "source"), _colours(body, mod, "target")
-    new, share = _one(mod, row, source, target, faction_colours(mod), _touches(body).get(rel.lower()))
-    return {"rel": row["rel"], "share": round(share, 3), "new": _png(new)}
-
-
-def _png(im, side=128) -> str:
-    im = im.copy()
-    im.thumbnail((side, side))
+def _data_uri(im) -> str:
+    t = im.convert("RGBA")
+    t.thumbnail((128, 128))
     buf = io.BytesIO()
-    im.save(buf, "PNG")
+    t.save(buf, "PNG")
     return "data:image/png;base64," + base64.b64encode(buf.getvalue()).decode("ascii")
 
 
-def plan(mod, body: dict) -> Dict:
-    """Which pictures would change, and a few of them before and after."""
-    slot = str(body.get("faction") or "").strip()
-    rows = targets(mod, slot)
-    if not rows:
-        raise RecolourError(_i18n.msg("eng.artrecolour.nothing", "{faction} has no pictures of its own in this mod to recolour", faction=slot))
-    source, target = _colours(body, mod, "source"), _colours(body, mod, "target")
+# ---------------------------------------------------------------------------
+# the request
+
+
+def _one_colour(c):
+    if c is None or c == "":
+        return None
+    text = str(c).strip().lstrip("#")
+    if not text:
+        return None
+    if not re.fullmatch(r"[0-9a-fA-F]{6}", text):
+        raise RecolourError(_i18n.msg("eng.artrecolour.bad_colour",
+                                      "{c} is not a colour like #c81e1e", c=text))
+    return tuple(int(text[i:i + 2], 16) for i in (0, 2, 4))
+
+
+def _colours(spec, cols):
+    if isinstance(spec, str) and spec in cols:
+        return tuple(cols[spec])
+    if isinstance(spec, (list, tuple)):
+        pair = [_one_colour(c) for c in list(spec)[:2]]
+        return tuple(pair + [None] * (2 - len(pair)))
+    raise RecolourError(_i18n.msg("eng.artrecolour.no_colours",
+                                  "say which colours the pictures are in now and which they should take"))
+
+
+def _both(body, cols):
+    return _colours(body.get("source"), cols), _colours(body.get("target"), cols)
+
+
+def _touch(body) -> dict:
+    t = body.get("touch")
+    if not isinstance(t, dict) or not all(isinstance(v, list) for v in t.values()):
+        return {}
+    return {str(k).lower(): v for k, v in t.items()}
+
+
+def _slot(body) -> str:
+    return str(body.get("faction") or "").strip()
+
+
+def sample(mod, body) -> dict:
+    slot = _slot(body)
+    rel = str(body.get("rel") or "")
     cols = faction_colours(mod)
-    samples = []
-    picks = [r for r in rows if r["kind"] == "card"][:3] + [r for r in rows if r["kind"] == "texture"][:2] \
-        + [r for r in rows if r["kind"] == "symbol"][:1]
-    for r in picks:
-        try:
-            new, share = _one(mod, r, source, target, cols)
-        except Exception as e:  # noqa: BLE001 - one sample that will not read is shown as that
-            samples.append({"rel": r["rel"], "error": str(e)})
-            continue
-        samples.append({"rel": r["rel"], "kind": r["kind"], "share": round(share, 3),
-                        "old": _png(_read(Path(mod.data) / r["rel"])), "new": _png(new)})
-    counts: Dict[str, int] = {}
-    for r in rows:
-        counts[r["kind"]] = counts.get(r["kind"], 0) + 1
-    space = _new_space(mod, rows)
-    return {"faction": slot, "counts": counts, "samples": samples,
-            "shared": sum(1 for r in rows if r["shared"]),
-            "new_bytes": space, "free_bytes": _free(mod),
-            "source": [list(c) if c else None for c in source],
-            "target": [list(c) if c else None for c in target]}
+    row = next((r for r in targets(mod, slot) if r["rel"].lower() == rel.lower()), None)
+    if row is None:
+        raise RecolourError(_i18n.msg("eng.artrecolour.not_its_picture",
+                                      "{rel} is not one of {faction}'s pictures",
+                                      rel=rel, faction=slot))
+    source, target = _both(body, cols)
+    new, share = _one(mod, row, source, target, cols, _touch(body).get(rel.lower()))
+    return {"rel": row["rel"], "share": round(share, 3), "new": _data_uri(new)}
 
 
-def _new_space(mod, rows) -> int:
-    """About how many bytes the faction's own copies of shared textures take."""
-    data = Path(mod.data)
+def _free_bytes(path) -> int:
+    try:
+        return int(shutil.disk_usage(path).free)
+    except OSError:
+        return 0
+
+
+def _size_of(mod, rows) -> int:
     total = 0
     for r in rows:
         if r["shared"]:
             try:
-                total += (data / r["rel"]).stat().st_size
+                total += (Path(mod.data) / r["rel"]).stat().st_size
             except OSError:
                 pass
     return total
 
 
-def _free(mod) -> int:
-    try:
-        return shutil.disk_usage(Path(mod.data)).free
-    except OSError:
-        return 0
-
-
-def _own_name(rel: str, slot: str) -> str:
-    p = Path(rel)
-    return (p.parent / f"{p.stem}_{slot}{p.suffix}").as_posix()
-
-
-def apply(mod, body: dict) -> Dict:
-    """Recolour every picture of the faction, each backed up first."""
-    slot = str(body.get("faction") or "").strip()
+def plan(mod, body) -> dict:
+    slot = _slot(body)
     rows = targets(mod, slot)
-    source, target = _colours(body, mod, "source"), _colours(body, mod, "target")
+    if not rows:
+        raise RecolourError(_i18n.msg("eng.artrecolour.nothing",
+                                      "{faction} has no pictures of its own in this mod to recolour",
+                                      faction=slot))
     cols = faction_colours(mod)
+    source, target = _both(body, cols)
+    counts: Dict[str, int] = {}
+    for r in rows:
+        counts[r["kind"]] = counts.get(r["kind"], 0) + 1
+    chosen = ([r for r in rows if r["kind"] == "card"][:3]
+              + [r for r in rows if r["kind"] == "texture"][:2]
+              + [r for r in rows if r["kind"] == "symbol"][:1])
+    samples = []
+    for r in chosen:
+        try:
+            old = _read(Path(mod.data) / r["rel"])
+            new, share = _one(mod, r, source, target, cols)
+            samples.append({"rel": r["rel"], "kind": r["kind"], "share": round(share, 3),
+                            "old": _data_uri(old), "new": _data_uri(new)})
+        except Exception as e:
+            samples.append({"rel": r["rel"], "error": str(e)})
+    pair = lambda p: [list(c) if c else None for c in p]
+    return {"faction": slot, "counts": counts, "samples": samples,
+            "shared": sum(1 for r in rows if r["shared"]),
+            "new_bytes": _size_of(mod, rows),
+            "free_bytes": _free_bytes(mod.data),
+            "source": pair(source), "target": pair(target)}
+
+
+# ---------------------------------------------------------------------------
+# writing
+
+
+def _picture_bytes(im, suffix: str, tmp: Path) -> None:
+    """Write ``im`` to ``tmp`` in the format the file's suffix names."""
+    s = suffix.lower()
+    rgba = im.convert("RGBA")
+    if s in (".texture", ".dds"):
+        from . import armbake, sprites
+        dds = armbake.dds_with_mipmaps(rgba)
+        tmp.write_bytes(sprites.dds_to_texture(dds) if s == ".texture" else dds)
+    elif s == ".png":
+        rgba.save(tmp, "PNG")
+    else:
+        rgba.save(tmp, "TGA")
+
+
+def _repointed_text(mod, slot: str, moved: Dict[str, str]) -> Optional[str]:
+    """The modeldb as text with ``slot``'s texture records in ``moved`` (path key -> new
+    path) pointed at their new files, or None when no record changed."""
+    db = mod.modeldb
+    low = slot.lower()
+    saved = [(e, e.raw) for e in db.entries]
+    changed = 0
+    try:
+        for e in db.entries:
+            pad = e.first_entry_pad
+            idx = {}
+            for sl in modeldb.path_slots_raw(e.raw, pad=pad):
+                if (sl["kind"] == "texture" and sl["group"] == "main"
+                        and sl["faction"].lower() == low
+                        and modeldb.path_key(sl["value"]) in moved):
+                    idx[sl["i"]] = moved[modeldb.path_key(sl["value"])]
+            if idx:
+                e.raw = modeldb.rewrite_paths_indexed(e.raw, idx, pad=pad)
+                changed += len(idx)
+        text = db.to_text() if changed else None
+    finally:
+        for e, raw in saved:
+            e.raw = raw
+    return text if changed else None
+
+
+def apply(mod, body) -> dict:
+    slot = _slot(body)
+    cols = faction_colours(mod)
+    source, target = _both(body, cols)
+    rows = targets(mod, slot)
     data = Path(mod.data)
+
+    new_bytes = _size_of(mod, rows)
+    free = _free_bytes(data)
+    if free and 2 * new_bytes + _SPACE_MARGIN > free:
+        raise RecolourError(_i18n.msg(
+            "eng.artrecolour.no_space",
+            "the faction's own copies of the textures it shares need about {need} MB and the drive has {free} MB free; free some space first",
+            need="%.0f" % (new_bytes / 1e6), free="%.0f" % (free / 1e6)))
+
+    touch = _touch(body)
     tid = config.new_transfer_id()
     backup_root = config.backup_root_for(tid)
     manifest: Dict[str, List[str]] = {"backed_up": [], "created": []}
+    n_written = n_own = n_skipped = 0
+    moved: Dict[str, str] = {}
 
-    def keep(rel: str) -> Path:
-        t = data / rel
-        if t.exists():
-            b = backup_root / "data" / rel
-            b.parent.mkdir(parents=True, exist_ok=True)
-            shutil.copy2(t, b)
+    def backup(rel: str) -> None:
+        if rel in manifest["backed_up"] or rel in manifest["created"]:
+            return
+        path = data / rel
+        if path.is_file():
+            dest = backup_root / "data" / rel
+            dest.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(path, dest)
             manifest["backed_up"].append(rel)
-            file_op("BACKUP", t, f"-> {b}")
+            file_op("BACKUP", path, f"-> {dest}")
         else:
             manifest["created"].append(rel)
-        t.parent.mkdir(parents=True, exist_ok=True)
-        return t
 
-    need, free = _new_space(mod, rows), _free(mod)
-    if free and need * 2 + 50_000_000 > free:      # the copies, their backups' headroom, and a margin
-        raise RecolourError(_i18n.msg("eng.artrecolour.no_space", "the faction's own copies of the textures it shares need about {need} MB and the drive has {free} MB free; free some space first", need=f"{need / 1e6:.0f}", free=f"{free / 1e6:.0f}"))
-    repoint: Dict[str, str] = {}
-    changed = skipped = 0
-    touches = _touches(body)
-    for r in rows:
-        try:
-            new, share = _one(mod, r, source, target, cols, touches.get(r["rel"].lower()))
-        except Exception:  # noqa: BLE001 - a picture that will not read is left as it is
-            skipped += 1
-            continue
-        if share <= 0:
-            continue
-        rel = r["rel"]
-        if r["shared"]:
-            rel = _own_name(rel, slot)
-            repoint[r["rel"].lower()] = rel
-        dest = keep(rel)
-        raw = _write(dest, new)
-        tmp = dest.with_name(dest.name + ".new")
-        tmp.write_bytes(raw)
-        tmp.replace(dest)
-        file_op("WRITE", dest, "recoloured")
-        changed += 1
-    if repoint:
-        db = mod.modeldb
-        text_entries = []
-        for e in db.entries:
-            raw = e.raw
-            idx = {}
-            for s in modeldb.path_slots_raw(raw, pad=e.first_entry_pad):
-                if s["kind"] == "texture" and s["faction"].lower() == slot.lower():
-                    v = s["value"].replace("\\", "/")
-                    v2 = v[5:] if v.lower().startswith("data/") else v
-                    if v2.lower() in repoint:
-                        idx[s["i"]] = repoint[v2.lower()]
-            text_entries.append(modeldb.rewrite_paths_indexed(raw, idx, pad=e.first_entry_pad) if idx else raw)
-        olds = [e.raw for e in db.entries]
-        try:
-            for e, raw in zip(db.entries, text_entries):
-                e.raw = raw
-            text = db.to_text()
-        finally:
-            for e, raw in zip(db.entries, olds):
-                e.raw = raw
-        # 92a: a mod on M2EX's text models gets descr_model_battle.txt instead
-        db_rel, text, db_enc = modeltext.redirect(mod, "unit_models/battle_models.modeldb", text, modeldb.ENCODING)
-        target_db = keep(db_rel)
-        target_db.write_text(text, encoding=db_enc)   # as apply_transfer writes it
-        file_op("WRITE", target_db, f"{len(repoint)} texture(s) of {slot} pointed at its own copies")
-    rec = {"id": tid, "when": time.strftime("%Y-%m-%d %H:%M:%S"), "mode": "factions",
-           "action": "recolour", "source": mod.name, "source_root": str(mod.root),
-           "dest": mod.name, "dest_root": str(mod.root), "unit_type": slot, "resolved_type": slot,
-           "options": {}, "applied": True, "undone": False, "note": "",
-           "summary": _i18n.msg("eng.artrecolour.summary", "{faction}'s pictures recoloured: {n} changed, {own} made its own", faction=slot, n=changed, own=len(repoint)),
-           "warnings": [], "manifest": manifest, "backup_root": str(backup_root)}
-    config.append_log(rec)
+    try:
+        for row in rows:
+            try:
+                new, share = _one(mod, row, source, target, cols, touch.get(row["rel"].lower()))
+            except Exception:
+                n_skipped += 1
+                continue
+            if share <= 0:
+                continue
+            rel = row["rel"]
+            pp = PurePosixPath(rel)
+            if row["shared"]:
+                out_rel = str(pp.with_name(f"{pp.stem}_{slot}{pp.suffix}"))
+            else:
+                out_rel = rel
+            backup(out_rel)
+            out = data / out_rel
+            out.parent.mkdir(parents=True, exist_ok=True)
+            tmp = out.with_name(out.name + ".new")
+            _picture_bytes(new, pp.suffix, tmp)
+            os.replace(tmp, out)
+            file_op("WRITE", out, "recoloured")
+            n_written += 1
+            if row["shared"]:
+                n_own += 1
+                moved[modeldb.path_key(rel)] = out_rel
+
+        if moved:
+            text = _repointed_text(mod, slot, moved)
+            if text is not None:
+                db_rel, text, enc = modeltext.redirect(mod, _MODELDB_REL, text, modeldb.ENCODING)
+                backup(db_rel)
+                target_path = data / db_rel
+                target_path.write_text(text, encoding=enc)
+                file_op("WRITE", target_path, f"{len(moved)} texture(s) of {slot} pointed at its own copies")
+    except BaseException:
+        from . import transfer
+        transfer._put_back(data, backup_root, manifest)
+        mod.__dict__.pop("modeldb", None)
+        raise
+
     mod.__dict__.pop("modeldb", None)
+    rec = {
+        "id": tid,
+        "when": time.strftime("%Y-%m-%d %H:%M:%S"),
+        "mode": "factions", "action": "recolour",
+        "source": mod.name, "source_root": str(mod.root),
+        "dest": mod.name, "dest_root": str(mod.root),
+        "unit_type": slot, "resolved_type": slot,
+        "options": {}, "applied": True, "undone": False, "note": "",
+        "summary": _i18n.msg("eng.artrecolour.summary",
+                             "{faction}'s pictures recoloured: {n} changed, {own} made its own",
+                             faction=slot, n=n_written, own=n_own),
+        "warnings": [], "manifest": manifest, "backup_root": str(backup_root),
+    }
+    config.append_log(rec)
     log.info("RECOLOUR %s in %s: %d changed, %d own copies, %d skipped, id=%s",
-             slot, mod.name, changed, len(repoint), skipped, tid)
-    return dict(rec, changed=changed, own=len(repoint), skipped=skipped)
+             slot, mod.name, n_written, n_own, n_skipped, tid)
+    return dict(rec, changed=n_written, own=n_own, skipped=n_skipped)
