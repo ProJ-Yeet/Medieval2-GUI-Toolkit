@@ -25,7 +25,6 @@ editor's file it comes from. They are:
     main/unittransfer/scriptcompat.py
     main/unittransfer/scriptdocs.py
     main/unittransfer/scripts.py
-    main/unittransfer/stratfamily.py
     main/web/js/cardgen.js
     main/web/js/family.js
     main/web/js/guided.js (unit attributes)
