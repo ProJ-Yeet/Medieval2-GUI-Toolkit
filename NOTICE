@@ -19,7 +19,7 @@ editor's file it comes from. They are:
 
     main/unittransfer/artrecolour.py      main/unittransfer/scriptbuilder.py
     main/unittransfer/bannermaker.py      main/unittransfer/scriptcompat.py
-    main/unittransfer/cardart.py          main/unittransfer/scriptdocs.py
+    main/unittransfer/scriptdocs.py
     main/unittransfer/emblem.py           main/unittransfer/scriptfiles.py
     main/unittransfer/factionbring.py     main/unittransfer/scripts.py
     main/unittransfer/gamelog.py          main/unittransfer/stratfamily.py

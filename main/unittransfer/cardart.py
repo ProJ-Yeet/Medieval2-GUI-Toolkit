@@ -1,117 +1,119 @@
-"""The game's own pieces for the card maker, and the sizes a mod's cards are.
+"""The game's own interface pieces for the card maker, and a mod's card sizes.
 
-Taken, with the author's leave, from Pfadfinder-Adam's RTW-M2TW-Campaign-Editor
-(``campaign_editor/cardmaker.py``: ``game_sprite``, ``paper``, ``framed``, the
-picture sizes): the card maker in Unit cards > Generate lays a card on the
-game's own card ground, an info picture on the game's scroll paper inside the
-game's portrait frame, and makes them at the size the mod's own pictures are.
+The card maker (Armory > Unit cards > Generate) lays its cards on the art the
+game itself uses: card backgrounds, the scroll, the portrait frame. This module
+finds such a piece in the interface sheets (ui/*.sd.xml), cuts it from its page
+picture, and hands it out as a PNG. It also reads the picture size a mod's unit
+cards and info pictures use, from the TGA headers alone.
 
-* :func:`game_sprite` - a named sprite (``STRAT_CARD_BACKGROUND``,
-  ``BATTLE_CARD_BACKGROUND``, ``SCROLL_MID``, ``PORTRAIT_FRAME``,
-  ``PORTRAIT_FRAME_INT``) cut from its page. The interface sheets are
-  ``data/ui/*.sd.xml``: a ``<page file="...">`` and its ``<sprite name x y w
-  h>`` boxes, the page a picture in ``ui/<culture>/interface/``. Looked up the
-  way the game finds a file (:func:`gamepack.lookup`: the mod, the game's
-  loose data, its packs), the culture's own page first, else any culture's.
-* :func:`mod_sizes` - the size most of the mod's unit cards and unit info
-  pictures are, read off the files' headers.
+Written independently from a description of the behaviour (2026-11-06); the idea of laying cards on the game's own art follows Pfadfinder-Adam's campaign editor.
 """
-from __future__ import annotations
-
 import io
 import re
 from collections import Counter
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
-from PIL import Image
-
 from . import gamepack
 
-#: the interface sheets, in the order the game's pieces are looked for
-SHEETS = ("shared.sd.xml", "battle.sd.xml", "strategy.sd.xml", "shared2.sd.xml",
-          "battle3.sd.xml", "strat3.sd.xml")
-#: what the card maker may ask for, and nothing else
+SHEETS = ("shared.sd.xml", "battle.sd.xml", "strategy.sd.xml",
+          "shared2.sd.xml", "battle3.sd.xml", "strat3.sd.xml")
 NAMES = ("STRAT_CARD_BACKGROUND", "BATTLE_CARD_BACKGROUND", "SCROLL_MID",
          "PORTRAIT_FRAME", "PORTRAIT_FRAME_INT")
-#: every culture folder Medieval II ships, tried when the asked one has no page
 CULTURES = ("northern_european", "southern_european", "eastern_european",
             "middle_eastern", "greek", "mesoamerican")
 
-_PAGE = re.compile(r'<page\s+file="([^"]+)"', re.I)
-_SPRITE = re.compile(r'<sprite\s+name="([^"]+)"\s+x="(\d+)"\s+y="(\d+)"\s+w="(\d+)"\s+h="(\d+)"', re.I)
+_PAGE_TAG = re.compile(r'<page\s+file\s*=\s*"([^"]*)"', re.I)
+_SPRITE = re.compile(
+    r'<sprite\s+name\s*=\s*"([^"]*)"\s+x\s*=\s*"(-?\d+)"\s+y\s*=\s*"(-?\d+)"'
+    r'\s+w\s*=\s*"(\d+)"\s+h\s*=\s*"(\d+)"', re.I)
 
 
-def _read(rel: str, mod) -> Optional[bytes]:
-    path, _where = gamepack.lookup(rel, mod)
-    if path is None:
-        return None
+def _sheet_text(mod, sheet: str) -> str:
     try:
-        return Path(path).read_bytes()
-    except OSError:
-        return None
-
-
-def _culture_dirs(mod) -> List[str]:
-    """The culture folders under the mod's ``data/ui``, then the game's own."""
-    out: List[str] = []
-    ui = Path(mod.data) / "ui" if mod is not None else None
-    if ui is not None and ui.is_dir():
-        out += sorted(d.name for d in ui.iterdir() if d.is_dir() and (d / "interface").is_dir())
-    return out + [c for c in CULTURES if c not in out]
+        path, _where = gamepack.lookup("ui/" + sheet, mod)
+        if path is None:
+            return ""
+        return Path(path).read_text(encoding="latin-1")
+    except Exception:
+        return ""
 
 
 def find_sprite(mod, name: str) -> Optional[Tuple[str, Tuple[int, int, int, int]]]:
-    """``(page file, (x, y, w, h))`` of a sprite, from the first sheet that names it."""
-    want = (name or "").upper()
+    """(page file, (x, y, w, h)) of a named sprite, or None."""
+    if not name:
+        return None
+    want = name.lower()
     for sheet in SHEETS:
-        raw = _read("ui/" + sheet, mod)
-        if not raw:
-            continue
         page = None
-        for line in raw.decode("latin-1").splitlines():
-            m = _PAGE.search(line)
+        for line in _sheet_text(mod, sheet).splitlines():
+            m = _PAGE_TAG.search(line)
             if m:
                 page = m.group(1)
-            m = _SPRITE.search(line)
-            if m and page and m.group(1).upper() == want:
-                return page, tuple(int(v) for v in m.groups()[1:])
+                continue
+            s = _SPRITE.search(line)
+            if s and page is not None and s.group(1).lower() == want:
+                x, y, w, h = (int(s.group(i)) for i in range(2, 6))
+                return page, (x, y, w, h)
     return None
 
 
-def game_sprite(mod, name: str, culture: str = "") -> Optional[Image.Image]:
-    """A piece of the game's own interface as an RGBA picture, or None."""
-    if (name or "").upper() not in NAMES:
-        return None
-    hit = find_sprite(mod, name)
-    if hit is None:
-        return None
-    page, (x, y, w, h) = hit
-    tries = ([culture] if culture else []) + [c for c in _culture_dirs(mod) if c != culture]
-    from . import icons
-    for c in tries:
-        path, _where = gamepack.lookup(f"ui/{c}/interface/{page}", mod)
-        if path is None:
-            continue
-        # the toolkit's own reader: TGA (run-length too), DDS, PNG
-        data = icons._decode_to_png(Path(path), 0)
-        if data is None:
-            continue
+def _cultures(mod, culture: str) -> List[str]:
+    out: List[str] = []
+
+    def add(c):
+        if c and c not in out:
+            out.append(c)
+
+    add(culture)
+    ui = Path(mod.data) / "ui" if mod is not None else None
+    if ui is not None and ui.is_dir():
         try:
-            im = Image.open(io.BytesIO(data)).convert("RGBA")
-        except (OSError, ValueError):
+            for d in sorted(ui.iterdir()):
+                if d.is_dir() and (d / "interface").is_dir():
+                    add(d.name)
+        except OSError:
+            pass
+    for c in CULTURES:
+        add(c)
+    return out
+
+
+def game_sprite(mod, name: str, culture: str = ""):
+    """The named piece as an RGBA image cut from its page, or None."""
+    if not name or name.upper() not in NAMES:
+        return None
+    found = find_sprite(mod, name)
+    if found is None:
+        return None
+    page, (x, y, w, h) = found
+    try:
+        from PIL import Image
+        from .icons import _decode_to_png
+    except Exception:
+        return None
+    for cul in _cultures(mod, culture):
+        try:
+            path, _where = gamepack.lookup(f"ui/{cul}/interface/{page}", mod)
+            if path is None:
+                continue
+            png = _decode_to_png(Path(path), 0)
+            if not png:
+                continue
+            with Image.open(io.BytesIO(png)) as im:
+                return im.convert("RGBA").crop((x, y, x + w, y + h))
+        except Exception:
             continue
-        return im.crop((x, y, x + w, y + h))
     return None
 
 
-def png_bytes(im: Image.Image) -> bytes:
+def png_bytes(im) -> bytes:
     buf = io.BytesIO()
-    im.save(buf, "PNG")
+    im.save(buf, format="PNG")
     return buf.getvalue()
 
 
-def _tga_size(path: Path) -> Optional[Tuple[int, int]]:
+def _tga_dimensions(path: Path) -> Optional[Tuple[int, int]]:
     try:
         with open(path, "rb") as f:
             head = f.read(18)
@@ -119,33 +121,47 @@ def _tga_size(path: Path) -> Optional[Tuple[int, int]]:
         return None
     if len(head) < 18:
         return None
-    w, h = int.from_bytes(head[12:14], "little"), int.from_bytes(head[14:16], "little")
-    return (w, h) if 0 < w <= 4096 and 0 < h <= 4096 else None
+    w = head[12] | head[13] << 8
+    h = head[14] | head[15] << 8
+    if not (1 <= w <= 4096 and 1 <= h <= 4096):
+        return None
+    return w, h
+
+
+def _common_size(folder: Path, pattern: str, cap: int) -> Optional[List[int]]:
+    if not folder.is_dir():
+        return None
+    counts: Counter = Counter()   # insertion order keeps first seen on ties
+    seen = 0
+    try:
+        factions = sorted(d for d in folder.iterdir() if d.is_dir())
+    except OSError:
+        return None
+    for fac in factions:
+        try:
+            files = sorted(fac.glob(pattern))
+        except OSError:
+            continue
+        for f in files:
+            if seen >= cap:
+                break
+            seen += 1
+            size = _tga_dimensions(f)
+            if size is not None:
+                counts[size] += 1
+        if seen >= cap:
+            break
+    if not counts:
+        return None
+    best = max(counts.values())
+    for size, n in counts.items():
+        if n == best:
+            return [size[0], size[1]]
+    return None
 
 
 def mod_sizes(mod, cap: int = 400) -> Dict[str, Optional[List[int]]]:
-    """``{"card": [w, h], "info": [w, h]}``: the size most of the mod's own
-    unit cards (``ui/units/<faction>/#*.tga``) and unit info pictures
-    (``ui/unit_info/<faction>/*.tga``) are. None for a kind the mod has none of
-    (the game's own are then used). At most ``cap`` files of each are read."""
-    out: Dict[str, Optional[List[int]]] = {}
+    """The commonest card and info picture size in the mod's own data."""
     data = Path(mod.data)
-    for kind, rel, pat in (("card", "ui/units", "#*.tga"), ("info", "ui/unit_info", "*.tga")):
-        seen: Counter = Counter()
-        base = data / rel
-        n = 0
-        if base.is_dir():
-            for fac in sorted(base.iterdir()):
-                if not fac.is_dir():
-                    continue
-                for f in fac.glob(pat):
-                    s = _tga_size(f)
-                    if s:
-                        seen[s] += 1
-                    n += 1
-                    if n >= cap:
-                        break
-                if n >= cap:
-                    break
-        out[kind] = list(seen.most_common(1)[0][0]) if seen else None
-    return out
+    return {"card": _common_size(data / "ui" / "units", "#*.tga", cap),
+            "info": _common_size(data / "ui" / "unit_info", "*.tga", cap)}
