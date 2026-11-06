@@ -39,7 +39,7 @@ TARGETS = (
 STATES = (("", None), ("_roll", "roll"), ("_select", "select"), ("_grey", "grey"))
 
 # brightness factors to fall back on when the old pictures cannot be measured
-DEFAULT = {"roll": 1.4, "grey": 0.75}
+DEFAULT = {"grey": 0.75, "roll": 1.4}
 
 # kinds made even when no picture of them exists yet
 ALWAYS = {"button24", "button48", "loading128"}
@@ -84,7 +84,7 @@ def targets(mod, slot):
 
 def measure(normal, other, variant):
     """The median brightness ratio of other against normal, or None."""
-    if normal is None or other is None or normal.size != other.size:
+    if None in (normal, other) or normal.size != other.size:
         return None
     ratios = []
     for a, b in zip(normal.getdata(), other.getdata()):
@@ -134,7 +134,7 @@ def fit(src, size, box=None):
 
 def _merge(r, g, b, a):
     from PIL import Image
-    return Image.merge("RGBA", (r, g, b, a))
+    return Image.merge("RGBA", [r, g, b, a])
 
 
 def _brighten(im, k):
@@ -152,7 +152,7 @@ def _grey(im, k):
 
 def _halo(old_normal, old_select):
     """(colour, strength, width) of the glow in the old selected picture."""
-    if old_normal is None or old_select is None or old_normal.size != old_select.size:
+    if None in (old_normal, old_select) or old_select.size != old_normal.size:
         return None
     n_alpha = old_normal.getchannel("A").getdata()
     sel = [p for p, na in zip(old_select.getdata(), n_alpha) if na < _SOLID and p[3] > 0]
@@ -192,7 +192,7 @@ def build(src, tgts):
         if kind not in new_normal:
             ref = olds.get(normals.get(kind, t)["rel"])
             size = tuple(t["size"])
-            box = footprint(ref) if ref is not None and ref.size == size else None
+            box = None if ref is None or ref.size != size else footprint(ref)
             new_normal[kind] = fit(src, size, box)
         return new_normal[kind]
 

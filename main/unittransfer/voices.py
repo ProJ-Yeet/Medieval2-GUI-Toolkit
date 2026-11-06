@@ -262,7 +262,8 @@ def unit_view(mod, unit_type: str, pick: str = "") -> dict:
 
 
 def _slug(text: str) -> str:
-    return re.sub(r"[^A-Za-z0-9]+", "_", text).strip("_").lower() or "unit"
+    words = re.findall(r"[A-Za-z0-9]+", text)
+    return "_".join(words).lower() or "unit"
 
 
 def _no_template(accent, vclass) -> VoiceError:

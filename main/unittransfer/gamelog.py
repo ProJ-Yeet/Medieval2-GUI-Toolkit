@@ -20,7 +20,7 @@ from . import i18n as _i18n
 
 # A log bigger than this is read from its newest bytes.
 CAP = 40 * 1024 * 1024
-ORDER = {"fatal": 0, "error": 1, "warning": 2}
+LEVELS = ("fatal", "error", "warning")    # most serious first
 
 _TIMED = re.compile(r"^\s*\d\d:\d\d:\d\d(?:\.\d+)?\s+\[")
 _ENTRY = re.compile(r"^\s*\d\d:\d\d:\d\d(?:\.\d+)?\s+\[([^\]]*)\]\s+\[([^\]]*)\]\s*(.*)$")
@@ -79,10 +79,10 @@ def parse(text: str) -> List[dict]:
         area, level, msg = m.group(1), m.group(2).strip().lower(), m.group(3).strip()
         if level == "warn":
             level = "warning"
-        if level not in ORDER:
+        if level not in LEVELS:
             continue
         e = {"level": level, "area": area, "msg": msg, "why": "",
-             "file": None, "line": None, "col": None}
+             "col": None, "line": None, "file": None}
         s = _SCRIPT.search(msg)
         if s:
             e["file"] = s.group(1).replace("\\", "/")
@@ -133,7 +133,11 @@ def summary(entries: List[dict]) -> list:
         g[1] += 1
         if len(g[2]) < 6:
             g[2].append((e["line"], said))
-    return sorted(groups.values(), key=lambda g: (ORDER[g[0]["level"]], -g[1]))
+
+    def rank(group):
+        first, times = group[0], group[1]
+        return LEVELS.index(first["level"]), -times
+    return sorted(groups.values(), key=rank)
 
 
 def mod_line(game, rel, line) -> Optional[str]:
