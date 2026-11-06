@@ -133,6 +133,32 @@ for generator in ("Khronos glTF Blender I/O v5.2.41", "IWTE_v26_05_A"):
     n = got.normals[2]
     check(f"  and its normal is mirrored with it ({n:+.1f})", n < -0.99)
 
+
+# A GLB's material links normal maps whose names cannot be guessed from diffuse.
+from PIL import Image
+from unittransfer import armbake
+doc, binary = modelexport.read_glb(side_glb("IWTE"))
+images = []
+for name, color in (("fabric_d", (160, 80, 40, 255)), ("fabric_m2_norm", (180, 128, 245, 0))):
+    buf = io.BytesIO()
+    Image.new("RGBA", (8, 8), color).save(buf, "PNG")
+    vi = len(doc["bufferViews"])
+    doc["bufferViews"].append({"buffer": 0, "byteOffset": len(binary), "byteLength": len(buf.getvalue())})
+    binary += buf.getvalue()
+    images.append({"name": name, "mimeType": "image/png", "bufferView": vi})
+doc["images"] = images
+doc["textures"] = [{"source": 0}, {"source": 1}]
+doc["materials"] = [{"pbrMetallicRoughness": {"baseColorTexture": {"index": 0}}, "normalTexture": {"index": 1}}]
+doc["meshes"][0]["primitives"][0]["material"] = 0
+doc["buffers"][0]["byteLength"] = len(binary)
+p = tmp / "normal-linked.glb"
+p.write_bytes(modelexport._glb(doc, binary))
+a = {"kind": "external", "path": str(p)}
+sheets = armbake._Sheets({"test": a}, None, armbake.default_image_of)
+linked = sheets.normal_paths({"asset": "test", "group": 0})[0]
+check("GLB material normal links resolve embedded maps with unrelated diffuse names",
+      Path(linked).name == "fabric_m2_norm.png" and Path(linked).is_file())
+
 DAE = """<?xml version="1.0" encoding="utf-8"?>
 <COLLADA xmlns="http://www.collada.org/2005/11/COLLADASchema" version="1.4.1">
  <asset><up_axis>Z_UP</up_axis></asset>
@@ -463,7 +489,7 @@ const cv = {width: 512, height: 512, isConnected: true, getContext: () => ({fill
 const document = {getElementById: id => id.startsWith('armExpCv_') ? cv : id === 'modal' ? modal : null};
 class Image { set src(v){ this._s = v; setTimeout(() => this.onload && this.onload(), 0); } get src(){ return this._s; } }
 const modal = {}; function armProj(){ return {objects: [], collections: [], assets: []}; }
-function armExportPaint(){} function errText(e){ return String(e); }
+function armExportPaint(){} function armSave(){} function errText(e){ return String(e); }
 """ + (ROOT / "web" / "js" / "armexport.js").read_text(encoding="utf-8") + r""";
 const wait = ms => new Promise(r => setTimeout(r, ms));
 (async () => {

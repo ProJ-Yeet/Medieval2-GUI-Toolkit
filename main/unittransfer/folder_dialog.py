@@ -342,7 +342,7 @@ class _NoModernDialog(Exception):
     pass
 
 
-def _pick_folder_modern(title: str) -> Optional[str]:
+def _pick_folder_modern(title: str, initial_dir: str = "") -> Optional[str]:
     """The Explorer-style folder picker; raises :class:`_NoModernDialog` if
     COM will not make one, so the old box can stand in."""
     dlg = ctypes.c_void_p()
@@ -356,6 +356,17 @@ def _pick_folder_modern(title: str) -> Optional[str]:
         _vcall(dlg, 9, ctypes.HRESULT,                                             # SetOptions
                wintypes.DWORD(opts.value | FOS_PICKFOLDERS | FOS_FORCEFILESYSTEM | FOS_PATHMUSTEXIST))
         _vcall(dlg, 17, ctypes.HRESULT, wintypes.LPCWSTR(title))                   # SetTitle
+        if initial_dir and os.path.isdir(initial_dir):
+            item = ctypes.c_void_p()
+            iid = _GUID("{43826D1E-E718-42EE-BC55-A1E261C37BFE}")  # IShellItem
+            create = _shell32.SHCreateItemFromParsingName
+            create.argtypes = [wintypes.LPCWSTR, ctypes.c_void_p, ctypes.c_void_p, ctypes.c_void_p]
+            create.restype = ctypes.HRESULT
+            if create(initial_dir, None, ctypes.byref(iid), ctypes.byref(item)) == 0:
+                try:
+                    _vcall(dlg, 12, ctypes.HRESULT, item)  # SetFolder
+                finally:
+                    _vcall(item, 2, ctypes.c_ulong)
         with _Owner() as owner:
             hr = _vcall(dlg, 3, ctypes.c_long, wintypes.HWND(owner or 0))          # Show
         if hr == _CANCELLED:
@@ -377,7 +388,7 @@ def _pick_folder_modern(title: str) -> Optional[str]:
         _vcall(dlg, 2, ctypes.c_ulong)                                             # Release
 
 
-def browse_for_folder(title: str = "Select a folder") -> Optional[str]:
+def browse_for_folder(title: str = "Select a folder", initial_dir: str = "") -> Optional[str]:
     """Blocking native folder-picker. Returns the chosen path, or None if the
     user cancelled (or this isn't Windows)."""
     if sys.platform != "win32":
@@ -385,7 +396,7 @@ def browse_for_folder(title: str = "Select a folder") -> Optional[str]:
     ctypes.windll.ole32.CoInitialize(None)
     try:
         try:
-            return _pick_folder_modern(title)
+            return _pick_folder_modern(title, initial_dir)
         except (_NoModernDialog, OSError):
             pass
         display_name = ctypes.create_unicode_buffer(260)
@@ -393,6 +404,17 @@ def browse_for_folder(title: str = "Select a folder") -> Optional[str]:
         bi.pszDisplayName = ctypes.cast(display_name, wintypes.LPWSTR)
         bi.lpszTitle = title
         bi.ulFlags = BIF_RETURNONLYFSDIRS | BIF_NEWDIALOGSTYLE
+        callback = None
+        if initial_dir and os.path.isdir(initial_dir):
+            def set_initial(hwnd, msg, _lp, _data):
+                if msg == 1:  # BFFM_INITIALIZED
+                    send = ctypes.windll.user32.SendMessageW
+                    send.argtypes = [wintypes.HWND, wintypes.UINT, wintypes.WPARAM, wintypes.LPARAM]
+                    send(hwnd, 0x467, 1, ctypes.cast(ctypes.c_wchar_p(initial_dir), ctypes.c_void_p).value)
+                return 0
+            callback = ctypes.WINFUNCTYPE(ctypes.c_int, wintypes.HWND, wintypes.UINT,
+                                         wintypes.LPARAM, wintypes.LPARAM)(set_initial)
+            bi.lpfn = ctypes.cast(callback, ctypes.c_void_p)
         with _Owner() as owner:
             bi.hwndOwner = owner
             pidl = _shell32.SHBrowseForFolderW(ctypes.byref(bi))

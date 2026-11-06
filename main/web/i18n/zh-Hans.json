@@ -11963,9 +11963,15 @@
  "armory.exp_sel_scale_title": "在对象缩放的基础上单独缩放此 UV 岛。低于 100% 时，其图像会重新采样为更小尺寸，画质会降低",
  "armory.exp_sel_reset": "重置",
  "armory.exp_sel_overall": "计入对象缩放后为 {pct}%",
- "armory.exp_corner_hint": "拖动所选 UV 岛的角点可缩放该岛。",
+ "armory.exp_corner_hint": "拖动角点进行缩放，或按 S，输入缩放系数（0.5 将大小减半），然后按 Enter。按 Esc 取消。点击空白处可取消选择。",
  "armory.exp_sel_left": "此 UV 岛无法放入其纹理页。请缩小此岛，或缩放、移动其他岛。",
  "armory.exp_sheet_left": "未能放入：{n}",
  "armory.exp_left_mark_title": "此对象的部分 UV 岛无法放入任何纹理页",
- "armory.exp_pick_row_title": "点击选择此对象最大的 UV 岛"
+ "armory.exp_pick_row_title": "点击选择此对象最大的 UV 岛",
+ "eng.armunit.outside_data": "请选择此模组的 data 文件夹内的文件夹",
+ "armory.session_saved": "会话已保存",
+ "armory.check_existing_export": "检查现有导出",
+ "armory.recent_folder": "最近使用 · {folder}",
+ "armory.folder_choices": "部队文件夹和最近使用的路径",
+ "eng.server.pick_data_folder": "请选择 data 下的文件夹"
 }

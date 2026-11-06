@@ -24,44 +24,94 @@ function armExp(){
     settings: {size: {both: 'auto'}, margin: 0.4, obj_sheet: {}, block_sheet: {}, scale: {}, block_scale: {}, dyes: true, rotate: 'quarter'},
     check: null, plan: null, busy: false, err: '', folder: '', stem: '', done: null};
 }
+function armExpOutput(key, value){
+  const e = armExp(); e[key] = value; e.done = null; armSave();
+}
+async function armExpFindExisting(){
+  const e = armExp(), folder = e.folder, stem = e.stem;
+  if(!folder) return false;
+  try{
+    const r = await api.get('/api/armory/export_exists?folder=' + enc(folder) + '&stem=' + enc(stem));
+    if(e.folder !== folder || e.stem !== stem) return false;
+    e.done = r.found ? r : null;
+    e.exportCandidates = r.candidates || [];
+    if(r.found){ e.stem = r.stem; armSave(); }
+    if(e.step === 'bake') armExportPaint();
+    return !!e.done;
+  }catch(err){ e.err = errText(err); e.done = null; return false; }
+}
+function armExpHistory(){ return armExp().history || (armExp().history = {past: [], future: [], start: null}); }
+function armExpEditBegin(){
+  const h = armExpHistory();
+  if(h.start === null) h.start = JSON.stringify(armExp().settings);
+}
+function armExpEditEnd(){
+  const h = armExpHistory(), now = JSON.stringify(armExp().settings);
+  if(h.start !== null && h.start !== now){ h.past.push(h.start); if(h.past.length > 200) h.past.shift(); h.future = []; }
+  h.start = null; armSave();
+}
+function armExpUndo(redo){
+  if(armExp().numericScale) armExpScaleEnd(true);
+  armExpEditEnd();
+  const e = armExp(), h = armExpHistory(), from = redo ? h.future : h.past;
+  if(!from.length) return;
+  (redo ? h.past : h.future).push(JSON.stringify(e.settings));
+  e.settings = JSON.parse(from.pop());
+  armExpReplan(); armExpDrawSheets(); armExpSyncScale(); armSave();
+}
+function armExpSyncScale(){
+  const e = armExp(), own = (e.settings.block_scale[e.sel] || 1) * 100;
+  const sl = document.getElementById('armExpScaleSlider'), num = document.getElementById('armExpScaleNumber');
+  if(sl){ sl.max = Math.max(100, own); sl.value = own; }
+  if(num && document.activeElement !== num) num.value = Math.round(own * 100) / 100;
+}
 function armExpBody(){ return {project: armProj(), scope: armExp().scope}; }
 
 async function armExportOpen(){
   const e = armExp();
-  e.done = null; e.err = '';
+  e.err = '';
   if(!e.stem){
     const p = armProj();
-    e.stem = (p.name || (p.objects[0] && p.objects[0].mesh) || 'armory_model').replace(/[^A-Za-z0-9_\-]/g, '_');
+    const a = p.assets.find(a => (p.objects || []).some(o => (o.src || []).some(pc => pc.asset === armAssetKey(a))));
+    const imported = a && (a.kind === 'external' ? (a.path || '').split(/[\\/]/).pop().replace(/\.[^.]+$/, '') : a.entry);
+    e.stem = (imported || p.name || (p.objects[0] && p.objects[0].mesh) || 'armory_model').replace(/[^A-Za-z0-9_\-]/g, '_');
   }
   e.step = 'check';
   armExportPaint();
   overlay.classList.add('open');
   armExportCheck();
+  armExpFindExisting();
 }
 
 function armExportPaint(){
   const e = armExp();
+  const focused = document.activeElement && document.activeElement.id;
   document.getElementById('modal').className = 'modal wide';
   const tab = (id, label) => `<button class="mftab${e.step === id ? ' on' : ''}" onclick="armExportStep('${id}')">${label}</button>`;
   const errors = e.check ? e.check.issues.filter(i => i.level === 'error').length : 0;
-  modal.innerHTML = `<div class="armexp">
+  modal.innerHTML = `<div class="armexp" onkeydown="if((event.ctrlKey||event.metaKey)&&['z','y'].includes(event.key.toLowerCase()) && !event.target.matches('input,textarea,select'))armExpKey(event)">
     <h3>${tt('armory.exp_title')}</h3>
     <div class="mftabs">${tab('check', tt('armory.exp_step_check'))}${tab('uv', tt('armory.exp_step_uv'))}${tab('bake', tt('armory.exp_step_bake'))}${tab('mod', tt('armory.exp_step_mod'))}</div>
     <div id="armExpBody">${e.step === 'check' ? armExpCheckHtml() : e.step === 'uv' ? armExpUvHtml() : e.step === 'mod' ? armExpModHtml() : armExpBakeHtml()}</div>
     ${e.err ? `<div class="armexperr">${esc(e.err)}</div>` : ''}
     <div class="armimpfoot"><span class="count">${e.busy ? tt('armory.reading') : ''}</span><span style="flex:1"></span>
-      <button onclick="closeModal()">${tt('common.close')}</button>
+      <button onclick="armExpScaleEnd(true);closeModal()">${tt('common.close')}</button>
       ${e.step === 'check' ? `<button class="primary" onclick="armExportStep('uv')"${errors || !e.check ? ' disabled' : ''}>${tt('armory.exp_next')}</button>` : ''}
       ${e.step === 'uv' ? `<button class="primary" onclick="armExportStep('bake')"${e.plan && e.plan.fits ? '' : ' disabled'}>${tt('armory.exp_next')}</button>` : ''}
       ${e.step === 'bake' && e.done ? `<button class="primary" onclick="armExportStep('mod')">${tt('armory.exp_next')}</button>` : ''}
     </div></div>`;
-  if(e.step === 'uv') armExpDrawSheets();
+  if(e.step === 'uv'){ armExpDrawSheets(); if(focused && focused.startsWith('armExpCv_')){ const cv=document.getElementById(focused); if(cv) cv.focus({preventScroll:true}); } }
 }
 
-function armExportStep(s){
+async function armExportStep(s){
   const e = armExp();
+  if(e.numericScale) armExpScaleEnd(true);
+  if(s === 'mod'){
+    await armExpFindExisting();
+    if(e.done){ e.step = 'mod'; e.err = ''; armExportPaint(); armExpModLoad(); return; }
+  }
   if(s !== 'check' && (!e.check || e.check.issues.some(i => i.level === 'error'))){ e.step = 'check'; armExportPaint(); return; }
-  if(s === 'bake' && !(e.plan && e.plan.fits)) s = 'uv';
+  if(s === 'bake' && !e.done && !(e.plan && e.plan.fits)) s = 'uv';
   if(s === 'mod' && !e.done) s = 'bake';
   e.step = s; e.err = '';
   armExportPaint();
@@ -175,6 +225,7 @@ async function armExportPlan(auto){
 // the step would take the box being typed in away, so only the button changes
 function armExpReplan(){
   const e = armExp();
+  e.seq = (e.seq || 0) + 1;
   if(e.live === false){ e.stale = true; armExpStaleMark(); return; }
   clearTimeout(ARM.expTimer); ARM.expTimer = setTimeout(() => armExportPlan(), 250);
 }
@@ -216,26 +267,32 @@ async function armExpFetchArt(){
   if(e.step === 'uv') armExpDrawSheets();
 }
 function armExpSet(key, v){
+  armExpEditBegin();
   const s = armExp().settings;
   if(key === 'margin') s.margin = Math.max(0, Math.min(5, +v || 0));
   else if(key === 'dyes') s.dyes = !!v;
   else if(key === 'rotate') s.rotate = v ? 'free' : 'quarter';
   else if(key === 'size') s.size = {both: v === 'auto' ? 'auto' : +v};
   armExpReplan();
+  armExpEditEnd();
 }
 function armExpObjSheet(id, v){
+  armExpEditBegin();
   const s = armExp().settings;
   if(v) s.obj_sheet[id] = v; else delete s.obj_sheet[id];
   // an object's own choice beats what was said for its islands one by one
   if(armExp().plan) for(const sh of Object.values(armExp().plan.sheets))
     for(const b of sh.blocks) if(b.objs.includes(id)) delete s.block_sheet[b.id];
   armExpReplan();
+  armExpEditEnd();
 }
 function armExpScale(id, pct){
+  armExpEditBegin();
   const s = armExp().settings;
   const v = Math.max(5, Math.min(100, +pct || 100)) / 100;
   if(v >= 1) delete s.scale[id]; else s.scale[id] = v;
   armExpReplan();
+  armExpEditEnd();
 }
 /* An island picked on a sheet: its object's row and its object's other
    islands light up, its source texture shows beside the sheets with it
@@ -259,11 +316,16 @@ function armExpPick(sh, ev){
   let hit = null, best = Infinity;
   for(const b of S.blocks){
     if(!b.placed) continue;
-    const w = b.rot ? b.h : b.w, h = b.rot ? b.w : b.h;
+    const shown = armExpDisplayBlock(b);
+    const w = shown.rot ? shown.h : shown.w, h = shown.rot ? shown.w : shown.h;
     if(x >= b.x && x < b.x + w && y >= b.y && y < b.y + h && w * h < best){ hit = b; best = w * h; }
   }
+  if(e.numericScale){ armExpScaleEnd(false); return; }
+  e.drag = null;
   e.sel = hit ? hit.id : null; e.selSrc = null;
   armExportPaint();
+  const focus = document.getElementById('armExpCv_' + sh);
+  if(focus) focus.focus({preventScroll: true});
   if(hit) armExpFetchSel();
 }
 async function armExpFetchSel(){
@@ -303,7 +365,8 @@ function armExpSelBox(sh){
   const S = e.plan && e.plan.sheets[sh];
   if(!b || !b.placed || !S || !S.blocks.includes(b)) return null;
   const k = 512 / S.size;
-  return {b, x: b.x * k, y: b.y * k, w: (b.rot ? b.h : b.w) * k, h: (b.rot ? b.w : b.h) * k};
+  const shown = armExpDisplayBlock(b);
+  return {b, x: b.x * k, y: b.y * k, w: (shown.rot ? shown.h : shown.w) * k, h: (shown.rot ? shown.w : shown.h) * k};
 }
 function armExpCorner(sh, pt){
   const box = armExpSelBox(sh);
@@ -315,32 +378,33 @@ function armExpCorner(sh, pt){
   return null;
 }
 function armExpHover(sh, ev){
-  if(armExp().drag && !armExp().drag.done) return;
+  const point = armExpCvPoint(ev.currentTarget, ev); armExp().pointer = Object.assign({sh}, point);
+  if(armExp().numericScale || (armExp().drag && !armExp().drag.done)) return;
   const cv = ev.currentTarget, c = armExpCorner(sh, armExpCvPoint(cv, ev));
   cv.style.cursor = c ? (c.cx === c.cy ? 'nwse-resize' : 'nesw-resize') : '';
 }
 function armExpDown(sh, ev){
   const e = armExp(), cv = ev.currentTarget, c = armExpCorner(sh, armExpCvPoint(cv, ev));
-  if(!c || ev.button !== 0) return;
+  if(e.numericScale || !c || ev.button !== 0) return;
   ev.preventDefault();
   const own = e.settings.block_scale[c.box.b.id] || 1, B = c.box;
   e.drag = {sh, id: B.b.id, ox: B.x, oy: B.y, ow: B.w, oh: B.h, W0: B.w / own, H0: B.h / own, s: own,
             ax: B.x + (1 - c.cx) * B.w, ay: B.y + (1 - c.cy) * B.h, dx: c.cx ? 1 : -1, dy: c.cy ? 1 : -1};
   const move = mv => {
     const d = e.drag, pt = armExpCvPoint(cv, mv);
-    d.s = Math.max(0.05, Math.min(1, Math.max((pt.x - d.ax) * d.dx / d.W0, (pt.y - d.ay) * d.dy / d.H0)));
+    d.s = Math.max(0.05, Math.min(10, Math.max((pt.x - d.ax) * d.dx / d.W0, (pt.y - d.ay) * d.dy / d.H0)));
     const sl = document.querySelector('#armExpSel input[type=range]');
-    if(sl){ sl.value = Math.round(d.s * 100); sl.nextElementSibling.textContent = sl.value + '%'; }
+    if(sl){ sl.value = Math.round(d.s * 100); const num = document.getElementById('armExpScaleNumber'); if(num) num.value = sl.value; }
     armExpPaintCv(sh);
   };
   const up = () => {
     window.removeEventListener('mousemove', move); window.removeEventListener('mouseup', up);
     const d = e.drag;
     if(!d) return;
-    d.done = true; e.noClick = true;
+    e.drag = null; e.noClick = true;
     setTimeout(() => { e.noClick = false; }, 0);
-    armExpPaintCv(sh);
     armExpBlockScale(Math.round(d.s * 100));
+    armExpDrawSheets();
   };
   window.addEventListener('mousemove', move); window.addEventListener('mouseup', up);
 }
@@ -367,12 +431,79 @@ function armExpHandles(ctx, x, y, w, h){
     ctx.fillRect(cx - 4, cy - 4, 8, 8); ctx.strokeRect(cx - 4.5, cy - 4.5, 9, 9);
   }
 }
-function armExpBlockScale(pct){
-  const e = armExp(), s = e.settings;
-  if(!e.sel) return;
-  const v = Math.max(5, Math.min(100, +pct || 100)) / 100;
-  if(v >= 1) delete s.block_scale[e.sel]; else s.block_scale[e.sel] = v;
-  armExpReplan();
+function armExpBlockScale(pct, live=false){
+  const e = armExp(), n = Number(pct);
+  if(!e.sel || !Number.isFinite(n) || pct === '') return;
+  armExpEditBegin();
+  clearTimeout(ARM.expTimer); e.seq = (e.seq || 0) + 1;
+  const v = Math.max(5, Math.min(1000, n)) / 100;
+  if(v === 1) delete e.settings.block_scale[e.sel]; else e.settings.block_scale[e.sel] = v;
+  armExpSyncScale();
+  for(const sh of ['main','attach']) armExpPaintCv(sh);
+  if(!live){ armExpEditEnd(); armExpReplan(); }
+}
+// Keep every pending island visible when Live is off or a replan is in flight.
+function armExpDisplayBlock(b){
+  const ratio = (armExp().settings.block_scale[b.id] || 1) / (b.own || 1);
+  return Object.assign({}, b, {w: b.w * ratio, h: b.h * ratio});
+}
+function armExpDrawPending(ctx, cv, S, k){
+  for(const b of S.blocks){
+    const shown = armExpDisplayBlock(b);
+    if(!b.placed || shown.w === b.w) continue;
+    const x = b.x * k, y = b.y * k, w = (b.rot ? b.h : b.w) * k, h = (b.rot ? b.w : b.h) * k;
+    ctx.fillStyle = '#1d2128'; ctx.fillRect(x, y, w, h);
+    const nw = (b.rot ? shown.h : shown.w) * k, nh = (b.rot ? shown.w : shown.h) * k;
+    if(cv._img){
+      const r = cv._img.naturalWidth / cv.width;
+      ctx.drawImage(cv._img, x*r, y*r, w*r, h*r, x, y, nw, nh);
+    }else{ ctx.fillStyle = armExpColour(b.objs[0]); ctx.fillRect(x, y, nw, nh); }
+  }
+}
+function armExpScaleEnd(cancel){
+  const e = armExp(), f = e.numericScale;
+  if(!f) return;
+  window.removeEventListener('mousemove', f.track);
+  window.removeEventListener('contextmenu', f.context);
+  e.numericScale = null;
+  if(cancel){ e.settings.block_scale[f.id] = f.own; armExpHistory().start = null; }
+  else armExpEditEnd();
+  armExpSyncScale(); armExpDrawSheets(); armExpReplan();
+}
+function armExpKey(ev){
+  const e = armExp(), key = ev.key.toLowerCase();
+  ev.stopPropagation();
+  if((ev.ctrlKey || ev.metaKey) && (key === 'z' || key === 'y')){
+    ev.preventDefault(); armExpUndo(key === 'y' || !!ev.shiftKey); return;
+  }
+  if(!e.numericScale){
+    if(key !== 's' || !e.sel) return;
+    armExpEditBegin(); clearTimeout(ARM.expTimer); e.seq = (e.seq || 0) + 1;
+    const sh = ['main','attach'].find(sh => armExpSelBox(sh));
+    const box = sh && armExpSelBox(sh), pt = e.pointer;
+    const cx = box ? box.x + box.w/2 : 0, cy = box ? box.y + box.h/2 : 0;
+    const f = e.numericScale = {id:e.sel, value:'', own:e.settings.block_scale[e.sel] || 1,
+      sh, cx, cy, radius: pt && pt.sh === sh ? Math.max(10, Math.hypot(pt.x-cx,pt.y-cy)) : 50};
+    f.track = mv => {
+      if(e.numericScale !== f || f.value) return;
+      const cv = document.getElementById('armExpCv_' + sh);
+      if(!cv){ armExpScaleEnd(true); return; }
+      const p = armExpCvPoint(cv, mv);
+      e.settings.block_scale[f.id] = Math.max(.05, Math.min(10, f.own * Math.hypot(p.x-cx,p.y-cy)/f.radius));
+      armExpSyncScale(); for(const sheet of ['main','attach']) armExpPaintCv(sheet);
+    };
+    f.context = ev => { ev.preventDefault(); armExpScaleEnd(true); };
+    window.addEventListener('mousemove', f.track); window.addEventListener('contextmenu', f.context);
+  }else if(key === 'escape') armExpScaleEnd(true);
+  else if(key === 'enter') armExpScaleEnd(false);
+  else if(/^[0-9.]$/.test(key) || key === 'backspace'){
+    const f=e.numericScale;
+    f.value = key === 'backspace' ? f.value.slice(0,-1) : f.value+key;
+    const factor=Number(f.value);
+    e.settings.block_scale[f.id] = f.value && Number.isFinite(factor) ? Math.max(.05,Math.min(10,f.own*factor)) : f.own;
+    armExpSyncScale(); armExpDrawSheets();
+  }else return;
+  ev.preventDefault();
 }
 function armExpList(show){ armExp().listHidden = !show; armExportPaint(); }
 function armExpSelHtml(){
@@ -386,22 +517,26 @@ function armExpSelHtml(){
       : src.err ? `<div class="armexperr">${esc(src.err)}</div>`
       : `<div class="count">${esc(tt('armory.exp_sel_from', {name: src.name || '-'}))}</div><img src="${src.picture}" alt="">`}
     <label title="${ttA('armory.exp_sel_scale_title')}">${tt('armory.exp_sel_scale')}</label>
-    <div class="armexprow"><input type="range" min="5" max="100" step="1" value="${own}"
-        oninput="this.nextElementSibling.textContent = this.value + '%'" onchange="armExpBlockScale(this.value)">
-      <span class="num">${own}%</span>
-      ${own < 100 ? `<button class="mini" onclick="armExpBlockScale(100)">${tt('armory.exp_sel_reset')}</button>` : ''}</div>
+    <div class="armexprow"><input id="armExpScaleSlider" onkeydown="if(event.ctrlKey||event.metaKey)armExpKey(event)" type="range" min="5" max="${Math.max(100, own)}" step="1" value="${own}"
+        oninput="armExpBlockScale(this.value, true)" onchange="armExpBlockScale(this.value)">
+      <input id="armExpScaleNumber" onkeydown="if(event.ctrlKey||event.metaKey)armExpKey(event)" type="number" class="armnum" min="5" max="1000" step="1" value="${own}" oninput="armExpBlockScale(this.value,true)" onchange="armExpBlockScale(this.value)">%
+      ${own !== 100 ? `<button class="mini" onclick="armExpBlockScale(100)">${tt('armory.exp_sel_reset')}</button>` : ''}</div>
     ${Math.round(b.scale * 100) !== own ? `<div class="count">${tt('armory.exp_sel_overall', {pct: Math.round(b.scale * 100)})}</div>` : ''}
     ${b.placed ? `<div class="count">${tt('armory.exp_corner_hint')}</div>` : `<div class="armexpleftnote">${tt('armory.exp_sel_left')}</div>`}`;
 }
 function armExpMoveBlock(sh, i, to){
+  armExpEditBegin();
   const b = armExp().plan.sheets[sh].blocks[i];
   if(b){ armExp().settings.block_sheet[b.id] = to; armExpReplan(); }
+  armExpEditEnd();
 }
 function armExpScaleSheet(sheet, pct){
+  armExpEditBegin();
   const e = armExp();
   if(!e.plan) return;
   const ids = new Set(e.plan.sheets[sheet].blocks.flatMap(b => b.objs));
   for(const id of ids) armExpScale(id, pct);
+  armExpEditEnd();
 }
 
 const armExpLabel = s => s === 'attach' ? tt('armory.exp_sheet_attach') : tt('armory.exp_sheet_main');
@@ -435,7 +570,7 @@ function armExpUvHtml(){
     return `<div class="armexpsheet"><b>${armExpLabel(sh)} · ${S.size}²</b>
       <span class="count">${tt('armory.exp_sheet_facts', {fill: Math.round(S.fill * 100), needs: S.needs, margin: S.margin_px})}</span>
       ${S.left.length ? `<span class="armexpleftnote">${tt('armory.exp_sheet_left', {n: S.left.length})}</span>` : ''}
-      <canvas id="armExpCv_${sh}" width="512" height="512" onclick="armExpPick('${sh}', event)" onmousedown="armExpDown('${sh}', event)"
+      <canvas id="armExpCv_${sh}" width="512" height="512" tabindex="0" onkeydown="armExpKey(event)" onclick="armExpPick('${sh}', event)" onmousedown="armExpDown('${sh}', event)"
         onmousemove="armExpHover('${sh}', event)" title="${ttA('armory.exp_pick_title')}"></canvas></div>`;
   };
   return `<div class="armexprow">
@@ -526,15 +661,18 @@ function armExpPaintCv(sh){
       ctx.globalAlpha = 1; ctx.strokeStyle = '#000'; ctx.strokeRect(b.x * k + 0.5, b.y * k + 0.5, w - 1, h - 1);
     }
   if(cv._pic && !cv._img) return;
+  armExpDrawPending(ctx, cv, S, k);
   armExpDrawSel(ctx, S, k, !(e.drag && e.drag.sh === sh));
   if(e.drag && e.drag.sh === sh) armExpDrawDrag(ctx, cv);
+  if(e.numericScale){ ctx.fillStyle = '#ffd640'; ctx.font = 'bold 14px sans-serif'; ctx.fillText('S ' + (e.numericScale.value || '1'), 8, 20); }
 }
 // the picked island boxed bright, its object's other islands fainter
 function armExpDrawSel(ctx, S, k, handles){
   const sel = armExpSelBlock();
   if(!sel) return;
   const mine = new Set(sel.objs);
-  for(const b of S.blocks){
+  for(const raw of S.blocks){
+    const b = armExpDisplayBlock(raw);
     if(!b.placed) continue;
     const on = b.id === sel.id;
     if(!on && !b.objs.some(o => mine.has(o))) continue;
@@ -558,9 +696,11 @@ function armExpBakeHtml(){
       <div class="count">${e.done.files.map(esc).join(', ')}</div>
       <div class="count">${tt('armory.exp_written_facts', {vertices: e.done.vertices.toLocaleString(), triangles: e.done.triangles.toLocaleString(), groups: e.done.groups})}</div></div>` : '';
   return `<div class="count armnote">${tt('armory.exp_bake_intro', {sheets: sizes})}</div>
-    <div class="armpathrow"><input id="armExpFolder" value="${esc(e.folder)}" placeholder="${esc(tt('armory.exp_folder'))}" oninput="armExp().folder=this.value">
+    <div class="armpathrow"><input id="armExpFolder" value="${esc(e.folder)}" placeholder="${esc(tt('armory.exp_folder'))}" oninput="armExpOutput('folder',this.value)" onchange="armExpFindExisting()">
       <button onclick="armExpBrowse()">${tt('armory.browse')}</button></div>
-    <div class="armexprow"><label>${tt('armory.exp_stem')}<input value="${esc(e.stem)}" oninput="armExp().stem=this.value"></label>
+    <div class="armexprow"><label>${tt('armory.exp_stem')}<input value="${esc(e.stem)}" list="armExportStems" oninput="armExpOutput('stem',this.value)" onchange="armExpFindExisting()"></label>
+      <datalist id="armExportStems">${(e.exportCandidates || []).map(n => `<option value="${esc(n)}">`).join('')}</datalist>
+      <button onclick="armExpFindExisting()">${tt('armory.check_existing_export')}</button>
       <button class="primary" onclick="armExpBake()"${e.busy ? ' disabled' : ''}>${tt('armory.exp_bake')}</button></div>
     <div class="count">${tt('armory.exp_bake_note')}</div>
     <div class="armexprow"><label>${tt('armory.exp_normals_pick')}
@@ -568,6 +708,7 @@ function armExpBakeHtml(){
         `<option value="${m}"${armNormals().mode === m ? ' selected' : ''}>${esc(armNormModeLabel(m))}</option>`).join('')}</select></label>
       <button onclick="armExpPreview()"${e.peeking ? ' disabled' : ''} title="${ttA('armory.exp_preview_title')}">${tt('armory.exp_preview')}</button></div>
     <div class="count">${tt('armory.exp_normals_note')}</div>
+    <div id="armBakeProgress" role="status">${e.baking ? `${e.bakePct || 0}% <progress max="100" value="${e.bakePct || 0}"></progress>` : ''}</div>
     ${armExpPreviewHtml()}${done}`;
 }
 /* The bake's normal maps chosen here as well as in the objects panel: the
@@ -611,17 +752,30 @@ function armExpPreviewHtml(){
 }
 async function armExpBrowse(){
   let r;
-  try{ r = await api.post('/api/browse_folder', {title: tt('armory.exp_folder')}); }catch(err){ toast(errText(err)); return; }
-  if(r && r.path){ armExp().folder = r.path; armExportPaint(); }
+  try{ r = await api.post('/api/browse_folder', {title: tt('armory.exp_folder'), dir: armExp().folder}); }catch(err){ toast(errText(err)); return; }
+  if(r && r.path){ armExpOutput('folder',r.path); await armExpFindExisting(); armExportPaint(); }
 }
 async function armExpBake(){
   const e = armExp();
   if(!e.folder.trim()){ toast(tt('armory.exp_folder')); return; }
-  e.busy = true; e.done = null; armExportPaint();
+  if(e.baking) return;
+  e.busy = true; e.baking = true; e.bakePct = 0; e.done = null; armExportPaint();
+  const job = 'armbake-' + Date.now() + '-' + Math.random().toString(36).slice(2);
+  const poll = async () => {
+    try{
+      const r = await api.get('/api/progress?job=' + enc(job));
+      if(!e.baking) return;
+      e.bakePct = r.pct || 0;
+      const el = document.getElementById('armBakeProgress');
+      if(el){ el.textContent = e.bakePct + '% '; const bar = document.createElement('progress'); bar.max=100; bar.value=e.bakePct; el.appendChild(bar); }
+    }catch(err){}
+  };
+  const timer = setInterval(poll, 500);
   try{
-    e.done = await api.post('/api/armory/bake', Object.assign(armExpBody(), {settings: e.settings, folder: e.folder, stem: e.stem}));
-    e.err = '';
+    e.done = await api.post('/api/armory/bake', Object.assign(armExpBody(), {settings: e.settings, folder: e.folder, stem: e.stem, job}));
+    e.err = ''; armSave();
   }catch(err){ e.err = errText(err); }
+  clearInterval(timer); e.baking = false;
   e.busy = false;
   armExportPaint();
 }
@@ -653,6 +807,48 @@ async function armExpModLoad(){
   catch(err){ m.data = null; e.err = errText(err); }
   e.busy = false;
   armExportPaint();
+  armExpUnitFolders();
+}
+function armExpRecentFolders(){
+  try{ return JSON.parse(localStorage.getItem('armory.folders.' + armExpMod().target) || '[]'); }catch(err){ return []; }
+}
+function armExpRememberFolder(){
+  const m = armExpMod(), path = m.folder.trim().replace(/\\/g,'/');
+  if(!path) return;
+  const memento = [path,...armExpRecentFolders().filter(p => p !== path)].slice(0,12);
+  try{ localStorage.setItem('armory.folders.' + m.target, JSON.stringify(memento)); }catch(err){}
+  armSave();
+  const select = document.getElementById('armExpFolderChoices');
+  if(select) select.innerHTML = `<option value="">${tt('armory.folder_choices')}</option>` + armExpFolderChoices();
+}
+function armExpFolderChoices(){
+  const m = armExpMod(), rows = new Map();
+  if(m.choice !== 'skip') for(const row of m.folders || []) for(const folder of row.folders || []){
+    if(!rows.has(folder)) rows.set(folder, row.name + ' · ' + folder);
+  }
+  for(const folder of armExpRecentFolders()) if(!rows.has(folder)) rows.set(folder, tt('armory.recent_folder', {folder}));
+  return [...rows].map(([folder,label]) => `<option value="${esc(folder)}"${m.folder === folder ? ' selected' : ''}>${esc(label)}</option>`).join('');
+}
+async function armExpUnitFolders(){
+  const m=armExpMod(), target=m.target, unit=m.unit;
+  m.folders=[];
+  if(m.choice === 'skip' || !unit) return;
+  try{
+    const r=await api.get('/api/unit_models?mod='+enc(target)+'&type='+enc(unit));
+    if(m.target !== target || m.unit !== unit) return;
+    m.folders=r.models || [];
+  }catch(err){ if(m.target === target && m.unit === unit) m.folders=[]; }
+  if(armExp().step === 'mod') armExportPaint();
+}
+async function armExpModBrowse(){
+  try{
+    const r=await api.post('/api/armory/install/folder',{mod:armExpMod().target});
+    if(r.path != null){ armExpModSet('folder',r.path); armExpRememberFolder(); armExportPaint(); }
+  }catch(err){ toast(errText(err),6000); }
+}
+function armExpChooseFolder(path){
+  if(!path) return;
+  armExpModSet('folder',path); armExpRememberFolder();
 }
 const armRoleLabel = r => ({heavy_infantry: tt('armory.role_heavy_infantry'), spear: tt('armory.role_spear'),
   pike: tt('armory.role_pike'), archer: tt('armory.role_archer'), crossbow: tt('armory.role_crossbow'),
@@ -680,7 +876,9 @@ function armExpModHtml(){
   const roles = Object.values(d.templates);
   html += `<div class="armexprow">
       <label>${tt('armory.exp_entry_name')}<input value="${esc(m.name)}" oninput="armExpModSet('name', this.value, true)"></label>
-      <label>${tt('armory.exp_entry_folder')}<input class="armwide" value="${esc(m.folder)}" placeholder="unit_models/_units/armory/${esc(m.name)}" oninput="armExpModSet('folder', this.value, true)"></label></div>`;
+      <label>${tt('armory.exp_entry_folder')}<input class="armwide" value="${esc(m.folder)}" placeholder="unit_models/_units/armory/${esc(m.name)}" oninput="armExpModSet('folder', this.value, true)" onchange="armExpRememberFolder()"></label>
+      <button onclick="armExpModBrowse()">${tt('armory.browse')}</button>
+      <select id="armExpFolderChoices" aria-label="${ttA('armory.folder_choices')}" onchange="armExpChooseFolder(this.value)"><option value="">${tt('armory.folder_choices')}</option>${armExpFolderChoices()}</select></div>`;
   if(m.choice !== 'skip')
     html += `<div class="armexprow"><label>${m.choice === 'new' ? tt('armory.exp_unit_from') : tt('armory.exp_unit')}<input list="armExpUnits" value="${esc(m.unit)}"
         placeholder="${esc(tt('armory.find'))}" onchange="armExpModSet('unit', this.value)"></label>${units}</div>`;
@@ -718,10 +916,11 @@ function armExpModBody(){
 }
 function armExpModSet(k, v, live){
   const m = armExpMod();
-  m[k] = v; m.plan = null; m.written = null;
+  m[k] = v; m.plan = null; m.written = null; armSave();
+  if(k === 'unit' || k === 'choice'){ m.folders=[]; armExpUnitFolders(); }
   if(!live) armExportPaint();
 }
-function armExpModTarget(v){ armExpMod().target = v; armExpModLoad(); }
+function armExpModTarget(v){ const m=armExpMod(); m.target=v; m.folders=[]; armSave(); armExpModLoad(); }
 async function armExpModPlan(){
   const m = armExpMod(), e = armExp();
   e.busy = true; armExportPaint();
@@ -736,7 +935,7 @@ async function armExpModApply(){
   try{
     await api.post('/api/armory/install/apply', armExpModBody());
     m.written = {mod: m.target, name: m.choice === 'new' ? m.new_type : m.name};
-    m.plan = null; e.err = '';
+    m.plan = null; e.err = ''; armExpRememberFolder(); armSave();
     toast(tt('armory.exp_written_mod', m.written));
   }catch(err){ e.err = errText(err); }
   e.busy = false; armExportPaint();

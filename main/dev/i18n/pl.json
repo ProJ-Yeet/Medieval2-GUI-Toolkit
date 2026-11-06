@@ -13379,9 +13379,15 @@
  "armory.exp_sel_scale_title": "Skaluje tylko tę wyspę UV, dodatkowo do skali jej obiektu. Poniżej 100% jej obraz jest ponownie próbkowany do mniejszego rozmiaru, co obniża jakość",
  "armory.exp_sel_reset": "Resetuj",
  "armory.exp_sel_overall": "{pct}% z uwzględnieniem skali jej obiektu",
- "armory.exp_corner_hint": "Przeciągnij róg wybranej wyspy, aby zmienić jej skalę.",
+ "armory.exp_corner_hint": "Przeciągnij róg, aby zmienić skalę, lub naciśnij S, wpisz współczynnik (0.5 zmniejsza rozmiar o połowę), a następnie naciśnij Enter. Esc anuluje. Kliknij puste miejsce, aby usunąć zaznaczenie.",
  "armory.exp_sel_left": "Ta wyspa nie zmieściła się na swoim arkuszu tekstury. Zmniejsz ją lub zmień skalę albo położenie innych wysp.",
  "armory.exp_sheet_left": "Nie zmieściło się: {n}",
  "armory.exp_left_mark_title": "Niektóre wyspy tego obiektu nie zmieściły się na żadnym arkuszu tekstury",
- "armory.exp_pick_row_title": "Kliknij, aby wybrać największą wyspę tego obiektu"
+ "armory.exp_pick_row_title": "Kliknij, aby wybrać największą wyspę tego obiektu",
+ "eng.armunit.outside_data": "wybierz folder wewnątrz folderu data tego moda",
+ "armory.session_saved": "Sesja zapisana",
+ "armory.check_existing_export": "Sprawdź istniejący eksport",
+ "armory.recent_folder": "Ostatnie · {folder}",
+ "armory.folder_choices": "Foldery jednostek i ostatnie ścieżki",
+ "eng.server.pick_data_folder": "Wybierz folder w data"
 }

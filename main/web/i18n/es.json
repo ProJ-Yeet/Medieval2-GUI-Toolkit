@@ -13159,9 +13159,15 @@
  "armory.exp_sel_scale_title": "Escala solo esta isla UV, además de la escala de su objeto. Por debajo del 100%, su imagen se remuestrea a un tamaño menor y pierde calidad",
  "armory.exp_sel_reset": "Restablecer",
  "armory.exp_sel_overall": "{pct}% con la escala de su objeto",
- "armory.exp_corner_hint": "Arrastra una esquina de la isla seleccionada para cambiar su escala.",
+ "armory.exp_corner_hint": "Arrastra una esquina para cambiar la escala, o pulsa S, introduce un factor (0.5 reduce el tamaño a la mitad) y luego pulsa Enter. Esc cancela. Haz clic en un espacio vacío para deseleccionar.",
  "armory.exp_sel_left": "Esta isla no cupo en su hoja de textura. Redúcela o cambia la escala o la posición de otras islas.",
  "armory.exp_sheet_left": "No cupieron: {n}",
  "armory.exp_left_mark_title": "Algunas de sus islas no cupieron en ninguna hoja de textura",
- "armory.exp_pick_row_title": "Haz clic para seleccionar la isla más grande de este objeto"
+ "armory.exp_pick_row_title": "Haz clic para seleccionar la isla más grande de este objeto",
+ "eng.armunit.outside_data": "elige una carpeta dentro de la carpeta data de este mod",
+ "armory.session_saved": "Sesión guardada",
+ "armory.check_existing_export": "Comprobar exportación existente",
+ "armory.recent_folder": "Recientes · {folder}",
+ "armory.folder_choices": "Carpetas de unidades y rutas recientes",
+ "eng.server.pick_data_folder": "Elige una carpeta dentro de data"
 }

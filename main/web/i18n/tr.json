@@ -12172,9 +12172,15 @@
  "armory.exp_sel_scale_title": "Nesnesinin ölçeğine ek olarak yalnızca bu UV adasını ölçekler. %100'ün altında görüntüsü daha küçük boyuta yeniden örneklenir ve kalite düşer",
  "armory.exp_sel_reset": "Sıfırla",
  "armory.exp_sel_overall": "Nesnesinin ölçeğiyle birlikte %{pct}",
- "armory.exp_corner_hint": "Seçili adayı ölçeklendirmek için bir köşesini sürükleyin.",
+ "armory.exp_corner_hint": "Ölçeklendirmek için bir köşeyi sürükleyin veya S tuşuna basın, bir katsayı girin (0.5 boyutu yarıya indirir), ardından Enter tuşuna basın. Esc işlemi iptal eder. Seçimi kaldırmak için boş bir alana tıklayın.",
  "armory.exp_sel_left": "Bu ada kendi doku sayfasına sığmadı. Adayı küçültün veya diğer adaları ölçeklendirin ya da taşıyın.",
  "armory.exp_sheet_left": "Sığmayan: {n}",
  "armory.exp_left_mark_title": "Bu nesnenin bazı adaları hiçbir doku sayfasına sığmadı",
- "armory.exp_pick_row_title": "Bu nesnenin en büyük adasını seçmek için tıklayın"
+ "armory.exp_pick_row_title": "Bu nesnenin en büyük adasını seçmek için tıklayın",
+ "eng.armunit.outside_data": "bu modun data klasörünün içinden bir klasör seçin",
+ "armory.session_saved": "Oturum kaydedildi",
+ "armory.check_existing_export": "Mevcut dışa aktarımı kontrol et",
+ "armory.recent_folder": "Son kullanılanlar · {folder}",
+ "armory.folder_choices": "Birim klasörleri ve son kullanılan yollar",
+ "eng.server.pick_data_folder": "Bir klasör seçin (data altında)"
 }

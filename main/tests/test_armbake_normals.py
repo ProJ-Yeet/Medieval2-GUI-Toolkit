@@ -149,5 +149,38 @@ full = armbake.render_sheets(state([block("n.png", False, 4, 4), block("n.png", 
 small = np.asarray(Image.fromarray(full, "RGBA").resize((64, 64), Image.LANCZOS))
 check("and it is the bake's own sheet, shrunk", np.abs(a.astype(int) - small.astype(int)).max() <= 1)
 
+
+print("5) zero-alpha source normals survive filtering")
+transparent = nrm.copy()
+transparent[..., 3] = 0
+b = block("n.png", False, 4, 4)
+b.scale = 0.5
+b.w, b.h = 8, 16
+st = state([b])
+st["sheets"].normals["n.png"] = transparent
+px = armbake._block_pixels(st, b, 0, None, transparent, True)
+check("scaling filters normal RGB independently from its zero alpha",
+      np.abs(px[..., :3].astype(int) - np.array(enc(0.6, 0)[:3])).max() <= 1 and (px[..., 3] == 0).all())
+st["sheets"].normals["n.png"] = transparent[::2, ::2]
+resized = armbake._source_normal(st, b)
+check("a normal at a different resolution keeps its RGB and alpha",
+      resized.shape == art.shape and np.abs(resized[..., :3].astype(int) - np.array(enc(0.6, 0)[:3])).max() <= 1)
+reports = []
+armbake.render_sheets(st, {"mode": "source"}, None, progress=lambda pct, label: reports.append(pct))
+check("render progress advances monotonically within its allotted range",
+      reports == sorted(reports) and min(reports) >= 20 and max(reports) <= 70)
+
+
+from unittest.mock import patch
+levels = []
+original_save = Image.Image.save
+def capture_mip(im, *args, **kwargs):
+    levels.append(np.array(im))
+    return original_save(im, *args, **kwargs)
+with patch.object(Image.Image, "save", capture_mip):
+    armbake.dds_with_mipmaps(Image.fromarray(transparent), normal=True)
+check("normal mipmaps preserve zero-alpha RGB at every level",
+      len(levels) == 7 and all(np.abs(lv[..., :3].astype(int) - np.array(enc(0.6, 0)[:3])).max() <= 1 for lv in levels))
+
 print(f"\n{sum(ok)}/{len(ok)} checks passed")
 sys.exit(0 if all(ok) else 1)

@@ -2966,12 +2966,20 @@ class Handler(BaseHTTPRequestHandler):
             if u.path == "/api/settings":
                 s = config.save_settings(**body)
                 return self._json(s)
+            if u.path == "/api/armory/install/folder":
+                from .folder_dialog import browse_for_folder
+                try:
+                    mod = self.registry.get(body.get("mod") or "")
+                    chosen = browse_for_folder(_i18n.msg("eng.server.pick_data_folder", "Choose a folder under data"), initial_dir=str(mod.data))
+                    return self._json({"path": armunit.data_folder(mod.data, chosen) if chosen else None})
+                except (KeyError, armunit.InstallError, OSError) as e:
+                    return self._err(400, str(e))
             if u.path == "/api/browse_folder":
                 # a browser page can't hand back a real filesystem path from its
                 # own file input, so pop the OS's native folder dialog instead -
                 # the server IS this machine, unlike a normal web app.
                 from .folder_dialog import browse_for_folder
-                path = browse_for_folder(body.get("title") or "Select a folder")
+                path = browse_for_folder(body.get("title") or "Select a folder", initial_dir=body.get("dir") or "")
                 return self._json({"path": path})
             if u.path == "/api/reveal":
                 # "Open file location". The page sends the mod and a path
@@ -3424,7 +3432,7 @@ class Handler(BaseHTTPRequestHandler):
                                                           scope=scope, side=int(body.get("side") or 1024)))
                     return self._json(armbake.bake(proj, self.registry.get, body.get("settings") or {},
                                                    body.get("folder") or "", body.get("stem") or "",
-                                                   scope=scope))
+                                                   scope=scope, progress=_progress_sink(body.get("job") or "")))
                 except (armory.ArmoryError, mesh.MeshError, KeyError, OSError) as e:
                     return self._err(400, str(e))
             if u.path == "/api/browse_file":
@@ -6508,6 +6516,11 @@ class Handler(BaseHTTPRequestHandler):
             return self._json(armory.load_project())
         if path == "/api/armory/presets":
             return self._json({"presets": armory.load_presets()})
+        if path == "/api/armory/export_exists":
+            try:
+                return self._json(armunit.existing_export(arg("folder"), arg("stem")))
+            except (armunit.InstallError, mesh.MeshError, OSError, ValueError) as e:
+                return self._err(400, str(e))
         if path == "/api/armory/keys":
             return self._json({"keys": armory.load_keys()})
         if path == "/api/armory/sessions":

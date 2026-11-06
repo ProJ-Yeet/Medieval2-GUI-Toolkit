@@ -42,6 +42,7 @@ function armUvOpen(){
   armUvPanel();
 }
 function armUvClose(){
+  if(ARM.uvEd && ARM.uvEd.xf) armUvXfEnd(true);
   const el = document.getElementById('armUvPanel');
   if(el) el.remove();
   ARM.uvEd = null;
@@ -148,6 +149,7 @@ function armUvPanel(){
   c.addEventListener('mousedown', armUvDown);
   c.addEventListener('wheel', armUvWheel, {passive: false});
   c.addEventListener('keydown', armUvKey);
+  c.addEventListener('mousemove', ev => { const [x,y]=armUvAt(ev); e.lastX=x; e.lastY=y; });
   c.addEventListener('contextmenu', ev => ev.preventDefault());
   c.addEventListener('mouseenter', () => c.focus({preventScroll: true}));
   armUvPaint();
@@ -319,9 +321,19 @@ function armUvKey(ev){
   if(!e) return;
   const k = ev.key.toLowerCase();
   ev.stopPropagation();
+  if((ev.ctrlKey || ev.metaKey) && (k === 'z' || k === 'y')){
+    ev.preventDefault();
+    if(e.xf) armUvXfEnd(true);
+    e.drag = null; armUndo(k === 'y' || !!ev.shiftKey); return;
+  }
   if(e.xf){
     if(k === 'escape'){ armUvXfEnd(true); ev.preventDefault(); }
     else if(k === 'enter'){ armUvXfEnd(false); ev.preventDefault(); }
+    else if(e.xf.op === 's' && (/^[0-9.\-]$/.test(k) || k === 'backspace')){
+      ev.preventDefault();
+      e.xf.number = k === 'backspace' ? (e.xf.number || '').slice(0,-1) : (e.xf.number || '') + k;
+      armUvXfMove(e.xf.X, e.xf.Y);
+    }
     else if(k === 'x' || k === 'y'){ e.xf.axis = e.xf.axis === k ? '' : k; armUvXfMove(e.xf.X, e.xf.Y); }
     return;
   }
@@ -336,6 +348,7 @@ function armUvKey(ev){
     const X = e.lastX != null ? e.lastX : CX + 40, Y = e.lastY != null ? e.lastY : CY;
     e.xf = {op: k, axis: '', X, Y, X0: X, Y0: Y, cu, cv, CX, CY, start: armUvSnapshot()};
     const track = m => { const [mx, my] = armUvAt(m); e.lastX = mx; e.lastY = my; if(e.xf) armUvXfMove(mx, my); else window.removeEventListener('mousemove', track); };
+    e.xf.track = track;
     window.addEventListener('mousemove', track);
     armUvPaint();
   }
@@ -358,7 +371,9 @@ function armUvXfMove(X, Y){
       return [f.cu + (x * cs - y * sn) / ku, f.cv + (x * sn + y * cs) / kv];
     });
   }else{
-    const d0 = Math.hypot(f.X0 - f.CX, f.Y0 - f.CY) || 1, s = Math.hypot(X - f.CX, Y - f.CY) / d0;
+    const d0 = Math.hypot(f.X0 - f.CX, f.Y0 - f.CY) || 1;
+    const typed = f.number && Number(f.number);
+    const s = f.number && Number.isFinite(typed) ? typed : Math.hypot(X - f.CX, Y - f.CY) / d0;
     const su = f.axis === 'y' ? 1 : s, sv = f.axis === 'x' ? 1 : s;
     armUvApply(f.start, p => [f.cu + (p.u - f.cu) * su, f.cv + (p.w - f.cv) * sv]);
   }
@@ -368,7 +383,8 @@ function armUvXfEnd(cancel){
   const e = ARM.uvEd, f = e.xf;
   e.xf = null;
   if(!f) return;
-  if(cancel){ armUvApply(f.start, p => [p.u, p.w]); f.start.moved = false; armUvPush(); }
+  window.removeEventListener('mousemove', f.track);
+  if(cancel){ armUvApply(f.start, p => [p.u, p.w], false); f.start.moved = false; armUvPush(); }
   else if(f.start.moved) armUvCommit();
   armUvPaint();
 }
@@ -379,13 +395,13 @@ function armUvSnapshot(){
   const e = ARM.uvEd;
   return {at: [...e.sel].map(i => ({i, u: e.pts[i].u, w: e.pts[i].w})), moved: false};
 }
-function armUvApply(start, fn){
+function armUvApply(start, fn, snap=true){
   const e = ARM.uvEd, g = armUvGeom(document.getElementById('armUvCanvas'));
   // a texel of the sheet shown, in UV units
   const perU = g.sh.span === 2 ? g.iw / 2 : g.iw;
   for(const s of start.at){
     let [u, w] = fn(s);
-    if(e.snap && perU > 1){ u = Math.round(u * perU) / perU; w = Math.round(w * (g.ih || 1)) / (g.ih || 1); }
+    if(snap && e.snap && !(e.xf && e.xf.op === 's' && e.xf.number) && perU > 1){ u = Math.round(u * perU) / perU; w = Math.round(w * (g.ih || 1)) / (g.ih || 1); }
     e.pts[s.i].u = u; e.pts[s.i].w = w;
     if(u !== s.u || w !== s.w) start.moved = true;
   }

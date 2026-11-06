@@ -16,14 +16,19 @@ function armExtrasInto(p){
   const keep = o => o ? JSON.parse(JSON.stringify(o)) : null;
   const card = state.cg ? Object.assign({}, state.cg) : null;
   if(card){ for(const k of ['saved', 'err', 'givePlan', 'units', 'poseNote', 'poseNote2']) delete card[k]; }
-  p.extra = {cam: keep(ARM.cam), card: keep(card), exp: state.armExp ? keep(state.armExp.settings) : null};
+  p.extra = {cam: keep(ARM.cam), card: keep(card), exp: state.armExp ? keep(state.armExp.settings) : null,
+    exportOutput: state.armExp ? keep({folder: state.armExp.folder, stem: state.armExp.stem,
+      mod: state.armExp.mod ? Object.fromEntries(Object.entries(state.armExp.mod).filter(([k]) =>
+        !['data','plan','written','folders'].includes(k))) : null}) : null};
 }
 /* And taken back out when a session is opened. */
 function armExtrasFrom(p){
   const x = (p && p.extra) || {};
   if(x.cam && Array.isArray(x.cam.target)) ARM.cam = Object.assign({}, ARM.cam, x.cam);
   if(x.card) state.cg = Object.assign(cg(), x.card);
-  if(x.exp){ state.armExp = null; armExp().settings = Object.assign(armExp().settings, x.exp); }
+  state.armExp = null;
+  if(x.exp) armExp().settings = Object.assign(armExp().settings, x.exp);
+  if(x.exportOutput) Object.assign(armExp(), x.exportOutput);
 }
 
 /* On the way out: the project as it is, then goodbye (a beacon survives
@@ -77,6 +82,7 @@ async function armSessOpen(){
       <button class="mini" onclick="armSessRevert('${esc(q1(b.file))}')">${tt('armory.sess_revert')}</button></div>`).join('');
   modal.innerHTML = `<div class="armimp">
     <h3>${tt('armory.sess_title')}</h3>
+    <button class="mini primary" onclick="armSessSaveCurrent()">${tt('common.save')}</button>
     <div class="count">${v.name ? tt('armory.sess_current', {name: esc(v.name)}) : tt('armory.sess_unsaved')}</div>
     <div class="armexprow"><input id="armSessName" placeholder="${esc(tt('armory.sess_name'))}" value="${esc(armProj().name || '')}">
       <button class="primary" onclick="armSessSave()">${tt('armory.sess_save_as')}</button></div>
@@ -91,6 +97,15 @@ async function armSessOpen(){
 async function armSessPost(body){
   try{ return await api.post('/api/armory/sessions', body); }
   catch(e){ toast(errText(e), 6000); return null; }
+}
+async function armSessSaveCurrent(){
+  if(!(armProj().session || {}).id){ await armSessOpen(); return; }
+  clearTimeout(ARM.saveTimer);
+  armUndoNote(); armExtrasInto(armProj());
+  try{
+    await api.post('/api/armory/project', {project: armProj()});
+    toast(tt('armory.session_saved'));
+  }catch(err){ toast(errText(err), 6000); }
 }
 async function armSessSave(){
   const name = ((document.getElementById('armSessName') || {}).value || '').trim();

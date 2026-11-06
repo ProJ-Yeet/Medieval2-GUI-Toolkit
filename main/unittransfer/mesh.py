@@ -261,6 +261,7 @@ class MeshGroup:
     #: ``.mesh`` never does - its modeldb entry does - so this stays empty for
     #: one and carries the material's path for a ``.cas``.
     texture: str = ""
+    normal_texture: str = ""  # external material normal map; not a game mesh field
     #: the byte after the flag in the file, kept so a model writes back as it
     #: was read (Phase 95d); 0 in every model measured
     byte: int = 0

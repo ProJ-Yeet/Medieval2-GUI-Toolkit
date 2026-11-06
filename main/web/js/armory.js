@@ -162,7 +162,7 @@ function armUndo(redo){
 /* Puts a project back, keeping how the page shows it. */
 function armUndoApply(next){
   const keep = armProj();
-  next.ui = keep.ui; next.anim = keep.anim;
+  next.ui = keep.ui; next.anim = keep.anim; next.extra = keep.extra; next.session = keep.session;
   for(const a of next.assets || []){
     const was = (keep.assets || []).find(x => armAssetKey(x) === armAssetKey(a));
     if(was){ a.open = was.open; a.show = was.show; }
@@ -260,6 +260,7 @@ function armPaintBar(){
     <button class="mini" onclick="armTexOpen()" title="${esc(tt('armory.textures_title'))}">🖼 ${tt('armory.textures')}</button>
     <button class="mini" onclick="armUvOpen()" title="${esc(tt('armory.uv_edit_title'))}">${tt('armory.uv_edit')}</button>
     <button class="mini" onclick="armFrameAll()" title="${esc(tt('armory.frame_all_title'))}">${tt('armory.frame_all')}</button>
+    <button class="mini primary" onclick="armSessSaveCurrent()">${tt('common.save')}</button>
     <button class="mini" onclick="armSessOpen()" title="${esc(tt('armory.sess_button_title'))}">${tt('armory.sess_button')}</button>
     <button class="mini" onclick="armLibOpen()" title="${esc(tt('armory.lib_open_title'))}">${tt('armory.lib_open')}</button>
     <button class="mini" onclick="armNew()">${tt('armory.new_project')}</button>

@@ -345,6 +345,14 @@ class _Sheets:
                 out = list(_entry_normals(a, self.mod_of))
             except Exception:          # a mod since removed: no normal map
                 out = ["", ""]
+        group = int(pc.get("group") or 0)
+        overrides = a.get("textures") or {}
+        if (a.get("kind") == "external" and not pc.get("sheet")
+                and not (overrides.get(str(group)) or overrides.get(group))):
+            try:
+                out[0] = armory.external_normal_texture(a, int(pc.get("group") or 0))
+            except (armory.ArmoryError, IndexError):
+                pass
         for i, sheet in enumerate((main, att)):
             if not out[i] and sheet:
                 out[i] = _beside(sheet)
@@ -1270,7 +1278,7 @@ def plan(project: dict, mod_of, settings: Optional[dict] = None, image_of: Image
         for b in blocks:
             own = block_scale.get(b.id)
             if own:
-                b.scale *= max(0.05, min(1.0, float(own)))
+                b.scale *= max(0.05, min(10.0, float(own)))
         st = dict(settings, block_sheet=block_sheet)
         rooms = {"main": 0.0, "attach": 0.0}
         order = sorted(blocks, key=lambda b: -(b.src_w * b.src_h))
@@ -1485,7 +1493,7 @@ def normal_pixels(rgba: np.ndarray, setting: dict) -> np.ndarray:
     return out
 
 
-def dds_with_mipmaps(im: Image.Image) -> bytes:
+def dds_with_mipmaps(im: Image.Image, normal: bool = False) -> bytes:
     """A DXT5 ``.dds`` with its whole mipmap chain down to 1x1, each level
     made from the full image. Measured on 800 of Heirs of Elendil's unit
     sheets: 797 carry a full chain (11 levels at 1024, 12 at 2048)."""
@@ -1497,7 +1505,9 @@ def dds_with_mipmaps(im: Image.Image) -> bytes:
         levels.append(buf.getvalue())
         if cur.width == 1 and cur.height == 1:
             break
-        cur = im.resize((max(1, cur.width // 2), max(1, cur.height // 2)), Image.LANCZOS)
+        size = (max(1, cur.width // 2), max(1, cur.height // 2))
+        cur = (Image.merge("RGBA", tuple(band.resize(size, Image.LANCZOS) for band in im.split()))
+               if normal else im.resize(size, Image.LANCZOS))
     head = bytearray(levels[0][:128])
     flags, = struct.unpack_from("<I", head, 8)
     struct.pack_into("<I", head, 8, flags | 0x20000)            # DDSD_MIPMAPCOUNT
@@ -1507,11 +1517,11 @@ def dds_with_mipmaps(im: Image.Image) -> bytes:
     return bytes(head) + b"".join(lv[128:] for lv in levels)
 
 
-def _write_sheet(out: Path, name: str, canvas: np.ndarray) -> List[str]:
+def _write_sheet(out: Path, name: str, canvas: np.ndarray, normal: bool = False) -> List[str]:
     from . import sprites
     im = Image.fromarray(canvas, "RGBA")
     im.save(out / f"{name}.png")
-    (out / f"{name}.texture").write_bytes(sprites.dds_to_texture(dds_with_mipmaps(im)))
+    (out / f"{name}.texture").write_bytes(sprites.dds_to_texture(dds_with_mipmaps(im, normal=normal)))
     return [f"{name}.texture", f"{name}.png"]
 
 
@@ -1595,7 +1605,14 @@ def _block_pixels(st: dict, b: Block, margin: int, image_of: ImageOf,
         u0, v0 = ox - margin, oy - margin
         coeffs = (c / k, s / k, (c * u0 + s * v0) / k + pad,
                   -s / k, c / k, (-s * u0 + c * v0) / k + pad)
-        im = Image.fromarray(src).transform((tw, th), Image.AFFINE, coeffs, resample=Image.BICUBIC)
+        im = Image.fromarray(src)
+        if use_img:
+            # Normal alpha is data (often zero), not coverage. Pillow's RGBA
+            # filtering premultiplies RGB by alpha and erases transparent normals.
+            im = Image.merge("RGBA", tuple(band.transform((tw, th), Image.AFFINE, coeffs,
+                             resample=Image.BICUBIC) for band in im.split()))
+        else:
+            im = im.transform((tw, th), Image.AFFINE, coeffs, resample=Image.BICUBIC)
         px = np.asarray(im)
     if b.rot:
         px = np.rot90(px, k=-1)
@@ -1624,7 +1641,9 @@ def _source_normal(st: dict, b: Block) -> Optional[np.ndarray]:
     if n is None:
         return None
     if n.shape[:2] != img.shape[:2]:
-        n = np.asarray(Image.fromarray(n).resize((img.shape[1], img.shape[0]), Image.BILINEAR))
+        im = Image.fromarray(n)
+        n = np.asarray(Image.merge("RGBA", tuple(band.resize((img.shape[1], img.shape[0]),
+                       Image.BILINEAR) for band in im.split())))
     return n
 
 
@@ -1648,7 +1667,7 @@ def turn_normals(px: np.ndarray, angle: float, quarter: bool) -> np.ndarray:
     return out
 
 
-def render_sheets(st: dict, normals: dict, image_of: ImageOf) -> Dict[str, Tuple[np.ndarray, np.ndarray]]:
+def render_sheets(st: dict, normals: dict, image_of: ImageOf, progress=None) -> Dict[str, Tuple[np.ndarray, np.ndarray]]:
     """Each used sheet as the bake writes it: ``{sheet: (art, normal map)}``.
 
     The normal map, by ``normals["mode"]``: ``skip`` flat, ``generic`` /
@@ -1658,6 +1677,8 @@ def render_sheets(st: dict, normals: dict, image_of: ImageOf) -> Dict[str, Tuple
     per = st["per"]
     mode = (normals or {}).get("mode") or "skip"
     out: Dict[str, Tuple[np.ndarray, np.ndarray]] = {}
+    total = max(1, sum(len(per[s]["blocks"]) * 2 for s in SHEETS if per[s]["size"]))
+    completed = 0
     for s in SHEETS:
         size = per[s]["size"]
         if not size:
@@ -1668,6 +1689,9 @@ def render_sheets(st: dict, normals: dict, image_of: ImageOf) -> Dict[str, Tuple
         nmap[:] = NORMAL_FLAT
         copied = set()                 # blocks whose source normal map was laid
         for b in per[s]["blocks"]:
+            completed += 1
+            if progress:
+                progress(20 + int(50 * completed / total), "Baking textures and normals")
             px = _block_pixels(st, b, margin, image_of)
             x, y = b.x - margin, b.y - margin
             h, w = px.shape[:2]
@@ -1686,6 +1710,9 @@ def render_sheets(st: dict, normals: dict, image_of: ImageOf) -> Dict[str, Tuple
         # the generated parts: each block's own part made from its baked art
         # with its object's setting, the margin included; flat where no art is
         for b in per[s]["blocks"]:
+            completed += 1
+            if progress:
+                progress(20 + int(50 * completed / total), "Baking textures and normals")
             if mode == "source":
                 if id(b) in copied:
                     continue
@@ -1788,7 +1815,7 @@ def _new_uv(b: Block, sx: float, sy: float, size: int, sheet: str) -> Tuple[floa
 
 
 def bake(project: dict, mod_of, settings: Optional[dict], out_dir: str, stem: str,
-         image_of: ImageOf = default_image_of, scope: Optional[dict] = None) -> dict:
+         image_of: ImageOf = default_image_of, scope: Optional[dict] = None, progress=None) -> dict:
     """The model and its new sheets, written to ``out_dir``.
 
     Writes ``<stem>.mesh``, ``<stem>.texture`` (and ``<stem>_attach.texture``
@@ -1797,8 +1824,11 @@ def bake(project: dict, mod_of, settings: Optional[dict], out_dir: str, stem: st
     Refuses while a sheet still has blocks that do not fit.
     """
     stem = re.sub(r"[^A-Za-z0-9_\-]", "_", (stem or "").strip()) or "armory_model"
+    report = progress or (lambda pct, label: None)
+    report(0, "Planning UVs")
     st: dict = {}
     answer = plan(project, mod_of, settings, image_of, scope, _state=st)
+    report(20, "UVs packed")
     if not answer["fits"]:
         raise BakeError(_i18n.msg("eng.armbake.does_not_fit", "a sheet still has islands that do not fit; scale, move or lower the margin first"))
     out = Path(out_dir)
@@ -1810,11 +1840,12 @@ def bake(project: dict, mod_of, settings: Optional[dict], out_dir: str, stem: st
     # the sheets, rendered exactly as the preview renders them
     written = []
     sheet_files = {}
-    for s_, (canvas, nmap) in render_sheets(st, normals, image_of).items():
+    for s_, (canvas, nmap) in render_sheets(st, normals, image_of, progress=report).items():
+        report(70 if s_ == "main" else 80, "Writing texture files")
         name = stem if s_ == "main" else stem + "_attach"
         written += _write_sheet(out, name, canvas)
         sheet_files[s_] = name
-        written += _write_sheet(out, name + "_normal", nmap)
+        written += _write_sheet(out, name + "_normal", nmap, normal=True)
     # the UVs: each vertex goes where its island's block went
     new_uv: Dict[int, Dict[int, Tuple[float, float]]] = {}
     for b in blocks:
@@ -1828,10 +1859,12 @@ def bake(project: dict, mod_of, settings: Optional[dict], out_dir: str, stem: st
                 sx = (om.uvs[v * 2] - base) * W / span
                 sy = om.uvs[v * 2 + 1] * H
                 d[v] = _new_uv(b, sx, sy, size, b.sheet)
+    report(95, "Writing model")
     model = assemble(objs, meshes, new_uv, bone_table(objs, armory.project_assets(project), mod_of))
     from . import meshwrite
     meshwrite.write_mesh(model, out / f"{stem}.mesh")
     written.insert(0, f"{stem}.mesh")
+    report(100, "Bake complete")
     return {"folder": str(out), "files": written, "vertices": model.vertices,
             "triangles": model.triangles, "groups": len(model.groups),
             "sheets": {s: per[s]["size"] for s in SHEETS if per[s]["size"]},

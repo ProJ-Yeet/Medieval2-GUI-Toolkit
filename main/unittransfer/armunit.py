@@ -130,6 +130,37 @@ def baked_files(folder: str, stem: str) -> Dict[str, str]:
     return out
 
 
+def existing_export(folder: str, stem: str) -> dict:
+    from . import mesh
+    d = Path(folder or "")
+    if not folder.strip() or not d.is_dir():
+        return {"found": False, "candidates": []}
+    candidates = sorted(p.stem for p in d.glob("*.mesh"))
+    if not (d / f"{stem}.mesh").is_file() and len(candidates) == 1:
+        stem = candidates[0]
+    files = baked_files(folder, stem) if (d / f"{stem}.mesh").is_file() else {}
+    if not files:
+        return {"found": False, "candidates": candidates}
+    model = mesh.read_mesh(Path(files["mesh_src"]), layout=True)
+    required = ["texture_src", "normal_src"]
+    if any(g.sheets in ("attach", "both") for g in model.groups):
+        required += ["attach_texture_src", "attach_normal_src"]
+    missing = [k for k in required if k not in files]
+    if missing:
+        return {"found": False, "candidates": candidates, "missing": missing}
+    return {"found": True, "stem": stem, "folder": str(d),
+            "files": [Path(f).name for f in files.values()], "vertices": model.vertices,
+            "triangles": model.triangles, "groups": len(model.groups), "existing": True}
+
+
+def data_folder(data: Path, chosen: str) -> str:
+    """A folder chosen by the picker as a path relative to this mod's data."""
+    try:
+        return Path(chosen).resolve().relative_to(data.resolve()).as_posix()
+    except ValueError:
+        raise InstallError(_i18n.msg("eng.armunit.outside_data", "choose a folder inside this mod's data folder")) from None
+
+
 def _new_model(req: dict, templates: Dict[str, dict], assign: str = "") -> dict:
     name = (req.get("name") or "").strip().lower()
     clone = (req.get("clone_from") or "").strip().lower()

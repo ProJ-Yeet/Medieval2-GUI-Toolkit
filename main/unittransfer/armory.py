@@ -444,11 +444,12 @@ def _read_gltf(path: Path) -> Tuple[mesh.MeshFile, Dict[str, bytes]]:
             else:
                 names.append(uri)
 
-    def material_texture(mi) -> str:
+    def material_texture(mi, normal=False) -> str:
         if mi is None:
             return ""
         mat = gltf.get("materials", [])[mi]
-        tex = (mat.get("pbrMetallicRoughness", {}).get("baseColorTexture") or {}).get("index")
+        tex = ((mat.get("normalTexture") if normal else
+                mat.get("pbrMetallicRoughness", {}).get("baseColorTexture")) or {}).get("index")
         if tex is None:
             return ""
         src = gltf.get("textures", [])[tex].get("source")
@@ -485,6 +486,7 @@ def _read_gltf(path: Path) -> Tuple[mesh.MeshFile, Dict[str, bytes]]:
                 name = f"{name}_{pi + 1}"
             b.add(name, pos, nrm, uv, tris, texture=material_texture(prim.get("material")),
                   joints=joints, weights=weights, bone_names=bone_names, mirror=mirror)
+            b.m.groups[-1].normal_texture = material_texture(prim.get("material"), normal=True)
     return b.done(), images
 
 
@@ -707,6 +709,20 @@ def read_external(path_text: str) -> Tuple[str, mesh.MeshFile, dict]:
     with _EXT_LOCK:
         _EXTERNAL[key] = (stamp, m, textures)
     return external_id(path), m, textures
+
+
+def external_normal_texture(asset: dict, group: int) -> str:
+    """Resolve the imported material's explicit normal map, including GLB images."""
+    path = Path(asset.get("path") or "")
+    _, model, _ = read_external(str(path))
+    named = model.groups[group].normal_texture
+    if not named:
+        return ""
+    packed = ARMORY_DIR / "external" / external_id(path)[4:] / Path(named).name
+    if packed.is_file():
+        return str(packed)
+    found = _find_texture(path.parent, named, ())
+    return str(found) if found else ""
 
 
 def _mesh_sheets(path: Path) -> Optional[Tuple[Optional[Path], Optional[Path]]]:
