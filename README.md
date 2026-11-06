@@ -636,7 +636,7 @@ their code**
 * [Bare Geomod](https://www.moddb.com/mods/bare-geomod-and-tools) by Sinople and Gigantus
 * [TWMapReader](https://www.twcenter.net/threads/tw-map-reader-v2-24-1-jul-2015-update.438278/) by Withwnar
 * [Armory Studio 3D](https://github.com/muhamadridhomm/armorystudio3d) by Mreedmm
-* [RTW / M2TW Campaign Editor](https://github.com/MasterOogwayHomebrew/RTW-M2TW-Campaign-Editor) by Pfadfinder-Adam (Master Oogway), whose report relay Report a problem follows
+* [Rome and Medieval Campaign Editor](https://github.com/Pfadfinder-Adam/RTW-M2TW-Campaign-Editor) by Pfadfinder-Adam (Master Oogway), whose report relay Report a problem follows
 
 **Sponsored by** FeatherLeaf and Lupinemaverick
 

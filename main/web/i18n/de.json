@@ -11093,6 +11093,7 @@
  "armory.sess_saved_as": "Als Sitzung {name} gespeichert",
  "armory.sess_loaded": "{name} geöffnet",
  "core.armory_studio_3d_by_mreedmm": "<a href=\"https://github.com/muhamadridhomm/armorystudio3d\" target=\"_blank\" style=\"color:var(--accent2)\">Armory Studio 3D</a> von <b>Mreedmm</b>",
+ "core.rmce_by_pfadfinder_adam": "<a href=\"https://github.com/Pfadfinder-Adam/RTW-M2TW-Campaign-Editor\" target=\"_blank\" style=\"color:var(--accent2)\">Rome and Medieval Campaign Editor</a> von <b>Pfadfinder-Adam</b>",
  "core.campaign_map_2": "(Kampagnenkarte)",
  "core.lupinemaverick": "Lupinemaverick",
  "core.mreedmm_armory_studio": "<b>Mreedmm</b> <span class=\"count\">(Armory Studio)</span>",

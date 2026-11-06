@@ -3916,6 +3916,7 @@
  "core.area_effects": "Effets de zone",
  "core.armory_studio": "Armory Studio",
  "core.armory_studio_3d_by_mreedmm": "<a href=\"https://github.com/muhamadridhomm/armorystudio3d\" target=\"_blank\" style=\"color:var(--accent2)\">Armory Studio 3D</a> par <b>Mreedmm</b>",
+ "core.rmce_by_pfadfinder_adam": "<a href=\"https://github.com/Pfadfinder-Adam/RTW-M2TW-Campaign-Editor\" target=\"_blank\" style=\"color:var(--accent2)\">Rome and Medieval Campaign Editor</a> par <b>Pfadfinder-Adam</b>",
  "core.armory_studio_hint": "assembler un modèle à partir de pièces d’autres modèles, depuis un mod installé ou un fichier",
  "core.back_to": "← Retour à {label}",
  "core.bare_geomod_by_sinople_and_gigantus": "<a href=\"https://www.moddb.com/mods/bare-geomod-and-tools\" target=\"_blank\" style=\"color:var(--accent2)\">Bare Geomod</a> par <b>Sinople</b> et <b>Gigantus</b>",
