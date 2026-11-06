@@ -1,40 +1,31 @@
-"""A faction's whole emblem set from one picture (96e6).
+"""A faction's whole set of emblem pictures from one source picture.
 
-Taken from the Pfadfinder-Adam (formerly MasterOogwayHomebrew) RTW / M2TW
-Campaign Editor's ``emblem.py``, with its author's permission, and fitted to
-Medieval II's own files and this toolkit's plan / apply.
+Given one picture, this makes every emblem a faction has: the menu buttons in
+their four states, the faction-select symbol, the in-game panel symbols and the
+loading-screen logos. Each is made at the size the mod already uses, with the
+emblem placed where the old one sat. The mouse-over, selected and greyed states
+copy how the mod's own old pictures differ from their normal one. plan() shows
+old beside new and writes nothing; apply() writes TGA files, backs up what it
+replaces and logs the change so Undo puts every byte back.
 
-The game shows a faction's emblem in many places and sizes: the campaign
-menus' buttons (24 and 48 px, each normal, mouse over, selected and greyed
-out), the faction-select screen's 80 px symbol, the in-game panels' symbol and
-the loading screen's logo. One picture makes every one of them, each at the
-size the mod (or the base game) already uses, fitted into the place the old
-emblem took so a button's margin and a selected button's glow stay free. The
-states are made the way the mod's own are: mouse over brighter, selected
-brighter with the old picture's glow redrawn round the new shape, greyed out
-grey and darker - by how much is measured from the faction's old pictures, so
-a mod with another look keeps it.
-
-Nothing is written by :func:`plan`; :func:`apply` writes TGA files with a
-backup and a log record, so the Log's Undo takes it back. The faction's
-``logo_index`` sprite (a sheet the game packs) is a separate job.
+Written independently from a description of the behaviour (2026-11-06); the
+feature follows Pfadfinder-Adam's campaign editor.
 """
 from __future__ import annotations
 
 import base64
 import io
+import os
 import shutil
 import statistics
 import time
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
 
-from . import config, gamepack
+from . import config, gamepack, logutil
 from . import i18n as _i18n
-from .logutil import file_op, log
 
-#: (kind, template, the size the game uses when neither the mod nor the game has one)
-TARGETS: Tuple[Tuple[str, str, Tuple[int, int]], ...] = (
+# (kind, path under data/, default size)
+TARGETS = (
     ("button24", "menu/symbols/fe_buttons_24/symbol24_{f}{v}.tga", (24, 24)),
     ("button48", "menu/symbols/fe_buttons_48/symbol48_{f}{v}.tga", (48, 48)),
     ("select80", "menu/symbols/fe_symbols_80/{f}.tga", (80, 80)),
@@ -43,226 +34,284 @@ TARGETS: Tuple[Tuple[str, str, Tuple[int, int]], ...] = (
     ("loading128", "loading_screen/symbols/symbol128_{f}.tga", (128, 128)),
     ("loading64", "loading_screen/symbols/symbol64_{f}.tga", (64, 64)),
 )
-#: the button states and their file suffixes; only the buttons have them
+
+# file suffix, state name
 STATES = (("", None), ("_roll", "roll"), ("_select", "select"), ("_grey", "grey"))
+
+# brightness factors to fall back on when the old pictures cannot be measured
 DEFAULT = {"roll": 1.4, "grey": 0.75}
-#: kinds the game needs even when neither the mod nor the game has them
+
+# kinds made even when no picture of them exists yet
 ALWAYS = {"button24", "button48", "loading128"}
+
+_SOLID = 40  # alpha at or above this counts as part of the shape
 
 
 class EmblemError(Exception):
-    def __init__(self, message: str):
+    def __init__(self, message):
         super().__init__(message)
         self.message = message
 
 
-def _open(path: Path):
+def _open(path):
+    """The picture at path as RGBA, or None when it cannot be read."""
     from PIL import Image
     try:
-        return Image.open(path).convert("RGBA")
-    except (OSError, ValueError):
+        with Image.open(path) as im:
+            return im.convert("RGBA")
+    except Exception:
         return None
 
 
-def targets(mod, slot: str) -> List[Dict]:
-    """Every emblem picture of ``slot``: ``{rel, kind, state, size, where}``,
-    ``where`` saying whether the mod has it, the game has it, or it is new."""
+def targets(mod, slot):
+    """One dict per picture to write, in TARGETS order, buttons by state."""
     out = []
-    for kind, tmpl, size in TARGETS:
+    for kind, tmpl, default in TARGETS:
         states = STATES if kind.startswith("button") else (("", None),)
         for suffix, state in states:
             rel = tmpl.format(f=slot, v=suffix)
             path, where = gamepack.lookup(rel, mod)
-            if not path and kind not in ALWAYS:
-                continue
-            old = _open(path) if path else None
-            out.append({"rel": rel, "kind": kind, "state": state,
-                        "size": list(old.size if old else size),
-                        "where": where or "new", "path": str(path) if path else ""})
+            if path:
+                im = _open(path)
+                size = list(im.size) if im is not None else list(default)
+                out.append({"rel": rel, "kind": kind, "state": state, "size": size,
+                            "where": where, "path": str(path)})
+            elif kind in ALWAYS:
+                out.append({"rel": rel, "kind": kind, "state": state, "size": list(default),
+                            "where": "new", "path": ""})
     return out
 
 
-def measure(normal, other, variant: str) -> Optional[float]:
-    """How much brighter (roll / select) or grey-dark (grey) ``other`` is than
-    ``normal``, the median over the pixels both cover; None when it cannot be told."""
+def measure(normal, other, variant):
+    """The median brightness ratio of other against normal, or None."""
     if normal is None or other is None or normal.size != other.size:
         return None
-    vals = []
-    for p, q in zip(normal.getdata(), other.getdata()):
-        if p[3] > 200 and q[3] > 200:
-            if variant == "grey":
-                lum = 0.299 * p[0] + 0.587 * p[1] + 0.114 * p[2]
-                if lum > 20:
-                    vals.append(q[0] / lum)
-            elif sum(p[:3]) > 60:
-                vals.append(sum(q[:3]) / float(sum(p[:3])))
-    return statistics.median(vals) if len(vals) > 20 else None
+    ratios = []
+    for a, b in zip(normal.getdata(), other.getdata()):
+        if a[3] <= 200 or b[3] <= 200:
+            continue
+        if variant == "grey":
+            lum = 0.299 * a[0] + 0.587 * a[1] + 0.114 * a[2]
+            if lum > 20:
+                ratios.append(b[0] / lum)
+        else:
+            base = a[0] + a[1] + a[2]
+            if base > 60:
+                ratios.append((b[0] + b[1] + b[2]) / base)
+    if len(ratios) <= 20:
+        return None
+    return statistics.median(ratios)
 
 
-def footprint(old) -> Optional[Tuple[int, int, int, int]]:
-    """Where the old picture's emblem lies (its solid part): (x, y, w, h)."""
+def footprint(old):
+    """(x, y, w, h) of the solid part of an RGBA image, or None."""
     if old is None:
         return None
-    box = old.split()[3].point(lambda a: 255 if a >= 40 else 0).getbbox()
-    return (box[0], box[1], box[2] - box[0], box[3] - box[1]) if box else None
+    mask = old.getchannel("A").point(lambda v: 255 if v >= _SOLID else 0)
+    box = mask.getbbox()
+    if box is None:
+        return None
+    return (box[0], box[1], box[2] - box[0], box[3] - box[1])
 
 
 def fit(src, size, box=None):
-    """``src`` at ``size``, its shape kept, fitted into ``box`` (the old
-    emblem's place) or the whole picture, centred on a clear ground."""
+    """src cropped to its shape, scaled to fill box as far as it fits, centred."""
     from PIL import Image
-    im = src.convert("RGBA")
-    solid = footprint(im)
-    if solid:
-        x, y, w, h = solid
-        im = im.crop((x, y, x + w, y + h))
-    bx, by, bw, bh = box or (0, 0, size[0], size[1])
-    k = min(bw / im.size[0], bh / im.size[1])
-    new = im.resize((max(1, round(im.size[0] * k)), max(1, round(im.size[1] * k))), Image.LANCZOS)
-    out = Image.new("RGBA", tuple(size), (0, 0, 0, 0))
-    out.paste(new, (bx + (bw - new.size[0]) // 2, by + (bh - new.size[1]) // 2))
+    w, h = size
+    out = Image.new("RGBA", (w, h), (0, 0, 0, 0))
+    fp = footprint(src)
+    if fp is None:
+        return out
+    bx, by, bw, bh = box if box else (0, 0, w, h)
+    crop = src.crop((fp[0], fp[1], fp[0] + fp[2], fp[1] + fp[3]))
+    k = min(bw / crop.width, bh / crop.height)
+    nw = max(1, round(crop.width * k))
+    nh = max(1, round(crop.height * k))
+    crop = crop.resize((nw, nh), Image.LANCZOS)
+    out.paste(crop, (bx + (bw - nw) // 2, by + (bh - nh) // 2))
     return out
 
 
-def _bright(im, k):
+def _merge(r, g, b, a):
     from PIL import Image
-    r, g, b, a = im.split()
-    r, g, b = (c.point(lambda x: min(255, int(x * k + 0.5))) for c in (r, g, b))
     return Image.merge("RGBA", (r, g, b, a))
 
 
-def _grey(im, k):
-    from PIL import Image
+def _brighten(im, k):
     r, g, b, a = im.split()
-    lum = Image.merge("RGB", (r, g, b)).convert("L").point(lambda x: min(255, int(x * k + 0.5)))
-    return Image.merge("RGBA", (lum, lum, lum, a))
+    lut = [min(255, round(i * k)) for i in range(256)]
+    return _merge(r.point(lut), g.point(lut), b.point(lut), a)
 
 
-def _glow(old_normal, old_select, new):
-    """A selected button's glow round the NEW shape: its colour, strength and
-    width taken from the old selected picture where the old normal one is clear."""
-    from PIL import Image, ImageChops, ImageFilter, ImageStat
+def _grey(im, k):
+    a = im.getchannel("A")
+    lut = [min(255, round(i * k)) for i in range(256)]
+    lum = im.convert("L").point(lut)
+    return _merge(lum, lum, lum, a)
+
+
+def _halo(old_normal, old_select):
+    """(colour, strength, width) of the glow in the old selected picture."""
     if old_normal is None or old_select is None or old_normal.size != old_select.size:
         return None
-    clear = old_normal.split()[3].point(lambda a: 255 if a < 40 else 0)
-    halo = ImageChops.multiply(old_select.split()[3], clear)
-    if not halo.getbbox():
+    n_alpha = old_normal.getchannel("A").getdata()
+    sel = [p for p, na in zip(old_select.getdata(), n_alpha) if na < _SOLID and p[3] > 0]
+    if not sel:
         return None
-    st = ImageStat.Stat(old_select.convert("RGB"), halo.point(lambda a: 255 if a > 30 else 0))
-    colour = tuple(int(c) for c in st.mean)
-    strength = max(halo.getextrema()[1], 1)
-    width = max(1, int(round(halo.point(lambda a: 255 if a > 30 else 0).histogram()[255] /
-                             max(1.0, 2.0 * (old_normal.size[0] + old_normal.size[1])))))
-    shape = new.split()[3].point(lambda a: 255 if a >= 40 else 0)
-    grown = shape.filter(ImageFilter.MaxFilter(2 * width + 1)).filter(ImageFilter.GaussianBlur(width * 0.7))
-    glow = Image.new("RGBA", new.size, colour + (0,))
-    glow.putalpha(grown.point(lambda a: a * strength // 255))
-    return glow
+    total = sum(p[3] for p in sel)
+    colour = tuple(round(sum(p[i] * p[3] for p in sel) / total) for i in range(3))
+    strength = max(p[3] for p in sel)
+    w, h = old_normal.size
+    width = max(1, round(len(sel) / (2 * (w + h))))
+    return colour, strength, width
 
 
-def build(src, tgts: List[Dict]) -> Dict[str, object]:
-    """``{rel: new picture}`` for every target, from one source picture."""
+def _glow(shape, halo):
+    """A glow layer round the solid area of shape, from a measured halo."""
+    from PIL import Image, ImageFilter
+    colour, strength, width = halo
+    mask = shape.getchannel("A").point(lambda v: 255 if v >= _SOLID else 0)
+    mask = mask.filter(ImageFilter.MaxFilter(2 * width + 1))
+    mask = mask.filter(ImageFilter.GaussianBlur(max(0.5, width / 2)))
+    mask = mask.point(lambda v: round(v * strength / 255))
+    layer = Image.new("RGBA", shape.size, tuple(colour) + (0,))
+    layer.putalpha(mask)
+    return layer
+
+
+def build(src, tgts):
+    """One new picture per target, at the target's size."""
     from PIL import Image
-    olds = {t["rel"]: (_open(Path(t["path"])) if t["path"] else None) for t in tgts}
-    normal_of = {(t["kind"]): t for t in tgts if t["state"] is None}
+    olds = {t["rel"]: (_open(t["path"]) if t["path"] else None) for t in tgts}
+    normals = {t["kind"]: t for t in tgts if t["state"] is None}
+    new_normal = {}
     out = {}
+
+    def normal_for(t):
+        kind = t["kind"]
+        if kind not in new_normal:
+            ref = olds.get(normals.get(kind, t)["rel"])
+            size = tuple(t["size"])
+            box = footprint(ref) if ref is not None and ref.size == size else None
+            new_normal[kind] = fit(src, size, box)
+        return new_normal[kind]
+
     for t in tgts:
-        size = tuple(t["size"])
-        n0 = normal_of.get(t["kind"])
-        ref = olds.get(n0["rel"]) if n0 else olds.get(t["rel"])
-        box = footprint(ref) if ref is not None and ref.size == size else None
-        base = fit(src, size, box)
-        v = t["state"]
-        if v is None:
+        base = normal_for(t)
+        state = t["state"]
+        old_n = olds.get(normals[t["kind"]]["rel"]) if t["kind"] in normals else None
+        old_t = olds.get(t["rel"])
+        if state is None:
             out[t["rel"]] = base
-            continue
-        old_n = olds.get(n0["rel"]) if n0 else None
-        old_v = olds.get(t["rel"])
-        if v == "grey":
-            out[t["rel"]] = _grey(base, measure(old_n, old_v, "grey") or DEFAULT["grey"])
-            continue
-        lit = _bright(base, measure(old_n, old_v, "roll") or DEFAULT["roll"])
-        if v == "select":
-            glow = _glow(old_n, old_v, lit)
-            if glow is not None:
-                under = Image.new("RGBA", size, (0, 0, 0, 0))
-                under.alpha_composite(glow)
-                under.alpha_composite(lit)
-                lit = under
-        out[t["rel"]] = lit
+        elif state == "grey":
+            k = measure(old_n, old_t, "grey")
+            out[t["rel"]] = _grey(base, DEFAULT["grey"] if k is None else k)
+        else:
+            k = measure(old_n, old_t, "roll")
+            lit = _brighten(base, DEFAULT["roll"] if k is None else k)
+            if state == "select":
+                halo = _halo(old_n, old_t)
+                if halo and old_t.size == base.size:
+                    lit = Image.alpha_composite(_glow(base, halo), lit)
+            out[t["rel"]] = lit
     return out
 
 
-def _png(im) -> str:
+def _png_uri(im):
     buf = io.BytesIO()
     im.save(buf, "PNG")
     return "data:image/png;base64," + base64.b64encode(buf.getvalue()).decode("ascii")
 
 
-def _source(raw: bytes):
+def _source(raw):
+    """Decode the uploaded bytes into a usable RGBA picture."""
     from PIL import Image
     try:
-        im = Image.open(io.BytesIO(raw))
-        im.load()
-    except (OSError, ValueError, SyntaxError):
-        raise EmblemError(_i18n.msg("eng.emblem.not_a_picture", "that file is not a picture this can read (PNG, JPG, TGA, BMP)")) from None
-    im = im.convert("RGBA")
-    if footprint(im) is None:
-        raise EmblemError(_i18n.msg("eng.emblem.empty", "the picture is fully transparent, so there is no emblem in it"))
-    return im
+        src = Image.open(io.BytesIO(raw)).convert("RGBA")
+    except Exception:
+        raise EmblemError(_i18n.msg("eng.emblem.not_a_picture",
+                                    "that file is not a picture this can read (PNG, JPG, TGA, BMP)"))
+    if footprint(src) is None:
+        raise EmblemError(_i18n.msg("eng.emblem.empty",
+                                    "the picture is fully transparent, so there is no emblem in it"))
+    return src
 
 
-def plan(mod, slot: str, raw: bytes) -> Dict:
-    """What a new emblem would write, with a preview of each picture and of the
-    old one beside it. Writes nothing."""
+def _slot(slot):
     slot = (slot or "").strip().lower()
     if not slot:
         raise EmblemError(_i18n.msg("eng.emblem.no_faction", "pick a faction"))
+    return slot
+
+
+def plan(mod, slot, raw):
+    """Old beside new for every picture. Writes nothing."""
+    slot = _slot(slot)
     src = _source(raw)
-    tgts = targets(mod, slot)
-    made = build(src, tgts)
+    tg = targets(mod, slot)
+    made = build(src, tg)
     rows = []
-    for t in tgts:
-        old = _open(Path(t["path"])) if t["path"] else None
+    for t in tg:
+        old = _open(t["path"]) if t["path"] else None
         rows.append({"rel": t["rel"], "kind": t["kind"], "state": t["state"] or "",
                      "size": t["size"], "where": t["where"],
-                     "old": _png(old) if old is not None else "", "new": _png(made[t["rel"]])})
+                     "old": _png_uri(old) if old is not None else "",
+                     "new": _png_uri(made[t["rel"]])})
     return {"faction": slot, "rows": rows}
 
 
-def apply(mod, slot: str, raw: bytes, only: Optional[List[str]] = None) -> Dict:
-    """Write the emblem set as TGA files, each backed up first."""
-    slot = (slot or "").strip().lower()
+def apply(mod, slot, raw, only=None):
+    """Write the set as TGA files, with backups and a log record for Undo."""
+    slot = _slot(slot)
     src = _source(raw)
-    tgts = [t for t in targets(mod, slot) if not only or t["rel"] in only]
-    if not tgts:
+    tg = targets(mod, slot)
+    if only:
+        wanted = set(only)
+        tg = [t for t in tg if t["rel"] in wanted]
+    if not tg:
         raise EmblemError(_i18n.msg("eng.emblem.nothing", "nothing picked to write"))
-    made = build(src, tgts)
+    made = build(src, tg)
     tid = config.new_transfer_id()
     backup_root = config.backup_root_for(tid)
-    manifest: Dict[str, List[str]] = {"backed_up": [], "created": []}
-    data = Path(mod.data)
-    for t in tgts:
-        target = data / t["rel"]
-        if target.exists():
-            b = backup_root / "data" / t["rel"]
-            b.parent.mkdir(parents=True, exist_ok=True)
-            shutil.copy2(target, b)
-            manifest["backed_up"].append(t["rel"])
-            file_op("BACKUP", target, f"-> {b}")
+    backed_up, created = [], []
+    for t in tg:
+        rel = t["rel"]
+        dest = Path(mod.data) / rel
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        if dest.exists():
+            keep = backup_root / "data" / rel
+            keep.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(dest, keep)
+            logutil.file_op("BACKUP", dest, f"-> {keep}")
+            backed_up.append(rel)
         else:
-            manifest["created"].append(t["rel"])
-        target.parent.mkdir(parents=True, exist_ok=True)
-        tmp = target.with_name(target.name + ".new")
-        made[t["rel"]].save(tmp, "TGA")
-        tmp.replace(target)
-        file_op("WRITE", target, "emblem")
-    rec = {"id": tid, "when": time.strftime("%Y-%m-%d %H:%M:%S"), "mode": "factions",
-           "action": "emblem", "source": mod.name, "source_root": str(mod.root),
-           "dest": mod.name, "dest_root": str(mod.root), "unit_type": slot, "resolved_type": slot,
-           "options": {}, "applied": True, "undone": False, "note": "",
-           "summary": _i18n.msg("eng.emblem.summary", "a new emblem for {faction}: {n} pictures", faction=slot, n=len(tgts)),
-           "warnings": [], "manifest": manifest, "backup_root": str(backup_root)}
+            created.append(rel)
+        tmp = dest.with_name(dest.name + ".tmp")
+        made[rel].save(tmp, "TGA")
+        os.replace(tmp, dest)
+        logutil.file_op("WRITE", dest, "emblem")
+    n = len(tg)
+    rec = {
+        "id": tid,
+        "when": time.strftime("%Y-%m-%d %H:%M:%S"),
+        "mode": "factions",
+        "action": "emblem",
+        "source": mod.name,
+        "source_root": str(mod.root),
+        "dest": mod.name,
+        "dest_root": str(mod.root),
+        "unit_type": slot,
+        "resolved_type": slot,
+        "options": {},
+        "applied": True,
+        "undone": False,
+        "note": "",
+        "summary": _i18n.msg("eng.emblem.summary", "a new emblem for {faction}: {n} pictures",
+                             faction=slot, n=n),
+        "warnings": [],
+        "manifest": {"backed_up": backed_up, "created": created},
+        "backup_root": str(backup_root),
+    }
     config.append_log(rec)
-    log.info("EMBLEM %s in %s, %d pictures, id=%s", slot, mod.name, len(tgts), tid)
+    logutil.log.info("EMBLEM %s in %s, %d pictures, id=%s", slot, mod.name, n, tid)
     return rec
