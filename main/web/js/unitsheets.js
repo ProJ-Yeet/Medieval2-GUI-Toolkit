@@ -11,43 +11,69 @@ async function unitSheetsOpen(){
 }
 function unitSheetsBody(extra={}){
  const u=USHEET;return Object.assign({mod:u.mod,revision:u.data&&u.data.revision,source_token:u.data&&u.data.source_token,
-  view:u.view,where:u.where,sort:u.sort,offset:u.offset,limit:75},extra);
+  view:u.view,where:u.where,sort:u.sort,offset:u.offset,limit:75,comparison_group:u.compareGroup},extra);
 }
 async function unitSheetsRequest(action,extra={},history=false){
  const u=USHEET;if(!u)return false;
  const pending=(u.queue||Promise.resolve()).then(()=>USHEET===u?unitSheetsRequestNow(action,extra,history):false);
  u.queue=pending.catch(()=>false);return pending;
 }
+// api.post hands back a refusal as {error}; every caller here treats a resolved
+// answer as success, so turn the refusal into the error its catch expects.
+async function unitSheetsPost(url,body){
+ const r=await api.post(url,body);
+ if(r&&r.error)throw new Error(r.error);
+ return r;
+}
 async function unitSheetsRequestNow(action,extra={},history=false){
  const u=USHEET;if(!u || u.busy)return false;u.busy=true;
  const prior=u.data?JSON.stringify(u.data.project):null;
  try{
   if(typeof extra==='function')extra=extra();
-  const r=await api.post('/api/unit_sheets/'+action,unitSheetsBody(extra));
+  const r=await unitSheetsPost('/api/unit_sheets/'+action,unitSheetsBody(extra));
   if(USHEET!==u)return false;
   if(history&&prior&&JSON.stringify(r.project)!==prior){u.past.push(prior);if(u.past.length>20)u.past.shift();u.future=[];}
-  if(history){u.native=null;u.balance=null;}u.data=r;u.err='';unitSheetsPaint();return true;
+  if(history){u.native=null;u.balance=null;}
+  const before=u.data&&u.data.table.rows.map(row=>row.id);
+  if(before&&JSON.stringify(before)!==JSON.stringify(r.table.rows.map(row=>row.id))){
+   unitSheetsClearRect();
+  }
+  u.data=r;unitSheetsRestoreFilters();unitSheetsPruneSelection();u.err='';unitSheetsPaint();return true;
  }catch(err){if(USHEET===u){u.err=errText(err);unitSheetsPaint();}return false;}
  finally{u.busy=false;}
 }
-function unitSheetsColumns(){
+function unitSheetsColumns(includeHidden=false){
  const u=USHEET,d=u.data;let cols;
- if(u.view==='recruitment')cols=['id','unit','building','level','settlement','section','initial','per_turn','maximum','experience','requires',...USHEET_META,USHEET_CATEGORY];
- else if(u.view==='classification')cols=['id',...USHEET_META,USHEET_CATEGORY,'needs_classification'];
+ if(unitSheetsRuleKind())cols=['id',...d.columns];
+ else if(u.view==='recruitment')cols=['id','unit','building','building_type','level','building_depth','building_tier','settlement','section','initial','per_turn','maximum','experience','requires',...USHEET_META,USHEET_CATEGORY];
+ else if(u.view==='classification')cols=['id',...USHEET_META,USHEET_CATEGORY,'groups','needs_classification'];
  else cols=['id',...Object.keys(d.field_info).filter(k=>d.field_info[k].view===u.view),
-   ...(u.view==='base'?['defense_total','ultra_size','cost_efficiency','upkeep_efficiency']:[])];
- if(u.showExtras)cols.push(...d.extra_columns);
+   ...(u.view==='base'?['groups','defense_total','ultra_size','cost_efficiency','upkeep_efficiency',
+    ...Object.keys(d.filter_info||{}).filter(key=>/^(pri|sec)_(weapon|tech)_type$/.test(key))]:[])];
+ if(u.showExtras&&!unitSheetsRuleKind())cols.push(...d.extra_columns);
  if(u.order.length)cols.sort((a,b)=>(u.order.includes(a)?u.order.indexOf(a):999)-(u.order.includes(b)?u.order.indexOf(b):999));
- return ['id',...cols.filter(k=>k!=='id'&&!u.hidden.includes(k))];
+ const frozen=unitSheetsRuleKind()?(d.frozen_columns||['id']):['id'];
+ return [...frozen,...cols.filter(k=>!frozen.includes(k)&&(includeHidden||!u.hidden.includes(k)))];
+}
+function unitSheetsColumnLabel(column){
+ const labels={
+  pri_weapon_type:tt('sheets.pri_weapon_type'),pri_tech_type:tt('sheets.pri_tech_type'),
+  sec_weapon_type:tt('sheets.sec_weapon_type'),sec_tech_type:tt('sheets.sec_tech_type'),
+  building_depth:tt('sheets.building_depth'),building_tier:tt('sheets.building_tier'),
+  building_type:tt('sheets.building_type'),groups:tt('sheets.groups')
+ };
+ return labels[column]||column;
 }
 function unitSheetsValue(v){return Array.isArray(v)?v.join(', '):v==null?'':String(v);}
-function unitSheetsEditable(col){return USHEET.view!=='recruitment'&&(USHEET_META.includes(col)||!!USHEET.data.field_info[col]);}
+function unitSheetsEditable(col){
+ if(unitSheetsRuleKind())return col!=='id'&&!!USHEET.data.field_info[col];
+ return USHEET.view!=='recruitment'&&(USHEET_META.includes(col)||!!USHEET.data.field_info[col]);}
 function unitSheetsPaint(){
  const u=USHEET;if(!u || !u.data){if(u&&u.err)modal.innerHTML=`<div class="w-bad">${esc(u.err)}</div>`;return;}
  const d=u.data,cols=unitSheetsColumns(),table=d.table;
- const tabs=[['classification',tt('sheets.classification')],['base',tt('sheets.base')],['attributes',tt('sheets.attributes')],['soft',tt('sheets.soft')],['rules',tt('sheets.rules')],['recruitment',tt('sheets.recruitment')]];
+ const tabs=[['classification',tt('sheets.classification')],['base',tt('sheets.base')],['attributes',tt('sheets.attributes')],['soft',tt('sheets.soft')],['rules:replenish',tt('sheets.rules')],['recruitment',tt('sheets.recruitment')]];
  const option=col=>`<option value="${esc(col)}">${esc(col)}</option>`;
- const filterCols=['id',...USHEET_META,...d.columns,USHEET_CATEGORY,'ownership','model','mount','projectile','changed','needs_classification',...(u.view==='recruitment'?['unit','building','level','settlement','section','initial','per_turn','maximum','experience','requires']:[]),...d.extra_columns];
+ const filterCols=Object.keys(d.filter_info||{});
  modal.innerHTML=`<div class="unit-sheets" onkeydown="unitSheetsKey(event)">
  <h3>${tt('sheets.title')} · ${esc(u.mod)}</h3>
  <div class="count">${tt('sheets.staged_note')}</div>
@@ -63,43 +89,236 @@ function unitSheetsPaint(){
  <input type="file" accept=".csv,.json" onchange="unitSheetsImport(this)">
  <button onclick="unitSheetsExport('project')">${tt('sheets.export_project')}</button><button onclick="unitSheetsExport('reference')">${tt('sheets.export_reference')}</button></div>
  <label>${tt('sheets.column_mapping')}<input id="usMapping" placeholder="${ttA('sheets.mapping_example')}"></label></details>
- ${u.view==='rules'?unitSheetsRulesHtml():`
- <details${u.filterRows.length?' open':''}><summary>${tt('sheets.filters')}</summary>
- <div id="usFilters">${u.filterRows.map((f,i)=>`<div class="barrow"><select onchange="USHEET.filterRows[${i}].column=this.value">${filterCols.map(k=>`<option${f.column===k?' selected':''}>${esc(k)}</option>`).join('')}</select>
- <select onchange="USHEET.filterRows[${i}].op=this.value">${['eq','ne','contains','not_contains','gt','ge','lt','le','blank','missing','invalid'].map(k=>`<option${f.op===k?' selected':''}>${k}</option>`).join('')}</select><input value="${esc(f.value||'')}" oninput="USHEET.filterRows[${i}].value=this.value"><button onclick="USHEET.filterRows.splice(${i},1);unitSheetsPaint()">×</button></div>`).join('')}</div>
+ ${unitSheetsGroupsHtml()}
+ <div class="barrow us-legend">${['native','annotation','derived'].map(kind=>`<span class="us-kind-${kind}">${unitSheetsKindLabel(kind)}</span>`).join('')}</div>
+ ${unitSheetsRuleKind()?unitSheetsRulesHtml():''}
+ <details${u.filterRows.length||u.advancedFilter?' open':''}><summary>${tt('sheets.filters')}</summary>
+ <div class="count" id="usActiveFilter">${esc(unitSheetsFilterSummary())} | ${tt('sheets.active_filter_count',{count:table.total})}</div>
+ <div id="usFilters">${u.filterRows.map((f,i)=>unitSheetsFilterRow(f,i,filterCols)).join('')}</div>
  <div class="barrow"><button onclick="USHEET.filterRows.push({column:'id',op:'contains',value:''});unitSheetsPaint()">${tt('sheets.add_filter')}</button><select onchange="USHEET.group=this.value"><option value="all"${u.group==='all'?' selected':''}>${tt('sheets.and')}</option><option value="any"${u.group==='any'?' selected':''}>${tt('sheets.or')}</option></select>
- <button onclick="unitSheetsFilter()">${tt('sheets.filter_apply')}</button>${u.view==='recruitment'?'':`<button onclick="unitSheetsMissing()">${tt('sheets.missing_only')}</button>`}<button onclick="USHEET.where=null;USHEET.filterRows=[];USHEET.offset=0;unitSheetsRequest('query')">${tt('sheets.clear_filters')}</button></div>
+ <button onclick="unitSheetsFilter()">${tt('sheets.filter_apply')}</button>${u.view==='recruitment'||unitSheetsRuleKind()?'':`<button onclick="unitSheetsMissing()">${tt('sheets.missing_only')}</button>`}<button onclick="unitSheetsClearFilters()">${tt('sheets.clear_filters')}</button></div>
  <label>${tt('sheets.advanced_filter')}<textarea id="usAdvanced" rows="3" style="width:100%">${esc(JSON.stringify(u.where||{}))}</textarea></label><button onclick="unitSheetsAdvanced()">${tt('sheets.filter_apply')}</button></details>
  <details><summary>${tt('sheets.columns_views')}</summary><div class="barrow"><input id="usViewName" placeholder="${ttA('sheets.view_name')}"><button onclick="unitSheetsSaveView()">${tt('sheets.save_view')}</button><select onchange="unitSheetsLoadView(this.value)"><option value="">${tt('sheets.saved_views')}</option>${Object.keys(d.project.views).map(option).join('')}</select></div>
- <label><input type="checkbox"${u.showExtras?' checked':''} onchange="USHEET.showExtras=this.checked;unitSheetsPaint()">${tt('sheets.show_extras')}</label><label>${tt('sheets.visible_columns')}<textarea id="usColumns" rows="2" style="width:100%">${esc(cols.join(', '))}</textarea></label><button onclick="unitSheetsSetColumns()">${tt('sheets.columns_apply')}</button>
+ <label><input type="checkbox"${u.showExtras?' checked':''} onchange="unitSheetsExtras(this.checked)">${tt('sheets.show_extras')}</label><label>${tt('sheets.visible_columns')}<textarea id="usColumns" rows="2" style="width:100%">${esc(cols.join(', '))}</textarea></label><button onclick="unitSheetsSetColumns()">${tt('sheets.columns_apply')}</button>
  <label>${tt('sheets.comparison')}<input id="usUltra" type="number" step="any" value="${d.project.comparison.ultra_size}"><input id="usDefenseWeight" type="number" step="any" value="${d.project.comparison.defense_weight}"><button onclick="unitSheetsComparison()">${tt('common.save')}</button></label></details>
  <div class="barrow"><span>${tt('sheets.rows_count',{matches:table.total,selected:u.selected.size})}</span><button onclick="unitSheetsSelectMatches()">${tt('sheets.select_matches')}</button><button onclick="USHEET.selected.clear();unitSheetsPaint()">${tt('sheets.select_none')}</button>
  <button onclick="unitSheetsPage(-1)"${u.offset?'':' disabled'}>◀</button><span>${u.offset+1}–${Math.min(u.offset+75,table.total)}</span><button onclick="unitSheetsPage(1)"${u.offset+75<table.total?'':' disabled'}>▶</button></div>
- <div class="us-grid" style="max-height:55vh;overflow:auto"><table class="us-table"><thead><tr><th>✓</th>${cols.map((k,c)=>`<th data-sort="${esc(k)}" onclick="unitSheetsSort(this.dataset.sort,event.shiftKey)" title="${ttA('sheets.sort_hint')}">${esc(k)}</th>`).join('')}</tr></thead><tbody>
- ${table.rows.map((row,r)=>`<tr class="${row.changed?'us-changed':''}"><td><input type="checkbox"${u.selected.has(row.id)?' checked':''} onchange="unitSheetsSelect(${r},this.checked)"></td>${cols.map((col,c)=>`<td data-r="${r}" data-c="${c}" onmousedown="unitSheetsRect(event,${r},${c})">${unitSheetsEditable(col)?`<input data-r="${r}" data-c="${c}" data-col="${esc(col)}" value="${esc(unitSheetsValue(row[col]))}" oninput="unitSheetsInput(${r},${c},this.value)" onchange="unitSheetsCell(${r},${c},this.value)" onkeydown="unitSheetsCellKey(event)" onpaste="unitSheetsPaste(event)">`:`<span>${esc(unitSheetsValue(row[col]))}</span>`}</td>`).join('')}</tr>`).join('')}
+ <div class="us-grid" style="max-height:55vh;overflow:auto">${unitSheetsGridOpen(cols)}<thead><tr><th>✓</th>${cols.map((k,c)=>`<th class="us-kind-${unitSheetsColumnKind(k)}" ${unitSheetsFrozenStyle(k,true)} data-sort="${esc(k)}" onclick="unitSheetsSort(this.dataset.sort,event.shiftKey)" title="${ttA('sheets.sort_hint')}">${esc(unitSheetsColumnLabel(k))}</th>`).join('')}</tr></thead><tbody>
+ ${table.rows.map((row,r)=>`<tr class="${row.changed?'us-changed':''}"><td><input type="checkbox"${u.selected.has(row.id)?' checked':''} onchange="unitSheetsSelect(${r},this.checked)"></td>${cols.map((col,c)=>`<td class="us-kind-${unitSheetsColumnKind(col)}" ${unitSheetsFrozenStyle(col)} data-r="${r}" data-c="${c}" onmousedown="unitSheetsRect(event,${r},${c})">${unitSheetsEditable(col)?`<input data-r="${r}" data-c="${c}" data-col="${esc(col)}" value="${esc(unitSheetsValue(row[col]))}" oninput="unitSheetsInput(${r},${c},this.value)" onchange="unitSheetsCell(${r},${c},this.value)" onkeydown="unitSheetsCellKey(event)" onpaste="unitSheetsPaste(event)">`:`<span>${esc(unitSheetsValue(row[col]))}</span>`}</td>`).join('')}</tr>`).join('')}
  </tbody></table></div>
- <details${u.view==='recruitment'?' hidden':''}><summary>${tt('sheets.mass_edit')}</summary><div class="barrow"><select id="usMassColumn">${[...USHEET_META,...d.columns].map(option).join('')}</select><select id="usMassOp">${['set','clear','add','subtract','multiply','divide','percent','min','max','round','copy','expression','replace','append','remove','deduplicate'].map(k=>`<option>${k}</option>`).join('')}</select>
- <input id="usMassValue" placeholder="${ttA('sheets.value')}"><input id="usMassOther" placeholder="${ttA('sheets.replacement')}"><button onclick="unitSheetsMass()">${tt('sheets.stage_selected')}</button><button onclick="unitSheetsFill()">${tt('sheets.fill_down')}</button></div>
- <div class="barrow"><input id="usRecipeName" placeholder="${ttA('sheets.recipe_name')}"><button onclick="unitSheetsSaveRecipe()">${tt('common.save')}</button><select onchange="unitSheetsLoadRecipe(this.value)"><option value="">${tt('sheets.recipes')}</option>${Object.keys(d.project.recipes).map(option).join('')}</select></div></details>`}
+ <details${u.view==='recruitment'?' hidden':''}><summary>${tt('sheets.mass_edit')}</summary><div class="barrow"><select id="usMassColumn">${(unitSheetsRuleKind()?d.columns:[...USHEET_META,...d.columns]).map(option).join('')}</select><select id="usMassOp">${(unitSheetsRuleKind()?['set','clear','copy']:['set','clear','add','subtract','multiply','divide','percent','min','max','round','copy','expression','replace','append','remove','deduplicate']).map(k=>`<option>${k}</option>`).join('')}</select>
+ <input id="usMassValue" placeholder="${ttA('sheets.value')}"><input id="usMassOther" placeholder="${ttA('sheets.replacement')}"><button onclick="unitSheetsMass()">${tt('sheets.stage_selected')}</button><button onclick="unitSheetsFill()">${tt('sheets.fill_down')}</button></div><div class="count">${tt('sheets.fill_page_note')}</div>
+ <div class="barrow"><input id="usRecipeName" placeholder="${ttA('sheets.recipe_name')}"><button onclick="unitSheetsSaveRecipe()">${tt('common.save')}</button><select onchange="unitSheetsLoadRecipe(this.value)"><option value="">${tt('sheets.recipes')}</option>${Object.keys(d.project.recipes).map(option).join('')}</select></div></details>
  ${d.changes?`<details open><summary>${tt('sheets.change_preview')}</summary><pre style="max-height:180px;overflow:auto">${esc(JSON.stringify(d.changes,null,2))}</pre></details>`:''}
  ${u.native?`<details open><summary>${tt('sheets.native_review',{count:u.native.units})}</summary><pre style="max-height:240px;overflow:auto">${esc(u.native.files.map(f=>f.diff).join('\n\n'))}</pre><button onclick="unitSheetsNativeApply()">${tt('sheets.native_apply')}</button></details>`:''}
  <div class="foot"><button onclick="unitSheetsNativePreview()">${tt('sheets.native_preview')}</button><button onclick="unitSheetsDiscard()">${tt('sheets.discard_native')}</button><button onclick="closeModal()">${tt('common.close')}</button></div></div>`;
+ unitSheetsRectPaint();
 }
-function unitSheetsTab(view){USHEET.view=view;USHEET.offset=0;USHEET.hidden=[];USHEET.order=[];USHEET.where=null;USHEET.filterRows=[];USHEET.selected.clear();USHEET.sort=[{column:'id',desc:false}];unitSheetsRequest('query');}
+function unitSheetsClearRect(){
+ USHEET.rect=null;
+ USHEET.anchor=null;
+}
+function unitSheetsPruneSelection(){
+ // Only matching stable IDs may remain in the multi-row edit set.
+ const u=USHEET,matching=new Set(u.data.table.matched_ids);
+ u.selected=new Set([...u.selected].filter(id=>matching.has(id)));
+}
+function unitSheetsLayout(change,query=true){
+ const u=USHEET;
+ // Serialize layout changes so each flush still uses the preceding view.
+ const pending=(u.layout||Promise.resolve()).then(async()=>{
+  if(USHEET!==u)return;
+  await unitSheetsFlush();
+  if(USHEET!==u)return;
+  unitSheetsClearRect();
+  change(u);
+  unitSheetsRestoreFilters();
+  if(query)return unitSheetsRequest('query');
+  unitSheetsPaint();
+ });
+ u.layout=pending.catch(()=>false);
+ return pending;
+}
+function unitSheetsTab(view){
+ return unitSheetsLayout(u=>{
+  u.view=view==='rules'?'rules:replenish':view;u.offset=0;u.hidden=[];u.order=[];u.where=null;u.filterRows=[];
+  u.selected.clear();u.sort=[{column:'id',desc:false}];
+ });
+}
 function unitSheetsSelect(index,on){const id=USHEET.data.table.rows[index].id;on?USHEET.selected.add(id):USHEET.selected.delete(id);unitSheetsPaint();}
-function unitSheetsSelectMatches(){USHEET.data.table.matched_ids.forEach(id=>USHEET.selected.add(id));unitSheetsPaint();}
-function unitSheetsPage(dir){USHEET.offset=Math.max(0,USHEET.offset+dir*75);unitSheetsRequest('query');}
-function unitSheetsSort(column,add){const u=USHEET,old=u.sort.find(s=>s.column===column);u.sort=add?u.sort.filter(s=>s.column!==column):[];u.sort.push({column,desc:old?!old.desc:false});unitSheetsRequest('query');}
-function unitSheetsFilter(){USHEET.where={[USHEET.group]:USHEET.filterRows};USHEET.offset=0;unitSheetsRequest('query');}
-function unitSheetsMissing(){if(USHEET.view==='recruitment')return;USHEET.where={column:'needs_classification',op:'eq',value:true};USHEET.offset=0;unitSheetsRequest('query');}
-function unitSheetsAdvanced(){try{USHEET.where=JSON.parse(document.getElementById('usAdvanced').value);USHEET.offset=0;unitSheetsRequest('query');}catch(e){toast(errText(e));}}
+function unitSheetsSelectMatches(){
+ USHEET.selected=new Set(USHEET.data.table.matched_ids);
+ unitSheetsPaint();
+}
+function unitSheetsPage(dir){
+ return unitSheetsLayout(u=>{u.offset=Math.max(0,u.offset+dir*75);});
+}
+function unitSheetsSort(column,add){
+ return unitSheetsLayout(u=>{
+  const old=u.sort.find(s=>s.column===column);
+  u.sort=add?u.sort.filter(s=>s.column!==column):[];
+  u.sort.push({column,desc:old?!old.desc:false});
+ });
+}
+function unitSheetsFilterOpLabel(op){
+ const labels={
+  eq:tt('sheets.filter_op_eq'),ne:tt('sheets.filter_op_ne'),
+  contains:tt('sheets.filter_op_contains'),not_contains:tt('sheets.filter_op_not_contains'),
+  gt:tt('sheets.filter_op_gt'),ge:tt('sheets.filter_op_ge'),
+  lt:tt('sheets.filter_op_lt'),le:tt('sheets.filter_op_le'),
+  blank:tt('sheets.filter_op_blank'),missing:tt('sheets.filter_op_missing'),invalid:tt('sheets.filter_op_invalid')
+ };
+ return labels[op]||op;
+}
+function unitSheetsFilterOps(column){
+ const kind=USHEET.data.filter_info?.[column]?.type||'text';
+ const ops=['eq','ne'];
+ if(kind==='text'||kind==='list')ops.push('contains','not_contains');
+ if(kind==='number')ops.push('gt','ge','lt','le');
+ ops.push('blank','missing');
+ if(kind!=='bool')ops.push('invalid');
+ return ops;
+}
+function unitSheetsFilterColumn(index,column){
+ // Reset incompatible operators and values when the column type changes.
+ const row=USHEET.filterRows[index];
+ row.column=column;
+ row.op='eq';
+ row.value=USHEET.data.filter_info?.[column]?.type==='bool'?true:'';
+ unitSheetsPaint();
+}
+function unitSheetsFilterOperator(index,op){
+ const row=USHEET.filterRows[index];
+ row.op=op;
+ // A saved unary clause has no value to reuse when equality is selected.
+ if(row.value===undefined){
+  row.value=USHEET.data.filter_info?.[row.column]?.type==='bool'?true:'';
+ }
+ unitSheetsPaint();
+}
+function unitSheetsFilterRow(row,index,columns){
+ const kind=USHEET.data.filter_info?.[row.column]?.type||'text';
+ const unary=['blank','missing','invalid'].includes(row.op);
+ const columnMenu=columns.map(column=>`<option value="${esc(column)}"${row.column===column?' selected':''}>${esc(unitSheetsColumnLabel(column))}</option>`).join('');
+ const opMenu=unitSheetsFilterOps(row.column).map(op=>`<option value="${op}"${row.op===op?' selected':''}>${unitSheetsFilterOpLabel(op)}</option>`).join('');
+ let valueControl='';
+ if(!unary){
+  if(kind==='bool'){
+   valueControl=`<select onchange="USHEET.filterRows[${index}].value=this.value==='true'">${[true,false].map(value=>`<option value="${value}"${String(row.value)===String(value)?' selected':''}>${value?tt('sheets.filter_bool_true'):tt('sheets.filter_bool_false')}</option>`).join('')}</select>`;
+  }else{
+   valueControl=`<input type="${kind==='number'?'number':'text'}" step="any" value="${esc(row.value??'')}" oninput="USHEET.filterRows[${index}].value=this.value">`;
+  }
+ }
+ return `<div class="barrow"><select onchange="unitSheetsFilterColumn(${index},this.value)">${columnMenu}</select>
+ <select onchange="unitSheetsFilterOperator(${index},this.value)">${opMenu}</select>${valueControl}
+ <button onclick="USHEET.filterRows.splice(${index},1);unitSheetsPaint()">&#215;</button></div>`;
+}
+function unitSheetsRestoreFilters(){
+ const u=USHEET,where=u.where;
+ const leaf=expr=>expr&&typeof expr.column==='string'&&
+  Object.keys(expr).every(key=>['column','op','value'].includes(key))&&
+  (!u.data?.filter_info||u.data.filter_info[expr.column])&&
+  unitSheetsFilterOps(expr.column).includes(expr.op||'eq');
+ let rows=[],group='all';
+ if(where&&Object.keys(where).length){
+  if(leaf(where))rows=[where];
+  else if(Object.keys(where).length===1&&
+   ['all','any'].some(key=>Array.isArray(where[key])&&where[key].every(leaf))){
+   group=Array.isArray(where.all)?'all':'any';
+   rows=where[group];
+  }else{
+   // Nested expressions cannot be represented by the flat visual builder.
+   u.filterRows=[];u.advancedFilter=true;
+   return;
+  }
+ }
+ u.group=group;
+ u.filterRows=structuredClone(rows).map(row=>{
+  const restored={...row,op:row.op||'eq'};
+  if(u.data?.filter_info?.[row.column]?.type==='bool'&&typeof row.value==='string'){
+   restored.value=row.value.trim().toLowerCase()==='true';
+  }
+  return restored;
+ });
+ u.advancedFilter=false;
+}
+function unitSheetsFilterSummary(){
+ const u=USHEET;
+ function describe(expr,depth=0){
+  if(!expr||!Object.keys(expr).length)return tt('sheets.no_active_filter');
+  if(depth>8)return tt('sheets.advanced_active');
+  for(const group of ['all','any']){
+   if(Array.isArray(expr[group])){
+    if(!expr[group].length){
+     return group==='all'?tt('sheets.filter_empty_all'):tt('sheets.filter_empty_any');
+    }
+    const parts=expr[group].map(child=>describe(child,depth+1));
+    const expression=parts.reduce((left,right)=>group==='all'?
+     tt('sheets.filter_all_join',{left,right}):tt('sheets.filter_any_join',{left,right}));
+    return tt('sheets.filter_group',{expression});
+   }
+  }
+  if(expr.not)return tt('sheets.filter_not',{expression:describe(expr.not,depth+1)});
+  const op=expr.op||'eq';
+  const column=unitSheetsColumnLabel(expr.column),operator=unitSheetsFilterOpLabel(op);
+  if(['blank','missing','invalid'].includes(op)){
+   return tt('sheets.filter_unary',{column,operator});
+  }
+  const value=typeof expr.value==='boolean'?
+   (expr.value?tt('sheets.filter_bool_true'):tt('sheets.filter_bool_false')):
+   unitSheetsValue(expr.value);
+  return tt('sheets.filter_clause',{column,operator,value});
+ }
+ const summary=describe(u.where);
+ const compact=summary.length>240?summary.slice(0,237)+'...':summary;
+ return u.advancedFilter?tt('sheets.advanced_summary',{expression:compact}):compact;
+}
+
+function unitSheetsFilter(){
+ const rows=structuredClone(USHEET.filterRows);
+ for(const row of rows){
+  if(USHEET.data.filter_info?.[row.column]?.type==='bool'&&typeof row.value==='string'){
+   row.value=row.value.trim().toLowerCase()==='true';
+  }
+ }
+ const where={[USHEET.group]:rows};
+ return unitSheetsLayout(u=>{u.where=where;u.offset=0;});
+}
+function unitSheetsMissing(){
+ if(USHEET.view==='recruitment'||unitSheetsRuleKind())return;
+ return unitSheetsLayout(u=>{
+  u.where={column:'needs_classification',op:'eq',value:true};u.offset=0;
+ });
+}
+function unitSheetsClearFilters(){
+ return unitSheetsLayout(u=>{u.where=null;u.filterRows=[];u.offset=0;});
+}
+function unitSheetsAdvanced(){
+ try{
+  const where=JSON.parse(document.getElementById('usAdvanced').value);
+  return unitSheetsLayout(u=>{u.where=where;u.offset=0;});
+ }catch(e){toast(errText(e));}
+}
 function unitSheetsInput(r,c,value){
  const u=USHEET,col=unitSheetsColumns()[c],id=u.data.table.rows[r].id,key=id+'\u0000'+col;
  u.inputs=u.inputs||new Map();const old=u.inputs.get(key);if(old)clearTimeout(old.timer);
  u.inputs.set(key,{id,column:col,value,timer:setTimeout(()=>unitSheetsCommit(key,u),350)});
 }
-function unitSheetsCommit(key,u){const cell=u.inputs&&u.inputs.get(key);if(!cell||USHEET!==u)return;clearTimeout(cell.timer);u.inputs.delete(key);if(cell.value!=='')unitSheetsRequest('operate',{ids:[cell.id],column:cell.column,operation:'set',value:cell.value},true);}
-function unitSheetsCell(r,c,value){const u=USHEET,col=unitSheetsColumns()[c],id=u.data.table.rows[r].id,key=id+'\u0000'+col;if(u.inputs&&u.inputs.has(key))unitSheetsCommit(key,u);else if(value!==unitSheetsValue(u.data.table.rows[r][col])&&value!=='')unitSheetsRequest('operate',{ids:[id],column:col,operation:'set',value},true);}
+function unitSheetsCommit(key,u){
+ const cell=u.inputs&&u.inputs.get(key);
+ if(!cell||USHEET!==u)return;
+ clearTimeout(cell.timer);u.inputs.delete(key);
+ if(cell.value!==''||unitSheetsRuleKind()){
+  return unitSheetsRequest('operate',{ids:[cell.id],column:cell.column,operation:'set',value:cell.value},true);
+ }
+}
+function unitSheetsCell(r,c,value){
+ const u=USHEET,col=unitSheetsColumns()[c],id=u.data.table.rows[r].id,key=id+'\u0000'+col;
+ if(u.inputs&&u.inputs.has(key))return unitSheetsCommit(key,u);
+ if(value!==unitSheetsValue(u.data.table.rows[r][col])&&(value!==''||unitSheetsRuleKind())){
+  return unitSheetsRequest('operate',{ids:[id],column:col,operation:'set',value},true);
+ }
+}
 
 function unitSheetsCellKey(ev){
  const inp=ev.currentTarget,r=+inp.dataset.r,c=+inp.dataset.c;
@@ -108,41 +327,186 @@ function unitSheetsCellKey(ev){
   const next=modal.querySelector(`input[data-r="${nr}"][data-c="${nc}"]`);if(next){ev.preventDefault();next.focus();next.select();}
  }
 }
-function unitSheetsPaste(ev){
+async function unitSheetsPaste(ev){
  const text=ev.clipboardData.getData('text/plain');if(!text.includes('\t')&&!text.includes('\n'))return;
- ev.preventDefault();const r=+ev.currentTarget.dataset.r,c=+ev.currentTarget.dataset.c,cols=unitSheetsColumns(),rows=USHEET.data.table.rows,cells=[];
+ ev.preventDefault();
+ const u=USHEET,r=+ev.currentTarget.dataset.r,c=+ev.currentTarget.dataset.c;
+ const cols=unitSheetsColumns(),rows=u.data.table.rows,cells=[];
+ // Snapshot displayed IDs and names rather than retaining positional targets.
+ const rect=u.rect,range=rect&&(rect.ids.length>1||rect.columns.length>1);
+ const startRow=rect?rows.findIndex(row=>row.id===rect.ids[0]):r;
+ const startColumn=rect?cols.indexOf(rect.columns[0]):c;
+ if(startRow<0||startColumn<0)return;
+ // A clicked cell is an insertion point; a larger rectangle bounds the paste.
+ const ids=range?rect.ids:rows.slice(startRow).map(row=>row.id);
+ const columns=range?rect.columns:cols.slice(startColumn);
+ const visible=new Set(rows.map(row=>row.id));
  text.replace(/\r/g,'').replace(/\n$/,'').split('\n').forEach((line,dy)=>line.split('\t').forEach((value,dx)=>{
-  if(value===''||!rows[r+dy]||!unitSheetsEditable(cols[c+dx]))return;
-  cells.push({id:rows[r+dy].id,column:cols[c+dx],value});
+  const id=ids[dy],column=columns[dx];
+  if(value===''&&!unitSheetsRuleKind()||!visible.has(id)||!cols.includes(column)||!unitSheetsEditable(column))return;
+  cells.push({id,column,value});
  }));
- if(cells.length)unitSheetsRequest('paste',{cells},true);
+ await u.layout;await unitSheetsFlush();
+ if(USHEET!==u)return;
+ // A filter may have completed while the clipboard event was being handled.
+ const current=new Set(u.data.table.rows.map(row=>row.id)),shown=unitSheetsColumns();
+ const targets=cells.filter(cell=>current.has(cell.id)&&shown.includes(cell.column)&&unitSheetsEditable(cell.column));
+ if(targets.length)return unitSheetsRequest('paste',{cells:targets},true);
 }
 function unitSheetsKey(ev){if((ev.ctrlKey||ev.metaKey)&&['z','y'].includes(ev.key.toLowerCase())&&!ev.target.matches('textarea')){ev.preventDefault();ev.stopPropagation();unitSheetsUndo(ev.key.toLowerCase()==='y'||ev.shiftKey);}}
-async function unitSheetsUndo(redo){const u=USHEET,from=redo?u.future:u.past,to=redo?u.past:u.future;if(!from.length||u.busy)return;const next=from[from.length-1],old=JSON.stringify(u.data.project);if(await unitSheetsRequest('save',{project:JSON.parse(next)})){from.pop();to.push(old);unitSheetsPaint();}}
-function unitSheetsMass(){const ids=[...USHEET.selected];if(!ids.length){toast(tt('sheets.select_first'));return;}unitSheetsRequest('operate',{ids,column:document.getElementById('usMassColumn').value,operation:document.getElementById('usMassOp').value,value:document.getElementById('usMassValue').value,other:document.getElementById('usMassOther').value},true);}
-function unitSheetsFill(){const u=USHEET,col=document.getElementById('usMassColumn').value,rows=u.data.table.rows.filter(r=>u.selected.has(r.id));if(!rows.length)return;unitSheetsRequest('operate',{ids:[...u.selected],column:col,operation:'set',value:rows[0][col]},true);}
+async function unitSheetsUndo(redo){
+ const u=USHEET;
+ await u.layout;await unitSheetsFlush();
+ if(USHEET!==u||u.busy)return;
+ const from=redo?u.future:u.past,to=redo?u.past:u.future;
+ if(!from.length)return;
+ const next=from[from.length-1],old=JSON.stringify(u.data.project);
+ if(unitSheetsRuleKind()){
+  // Undo can remove a column referenced by the current filter or sort.
+  unitSheetsClearRect();
+  u.where=null;u.filterRows=[];u.sort=[{column:'id',desc:false}];u.offset=0;
+ }
+ if(await unitSheetsRequest('save',{project:JSON.parse(next)})){
+  from.pop();to.push(old);unitSheetsPaint();
+ }
+}
+
+async function unitSheetsMass(){
+ const u=USHEET;
+ const edit={column:document.getElementById('usMassColumn').value,
+  operation:document.getElementById('usMassOp').value,
+  value:document.getElementById('usMassValue').value,other:document.getElementById('usMassOther').value};
+ await u.layout;await unitSheetsFlush();
+ if(USHEET!==u)return;
+ unitSheetsPruneSelection();
+ const ids=[...u.selected];
+ if(!ids.length){toast(tt('sheets.select_first'));return;}
+ return unitSheetsRequest('operate',{ids,...edit},true);
+}
+async function unitSheetsFill(){
+ const u=USHEET,col=document.getElementById('usMassColumn').value;
+ await u.layout;
+ if(USHEET!==u)return;
+ unitSheetsPruneSelection();
+ const cols=unitSheetsColumns(),visible=new Map(u.data.table.rows.map(row=>[row.id,row]));
+ const rectangle=!!u.rect;
+ const ids=rectangle?u.rect.ids.filter(id=>visible.has(id)):
+  u.data.table.rows.filter(row=>u.selected.has(row.id)).map(row=>row.id);
+ const columns=rectangle?u.rect.columns.filter(column=>cols.includes(column)&&unitSheetsEditable(column)):[col];
+ if(!ids.length||!columns.length)return;
+ // Capture the top displayed unit before flushing can change the sort order.
+ const source=visible.get(ids[0]);
+ await unitSheetsFlush();
+ if(USHEET!==u)return;
+ const fresh=u.data.table.rows.find(row=>row.id===source.id)||{...source,...u.data.project.draft[source.id]};
+ const shown=new Set(u.data.table.rows.map(row=>row.id));
+ const targets=ids.filter(id=>shown.has(id));
+ if(!targets.length)return;
+ if(rectangle){
+  const cells=targets.flatMap(id=>columns.map(column=>({id,column,value:fresh[column]})));
+  return unitSheetsRequest('paste',{cells},true);
+ }
+ return unitSheetsRequest('operate',{ids:targets,column:col,operation:'set',value:fresh[col]},true);
+}
 async function unitSheetsImport(input){const file=input.files[0];if(!file)return;if(file.size>20*1024*1024){toast(tt('sheets.file_large'));return;}try{const mapping=JSON.parse(document.getElementById('usMapping').value||'{}');await unitSheetsRequest('import',{kind:document.getElementById('usImportKind').value,text:await file.text(),mapping},true);}catch(e){toast(errText(e));}}
-async function unitSheetsExport(kind){try{const r=await api.post('/api/unit_sheets/export',unitSheetsBody({kind}));const content=r.encoding==='base64'?Uint8Array.from(atob(r.text),c=>c.charCodeAt(0)):r.text;const url=URL.createObjectURL(new Blob([content],{type:r.mime}));const a=document.createElement('a');a.href=url;a.download=r.name;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}catch(e){toast(errText(e));}}
+async function unitSheetsExport(kind){try{const r=await unitSheetsPost('/api/unit_sheets/export',unitSheetsBody({kind}));const content=r.encoding==='base64'?Uint8Array.from(atob(r.text),c=>c.charCodeAt(0)):r.text;const url=URL.createObjectURL(new Blob([content],{type:r.mime}));const a=document.createElement('a');a.href=url;a.download=r.name;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}catch(e){toast(errText(e));}}
 function unitSheetsSave(change){return unitSheetsRequest('save',()=>{const project=structuredClone(USHEET.data.project);change(project);return {project};},true);}
 function unitSheetsSaveView(){const name=document.getElementById('usViewName').value.trim();if(!name)return;const view=structuredClone({view:USHEET.view,where:USHEET.where,sort:USHEET.sort,hidden:USHEET.hidden,order:USHEET.order,showExtras:USHEET.showExtras});unitSheetsSave(p=>{p.views[name]=view;});}
-function unitSheetsLoadView(name){const v=USHEET.data.project.views[name];if(v){Object.assign(USHEET,v,{offset:0});unitSheetsRequest('query');}}
-function unitSheetsSetColumns(){const order=document.getElementById('usColumns').value.split(',').map(x=>x.trim()).filter(Boolean);const all=unitSheetsColumns();USHEET.order=order;USHEET.hidden=all.filter(c=>!order.includes(c));unitSheetsPaint();}
+function unitSheetsLoadView(name){
+ const v=USHEET.data.project.views[name];
+ if(v)return unitSheetsLayout(u=>{Object.assign(u,structuredClone(v),{offset:0});});
+}
+function unitSheetsSetColumns(){
+ const order=document.getElementById('usColumns').value.split(',').map(x=>x.trim()).filter(Boolean);
+ return unitSheetsLayout(u=>{
+  // Include previously hidden columns so applying the visible list keeps them hidden.
+  const all=new Set([...u.hidden,...unitSheetsColumns(true)]);
+  u.order=order;u.hidden=[...all].filter(c=>c!=='id'&&!order.includes(c));
+ },false);
+}
+function unitSheetsExtras(show){
+ return unitSheetsLayout(u=>{u.showExtras=show;},false);
+}
 function unitSheetsComparison(){const comparison={ultra_size:+document.getElementById('usUltra').value,defense_weight:+document.getElementById('usDefenseWeight').value};unitSheetsSave(p=>{p.comparison=comparison;});}
 function unitSheetsSaveRecipe(){const name=document.getElementById('usRecipeName').value.trim();if(!name)return;const recipe={column:document.getElementById('usMassColumn').value,operation:document.getElementById('usMassOp').value,value:document.getElementById('usMassValue').value,other:document.getElementById('usMassOther').value};unitSheetsSave(p=>{p.recipes[name]=recipe;});}
 function unitSheetsLoadRecipe(name){const r=USHEET.data.project.recipes[name];if(r)for(const [k,id]of [['column','usMassColumn'],['operation','usMassOp'],['value','usMassValue'],['other','usMassOther']])document.getElementById(id).value=r[k]||'';}
 function unitSheetsDiscard(){unitSheetsSave(p=>{p.draft={};p.draft_sources={};});}
 function unitSheetsRename(index){const r=USHEET.data.refresh.rename_candidates[index];unitSheetsRequest('rename',{old:r.from,new:r.to},true);}
-function unitSheetsRulesHtml(){
- const kind=USHEET.ruleKind||'replenish',rows=USHEET.data.project.rules[kind]||[],keys=[...new Set(rows.flatMap(Object.keys))];
- return `${unitSheetsBalanceHtml()}<div class="barrow">${['replenish','experience','pool'].map(k=>`<button onclick="USHEET.ruleKind='${k}';unitSheetsPaint()">${k}</button>`).join('')}<button onclick="unitSheetsExport('${kind}')">${tt('sheets.export_table')}</button></div>
- <div class="us-grid" style="max-height:55vh;overflow:auto"><table class="us-table"><thead><tr>${keys.map(k=>`<th>${esc(k)}</th>`).join('')}</tr></thead><tbody>${rows.map((row,r)=>`<tr>${keys.map((key,c)=>`<td><input value="${esc(row[key]??'')}" onchange="unitSheetsRuleCell('${kind}',${r},${c},this.value)"></td>`).join('')}</tr>`).join('')}</tbody></table></div><div class="count">${tt('sheets.rules_import_hint')}</div>`;
+function unitSheetsRuleKind(){
+ const view=USHEET.view;
+ return view.startsWith('rules:')?view.slice(6):view==='rules'?'replenish':null;
 }
-function unitSheetsRuleCell(kind,r,c,value){const keys=[...new Set(USHEET.data.project.rules[kind].flatMap(Object.keys))],key=keys[c];unitSheetsSave(p=>{p.rules[kind][r][key]=value;});}
+function unitSheetsGridOpen(columns){
+ if(!unitSheetsRuleKind())return '<table class="us-table">';
+ return `<table class="us-table" style="table-layout:fixed;width:${36+columns.length*160}px"><colgroup><col style="width:36px">${columns.map(()=>'<col style="width:160px">').join('')}</colgroup>`;
+}
+function unitSheetsFrozenStyle(column,header=false){
+ const frozen=USHEET.data.frozen_columns||[];
+ const index=frozen.indexOf(column);
+ if(index<0)return '';
+ // Fixed widths keep several key columns frozen without overlapping cells.
+ return `style="position:sticky;left:${36+index*160}px;min-width:160px;max-width:160px;background:var(--bg,#20232a);z-index:${header?4:2};${header?'top:0;':''}"`;
+}
+function unitSheetsRulesHtml(){
+ const kind=unitSheetsRuleKind(),d=USHEET.data;
+ const labels={replenish:tt('sheets.rule_replenish'),experience:tt('sheets.rule_experience'),pool:tt('sheets.rule_pool')};
+ const options=d.columns.map(name=>`<option value="${esc(name)}">${esc(name)}</option>`).join('');
+ const issues=d.rule_issues||[];
+ return `${unitSheetsBalanceHtml()}<div class="count">${tt('sheets.rules_import_hint')}</div><div class="barrow">${['replenish','experience','pool'].map(k=>`<button onclick="unitSheetsTab('rules:${k}')">${labels[k]}</button>`).join('')}
+ <button onclick="unitSheetsExport('${kind}')">${tt('sheets.export_table')}</button>
+ <button onclick="unitSheetsRuleStructure('add_row')">${tt('sheets.rule_add_row')}</button>
+ <button onclick="unitSheetsRuleStructure('remove_rows')">${tt('sheets.rule_remove_rows')}</button></div>
+ <div class="barrow"><select id="usRuleColumn">${options}</select>
+ <input id="usRuleColumnName" placeholder="${ttA('sheets.rule_column_name')}">
+ <label><input id="usRuleKey" type="checkbox">${tt('sheets.rule_key_column')}</label>
+ <button onclick="unitSheetsRuleStructure('add_column')">${tt('sheets.rule_add_column')}</button>
+ <button onclick="unitSheetsRuleStructure('rename_column')">${tt('sheets.rule_rename_column')}</button>
+ <button onclick="unitSheetsRuleStructure('remove_column')">${tt('sheets.rule_remove_column')}</button></div>
+ ${issues.length?`<details open><summary>${tt('sheets.rule_issues',{count:issues.length})}</summary>${issues.map(issue=>`<div class="w-bad">${esc(issue.message)}</div>`).join('')}</details>`:''}`;
+}
+async function unitSheetsRuleStructure(operation){
+ const u=USHEET,body={operation};
+ if(operation==='remove_rows'||operation==='remove_column'||operation==='rename_column'){
+  if(!confirm(tt('sheets.rule_structure_confirm')))return;
+ }
+ if(operation.includes('column')){
+  const name=document.getElementById('usRuleColumnName').value.trim();
+  body.column=operation==='add_column'?name:document.getElementById('usRuleColumn').value;
+  if(operation==='rename_column')body.name=name;
+  if(operation==='add_column')body.key=document.getElementById('usRuleKey').checked;
+ }
+ await u.layout;await unitSheetsFlush();
+ if(USHEET!==u)return;
+ unitSheetsPruneSelection();
+ if(operation==='remove_rows'){
+  body.ids=[...u.selected];
+  if(!body.ids.length){toast(tt('sheets.select_first'));return;}
+ }
+ // Schema changes invalidate filter and sort names; flush in the old layout first.
+ unitSheetsClearRect();
+ u.where=null;u.filterRows=[];u.sort=[{column:'id',desc:false}];u.offset=0;
+ return unitSheetsRequest('rule_structure',body,true);
+}
 
 function unitSheetsRect(ev,r,c){
- const u=USHEET;if(ev.shiftKey&&u.anchor){ev.preventDefault();u.rect={r0:Math.min(r,u.anchor.r),r1:Math.max(r,u.anchor.r),c0:Math.min(c,u.anchor.c),c1:Math.max(c,u.anchor.c)};}
- else {u.anchor={r,c};u.rect={r0:r,r1:r,c0:c,c1:c};}
- for(const cell of modal.querySelectorAll('td[data-r]')){const y=+cell.dataset.r,x=+cell.dataset.c;cell.classList.toggle('us-cell-selected',y>=u.rect.r0&&y<=u.rect.r1&&x>=u.rect.c0&&x<=u.rect.c1);}
+ const u=USHEET,rows=u.data.table.rows,cols=unitSheetsColumns();
+ let ar=r,ac=c;
+ if(ev.shiftKey&&u.anchor){
+  ev.preventDefault();
+  ar=rows.findIndex(row=>row.id===u.anchor.id);ac=cols.indexOf(u.anchor.column);
+  if(ar<0||ac<0){ar=r;ac=c;}
+ }else{u.anchor={id:rows[r].id,column:cols[c]};}
+ u.rect={ids:rows.slice(Math.min(r,ar),Math.max(r,ar)+1).map(row=>row.id),
+  columns:cols.slice(Math.min(c,ac),Math.max(c,ac)+1)};
+ unitSheetsRectPaint();
+}
+function unitSheetsRectPaint(){
+ const u=USHEET,cols=unitSheetsColumns(),rows=u.data.table.rows;
+ for(const cell of modal.querySelectorAll('td[data-r]')){
+  const row=rows[+cell.dataset.r],column=cols[+cell.dataset.c];
+  const selected=!!(u.rect&&row&&u.rect.ids.includes(row.id)&&u.rect.columns.includes(column));
+  cell.classList.toggle('us-cell-selected',selected);
+ }
 }
 
 function unitSheetsBalanceHtml(){
@@ -157,12 +521,86 @@ function unitSheetsBalanceHtml(){
  <details><summary>${tt('sheets.structure')}</summary><pre style="max-height:240px;overflow:auto">${esc(JSON.stringify(b.structure,null,2))}</pre></details>`:''}</details>`;
 }
 function unitSheetsStages(){USHEET.balanceStages=[...modal.querySelectorAll('.us-stage:checked')].map(x=>x.value);return USHEET.balanceStages;}
-async function unitSheetsBalancePreview(){const u=USHEET;if(u.busy)return;u.busy=true;try{u.balance=await api.post('/api/unit_sheets/balance_preview',unitSheetsBody({stages:unitSheetsStages()}));unitSheetsPaint();}catch(e){toast(errText(e));}finally{u.busy=false;}}
-async function unitSheetsBalanceExport(){try{const r=await api.post('/api/unit_sheets/balance_export',unitSheetsBody({stages:unitSheetsStages(),intermediate:document.getElementById('usIntermediate').checked}));const url=URL.createObjectURL(new Blob([Uint8Array.from(atob(r.text),c=>c.charCodeAt(0))],{type:r.mime}));const a=document.createElement('a');a.href=url;a.download=r.name;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}catch(e){toast(errText(e));}}
+async function unitSheetsBalancePreview(){const u=USHEET;if(u.busy)return;u.busy=true;try{u.balance=await unitSheetsPost('/api/unit_sheets/balance_preview',unitSheetsBody({stages:unitSheetsStages()}));unitSheetsPaint();}catch(e){toast(errText(e));}finally{u.busy=false;}}
+async function unitSheetsBalanceExport(){try{const r=await unitSheetsPost('/api/unit_sheets/balance_export',unitSheetsBody({stages:unitSheetsStages(),intermediate:document.getElementById('usIntermediate').checked}));const url=URL.createObjectURL(new Blob([Uint8Array.from(atob(r.text),c=>c.charCodeAt(0))],{type:r.mime}));const a=document.createElement('a');a.href=url;a.download=r.name;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}catch(e){toast(errText(e));}}
 function unitSheetsBalanceProfile(){try{const profile=JSON.parse(document.getElementById('usProfile').value||'{}'),overrides=JSON.parse(document.getElementById('usOverrides').value||'[]');USHEET.balance=null;unitSheetsSave(p=>{p.balance_profile=profile;p.balance_overrides=overrides;});}catch(e){toast(errText(e));}}
 
-async function unitSheetsBalanceApply(){const u=USHEET,b=u.balance;if(!b||u.busy||!confirm(tt('sheets.apply_balance_confirm',{count:b.changed_fields})))return;u.busy=true;try{await api.post('/api/unit_sheets/balance_apply',unitSheetsBody({stages:b.stages,plan_token:b.plan_token}));u.balance=null;toast(tt('sheets.applied'));}catch(e){toast(errText(e));}finally{u.busy=false;unitSheetsPaint();}}
+async function unitSheetsBalanceApply(){const u=USHEET,b=u.balance;if(!b||u.busy||!confirm(tt('sheets.apply_balance_confirm',{count:b.changed_fields})))return;u.busy=true;try{await unitSheetsPost('/api/unit_sheets/balance_apply',unitSheetsBody({stages:b.stages,plan_token:b.plan_token}));u.balance=null;toast(tt('sheets.applied'));}catch(e){toast(errText(e));}finally{u.busy=false;unitSheetsPaint();}}
 
 async function unitSheetsFlush(){const u=USHEET;if(u.inputs)for(const key of [...u.inputs.keys()])unitSheetsCommit(key,u);if(u.queue)await u.queue;}
-async function unitSheetsNativePreview(){const u=USHEET;await unitSheetsFlush();if(u.busy)return;u.busy=true;try{u.native=await api.post('/api/unit_sheets/native_preview',unitSheetsBody());unitSheetsPaint();}catch(e){toast(errText(e));}finally{u.busy=false;}}
-async function unitSheetsNativeApply(){const u=USHEET,n=u.native;if(!n||u.busy||!confirm(tt('sheets.native_confirm',{count:n.units})))return;u.busy=true;try{const applied=await api.post('/api/unit_sheets/native_apply',unitSheetsBody({plan_token:n.plan_token}));if(applied.warning)toast(applied.warning);u.native=null;u.past=[];u.future=[];toast(tt('sheets.native_done'));}catch(e){toast(errText(e));}finally{u.busy=false;}await unitSheetsRequest('load');}
+async function unitSheetsNativePreview(){const u=USHEET;await unitSheetsFlush();if(u.busy)return;u.busy=true;try{u.native=await unitSheetsPost('/api/unit_sheets/native_preview',unitSheetsBody());unitSheetsPaint();}catch(e){toast(errText(e));}finally{u.busy=false;}}
+async function unitSheetsNativeApply(){const u=USHEET,n=u.native;if(!n||u.busy||!confirm(tt('sheets.native_confirm',{count:n.units})))return;u.busy=true;try{const applied=await unitSheetsPost('/api/unit_sheets/native_apply',unitSheetsBody({plan_token:n.plan_token}));if(applied.warning)toast(applied.warning);u.native=null;u.past=[];u.future=[];toast(tt('sheets.native_done'));}catch(e){toast(errText(e));}finally{u.busy=false;}await unitSheetsRequest('load');}
+
+function unitSheetsColumnKind(column){
+ // The API supplies kinds even for read-only recruitment context columns.
+ const declared=USHEET.data.filter_info?.[column]?.kind;
+ if(declared)return declared;
+ if(USHEET_META.includes(column)||column==='groups'||column==='id'||column.startsWith('extra:'))return 'annotation';
+ if(unitSheetsRuleKind())return 'annotation';
+ return USHEET.data.field_info[column]?'native':'derived';
+}
+function unitSheetsGroupPick(name){
+ return unitSheetsLayout(u=>{u.compareGroup=name;});
+}
+async function unitSheetsGroupAction(operation){
+ const u=USHEET;
+ const input=document.getElementById('usGroupName');
+ const typed=input?input.value.trim():'';
+ const name=operation==='create'?typed:u.compareGroup;
+ if(!name)return;
+ await u.layout;
+ await unitSheetsFlush();
+ if(USHEET!==u)return;
+ return unitSheetsRequest('group',()=>{
+  // Resolve selected IDs after queued queries have pruned newly hidden rows.
+  unitSheetsPruneSelection();
+  const body={operation,name};
+  if(operation==='add'||operation==='remove'){
+   if(u.view==='recruitment'||unitSheetsRuleKind())throw new Error(tt('sheets.group_units_only'));
+   body.ids=[...u.selected];
+   if(!body.ids.length)throw new Error(tt('sheets.select_first'));
+  }
+  if(operation==='rename')body.new_name=typed;
+  u.compareGroup=operation==='delete'?'':operation==='rename'?typed:name;
+  return body;
+ },true);
+}
+function unitSheetsGroupsHtml(){
+ const u=USHEET,d=u.data;
+ const names=Object.keys(d.project.groups||{});
+ const unitView=u.view!=='recruitment'&&!unitSheetsRuleKind();
+ const disabled=unitView?'':' disabled';
+ let html=`<details${u.compareGroup?' open':''}><summary>${tt('sheets.groups')}</summary>
+ <div class="barrow"><select id="usGroupPick" onchange="unitSheetsGroupPick(this.value)"><option value="">${tt('sheets.group_pick')}</option>${names.map(name=>`<option value="${esc(name)}"${name===u.compareGroup?' selected':''}>${esc(name)}</option>`).join('')}</select>
+ <input id="usGroupName" placeholder="${ttA('sheets.group_name')}">
+ ${['create','rename','delete','add','remove'].map(operation=>`<button onclick="unitSheetsGroupAction('${operation}')"${['add','remove'].includes(operation)?disabled:''}>${unitSheetsGroupLabel(operation)}</button>`).join('')}</div>
+ <div class="count">${tt('sheets.group_note')}</div>`;
+ const comparison=d.comparison_group;
+ if(comparison){
+  // Transpose the Base columns so unit values can be read side by side.
+  html+=`<div class="us-comparison"><table class="us-table us-compare-table"><thead><tr><th>${esc(comparison.name)}</th>
+   ${['min','max','average'].map(key=>`<th>${unitSheetsGroupLabel(key)}</th>`).join('')}
+   ${comparison.members.map(member=>`<th>${esc(member.id)}${member.missing?` <span>${tt('sheets.group_missing')}</span>`:''}</th>`).join('')}</tr></thead><tbody>`;
+  html+=comparison.columns.map(column=>{
+   const stats=comparison.statistics[column];
+   const kind=comparison.column_kinds?.[column]||unitSheetsColumnKind(column);
+   return `<tr><th class="us-kind-${kind}">${esc(unitSheetsColumnLabel(column))}</th>
+    ${['min','max','average'].map(key=>`<td>${esc(unitSheetsValue(stats?.[key]))}</td>`).join('')}
+    ${comparison.members.map(member=>`<td class="us-kind-${kind}">${esc(unitSheetsValue(member[column]))}${stats?`<small>${tt('sheets.group_difference',{value:esc(unitSheetsValue(member.difference[column]))})}</small>`:''}</td>`).join('')}</tr>`;
+  }).join('');
+  html+='</tbody></table></div>';
+ }
+ return html+'</details>';
+}
+
+function unitSheetsKindLabel(kind){
+ const labels={native:tt('sheets.kind_native'),annotation:tt('sheets.kind_annotation'),
+  derived:tt('sheets.kind_derived')};
+ return labels[kind]||kind;
+}
+function unitSheetsGroupLabel(key){
+ const labels={create:tt('sheets.group_create'),rename:tt('sheets.group_rename'),
+  delete:tt('sheets.group_delete'),add:tt('sheets.group_add'),remove:tt('sheets.group_remove'),
+  min:tt('sheets.group_min'),max:tt('sheets.group_max'),average:tt('sheets.group_average')};
+ return labels[key]||key;
+}

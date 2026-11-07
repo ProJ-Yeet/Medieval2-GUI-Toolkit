@@ -3804,6 +3804,20 @@ body.look-editing :is(button,label,legend,h1,h2,h3,.trsechead,.mftab):hover{outl
     font-synthesis:none; font-style:normal!important; letter-spacing:0!important}
   html:is(:lang(zh),:lang(ja),:lang(ko)) :is(i,em){font-weight:600}
 
+/* Column kinds use theme tokens and border patterns in both themes. */
+.unit-sheets .us-kind-native{border-bottom:2px solid var(--accent)}
+.unit-sheets .us-kind-annotation{border-bottom:2px dashed var(--ink)}
+.unit-sheets .us-kind-derived{border-bottom:3px double var(--accent2)}
+.unit-sheets th.us-kind-native{color:var(--accent)}
+.unit-sheets th.us-kind-annotation{font-style:italic}
+.unit-sheets th.us-kind-derived{color:var(--accent2)}
+.us-legend span{padding:3px 8px;background:var(--panel2);color:var(--ink)}
+.us-comparison{max-height:50vh;overflow:auto}
+.us-compare-table small{display:block;color:var(--dim)}
+.us-compare-table td:first-child,.us-compare-table th:first-child{left:0;min-width:160px}
+.us-compare-table td:nth-child(2),.us-compare-table th:nth-child(2){position:static;min-width:80px}
+.us-compare-table tbody th{top:auto;left:0;z-index:2;cursor:default}
+.us-compare-table thead th{cursor:default}
 /* Editable sheets: frozen identity/header, native draft and cell selection. */
 .unit-sheets .barrow{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin:8px 0}
 .unit-sheets details{margin:8px 0}.unit-sheets input{max-width:240px}

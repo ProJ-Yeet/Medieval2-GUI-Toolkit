@@ -4,6 +4,260 @@ Newest entries first. This records Codex's work for Claude; project status and
 release rules remain in STATE.md and RELEASE.md. Do not assume the working tree's
 other changes belong to Codex.
 
+## 2026-11-07 - Phase 110 step 4 comparison groups and column kinds
+
+- Read Phase 110 in docs/ROADMAP.md and the workbook comparison workflow in
+  docs/upstream/EDB_SHEETS_WORKFLOW.md. Implemented the last requested build step.
+  Preserved pre-existing step 1-3 and unrelated working-tree changes. No commit
+  or release was made. Did not edit viewer3d.js, ROADMAP.md, STATE.md, other
+  web/i18n catalogues or dev/i18n files.
+- (a) Project groups map names to ordered stable unit IDs, scoped by the existing
+  per-mod project path. Older projects migrate to an empty groups object.
+  Create, rename, delete and explicit selected-unit add/remove operations validate
+  the schema, revision and source token. Add/remove validates live matching IDs
+  and rejects rule/recruitment row selections. The frontend waits for layout,
+  pending edits and queued queries before pruning and snapshotting selection.
+  Missing EDU members remain in the project and are labelled in the panel.
+- (b) A read-only transposed comparison panel shows all saved members side by
+  side on Base columns and Defense Total, Ultra Size and both efficiency columns.
+  Numeric min/max/average and each member's difference from average use valid
+  present values only. Missing members and missing/invalid values do not become
+  zero. It reads staged values and is independent of grid filtering/pagination.
+  Its column-kind schema remains independent of the active normal/rule view.
+- (c) groups is an annotation list column with contains/not_contains support
+  through filter_info, including recruitment context. Group membership itself
+  is read-only in the grid and managed by the group buttons.
+- (d) Headers and cells distinguish native EDU, classification/annotation and
+  derived columns. A small legend uses solid, dashed and double borders plus
+  header treatments. CSS uses existing accent, accent2, ink, dim and panel2
+  theme tokens; index.html changes are CSS only. No live browser visual check
+  was performed, so light/dark rendering is based on the shared token contract.
+- (e) Existing visible formulas and editable size/defense coefficients were
+  preserved. Group comparison reuses those calculations and staged records.
+- Changed unittransfer/unit_sheets.py, unittransfer/sheet_ops.py,
+  web/js/unitsheets.js, web/index.html, web/i18n/en.json,
+  tests/test_unit_sheets.py, tests/test_sheet_ops.py,
+  tests/test_unit_sheets_ui.js and this handoff.
+- Test-first evidence: new Python regressions failed on missing group schema,
+  group service action, comparison API and membership fields; the Node regression
+  failed on the missing group action handler. A further comparison-kind assertion
+  failed before adding its independent schema. Implemented and reran to green.
+  Initial Python runs also hit the known sandbox mode-0700 Temp directory denial.
+  Verification used an ignored .tmp/phase110-step4-runner/sitecustomize.py shim
+  via PYTHONPATH to map mkdir mode 0700 to 0777, with UT_NO_BROWSER=1. No runtime
+  or tracked test-runner workaround was introduced. The i18n check initially
+  rejected dynamic ID concatenation; explicit tt IDs fixed it.
+- Final checks actually run, all passed:
+  python -m tests.test_unit_sheets: 29 tests;
+  python -m tests.test_sheet_ops: 18 tests;
+  python -m tests.test_sheet_pipeline: 9 tests;
+  python -m tests.test_sheet_native: 7 tests;
+  python -m tests.test_edb_balance: 12 tests;
+  python -m tests.test_web_modules: 130/130 checks;
+  python -m tests.test_i18n: 45/45 checks;
+  node tests/test_unit_sheets_ui.js: all 32 named safety cases, the existing VM
+  assertions and new group queue/panel/style assertions passed;
+  git diff --check: passed.
+- Usage authorization: user explicitly allowed this Phase 110 run to reach
+  90% used in the five-hour window. Local telemetry was stale, then direct live
+  account endpoint checks succeeded at 79%, 80%, 81% and finally 82% used.
+  Work finishes in a stable state below the authorized stop. No credits were
+  purchased and no limits were reset. Checks are periodic and account-wide.
+- No requested implementation item remains. Translation stays separate as
+  instructed. No installed-game or live browser verification was performed.
+
+## 2026-11-07 - Phase 110 step 3 Barracks rules on the shared grid
+
+- Read Phases 110, 112 and 113 in docs/ROADMAP.md. Changed
+  unittransfer/unit_sheets.py, unittransfer/sheet_ops.py, web/js/unitsheets.js,
+  web/i18n/en.json, tests/test_unit_sheets.py, tests/test_unit_sheets_ui.js,
+  and this handoff. Preserved the pre-existing step 1, step 2 and unrelated
+  working-tree changes. No commit or release was made. No edits were made to
+  viewer3d.js, ROADMAP.md, STATE.md or non-English locale files.
+- (a) Rule rows now have stable string IDs in project.rules. Migration assigns
+  deterministic IDs to older rows and persists the migrated project on load.
+  Newly created rows use UUIDs. All rule cell, paste and removal requests use
+  row IDs. CSV exports include IDs and the saved schema even for empty tables.
+- (b) Project rule_schema records text key columns and numeric value columns.
+  Query rows normalize numbers; edits reject non-finite and non-numeric values
+  using the existing SheetError style. Explicit zero survives; blank stays blank.
+  Paste validates transactionally. Project replacement cannot bypass validation
+  of changed rule values. Existing malformed source tokens remain inspectable
+  through invalid filters and named issues. Conflicting duplicate keys, equal
+  duplicate keys and incomplete keys appear as named rule issues. CSV imports
+  now retain duplicate rows for repair; balance lookup still rejects duplicates
+  exactly as before. No race vocabulary is hardcoded.
+- (c) Added row creation, selected-ID removal, and add/rename/remove column
+  controls. Extra text key columns can be selected when adding a column.
+  Structural requests flush pending inputs and use the serialized request/history
+  path. Destructive changes and column rename use the existing confirm pattern.
+  Undo/redo flush pending inputs; rule undo resets filters/sorts that may reference
+  removed columns. Structural changes also reset those filters/sorts safely.
+- (d) rules:replenish, rules:experience and rules:pool query the shared service,
+  with filter_info, matched_ids, stable multi-column sort and paging. The same
+  grid renderer and existing movement, rectangular selection/paste, fill-down,
+  selection pruning and layout-flush functions serve these views. Rule IDs and
+  text keys stay frozen using fixed column widths. Rule blanks can be edited
+  and pasted intentionally without changing native-unit blank-edit behavior.
+- (e) Empty tables expose the default keys immediately. Experience/pool also
+  expose T0 through T4. Replenishment endpoint columns can be added for the
+  mod's own race labels. Column metadata and empty schemas persist in config.
+- edb_balance.py was not changed. Its existing header/key contract and balance
+  validation remain authoritative; changing/removing those headers requires
+  restoring the expected lookup headers before balancing. A fixture regression
+  verifies an experience table built/edited through the new API produces the
+  same balance text as its equivalent imported CSV table. The existing full
+  balance regression suite also passes with the new project metadata.
+- Test first: observed backend failures for migration, schema, structure,
+  validation and issues, then implemented and confirmed passing. Observed UI
+  failures for frozen columns, structure actions and pending-input undo before
+  their fixes. Additional VM coverage checks queued structure history,
+  undo/redo, rule fill with zero and stable IDs through sorting. The UI harness
+  runs the actual frontend module with an asynchronous fixture API.
+- Final required checks passed, with UT_NO_BROWSER=1 for Python commands:
+  python -u -m tests.test_unit_sheets: 27 tests;
+  python -u -m tests.test_sheet_ops: 16 tests;
+  python -u -m tests.test_sheet_pipeline: 9 tests;
+  python -u -m tests.test_sheet_native: 7 tests;
+  python -u -m tests.test_edb_balance: 12 tests;
+  python -u -m tests.test_web_modules: 130/130 checks;
+  python -u -m tests.test_i18n: 45/45 checks.
+  node tests/test_unit_sheets_ui.js passed all 32 named regression cases plus
+  the existing VM assertions. git diff --check passed.
+- Python verification used the existing ignored
+  .cache/codex-defect-tests/test-env sitecustomize shim via PYTHONPATH, which
+  maps mkdir mode 0700 to 0777 for this Windows sandbox. No runtime or test
+  runner workaround was added. No live browser or installed-game test was run.
+- Live account usage endpoint checks succeeded after bypassing the refused local
+  proxy. Five-hour usage readings were 69%, 71%, 74% and finally 75% used.
+  Continued under the user's 90%-used stop authorization; no credits were
+  purchased and no limits were reset. Periodic account-wide checks can lag.
+- No requested step 3 implementation item is outstanding. Translation remains
+  separate as instructed; only the English source catalogue was edited.
+
+## 2026-11-07 - Phase 110 step 2 row schemas and filters
+
+- Read Phase 110 in docs/ROADMAP.md. Changed unittransfer/sheet_ops.py,
+  unittransfer/unit_sheets.py, web/js/unitsheets.js, web/i18n/en.json,
+  tests/test_sheet_ops.py, tests/test_unit_sheets.py, tests/test_unit_sheets_ui.js,
+  and this handoff. Existing step 1 and unrelated working-tree changes were
+  preserved. No commit or release was made. viewer3d.js, ROADMAP.md, STATE.md
+  and non-English locale files were not edited.
+- (a) Query responses publish filter_info with text/number/bool/list types and
+  readonly flags. Native views share the complete native row contract;
+  recruitment exposes only its EDB and joined context columns. Empty sources
+  retain their schema. Filter column and operator menus use this contract.
+  Boolean columns use a translated True/False selector. Imported extra-column
+  types reflect their values rather than always claiming text.
+- (b) Boolean eq/ne filters accept true/false UI strings, case insensitive,
+  without treating booleans as numbers. Visual builder submissions use booleans.
+- (c) changed includes native drafts and classification edits. Classification
+  baselines are saved in project classification_sources on the first edit;
+  subsequent reversion and project undo compare against that baseline. Imports
+  and whole-project saves also record classification changes. These config
+  classifications persist independently of native Apply/Discard; historical
+  projects without a baseline are treated as the starting classification state.
+- (d) Numeric source parse failures keep their original token for inspection.
+  Native invalid_columns uses the editing validator, including integer and
+  forbidden-negative checks. Invalid is distinct from missing, comparisons
+  exclude invalid numeric sources, and derived arithmetic avoids bad operands.
+  Recruitment records parse failures and invalid negative/fractional-experience
+  values in invalid_columns rather than silently replacing them with None.
+- (e) Projectile context reads staged stat_pri/stat_sec members using EDU's
+  primary-then-secondary projectile policy. Recruitment joins carry staged
+  context, Category override, changed and needs_classification.
+- (f) Added read-only pri_weapon_type, pri_tech_type, sec_weapon_type and
+  sec_tech_type, extracted from zero-based CSV members 5 and 6, as used by
+  the existing EDU/vocabulary layout. Exposed in Base stats and filter menus.
+- (g) Saved views and advanced JSON restore flat AND/OR clauses and the group.
+  Nested or unsupported expressions clear the flat controls and show an
+  Advanced filter active summary. A translated human-readable expression
+  summary and matching count are derived from the active expression, not from
+  unsubmitted builder edits. Summaries truncate after 240 characters.
+- (h) Recruitment exposes numeric building_depth from edb_balance.graph and
+  building_tier as min(depth + 1, 5), matching the existing balance convention.
+  Graph errors leave both unknown. Building type uses the parser's optional
+  chain.extras['classification']; absent classifications remain None. It is
+  not inferred from chain names or settlement context.
+- Regression-first verification: new backend and UI regressions were observed
+  failing before their corresponding implementation fixes. Additional checks
+  cover classification reversion/undo, malformed derived inputs, optional EDB
+  classification and cyclic graphs. Tests use temporary fixture data and the
+  actual frontend module in a Node VM, not a live browser or installed game.
+- Environment: unmodified Python runs encountered the pre-existing Windows
+  sandbox denial of mode-0700 temporary directories. Verification uses the
+  existing .cache/codex-defect-tests/test-env sitecustomize shim via PYTHONPATH;
+  it maps only mkdir mode 0700 to 0777. UT_NO_BROWSER=1 and TEMP/TMP point to
+  local scratch. Some initial denied scratch directories could not be cleaned
+  by this sandbox. Runtime and test-runner source were not changed for this.
+- Account usage: live usage endpoint requests failed with connection refused;
+  no live usage tool was available. The latest local rate-limit event reported
+  52% used in the five-hour window, but it is not a current reading. No credits
+  were purchased and no limits were reset.
+- Final required verification passed, all Python commands with UT_NO_BROWSER=1:
+  python -m tests.test_unit_sheets: 19 tests; tests.test_sheet_ops: 16;
+  tests.test_sheet_pipeline: 9; tests.test_sheet_native: 7;
+  tests.test_edb_balance: 12; tests.test_web_modules: 130/130 checks;
+  tests.test_i18n: 45/45 checks. The final Python sweep used -u only to stream
+  progress. node tests/test_unit_sheets_ui.js passed all 27 named regression
+  cases plus its existing VM assertions. git diff --check passed.
+- No requested implementation item remains outstanding. No live-browser or
+  installed-game verification was performed. Live account usage and cleanup
+  of the 29 denied initial scratch directories remain environment limitations.
+
+## 2026-11-07 - Phase 110 step 1 edit-target safety
+
+- Changed web/js/unitsheets.js, tests/test_unit_sheets_ui.js, web/i18n/en.json,
+  and this handoff. Read Phase 110's exit criteria before implementation.
+  No commit or release was made. Existing unrelated working-tree changes were
+  preserved. viewer3d.js, ROADMAP.md, STATE.md and other locale files were not
+  edited.
+- Safe selection policy: intersect selected stable IDs with the response's
+  matched_ids after requests and again before mass edit/fill. Filtered-out IDs
+  are dropped, with the displayed selection count reflecting the remaining set.
+  Mass edit waits for an in-flight layout/filter change; Select matches replaces
+  the previous selection. Matching off-page checkbox selections remain available
+  for explicit mass edit, whose selected count includes them.
+- Rectangles and anchors now contain row IDs and column names. Sort, filters
+  (including clear, missing and advanced), pagination, tabs, saved-view loading,
+  visible-column changes and extra-column changes flush pending cell edits
+  before changing the layout, then clear the rectangle/anchor. Layout changes
+  are serialized. Response-driven changes in row order also clear rectangles;
+  unchanged rectangles retain their cell highlighting across repaint.
+- Fill-down snapshots the top displayed selected ID, copies its current values
+  and limits targets to displayed selected IDs. Rectangular fill uses the selected
+  editable column names; checkbox fill uses the mass-edit column. Neither writes
+  off-page rows. Paste snapshots IDs/names, waits for layout and pending edits,
+  and removes targets no longer displayed/editable. A single clicked cell anchors
+  a clipboard block within the page; a larger rectangle bounds it. Added only
+  sheets.fill_page_note in English to explain the page/filter selection policy.
+- Column hiding now derives from the full column list plus existing hidden
+  names, so repeatedly applying the visible list cannot resurrect hidden fields.
+  Explicitly listing a hidden field can reveal it again; id remains frozen.
+- Test-first: 18 initial safety regressions failed before implementation. Further
+  regressions exposed paste overtaking an in-flight filter, rectangle fill losing
+  its columns during a flush-driven reorder, and single-cell paste clipping;
+  each was observed failing before its fix. All 22 new safety cases and the
+  existing Node VM checks now pass. Verification uses the real module in a Node
+  VM with an asynchronous fixture API, not a live browser.
+- Python commands used UT_NO_BROWSER=1. Initial unmodified-environment runs
+  encountered the existing Windows sandbox denial of mode-0700 temporary
+  directories. Reruns used the pre-existing ignored local sitecustomize shim at
+  .cache/codex-defect-tests/test-env via PYTHONPATH, with TEMP/TMP in local scratch;
+  it maps mkdir mode 0700 to 0777 only. No runtime or test-runner source changes
+  were made for this environment issue.
+- Required checks: python -m tests.test_unit_sheets (12 tests),
+  tests.test_sheet_ops (10), tests.test_sheet_pipeline (9), tests.test_sheet_native
+  (7), tests.test_edb_balance (12), and tests.test_web_modules (130/130 checks)
+  passed. python -m tests.test_i18n passed 45/45 checks.
+  node tests/test_unit_sheets_ui.js and git diff --check passed. No requested
+  step-1 behavior remains unimplemented; live browser verification was not run.
+- Usage was checked at start and checkpoints from the latest account rate-limit
+  events. Latest reading: five-hour 52% used, 48% remaining. Continued under the
+  supplied active EDB/sheets run override; no credits spent or limits reset.
+  No separate live usage endpoint is exposed in this session, so account-event
+  readings may lag concurrent account activity.
+
 ## 2026-11-07 - Five updater and unit-sheet defect fixes
 
 - Added and ran failing regressions before each fix, then confirmed they pass.

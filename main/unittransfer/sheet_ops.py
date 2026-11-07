@@ -56,9 +56,13 @@ def value_of(fields,definition):
     if kind=='list':return [x.strip() for x in text.split(',') if x.strip() and x.strip()!='no']
     if kind in ('int','number'):
         try:
-            n=float(text)
-            return int(n) if kind=='int' and n.is_integer() else n if math.isfinite(n) else None
-        except ValueError:return None
+            n = float(text)
+            if math.isfinite(n):
+                return int(n) if kind == 'int' and n.is_integer() else n
+        except ValueError:
+            pass
+        # Keep malformed source text visible and distinct from an absent member.
+        return text
     return text
 
 
@@ -107,6 +111,77 @@ def field_changes(unit,columns):
     return changed,removals
 
 
+WEAPON_MEMBERS = {
+    'pri_weapon_type': ('stat_pri', 5), 'pri_tech_type': ('stat_pri', 6),
+    'sec_weapon_type': ('stat_sec', 5), 'sec_tech_type': ('stat_sec', 6),
+}
+RECRUIT_NUMBERS = ('initial', 'per_turn', 'maximum', 'experience')
+RECRUIT_CONTEXT = (*sheets.ANNOTATIONS, 'Category override', 'Category', 'class',
+                   'ownership', 'model', 'mount', 'projectile', 'changed',
+                   'needs_classification', 'groups', *WEAPON_MEMBERS)
+
+
+def classification_state(project, uid):
+    meta = project.get('units', {}).get(uid, {})
+    return {**{key: str(meta.get('annotations', {}).get(key, ''))
+               for key in sheets.ANNOTATIONS},
+            'Category override': meta.get('category_override', '')}
+
+
+def remember_classification(project, before, uid):
+    # A baseline lets changed include config edits and become false on reversion.
+    if classification_state(project, uid) != classification_state(before, uid):
+        project.setdefault('classification_sources', {}).setdefault(
+            uid, copy.deepcopy(before.get('classification_sources', {}).get(
+                uid, classification_state(before, uid))))
+
+
+def filter_info(rows, recruitment=False):
+    """Publish the row contract even when the current source contains no rows."""
+    kinds = {key: 'text' for key in ('id', *RECRUIT_CONTEXT)}
+    kinds.update(ownership='list', groups='list', changed='bool', needs_classification='bool')
+    if recruitment:
+        kinds.update({key: 'text' for key in
+                      ('unit', 'building', 'building_type', 'level', 'settlement', 'section', 'requires')})
+        kinds.update({key: 'number' for key in
+                      (*RECRUIT_NUMBERS, 'line', 'building_depth', 'building_tier')})
+    else:
+        kinds.update({key: 'text' for key in ('Name', 'live_category')})
+        kinds.update({key: 'number' if definition[2] == 'int' else definition[2]
+                      for key, definition in FIELDS.items()})
+        kinds.update({key: 'number' for key in
+                      ('defense_total', 'ultra_size', 'cost_efficiency', 'upkeep_efficiency')})
+        for row in rows:
+            for key, value in row.items():
+                if key.startswith('extra:'):
+                    if isinstance(value, bool):
+                        kinds[key] = 'bool'
+                    elif isinstance(value, (int, float)):
+                        kinds[key] = 'number'
+                    elif isinstance(value, list):
+                        kinds[key] = 'list'
+                    elif value is not None or key not in kinds:
+                        kinds[key] = 'text'
+    return {key: {'type': kind, 'kind': column_kind(key),
+                  'readonly': recruitment or key not in FIELDS and key not in META}
+            for key, kind in kinds.items()}
+
+
+def invalid_native(column, value):
+    if value is None:
+        return False
+    try:
+        typed(column, value)
+        return False
+    except sheets.SheetError:
+        return True
+
+
+def valid_number(row, column):
+    # Derived arithmetic must never consume malformed or forbidden source values.
+    return row.get(column) if column not in row['invalid_columns'] else None
+
+
 def records(mod,project):
     _,snapshot=sheets.refresh(mod,project)
     units=sheets.live_units(mod);rows=[]
@@ -120,26 +195,82 @@ def records(mod,project):
             for key in removals:fields.pop(key,None)
         row={k:v for k,v in source.items() if k not in ('fields','extra','attributes','class')}
         row.update({column:value_of(fields,definition) for column,definition in FIELDS.items()})
-        row['invalid_columns']=[column for column,definition in FIELDS.items()
-            if definition[2] in ('int','number') and definition[0] in fields
-            and (row[column] is None or definition[2]=='int' and not float(row[column]).is_integer())]
+        row['invalid_columns'] = [column for column in FIELDS
+                                  if invalid_native(column, row[column])]
+        for column, (key, index) in WEAPON_MEMBERS.items():
+            row[column] = value_of(fields, (key, index, 'text', 'base'))
+        # Use the same pri-then-sec projectile policy as EDU, against staged fields.
+        projectiles = [value_of(fields, (key, 2, 'text', 'base'))
+                       for key in ('stat_pri', 'stat_sec')]
+        row['projectile'] = next((value for value in projectiles
+                                  if value and value.lower() != 'no'), '')
         row['Category override']=project['units'].get(uid,{}).get('category_override','')
         row['Category']=row['Category override'] or row.get('category')
-        row['changed']=bool(draft)
+        baseline = project.get('classification_sources', {}).get(uid)
+        row['changed'] = bool(draft) or (baseline is not None and
+                                       baseline != classification_state(project, uid))
+        row['groups'] = [name for name, members in project.get('groups', {}).items() if uid in members]
         row['stale_draft']=stale
-        a,d,shield=row.get('armor'),row.get('defense'),row.get('shield')
+        a, d, shield = (valid_number(row, key) for key in ('armor', 'defense', 'shield'))
         row['defense_total']=a+d+shield if None not in (a,d,shield) else None
-        size=row.get('unit_size');row['ultra_size']=size*number(project['comparison'].get('ultra_size',2.5)) if size is not None else None
-        atk=row.get('attack');weight=number(project['comparison'].get('defense_weight',.8))
+        size=valid_number(row, 'unit_size');row['ultra_size']=size*number(project['comparison'].get('ultra_size',2.5)) if size is not None else None
+        atk=valid_number(row, 'attack');weight=number(project['comparison'].get('defense_weight',.8))
         denom=atk+a+weight*d+shield if None not in (atk,a,d,shield) else None
         for name,col in [('cost_efficiency','recruit_cost'),('upkeep_efficiency','upkeep')]:
-            row[name]=row[col]/denom if row.get(col) is not None and denom not in (None,0) else None
+            row[name]=row[col]/denom if valid_number(row, col) is not None and denom not in (None,0) else None
         for k,v in source['extra'].items():row['extra:'+k]=v
         rows.append(row)
     extras={key for row in rows for key in row if key.startswith('extra:')}
     for row in rows:
         for key in extras:row.setdefault(key,None)
     return rows,snapshot
+
+
+DERIVED_COLUMNS = ('defense_total', 'ultra_size', 'cost_efficiency', 'upkeep_efficiency')
+
+
+def column_kind(column):
+    if column in FIELDS:
+        return 'native'
+    if column in META or column in ('id', 'Name', 'Category', 'groups') or column.startswith('extra:'):
+        return 'annotation'
+    return 'derived'
+
+
+def compare_group(mod, project, name, rows=None):
+    """Compare the complete saved group, independent of grid filtering and paging."""
+    if not name or name not in project.get('groups', {}):
+        return None
+    if rows is None:
+        rows, _ = records(mod, project)
+    by_id = {row['id']: row for row in rows}
+    columns = [key for key, definition in FIELDS.items() if definition[3] == 'base']
+    columns.extend(DERIVED_COLUMNS)
+    members = []
+    for uid in project['groups'][name]:
+        source = by_id.get(uid)
+        members.append({**{column: source.get(column) if source else None for column in columns},
+                        'id':uid, 'missing':source is None, 'difference':{}})
+    statistics = {}
+    for column in columns:
+        numeric = column in DERIVED_COLUMNS or FIELDS[column][2] in ('int', 'number')
+        if not numeric:
+            continue
+        # Missing and invalid source values have no vote in the group average.
+        values = [member[column] for member in members
+                  if not member['missing'] and column not in by_id[member['id']]['invalid_columns']
+                  and isinstance(member[column], (int, float)) and math.isfinite(member[column])]
+        average = sum(values) / len(values) if values else None
+        statistics[column] = {'min':min(values) if values else None,
+                              'max':max(values) if values else None,
+                              'average':average, 'count':len(values)}
+        for member in members:
+            value = member[column]
+            valid = (not member['missing'] and column not in by_id[member['id']]['invalid_columns']
+                     and isinstance(value, (int, float)) and math.isfinite(value))
+            member['difference'][column] = value - average if valid and average is not None else None
+    return {'name':name, 'columns':columns, 'members':members, 'statistics':statistics,
+            'column_kinds':{column:column_kind(column) for column in columns}}
 
 
 def matches(row,expr,depth=0):
@@ -153,7 +284,7 @@ def matches(row,expr,depth=0):
     if 'not' in expr:return not matches(row,expr['not'],depth+1)
     key=expr.get('column');op=expr.get('op','eq');want=expr.get('value');value=row.get(key)
     if key not in row:sheets.fail(_i18n.msg('eng.sheets.unknown_filter_column_value1','unknown filter column: {value1}',value1=str(key)))
-    if op=='missing':return value is None
+    if op=='missing':return value is None and key not in row.get('invalid_columns', [])
     if op=='blank':return value is None or value=='' or value==[]
     if op=='invalid':
         if 'invalid_columns' in row:return key in row['invalid_columns']
@@ -162,6 +293,8 @@ def matches(row,expr,depth=0):
         return value is None
     if op in ('gt','ge','lt','le'):
         if value is None or value=='':return False
+        if key in row.get('invalid_columns', []):
+            return False
         a,b=number(value),number(want)
         return {'gt':a>b,'ge':a>=b,'lt':a<b,'le':a<=b}[op]
     if isinstance(value,list):hit=str(want).casefold() in {str(x).casefold() for x in value}
@@ -169,7 +302,13 @@ def matches(row,expr,depth=0):
     if op in ('contains','not_contains'):return hit if op=='contains' else not hit
     if op in ('eq','ne'):
         same=value==want if isinstance(value,(int,float,bool)) else str(value or '').casefold()==str(want or '').casefold()
-        if isinstance(value,(int,float)) and isinstance(want,str):
+        if isinstance(value, bool):
+            if isinstance(want, str):
+                normalized = want.strip().lower()
+                same = normalized in ('true', 'false') and value == (normalized == 'true')
+            else:
+                same = isinstance(want, bool) and value == want
+        elif isinstance(value,(int,float)) and isinstance(want,str):
             try:same=number(value)==number(want)
             except sheets.SheetError:same=False
         return same if op=='eq' else not same
@@ -222,7 +361,7 @@ def stage_operation(mod,project,ids,column,operation,value=None,other=None):
     """One all-or-nothing operation; save config only after the caller reviews it."""
     if not isinstance(ids,list) or not ids or len(ids)!=len(set(ids)):sheets.fail(_i18n.msg('eng.sheets.select_distinct_unit_ids_first','select distinct unit IDs first'))
     p=copy.deepcopy(project);rows,_=records(mod,p);live={r['id']:r for r in rows}
-    if any(uid not in live for uid in ids):sheets.fail(_i18n.msg('eng.sheets.selected_units_changed_refresh_before_editing','selected units changed; refresh before editing'))
+    if any(not isinstance(uid, str) or uid not in live for uid in ids):sheets.fail(_i18n.msg('eng.sheets.selected_units_changed_refresh_before_editing','selected units changed; refresh before editing'))
     if any(live[uid].get('stale_draft') for uid in ids):sheets.fail(_i18n.msg('eng.sheets.stale_draft_edit','Discard stale unit drafts before editing those units again'))
     if column not in META and column not in FIELDS:sheets.fail(_i18n.msg('eng.sheets.this_column_is_read_only','this column is read-only'))
     units=sheets.live_units(mod);changes=[]
@@ -265,6 +404,7 @@ def stage_operation(mod,project,ids,column,operation,value=None,other=None):
             p['draft'].setdefault(uid,{})[column]=new
             p.setdefault('draft_sources',{}).setdefault(uid,sheets.revision({'raw':units[uid].raw}))
             field_changes(units[uid],p['draft'][uid])
+        remember_classification(p, project, uid)
         changes.append({'id':uid,'column':column,'before':old,'after':new})
     return p,changes
 
@@ -284,7 +424,202 @@ def stage_cells(mod,project,cells):
         else:
             p['draft'].setdefault(uid,{})[column]=value
             p.setdefault('draft_sources',{}).setdefault(uid,sheets.revision({'raw':units[uid].raw}))
+        remember_classification(p, project, uid)
         changes.append({'id':uid,'column':column,'before':before[uid].get(column),'after':value})
     for uid in {c['id'] for c in cells}:
         field_changes(units[uid],p['draft'].get(uid,{}))
     return p,changes
+
+
+RULE_RESERVED = {'id', 'invalid_columns', 'changed'}
+
+
+def prepare_rules(project):
+    """Migrate identities deterministically so old revisions remain reproducible."""
+    import uuid
+    schemas = project.setdefault('rule_schema', {})
+    if not isinstance(schemas, dict):
+        sheets.fail(_i18n.msg('eng.sheets.invalid_rule_table', 'invalid rule table'))
+    for kind, keys in sheets.RULE_KEYS.items():
+        rows = project['rules'].setdefault(kind, [])
+        if not isinstance(rows, list) or any(not isinstance(row, dict) for row in rows):
+            sheets.fail(_i18n.msg('eng.sheets.invalid_rule_table', 'invalid rule table'))
+        if kind not in schemas:
+            names = list(dict.fromkeys([*keys, *(k for row in rows for k in row if k != 'id')]))
+            if kind != 'replenish':
+                names.extend(k for k in ('T0', 'T1', 'T2', 'T3', 'T4') if k not in names)
+            schemas[kind] = [{'name':name, 'type':'text' if name in keys else 'number',
+                              'key':name in keys} for name in names]
+        schema = schemas[kind]
+        if not isinstance(schema, list):
+            sheets.fail(_i18n.msg('eng.sheets.invalid_rule_table', 'invalid rule table'))
+        names = set()
+        for column in schema:
+            if (not isinstance(column, dict) or not isinstance(column.get('name'), str)
+                    or not column['name'].strip() or column['name'] in names | RULE_RESERVED
+                    or column.get('type') not in ('text', 'number')
+                    or not isinstance(column.get('key'), bool)
+                    or column['type'] != ('text' if column['key'] else 'number')):
+                sheets.fail(_i18n.msg('eng.sheets.invalid_rule_table', 'invalid rule table'))
+            names.add(column['name'])
+        # Preserve endpoint columns supplied by old projects and import adapters.
+        for row in rows:
+            for name in row:
+                if name in names or name == 'id':
+                    continue
+                if name in RULE_RESERVED:
+                    sheets.fail(_i18n.msg('eng.sheets.invalid_rule_table', 'invalid rule table'))
+                schema.append({'name':name, 'type':'text' if name in keys else 'number',
+                               'key':name in keys})
+                names.add(name)
+        seen = set()
+        for index, row in enumerate(rows):
+            if set(row) - names - {'id'}:
+                sheets.fail(_i18n.msg('eng.sheets.invalid_rule_table', 'invalid rule table'))
+            if 'id' not in row:
+                seed = kind + ':' + str(index) + ':' + sheets.revision(row)
+                row['id'] = 'rule-' + uuid.uuid5(uuid.NAMESPACE_URL, seed).hex
+            if not isinstance(row['id'], str) or not row['id'] or row['id'] in seen:
+                sheets.fail(_i18n.msg('eng.sheets.invalid_rule_table', 'invalid rule table'))
+            seen.add(row['id'])
+    return project
+
+
+def rule_kind(view):
+    if isinstance(view, str) and view.startswith('rules:'):
+        kind = view[6:]
+        if kind not in sheets.RULE_KEYS:
+            sheets.fail(_i18n.msg('eng.sheets.invalid_rule_table', 'invalid rule table'))
+        return kind
+    return None
+
+
+def rule_value(column, value):
+    # Clearing a rule cell is distinct from entering explicit zero.
+    if value is None or isinstance(value, str) and not value.strip():
+        return ''
+    if column['type'] == 'number':
+        if isinstance(value, bool):
+            sheets.fail(_i18n.msg('eng.sheets.expected_a_finite_number', 'expected a finite number'))
+        return number(value)
+    if isinstance(value, (dict, list, bool)) or any(c in str(value) for c in '\r\n'):
+        sheets.fail(_i18n.msg('eng.sheets.expected_a_single_text_value', 'expected a single text value'))
+    return str(value).strip()
+
+
+def rule_records(project, kind):
+    schema = project['rule_schema'][kind]
+    columns = {column['name']:column for column in schema}
+    rows = []
+    groups = {}
+    issues = []
+    keys = [column['name'] for column in schema if column['key']]
+    for source in project['rules'][kind]:
+        row = {'id':source['id'], 'invalid_columns':[]}
+        for name, column in columns.items():
+            try:
+                row[name] = rule_value(column, source.get(name, ''))
+            except sheets.SheetError:
+                row[name] = source.get(name)
+                row['invalid_columns'].append(name)
+                issues.append({'code':'invalid_rule_value', 'ids':[row['id']],
+                    'message':_i18n.msg('sheets.rule_invalid_value', 'Invalid rule value: {column} ({id})',
+                                        column=name, id=row['id'])})
+        key = tuple(str(row.get(name, '')).strip() for name in keys)
+        if not keys or not all(key):
+            issues.append({'code':'missing_rule_key', 'ids':[row['id']],
+                'message':_i18n.msg('sheets.rule_missing_key', 'Incomplete rule key: {id}', id=row['id'])})
+        else:
+            groups.setdefault(key, []).append(row)
+        rows.append(row)
+    for key, members in groups.items():
+        values = {repr(tuple(row[name] for name in columns if name not in keys)) for row in members}
+        if len(members) > 1:
+            code = 'conflicting_duplicate_rule_key' if len(values) > 1 else 'duplicate_rule_key'
+            message = (_i18n.msg('sheets.rule_conflicting_key', 'Conflicting duplicate rule key: {key}',
+                                 key=', '.join(key)) if len(values) > 1 else
+                       _i18n.msg('sheets.rule_duplicate_key', 'Duplicate rule key: {key}', key=', '.join(key)))
+            issues.append({'code':code, 'ids':[row['id'] for row in members], 'message':message})
+    info = {'id':{'type':'text', 'readonly':True}}
+    info.update({name:{'type':column['type'], 'readonly':False} for name,column in columns.items()})
+    return rows, info, ['id', *keys], issues
+
+
+def stage_rule_cells(project, kind, cells):
+    if not isinstance(cells, list):
+        sheets.fail(_i18n.msg('eng.sheets.invalid_rule_table', 'invalid rule table'))
+    p = copy.deepcopy(project)
+    columns = {column['name']:column for column in p['rule_schema'][kind]}
+    rows = {row['id']:row for row in p['rules'][kind]}
+    changes = []
+    for cell in cells:
+        if not isinstance(cell, dict):
+            sheets.fail(_i18n.msg('eng.sheets.invalid_rule_target', 'Unknown rule row or column'))
+        uid, name = cell.get('id'), cell.get('column')
+        if not isinstance(uid, str) or not isinstance(name, str) or uid not in rows or name not in columns:
+            sheets.fail(_i18n.msg('eng.sheets.invalid_rule_target', 'Unknown rule row or column'))
+        value = rule_value(columns[name], cell.get('value'))
+        changes.append({'id':uid, 'column':name, 'before':rows[uid].get(name, ''), 'after':value})
+        rows[uid][name] = value
+    return p, changes
+
+
+def stage_rule_operation(project, kind, ids, column, operation, value=None):
+    rows, _, _, _ = rule_records(project, kind)
+    live = {row['id']:row for row in rows}
+    if not isinstance(ids, list) or not ids or any(not isinstance(uid, str) or uid not in live for uid in ids):
+        sheets.fail(_i18n.msg('eng.sheets.invalid_rule_target', 'Unknown rule row or column'))
+    cells = []
+    for uid in ids:
+        new = value
+        if operation == 'clear':
+            new = ''
+        elif operation == 'copy':
+            if not isinstance(value, str) or value not in live[uid] or value in RULE_RESERVED:
+                sheets.fail(_i18n.msg('eng.sheets.invalid_rule_target', 'Unknown rule row or column'))
+            new = live[uid][value]
+        elif operation != 'set':
+            sheets.fail(_i18n.msg('eng.sheets.invalid_rule_operation', 'Unsupported rule operation'))
+        cells.append({'id':uid, 'column':column, 'value':new})
+    return stage_rule_cells(project, kind, cells)
+
+
+def rule_structure(project, kind, body):
+    import uuid
+    p = copy.deepcopy(project)
+    schema = p['rule_schema'][kind]
+    rows = p['rules'][kind]
+    operation = body.get('operation')
+    name = str(body.get('column', '')).strip()
+    columns = {column['name']:column for column in schema}
+    if operation == 'add_row':
+        rows.append({'id':'rule-' + uuid.uuid4().hex, **{name:'' for name in columns}})
+    elif operation == 'remove_rows':
+        ids = body.get('ids')
+        if not isinstance(ids, list) or any(not isinstance(uid, str) or uid not in {row['id'] for row in rows} for uid in ids):
+            sheets.fail(_i18n.msg('eng.sheets.invalid_rule_target', 'Unknown rule row or column'))
+        p['rules'][kind] = [row for row in rows if row['id'] not in ids]
+    elif operation in ('add_column', 'rename_column', 'remove_column'):
+        target = str(body.get('name', '')).strip() if operation == 'rename_column' else name
+        if operation != 'remove_column' and (not target or target in columns or target in RULE_RESERVED
+                                                or any(c in target for c in '\r\n')):
+            sheets.fail(_i18n.msg('eng.sheets.invalid_rule_column', 'Column name is blank, reserved or already exists'))
+        if operation == 'add_column':
+            key = body.get('key', False) is True
+            schema.append({'name':name, 'type':'text' if key else 'number', 'key':key})
+            for row in rows:
+                row[name] = ''
+        else:
+            if name not in columns:
+                sheets.fail(_i18n.msg('eng.sheets.invalid_rule_target', 'Unknown rule row or column'))
+            if operation == 'rename_column':
+                columns[name]['name'] = target
+                for row in rows:
+                    row[target] = row.pop(name, '')
+            else:
+                schema.remove(columns[name])
+                for row in rows:
+                    row.pop(name, None)
+    else:
+        sheets.fail(_i18n.msg('eng.sheets.invalid_rule_operation', 'Unsupported rule operation'))
+    return p

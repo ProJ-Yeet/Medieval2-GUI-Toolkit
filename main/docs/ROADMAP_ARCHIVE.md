@@ -14126,3 +14126,52 @@ Fynn EDB recruitment rows. XLSX import remains Phase 115. Native game-file edits
 are outside this phase; configuration saves use optimistic revisions and atomic
 writes. Follow-on sheet/filter/balance implementation is in progress; see the
 Codex handoff for its current checks and limits.
+
+---
+
+## Phase 110 - Native editable sheet views and deep filters
+
+- Provide EDU Base stats, Attributes and Soft stats views, classification and
+  Barracks rule tables, and an EDB recruitment view with building/level/condition
+  context. Keep shared identity and field values synchronized across views.
+- Add typed cell editing, rectangular selection/paste, keyboard movement,
+  fill-down, undo/redo, frozen identifiers/headers, hide/reorder columns, stable
+  multi-column sorting and saved per-mod views. Paginate or virtualize large data.
+- Filter by text/substring, exact/not equal, numeric ranges and comparisons,
+  blank/missing/invalid/changed states, attribute contains/not contains and
+  combined AND/OR/NOT groups. Include unit, faction, race, tier, category/class,
+  weapon/mount/projectile, ownership/AOR and building chain/type/level filters
+  where their data exists. Show active filters and matching row counts.
+- Include comparison groups and derived Defense Total, Ultra Size and cost/upkeep
+  efficiency columns like the workbook, with visible formulas and configurable
+  coefficients. Distinguish editable native values, classifications and derived
+  columns. Do not impose its 2.5 size or 0.8 defense coefficient on every mod.
+- **Depends on:** 109. **Exit:** live editing and filters work on the supplied
+  workbook's scale, saved views reopen, sorting never moves an edit to another
+  unit, and hiding/filtering rows does not silently change the intended edit set.
+
+**Completed 2026-11-07, uncut.** Built by Codex in four reviewed steps.
+(1) Edit targets are stable unit IDs: a filter drops hidden units from the
+selection, Select matches replaces it, rectangles hold IDs and column names,
+and pending cell edits flush before any sort, filter, page or view change.
+(2) The server publishes each view's filter columns and types, so a view only
+offers columns its rows carry; booleans filter from the builder, changed covers
+classification edits, malformed values are invalid and never also missing,
+projectile follows staged edits, and weapon/tech type plus recruitment building
+depth and tier are filterable. Saved and advanced filters restore the builder or
+show an advanced summary. (3) The three Barracks rule tables use the shared
+grid with stable row IDs, typed columns (explicit 0 kept), duplicate-key issues,
+add/remove rows and columns, and in-app creation; balance reads them as before.
+Replenish columns are per race (`<Race>_Earliest`/`_Latest`), added by the
+user, since races are not hard-coded. (4) Named comparison groups per mod with
+min/max/average and difference from average, a `groups` filter column, and
+header styles plus a legend for native, classification and derived columns.
+Review fix: `api.post` returns a refusal as `{error}`, which the sheets treated
+as success (a refused edit crashed the window, a refused Apply looked applied);
+`unitSheetsPost` now throws it. Checked in the real app on Divide and Conquer
+EUR (952 units, 6,889 recruitment rows, opens in 1.5 s): an edit typed then
+sorted before it was sent stayed on its unit, a filter dropped a hidden
+selection, undo, recruitment depth/tier, rule validation and zero, a group's
+comparison, and a saved view reopening after closing the window. Real keyboard
+and clipboard input were exercised in the Node harness, not by hand.
+`tests/test_unit_sheets.py`, `test_sheet_ops.py`, `test_unit_sheets_ui.js`.

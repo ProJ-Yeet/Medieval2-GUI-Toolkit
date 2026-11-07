@@ -1433,8 +1433,8 @@ or bulk copy of generated HTML/assets.
 reference tables and Fynn JSON export, plus the `Unit script` workbook/converters,
 with editable sheets inside our tool, deep filtering and mass editing. This is
 authorized for implementation on 2026-11-06, progressing in numbered increments
-with verification at each checkpoint. Phase 109 is complete; 110-114 are active
-and not yet accepted as complete. Research and exact source locations are in
+with verification at each checkpoint. Phases 109 and 110 are complete; 111-114 are
+active and not yet accepted as complete. Research and exact source locations are in
 [upstream/EDB_SHEETS_WORKFLOW.md](upstream/EDB_SHEETS_WORKFLOW.md).
 
 Use the toolkit's existing EDU/EDB parsers and edit planners. Read the selected
@@ -1444,35 +1444,13 @@ and rule tables per mod as project data, not invented EDU fields. Share unit
 identity, projects and staging contracts with 102-108, but this track can begin
 independently after its own audit. Existing priorities remain unchanged.
 
-**Implementation checkpoint, 2026-11-06:** 109 complete. Shared sheet views,
-typed staging/recipes, native review/apply, all three EDB stages, audit ZIP exports
-and backed-up Apply/Undo are implemented and fixture-tested. 110-114 remain active
-until their full acceptance criteria are verified; 115-116 remain planned. Full
-interactive verification was interrupted by browser localhost access denial.
-Cancellation, comparison groups, deeper rule-table editing, XLSX/native sheet
-interchange and non-EUR/builder integration remain. See CODEX_HANDOFF.md for exact
-checks, changed files and limits. Paused at the user's 90%-used five-hour guard.
-
-## Phase 110 - Native editable sheet views and deep filters
-
-- Provide EDU Base stats, Attributes and Soft stats views, classification and
-  Barracks rule tables, and an EDB recruitment view with building/level/condition
-  context. Keep shared identity and field values synchronized across views.
-- Add typed cell editing, rectangular selection/paste, keyboard movement,
-  fill-down, undo/redo, frozen identifiers/headers, hide/reorder columns, stable
-  multi-column sorting and saved per-mod views. Paginate or virtualize large data.
-- Filter by text/substring, exact/not equal, numeric ranges and comparisons,
-  blank/missing/invalid/changed states, attribute contains/not contains and
-  combined AND/OR/NOT groups. Include unit, faction, race, tier, category/class,
-  weapon/mount/projectile, ownership/AOR and building chain/type/level filters
-  where their data exists. Show active filters and matching row counts.
-- Include comparison groups and derived Defense Total, Ultra Size and cost/upkeep
-  efficiency columns like the workbook, with visible formulas and configurable
-  coefficients. Distinguish editable native values, classifications and derived
-  columns. Do not impose its 2.5 size or 0.8 defense coefficient on every mod.
-- **Depends on:** 109. **Exit:** live editing and filters work on the supplied
-  workbook's scale, saved views reopen, sorting never moves an edit to another
-  unit, and hiding/filtering rows does not silently change the intended edit set.
+**Implementation checkpoint, 2026-11-07:** 109 and 110 complete (archived).
+Typed staging/recipes, native review/apply, all three EDB stages, audit ZIP
+exports and backed-up Apply/Undo are implemented and fixture-tested; 111-114
+remain active until their full acceptance criteria are verified, 115-116
+planned. Cancellation, XLSX/native sheet interchange and non-EUR/builder
+integration remain. See CODEX_HANDOFF.md for exact checks, changed files and
+limits.
 
 ## Phase 111 - Typed mass-edit operations and reusable recipes
 

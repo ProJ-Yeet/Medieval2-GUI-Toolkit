@@ -56,4 +56,80 @@ class SheetOperationTests(unittest.TestCase):
   self.assertEqual(result['table']['rows'][0]['attack'],7)
   self.assertNotEqual(first['revision'],result['revision'])
 
+ def test_boolean_builder_values_match_booleans(self):
+  for column in ('changed','needs_classification'):
+   for value in (True,False):
+    row={column:value}
+    self.assertTrue(ops.matches(row,{'column':column,'op':'eq','value':str(value).lower()}))
+    self.assertFalse(ops.matches(row,{'column':column,'op':'ne','value':str(value).lower()}))
+  self.assertFalse(ops.matches({'changed':True},{'column':'changed','value':'1'}))
+ def test_invalid_source_is_not_missing_and_uses_edit_validator(self):
+  for value in ('bad','-2','1.5','nan'):
+   self.mod.edu=edu.parse_text(FULL.replace('stat_pri 5,','stat_pri '+value+','))
+   row=ops.records(self.mod,self.project)[0][0]
+   self.assertTrue(ops.matches(row,{'column':'attack','op':'invalid'}),value)
+   self.assertFalse(ops.matches(row,{'column':'attack','op':'missing'}),value)
+  row=ops.records(self.mod,self.project)[0][1]
+  self.assertTrue(ops.matches(row,{'column':'attack','op':'missing'}))
+  self.assertFalse(ops.matches(row,{'column':'attack','op':'invalid'}))
+ def test_classification_changes_and_staged_projectile_context(self):
+  for column in ('Unit Race','Category override'):
+   p,_=ops.stage_operation(self.mod,self.project,['Guard'],column,'set','Human' if column=='Unit Race' else 'siege')
+   self.assertTrue(ops.records(self.mod,p)[0][0]['changed'])
+  p,_=ops.stage_cells(self.mod,self.project,[{'id':'Guard','column':'Tier','value':'T2'}])
+  self.assertTrue(ops.records(self.mod,p)[0][0]['changed'])
+  p,_=ops.stage_operation(self.mod,self.project,['Guard'],'missile','set','arrow')
+  row=ops.records(self.mod,p)[0][0]
+  self.assertEqual(row['projectile'],'arrow')
+  self.assertTrue(ops.matches(row,{'column':'projectile','value':'arrow'}))
+ def test_weapon_members_are_derived_and_read_only(self):
+  rows,_=ops.records(self.mod,self.project)
+  for column,value in [('pri_weapon_type','melee'),('pri_tech_type','simple'),('sec_weapon_type','melee'),('sec_tech_type','simple')]:
+   self.assertEqual(rows[0][column],value)
+   self.assertTrue(ops.matches(rows[0],{'column':column,'value':value}))
+   self.assertIsNone(rows[1][column])
+   with self.assertRaises(sheets.SheetError):
+    ops.stage_operation(self.mod,self.project,['Guard'],column,'set',value)
+
+ def test_classification_reversion_clears_changed_and_noop_is_not_changed(self):
+  p,_=ops.stage_operation(self.mod,self.project,['Guard'],'Tier','set','T2')
+  p,_=ops.stage_operation(self.mod,p,['Guard'],'Tier','clear')
+  self.assertFalse(ops.records(self.mod,p)[0][0]['changed'])
+ def test_invalid_numeric_sources_do_not_break_derived_or_range_filters(self):
+  self.mod.edu=edu.parse_text(FULL.replace('stat_pri_armour 6,','stat_pri_armour bad,'))
+  row=ops.records(self.mod,self.project)[0][0]
+  self.assertIsNone(row['defense_total'])
+  self.assertIsNone(row['cost_efficiency'])
+  self.assertFalse(ops.matches(row,{'column':'armor','op':'gt','value':'0'}))
+
+
+ def test_comparison_group_statistics_use_valid_members_and_staged_values(self):
+  self.project['groups'] = {'Archers':['Guard','Horse','Removed']}
+  p,_ = ops.stage_operation(self.mod,self.project,['Horse'],'unit_size','set',90)
+  result = ops.compare_group(self.mod,p,'Archers')
+  self.assertEqual([r['id'] for r in result['members']],['Guard','Horse','Removed'])
+  self.assertTrue(result['members'][2]['missing'])
+  self.assertEqual(result['statistics']['unit_size'],{'min':60,'max':90,'average':75,'count':2})
+  self.assertEqual(result['members'][0]['difference']['unit_size'],-15)
+  self.assertEqual(result['members'][1]['difference']['ultra_size'],37.5)
+  self.assertIsNone(result['members'][2]['difference']['attack'])
+  self.assertEqual(result['statistics']['attack']['count'],1)
+  self.assertIsNone(result['statistics']['movement']['average'])
+  self.assertIn('category',result['columns'])
+  self.assertNotIn('attributes',result['columns'])
+  self.assertEqual(result['column_kinds']['attack'],'native')
+  self.assertEqual(result['column_kinds']['defense_total'],'derived')
+
+ def test_group_membership_filter_contract_and_readonly(self):
+  self.project['groups'] = {'Gondor':['Guard'],'PikesHalberds':['Guard','Horse']}
+  rows,_ = ops.records(self.mod,self.project)
+  self.assertEqual(rows[0]['groups'],['Gondor','PikesHalberds'])
+  self.assertEqual(ops.query(rows,{'column':'groups','op':'not_contains','value':'Gondor'})['matched_ids'],['Horse'])
+  self.assertEqual(ops.query(rows,{'column':'groups','op':'contains','value':'Gondor'})['matched_ids'],['Guard'])
+  self.assertEqual(ops.filter_info([])['groups']['type'],'list')
+  for column,kind in [('attack','native'),('Tier','annotation'),('defense_total','derived'),('groups','annotation')]:
+   self.assertEqual(ops.filter_info(rows)[column]['kind'],kind)
+  with self.assertRaises(sheets.SheetError):
+   ops.stage_operation(self.mod,self.project,['Guard'],'groups','set','Other')
+
 if __name__=='__main__':unittest.main()
