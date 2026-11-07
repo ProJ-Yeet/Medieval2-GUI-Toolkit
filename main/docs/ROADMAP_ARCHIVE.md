@@ -14241,3 +14241,21 @@ staging store. `tests/test_sheet_ops.py`, `test_unit_sheets.py`,
 
 **Finished 2026-11-07.** Golden replenishment cases for single, linear, branched, merged, disconnected and cyclic chains, rounding boundaries, both graph policies, Beast and malformed-Beast labels, pool below 1 and missing endpoints/rules, each with its full explanation. One intentional difference from the legacy script, on the user's word: city or castle comes from each level's own header (the legacy script used the chain's first header), so a castle level is not given the city multiplier. The engine's fixed rules are shown read-only under Compatibility rules.
 
+## Phase 113 - Experience and maximum-pool balancing
+
+- Import/edit both lookup tables keyed by Unit Race, Category and BarracksTier;
+  select the unit-tier column T0-T4. Compatibility uses barracks depth + 1 capped
+  at T5; Beast X uses race X and category beast. Keep these keys configurable
+  rather than hardcoding Middle-earth races into the app's global vocabulary.
+- Change only starting experience or maximum pool as selected. Preserve initial
+  pool, replenishment and conditions. Keep the pool-below-1 exception on maximum
+  pool updates; experience does not inherit that skip from the other stages.
+- Show BG/missing unit tiers, missing rows/columns, invalid values and unsupported
+  unit categories as named outcomes, not zeros. Detect conflicting duplicate
+  table keys. Allow explicit unit/building/level overrides above table rules.
+- **Depends on:** 112. **Exit:** both stages match approved reference cases,
+  independent stage execution changes only its own field, and skips preserve
+  existing values and hand-written comments.
+
+**Finished 2026-11-07.** Golden experience and max-pool cases from the legacy scripts: the T5 cap, Beast X as race X and category beast, each unit tier reading its own column, and named outcomes for BG or missing tiers, missing rows, columns and values, unsupported categories and conflicting keys or overrides. Pool below 1 skips max pool but not experience. Each stage changes only its own number, and every outcome records the table key, cell and any override. Categories count as supported when the project's own tables name them.
+

@@ -86,6 +86,35 @@ class PipelineTests(unittest.TestCase):
   with patch.object(config,'append_log',side_effect=OSError('full disk')):
    with self.assertRaises(OSError):balance.apply_preview(self.mod,self.project,None,preview['plan_token'])
   self.assertEqual(self.mod.edb_path.read_bytes(),self.original)
+ def test_lookup_stages_export_apply_undo_independently(self):
+  for stage in ('experience','pool'):
+   with self.subTest(stage=stage):
+    body={**self.body(),'stages':[stage]};preview=sheets.service(self.mod,'balance_preview',body)
+    if stage=='experience':
+     expected=self.original.replace(b'2  0  requires',b'2  3  requires').replace(b'0.5 0 ;',b'0.5 3 ;').replace(b'2 0\r',b'2 3\r')
+    else:expected=self.original.replace(b'0.1  2  0',b'0.1  4  0').replace(b'"Guard" 1 0.1 2 0',b'"Guard" 1 0.1 4 0')
+    exported=sheets.service(self.mod,'balance_export',body)
+    with zipfile.ZipFile(io.BytesIO(base64.b64decode(exported['text']))) as z:
+     self.assertEqual(z.read('export_descr_buildings_new.txt'),expected)
+     entries=json.loads(z.read('logs/'+stage+'_all.json'))
+     self.assertEqual(entries[0]['explanation']['lookup_column'],'T1')
+     self.assertEqual(entries[0]['explanation']['lookup_value'],'3' if stage=='experience' else '4')
+    applied=sheets.service(self.mod,'balance_apply',{**body,'plan_token':preview['plan_token']})
+    self.assertEqual(self.mod.edb_path.read_bytes(),expected)
+    self.assertEqual(sheets.service(self.mod,'balance_preview',body)['changed_fields'],0)
+    undo(applied['record']['id']);self.assertEqual(self.mod.edb_path.read_bytes(),self.original)
+
+ def test_custom_lookup_keys_import_edit_and_reload_per_project(self):
+  for stage in ('experience','pool'):
+   sheets.service(self.mod,'import',{**self.body(),'kind':stage,
+    'text':'Unit Race,Category,BarracksTier,T0,T1,T2,T3,T4\nAurora,levy,T1,1,2,3,4,5\n'})
+   p=sheets.load_project(self.mod);row=p['rules'][stage][0]
+   self.assertEqual((row['Unit Race'],row['Category']),('Aurora','levy'))
+   result=sheets.service(self.mod,'operate',{**self.body(),'view':'rules:'+stage,
+    'mode':'matching','column':'T1','operation':'set','value':7})
+   self.assertEqual(sheets.load_project(self.mod)['rules'][stage][0]['T1'],7)
+   self.assertEqual(sheets.empty_project()['rules'][stage],[])
+
  def test_invalid_profile_import_is_transactional(self):
   body=self.body();before=sheets.load_project(self.mod);bad=copy.deepcopy(before);bad['balance_profile']={'city_multiplier':'nan'}
   with self.assertRaises(sheets.SheetError):sheets.service(self.mod,'save',{**body,'project':bad})

@@ -1433,7 +1433,7 @@ or bulk copy of generated HTML/assets.
 reference tables and Fynn JSON export, plus the `Unit script` workbook/converters,
 with editable sheets inside our tool, deep filtering and mass editing. This is
 authorized for implementation on 2026-11-06, progressing in numbered increments
-with verification at each checkpoint. Phases 109-112 are complete; 113-114 are
+with verification at each checkpoint. Phases 109-113 are complete; 114 is
 active and not yet accepted as complete. Research and exact source locations are in
 [upstream/EDB_SHEETS_WORKFLOW.md](upstream/EDB_SHEETS_WORKFLOW.md).
 
@@ -1444,29 +1444,13 @@ and rule tables per mod as project data, not invented EDU fields. Share unit
 identity, projects and staging contracts with 102-108, but this track can begin
 independently after its own audit. Existing priorities remain unchanged.
 
-**Implementation checkpoint, 2026-11-07:** 109-112 complete (archived).
+**Implementation checkpoint, 2026-11-07:** 109-113 complete (archived).
 Typed staging/recipes, native review/apply, all three EDB stages, audit ZIP
-exports and backed-up Apply/Undo are implemented and fixture-tested; 113-114
-remain active until their full acceptance criteria are verified, 115-116
+exports and backed-up Apply/Undo are implemented and fixture-tested; 114
+remains active until their full acceptance criteria are verified, 115-116
 planned. Cancellation, XLSX/native sheet interchange and non-EUR/builder
 integration remain. See CODEX_HANDOFF.md for exact checks, changed files and
 limits.
-
-## Phase 113 - Experience and maximum-pool balancing
-
-- Import/edit both lookup tables keyed by Unit Race, Category and BarracksTier;
-  select the unit-tier column T0-T4. Compatibility uses barracks depth + 1 capped
-  at T5; Beast X uses race X and category beast. Keep these keys configurable
-  rather than hardcoding Middle-earth races into the app's global vocabulary.
-- Change only starting experience or maximum pool as selected. Preserve initial
-  pool, replenishment and conditions. Keep the pool-below-1 exception on maximum
-  pool updates; experience does not inherit that skip from the other stages.
-- Show BG/missing unit tiers, missing rows/columns, invalid values and unsupported
-  unit categories as named outcomes, not zeros. Detect conflicting duplicate
-  table keys. Allow explicit unit/building/level overrides above table rules.
-- **Depends on:** 112. **Exit:** both stages match approved reference cases,
-  independent stage execution changes only its own field, and skips preserve
-  existing values and hand-written comments.
 
 ## Phase 114 - Pipeline preview, staged exports, complete logs and Apply/Undo
 

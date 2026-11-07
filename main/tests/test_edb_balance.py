@@ -224,4 +224,127 @@ class ReplenishmentGoldenTests(unittest.TestCase):
   self.assertEqual(b['changed_fields'],0)
 
 
+class LookupGoldenTests(unittest.TestCase):
+ def setUp(self):
+  self.p=sheets.empty_project()
+  self.units=('Guard','Beast','BG','NoTier','NoRow','NoColumn','Invalid','Unsupported','Fraction','Override')
+  self.edu=edu.parse_text(''.join('type '+u+'\ncategory infantry\nclass heavy\nsoldier guard, 60, 0, 1\n\n' for u in self.units))
+  for u in self.units:self.p['units'][u]={'annotations':{'Unit Race':'Aurora','Tier':'T1'},'extra':{}}
+  for u,race,tier in [('Beast','Beast Aurora','T2'),('BG','Aurora','BG'),('NoTier','Aurora',''),('NoRow','Absent','T1'),('NoColumn','Aurora','T4'),('Invalid','Aurora','T3')]:
+   self.p['units'][u]['annotations']={'Unit Race':race,'Tier':tier}
+  self.p['units']['Unsupported']['category_override']='ship'
+  # Hand lookup: depth 0..5 selects T1,T2,T3,T4,T5,T5, then unit column.
+  # The invented race proves keys belong to the project, not a global race list.
+  for stage in ('experience','pool'):
+   self.p['rules'][stage]=[{'Unit Race':'Aurora','Category':cat,'BarracksTier':'T'+str(i),
+    'T0':1,'T1':i,'T2':i+1,'T3':'NaN'} for cat in ('infantry','beast') for i in range(1,6)]
+  self.p['balance_overrides']=[{'stage':stage,'unit':'Override','value':6} for stage in ('experience','pool')]
+  self.p['balance_overrides'] += [{'stage':stage,'unit':'Override','building':'lookup','level':'a','value':8} for stage in ('experience','pool')]
+  self.text=golden_chain('lookup',list('abcdef'),{a:[b] for a,b in zip('abcde','bcdef')},units=self.units).replace('cafe','caf\xe9').replace('\n','\r\n')
+ def run_text(self,stage,text=None):
+  return balance.run(SimpleNamespace(edu=self.edu,edb=buildings.parse_text(self.text if text is None else text)),self.p,[stage])
+ def test_reference_values_cap_beast_and_named_outcomes(self):
+  for stage in ('experience','pool'):
+   result=self.run_text(stage);entries=result['logs'][stage]['all']
+   self.assertEqual([e['after'] for e in entries if e['unit']=='Guard'],['1','2','3','4','5','5'])
+   self.assertEqual([e['after'] for e in entries if e['unit']=='Beast'],['2','3','4','5','6','6'])
+   first={e['unit']:e for e in entries[:len(self.units)]}
+   reasons={'BG':'unsupported_unit_tier:BG','NoTier':'missing_tier',
+    'NoRow':"missing_lookup_row:('Absent', 'infantry', 'T1')",'NoColumn':'missing_lookup_value:T4',
+    'Invalid':'invalid_number','Unsupported':'unsupported_unit_category:ship'}
+   if stage=='pool':reasons['Fraction']='fractional_pool_preserved'
+   for unit,reason in reasons.items():
+    with self.subTest(stage=stage,unit=unit):
+     self.assertEqual(first[unit]['reason'],reason)
+     self.assertEqual(first[unit]['after'],first[unit]['before'])
+   self.assertEqual(first['Fraction']['after'],'1' if stage=='experience' else '0.5')
+   self.assertEqual(first['Override']['after'],'8')
+   self.assertEqual([e['after'] for e in entries if e['unit']=='Override'],['8','6','6','6','6','6'])
+ def test_every_outcome_explains_lookup_inputs_even_skips_and_overrides(self):
+  for stage in ('experience','pool'):
+   entries=self.run_text(stage)['logs'][stage]['all']
+   for e in entries:
+    with self.subTest(stage=stage,unit=e['unit'],level=e['level']):
+     ex=e['explanation'];a=self.p['units'][e['unit']]['annotations'];depth='abcdef'.index(e['level'])
+     race='Aurora' if e['unit']=='Beast' else a['Unit Race']
+     category='beast' if e['unit']=='Beast' else ('ship' if e['unit']=='Unsupported' else 'infantry')
+     self.assertEqual((ex['race'],ex['category'],ex['tier']),(race,category,a['Tier']))
+     self.assertEqual((ex['depth'],ex['barracks_tier']),(depth,'T'+str(min(depth+1,5))))
+     self.assertEqual(ex['rule_key'],(race,category,ex['barracks_tier']))
+     self.assertEqual(ex['lookup_column'],a['Tier'])
+     self.assertIn('lookup_value',ex);self.assertIn('lookup_row_found',ex)
+     self.assertEqual(ex['override'],e['unit']=='Override')
+     if e['unit']=='Invalid':self.assertEqual(ex['lookup_value'],'NaN')
+     if e['unit']=='Override':
+      self.assertEqual(ex['override_input'],8 if depth==0 else 6)
+      self.assertEqual(ex['override_selector'],{'unit':'Override','building':'lookup','level':'a'} if depth==0 else {'unit':'Override'})
+     self.assertEqual(ex['outcome'],e['reason'] or e['status'])
+ def test_independent_stages_preserve_all_other_bytes_skips_and_repeat(self):
+  for stage,slot in [('experience',3),('pool',2)]:
+   a=self.run_text(stage);b=self.run_text(stage,a['text'])
+   def mask(text):
+    pattern=r'(recruit_pool "[^"\r\n]+"(?:[ \t]+[^\s;]+){'+str(slot)+r'}[ \t]+)[^\s;]+'
+    return re.sub(pattern,r'\1<VALUE>',text).encode('latin-1')
+   self.assertEqual(mask(a['text']),mask(self.text))
+   before=self.text.splitlines(keepends=True);after=a['text'].splitlines(keepends=True)
+   for e in a['logs'][stage]['issues']:self.assertEqual(after[e['line']-1],before[e['line']-1])
+   self.assertEqual(a['text'],b['text']);self.assertEqual(b['changed_fields'],0)
+ def test_each_unit_tier_selects_its_own_column(self):
+  for stage in ('experience','pool'):
+   for row in self.p['rules'][stage]:row.update(T0=1,T1=2,T2=4,T3=5,T4=6)
+   for tier,value in [('T0','1'),('T1','2'),('T2','4'),('T3','5'),('T4','6')]:
+    self.p['units']['Guard']['annotations']['Tier']=tier
+    e=self.run_text(stage)['logs'][stage]['all'][0]
+    self.assertEqual(e['after'],value)
+
+ def test_legacy_table_samples_at_known_depths(self):
+  # Literal cells read from Barracks_tiers_exp/pool.csv, never loaded at test time.
+  self.p['units']['Guard']['annotations']={'Unit Race':'Elf','Tier':'T1'}
+  self.p['units']['Beast']['annotations']={'Unit Race':'Beast Elf','Tier':'T2'}
+  samples={'experience':{'infantry':[(2,2,1,0,0),(2,2,1,1,0),(3,2,2,1,1)],
+                         'beast':[(2,2,1,0,0),(2,2,1,1,0),(3,2,2,1,1)]},
+           'pool':{'infantry':[(4,4,3,2,2),(5,5,4,2,2),(6,5,4,3,2)],
+                   'beast':[(4,3,3,2,2),(4,3,3,3,2),(4,4,3,3,2)]}}
+  text=golden_chain('sample',list('abcdef'),{a:[b] for a,b in zip('abcde','bcdef')},units=('Guard','Beast'))
+  # Keep the full graph but recruit only at depths 2..5: T3,T4,T5,T5.
+  lines=text.splitlines(keepends=True);count=0
+  for i,line in enumerate(lines):
+   if 'recruit_pool' in line:
+    count+=1
+    if count<=4:lines[i]=''
+  for stage,categories in samples.items():
+   self.p['rules'][stage]=[{'Unit Race':'Elf','Category':cat,'BarracksTier':'T'+str(depth),
+    **dict(zip(('T0','T1','T2','T3','T4'),values))} for cat,rows in categories.items() for depth,values in zip((3,4,5),rows)]
+   entries=self.run_text(stage,''.join(lines))['logs'][stage]['all']
+   self.assertEqual([e['after'] for e in entries],['2','1','2','1','2','2','2','2'] if stage=='experience' else ['4','3','5','3','5','3','5','3'])
+ def test_overrides_bypass_fractional_and_classification_skips(self):
+  for stage in ('experience','pool'):
+   self.p['balance_overrides'] += [{'stage':stage,'unit':u,'building':'lookup','level':'a','value':7} for u in ('Fraction','BG','NoTier','Unsupported')]
+   entries=self.run_text(stage)['logs'][stage]['all'][:len(self.units)]
+   for e in entries:
+    if e['unit'] in ('Fraction','BG','NoTier','Unsupported'):
+     self.assertEqual(e['after'],'7');self.assertTrue(e['explanation']['override'])
+
+ def test_category_becomes_supported_when_added_to_project_tables(self):
+  for stage in ('experience','pool'):
+   self.p['rules'][stage] += [{**r,'Category':'ship'} for r in self.p['rules'][stage] if r['Category']=='infantry']
+   entry=next(e for e in self.run_text(stage)['logs'][stage]['all'] if e['unit']=='Unsupported')
+   self.assertEqual(entry['after'],'1');self.assertEqual(entry['reason'],'')
+ def test_conflicting_override_outcome_keeps_all_matching_selectors_and_values(self):
+  for stage in ('experience','pool'):
+   self.p['balance_overrides'].append({'stage':stage,'unit':'Override','building':'lookup','level':'a','value':9})
+   e=next(e for e in self.run_text(stage)['logs'][stage]['all'] if e['unit']=='Override')
+   self.assertEqual(e['reason'],'conflicting_overrides');self.assertEqual(e['after'],e['before'])
+   self.assertEqual(e['explanation']['override_candidates'],[
+    {'selector':{'unit':'Override'},'value':6},
+    {'selector':{'unit':'Override','building':'lookup','level':'a'},'value':8},
+    {'selector':{'unit':'Override','building':'lookup','level':'a'},'value':9}])
+
+ def test_conflicting_duplicate_keys_refuse_run(self):
+  for stage in ('experience','pool'):
+   p=copy.deepcopy(self.p);r=copy.deepcopy(p['rules'][stage][0]);r['T1']=9;p['rules'][stage].append(r)
+   with self.assertRaisesRegex(sheets.SheetError,'duplicate rule key'):
+    balance.run(SimpleNamespace(edu=self.edu,edb=buildings.parse_text(self.text)),p,[stage])
+
+
 if __name__=='__main__':unittest.main()

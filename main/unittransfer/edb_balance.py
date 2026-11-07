@@ -128,16 +128,25 @@ def lookup_index(project):
     return indices
 
 
-def overrides(project,stage,row):
+def overrides(project,stage,row,explain=None):
     candidates=[]
     for i,rule in enumerate(project.get('balance_overrides',[])):
         if not isinstance(rule,dict) or rule.get('stage') not in STAGES:sheets.fail(_i18n.msg('eng.sheets.invalid_balance_override','invalid balance override'))
         keys=[k for k in ('unit','building','level') if rule.get(k)]
         if not keys:sheets.fail(_i18n.msg('eng.sheets.override_must_select_a_unit_building_or_level','override must select a unit, building or level'))
         if rule['stage']==stage and all(rule[k]==row[k] for k in keys):candidates.append((len(keys),i,rule['value']))
+    if explain is not None:
+        explain['override_candidates']=[{'selector':{k:project['balance_overrides'][i][k]
+            for k in ('unit','building','level') if project['balance_overrides'][i].get(k)},'value':v}
+            for _,i,v in candidates]
     if not candidates:return None
     top=max(n for n,_,_ in candidates);values=[v for n,_,v in candidates if n==top]
     if len(values)>1:raise RuleSkip('conflicting_overrides')
+    if explain is not None:
+        chosen=next(i for n,i,_ in candidates if n==top)
+        rule=project['balance_overrides'][chosen]
+        explain.update(override=True,override_input=values[0],
+                       override_selector={k:rule[k] for k in ('unit','building','level') if rule.get(k)})
     return values[0]
 
 
@@ -156,11 +165,27 @@ def explanation_inputs(row,unit,project,structure,profile):
             'fractional_pool_exception':profile['fractional_pool_exception'],'rounding_steps':[]}
 
 
+def lookup_inputs(row,unit,project,profile,index,explain):
+    """Record the candidate cell before any skip or override short-circuits lookup."""
+    meta=project['units'].get(row['unit'],{});a=meta.get('annotations',{})
+    race=str(a.get('Unit Race','')).strip();tier=str(a.get('Tier','')).strip()
+    category=explain['native_category']
+    parts=race.split(maxsplit=1)
+    if len(parts)==2 and parts[0].casefold()=='beast':race=parts[1].strip();category='beast'
+    depth=explain['depth'];barracks='T'+str(min(depth+1,profile['barracks_cap'])) if depth is not None else None
+    key=(race,category,barracks);rule=index.get(key)
+    explain.update(race=race,tier=tier,category=category,barracks_tier=barracks,rule_key=key,
+                   lookup_column=tier,lookup_row_found=rule is not None,
+                   lookup_value=rule.get(tier) if rule is not None else None,override=False)
+
+
 def calculate(stage,row,unit,project,structure,profile,index,explain=None):
     # Mutate the entry's audit context so skipped/invalid outcomes keep known inputs.
     if explain is None:explain=explanation_inputs(row,unit,project,structure,profile)
     # An explicit override outranks classification/graph/table rules, including skips.
-    override=overrides(project,stage,row)
+    if stage in ('experience','pool') and 'lookup_column' not in explain:
+        lookup_inputs(row,unit,project,profile,index,explain)
+    override=overrides(project,stage,row,explain)
     if override is not None:
         explain.update(override=True,override_input=override)
         value=finite(override)
@@ -204,6 +229,8 @@ def calculate(stage,row,unit,project,structure,profile,index,explain=None):
             if tier not in ('T0','T1','T2','T3','T4'):raise RuleSkip('unsupported_unit_tier:'+tier)
             barracks='T'+str(min(depth+1,profile['barracks_cap']))
             key=(race,category,barracks);rule=index.get(key)
+            # Categories are supported by this project's table, not a global list.
+            if index and not any(k[1]==category for k in index):raise RuleSkip('unsupported_unit_category:'+category)
             if rule is None:raise RuleSkip('missing_lookup_row:'+repr(key))
             if tier not in rule or str(rule[tier]).strip().upper() in ('','N/A','MISSING'):raise RuleSkip('missing_lookup_value:'+tier)
             value=finite(rule[tier]);explain.update(barracks_tier=barracks,rule_key=key)
@@ -228,6 +255,7 @@ def run(mod,project,stages=None,edb=None):
             row=dict(original);line_index=row['line']-1;raw=lines[line_index]
             structure=by_name[row['building']];unit=units.get(row['unit'])
             explanation=explanation_inputs(row,unit,project,structure,profile)
+            if stage in ('experience','pool'):lookup_inputs(row,unit,project,profile,indices[stage],explanation)
             explanation['inputs']['raw_line']=raw
             entry={**row,'stage':stage,'status':'skipped','reason':'','before':None,'after':None,'explanation':explanation}
             match=TOKENS.match(raw)

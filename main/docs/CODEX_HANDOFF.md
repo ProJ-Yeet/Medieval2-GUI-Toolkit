@@ -4,6 +4,71 @@ Newest entries first. This records Codex's work for Claude; project status and
 release rules remain in STATE.md and RELEASE.md. Do not assume the working tree's
 other changes belong to Codex.
 
+## 2026-11-07 - Phase 113 completed, ready for Claude review
+
+- Finished experience/maximum-pool acceptance with fixture-only golden tests
+  and a small audit/outcome fix. Read Phase 113, archived Phase 112, its Finished
+  note, the prior handoff/checkpoint, workflow review, both original legacy
+  scripts and lookup-table samples. Original scripts were read only, never run.
+- Tests FIRST: the first new engine run (26 tests) had 2 failed subcases for
+  unsupported categories and 120 explanation subcase errors for missing audit
+  fields. Numeric chain/cap/Beast, byte preservation, repeat-run and duplicate
+  rejection assertions passed. The first new service run (11 tests) had 2
+  errors for missing lookup_column, one per stage. The new Node audit-rendering
+  test passed before engine edits. Additional T0-T4 and custom-key import/edit
+  tests passed before engine edits. A later conflict-audit test first failed
+  with missing override_candidates, then passed after retaining those details.
+- Engine now captures race, category, unit tier, known depth or null, capped
+  barracks tier, candidate rule key, column, raw cell and row-presence flag
+  before skips or overrides. Winning overrides show their exact selector/value;
+  conflicting outcomes retain all matching selectors/values. A missing column
+  or row has a null cell, not an invented zero. Candidate cells on skipped or
+  overridden entries are context, not applied values. Existing numeric behavior
+  and token-only patching are retained.
+- Unsupported categories now have unsupported_unit_category:<category> when
+  absent from the selected project's nonempty table. Available categories come
+  from table keys, with no global category/race vocabulary. Empty tables still
+  report missing_lookup_row. Tests prove adding ship to the project makes it
+  supported, and invented Aurora/levy keys import, edit and reload independently
+  for both tables without changing project defaults.
+- Verified exit items 1-5: six-level chain selects T1,T2,T3,T4,T5,T5; every
+  unit-tier column T0-T4; Beast X maps to X/beast; BG/missing tier, missing row,
+  missing column, invalid cell, unsupported category and conflicting duplicate
+  keys preserve values or refuse the run with named errors. Unit/building/level
+  overrides outrank broader overrides and table/classification/fractional skips.
+  Golden tests include literal positive selected cells from the original Elf
+  infantry/beast tables, hand-derived at depths 2-5, plus custom fixture tables.
+- On the same fractional-pool row, experience changes and pool skips. Each
+  independent stage masks only its own numeric token and compares every other
+  Latin-1/CRLF byte, including initial pool, replenishment, requirements,
+  conditions, comments and the other stage's value. Every skipped/invalid row
+  remains byte-identical. Repeated runs produce zero changes. Disposable service
+  fixtures verify exact independent-stage ZIP and Apply bytes, complete cell
+  audit logs, repeat preview and Log Undo restoring the original bytes.
+- Files: unittransfer/edb_balance.py, tests/test_edb_balance.py,
+  tests/test_sheet_pipeline.py, tests/test_unit_sheets_ui.js, and this handoff.
+  UI renderer changes were unnecessary: Node verifies the existing escaped JSON
+  preview exposes both stages' cell/selector details and fractional skip reason.
+- New string IDs: none. Added structured audit keys and a machine outcome code
+  using the existing audit format, with no new prose labels/messages. No i18n
+  catalogue, dev/i18n, STATE.md, ROADMAP.md or ROADMAP_ARCHIVE.md was edited.
+- Required checks passed with UT_NO_BROWSER=1:
+  python -m tests.test_edb_balance (31), tests.test_sheet_pipeline (12),
+  tests.test_sheet_ops (41), tests.test_unit_sheets (36),
+  tests.test_sheet_native (8), tests.test_web_modules (130/130);
+  node tests/test_unit_sheets_ui.js (all cases, exit 0);
+  git diff --check (exit 0). Also ran tests.test_i18n: 45/45 passed.
+  Python used the existing ignored .tmp/phase110-step4-runner/sitecustomize.py
+  via PYTHONPATH for the previously documented sandbox temp-directory mode
+  issue; no runner edits. Test temp directories clean up through existing
+  TemporaryDirectory cleanup. No real mod folders were used or changed.
+- Live account checks succeeded at 1%, 3% and 4% used in the five-hour window,
+  below the active run's 90%-used stop. Weekly usage is not the stop threshold.
+  No credits spent or limits reset. No browser/manual installed-game test is
+  claimed; UI verification is Node. No unresolved Phase 113 question remains.
+  No commit, tag, build or release. Pre-existing TWCenter index deletions and
+  unrelated untracked files were preserved. Claude owns review and archiving.
+
 ## 2026-11-07 - Phase 112 completed, ready for Claude review
 
 - Updated this existing entry after the user's settlement decision resolved the

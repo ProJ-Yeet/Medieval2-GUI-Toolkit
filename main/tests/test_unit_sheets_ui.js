@@ -107,6 +107,17 @@ async function safetyRegressions(){
   for(const value of ['N/A','2.50','0.1125','earliest_from_latest','invalid_building_graph:cycle','reject_ambiguous','per_level_header','&lt;Human&gt;'])assert(html.includes(value),value);
   assert(!html.includes('<Human>'));
  });
+ await check('Lookup previews expose cells selectors and skipped inputs safely',async()=>{
+  const h=harness();await h.c.unitSheetsOpen();
+  h.c.lookupExplanation={race:'<Aurora>',category:'beast',tier:'T2',depth:5,barracks_tier:'T5',
+   rule_key:['<Aurora>','beast','T5'],lookup_column:'T2',lookup_value:6,lookup_row_found:true,
+   override:true,override_input:8,override_selector:{unit:'Beast',building:'lookup',level:'f'}};
+  h.set("USHEET.balance={profile:{},changed_fields:1,recruitment_rows:2,logs:{experience:{counts:{changed:1},all:[{explanation:lookupExplanation}]},pool:{counts:{skipped:1},all:[{reason:'fractional_pool_preserved',explanation:lookupExplanation}]}},structure:[]}");
+  const html=h.c.unitSheetsBalanceHtml();
+  for(const key of Object.keys(h.c.lookupExplanation))assert(html.includes(key),key);
+  for(const value of ['&lt;Aurora&gt;','beast','T2','T5','fractional_pool_preserved','lookup'])assert(html.includes(value),value);
+  assert(!html.includes('<Aurora>'));
+ });
  await check('mass controls survive review Cancel repeated run Confirm history and query',async()=>{
   const h=harness();await h.c.unitSheetsOpen();
   h.set("USHEET.view='base';USHEET.selected=new Set(['first'])");
