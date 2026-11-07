@@ -13117,5 +13117,39 @@
  "sheets.rule_duplicate_key": "Clé de règle en double : {key}",
  "eng.sheets.invalid_rule_target": "Ligne de règle ou colonne inconnue",
  "eng.sheets.invalid_rule_operation": "Opération de règle non prise en charge",
- "eng.sheets.invalid_rule_column": "Le nom de colonne est vide, réservé ou existe déjà"
+ "eng.sheets.invalid_rule_column": "Le nom de colonne est vide, réservé ou existe déjà",
+ "sheets.use_clear": "Utilisez l’opération clear pour vider un champ",
+ "sheets.matching_targets": "Sélectionnez des identifiants distincts correspondant au filtre actuel avant de modifier",
+ "sheets.invalid_recipe_target": "Vue de recette, table de règles ou profil d’équilibrage inconnu",
+ "sheets.invalid_recipe": "Opération de recette, colonne ou valeur invalide",
+ "sheets.review_target": "Cible",
+ "sheets.review_field": "Champ",
+ "sheets.review_before": "Avant",
+ "sheets.review_after": "Après",
+ "sheets.review_confirm": "Confirmer",
+ "sheets.recipe_invalid": "{name} (Invalide : {reason})",
+ "sheets.recipe_run": "Exécuter",
+ "sheets.profile_recipe_key": "Clé du profil",
+ "sheets.recipe_operation": "Opération",
+ "sheets.recipe_op_set": "Définir",
+ "sheets.recipe_op_add": "Ajouter",
+ "sheets.recipe_op_subtract": "Soustraire",
+ "sheets.recipe_op_multiply": "Multiplier",
+ "sheets.recipe_op_divide": "Diviser",
+ "sheets.recipe_op_percent": "Pourcentage",
+ "sheets.recipe_op_min": "Minimum",
+ "sheets.recipe_op_max": "Maximum",
+ "sheets.recipe_op_round": "Arrondir",
+ "sheets.mode_selected": "Sélectionnés",
+ "sheets.mode_matching": "Correspondant au filtre",
+ "sheets.review_count": {
+  "one": "Vérifier {count} cible",
+  "many": "Vérifier {count} cibles",
+  "other": "Vérifier {count} cibles"
+ },
+ "sheets.review_more": {
+  "one": "{count} modification supplémentaire",
+  "many": "{count} modifications supplémentaires",
+  "other": "{count} modifications supplémentaires"
+ }
 }

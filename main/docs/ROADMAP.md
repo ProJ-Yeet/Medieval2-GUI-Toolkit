@@ -1433,7 +1433,7 @@ or bulk copy of generated HTML/assets.
 reference tables and Fynn JSON export, plus the `Unit script` workbook/converters,
 with editable sheets inside our tool, deep filtering and mass editing. This is
 authorized for implementation on 2026-11-06, progressing in numbered increments
-with verification at each checkpoint. Phases 109 and 110 are complete; 111-114 are
+with verification at each checkpoint. Phases 109-111 are complete; 112-114 are
 active and not yet accepted as complete. Research and exact source locations are in
 [upstream/EDB_SHEETS_WORKFLOW.md](upstream/EDB_SHEETS_WORKFLOW.md).
 
@@ -1444,28 +1444,13 @@ and rule tables per mod as project data, not invented EDU fields. Share unit
 identity, projects and staging contracts with 102-108, but this track can begin
 independently after its own audit. Existing priorities remain unchanged.
 
-**Implementation checkpoint, 2026-11-07:** 109 and 110 complete (archived).
+**Implementation checkpoint, 2026-11-07:** 109-111 complete (archived).
 Typed staging/recipes, native review/apply, all three EDB stages, audit ZIP
-exports and backed-up Apply/Undo are implemented and fixture-tested; 111-114
+exports and backed-up Apply/Undo are implemented and fixture-tested; 112-114
 remain active until their full acceptance criteria are verified, 115-116
 planned. Cancellation, XLSX/native sheet interchange and non-EUR/builder
 integration remain. See CODEX_HANDOFF.md for exact checks, changed files and
 limits.
-
-## Phase 111 - Typed mass-edit operations and reusable recipes
-
-- Support explicit selected rows versus all matching rows, with a target count
-  and stable-ID snapshot before staging. Never edit filtered-out rows implicitly.
-- Provide set, add/subtract, multiply/divide/percentage, min/max clamp, rounding,
-  fill/copy, text replacement and attribute add/remove/deduplicate operations.
-  Add column-based arithmetic or a limited expression language, not Python/JS
-  evaluation. Support reusable named recipes and rule/profile selection.
-- Preserve explicit zero and distinguish blank/no-change from clear. Reject
-  invalid cells/types, division by zero and unintended changes to compound EDU
-  fields; show per-field before/after values and per-operation undo/redo.
-- **Depends on:** 110. **Exit:** mixed-field and filtered-selection regression
-  tests pass; cancel is a no-op, operations can be undone, unknown attributes and
-  unedited tuple members survive, and no disk writes happen while staging.
 
 ## Phase 112 - Building graph and replenishment rules
 

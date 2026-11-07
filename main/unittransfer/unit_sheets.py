@@ -137,14 +137,14 @@ def change_group(mod, project, body):
     return p
 
 
-def load_project(mod):
+def load_project(mod, persist_migration=True):
     with _LOCK:
         p=project_path(mod)
         if not p.exists():return empty_project()
         try:
             original = json.loads(p.read_text(encoding='utf-8'))
             migrated = validate_project(copy.deepcopy(original))
-            if migrated != original:
+            if migrated != original and persist_migration:
                 config._write_json(p, migrated)
             return migrated
         except (OSError,json.JSONDecodeError) as e:fail(str(e))
@@ -153,7 +153,11 @@ def load_project(mod):
 def save_project(mod,project,expected=None):
     validate_project(project)
     with _LOCK:
-        if expected is not None and revision(load_project(mod))!=expected:
+        stored = load_project(mod)
+        from . import sheet_ops
+        # Old recipes remain inspectable; only newly saved instructions can fail.
+        sheet_ops.validate_recipes(project, stored)
+        if expected is not None and revision(stored)!=expected:
             fail(_i18n.msg('eng.sheets.the_sheet_project_changed_in_another_window_reload_before_saving','the sheet project changed in another window; reload before saving'))
         config._write_json(project_path(mod),project)
     return revision(project)
@@ -328,13 +332,43 @@ def service(mod,action,body=None):
     from . import sheet_ops
     body=body or {}
     with _LOCK:
-        p=load_project(mod);before=revision(p)
+        dry_run = body.get('dry_run') is True and action in ('operate', 'paste')
+        p=load_project(mod, persist_migration=not dry_run);before=revision(p)
         original_project = copy.deepcopy(p)
         if action not in ('load','query','export'):
             if body.get('revision')!=before:fail(_i18n.msg('eng.sheets.the_sheet_project_changed_reload_before_editing','the sheet project changed; reload before editing'))
             if body.get('source_token')!=source_token(mod):fail(_i18n.msg('eng.sheets.game_data_changed_refresh_before_editing','game data changed; refresh before editing'))
         report={}
+        recipe = None
+        if action == 'operate' and 'recipe_name' in body:
+            name = body['recipe_name']
+            if not isinstance(name, str) or name not in p['recipes']:
+                fail(_i18n.msg('sheets.invalid_recipe', 'Invalid recipe operation, column or value'))
+            recipe = p['recipes'][name]
+            sheet_ops.validate_recipes(dict(p, recipes={name:recipe}))
+            target = recipe.get('target') or {}
+            if 'profile' not in target:
+                view = target.get('view', body.get('view'))
+                if view == 'rules':
+                    view = 'rules:' + target['rule_table']
+                if view != body.get('view'):
+                    fail(_i18n.msg('sheets.invalid_recipe_target', 'Unknown recipe view, rule table or balance profile'))
+                body = dict(body, **{key:recipe.get(key) for key in ('column','operation','value','other')})
+        profile_recipe = recipe is not None and 'profile' in (recipe.get('target') or {})
         rule_kind = sheet_ops.rule_kind(body.get('view'))
+        if action in ('operate', 'paste') and not profile_recipe:
+            if body.get('view') == 'recruitment':
+                fail(_i18n.msg('eng.sheets.this_column_is_read_only', 'this column is read-only'))
+            target_rows = (sheet_ops.rule_records(p, rule_kind)[0] if rule_kind
+                           else sheet_ops.records(mod, p)[0])
+            if action == 'operate':
+                target_ids = sheet_ops.operation_targets(target_rows, body.get('ids'),
+                    body.get('mode', 'selected'), body.get('where'))
+            elif isinstance(body.get('cells'), list) and body['cells']:
+                # A pasted rectangle can repeat IDs across columns, but not escape its filter.
+                ids = list(dict.fromkeys(cell.get('id') for cell in body['cells']
+                                        if isinstance(cell, dict) and isinstance(cell.get('id'), str)))
+                sheet_ops.operation_targets(target_rows, ids, where=body.get('where'))
         if action in ('native_preview','native_apply'):
             from . import sheet_native
             if action=='native_preview':return sheet_native.preview(mod,p)
@@ -388,15 +422,18 @@ def service(mod,action,body=None):
             if rule_kind is None:
                 fail(_i18n.msg('eng.sheets.invalid_rule_table', 'invalid rule table'))
             p = sheet_ops.rule_structure(p, rule_kind, body)
+        elif action == 'operate' and profile_recipe:
+            p, changes = sheet_ops.stage_profile_recipe(p, recipe)
+            report = {'changes':changes}
         elif action == 'operate' and rule_kind:
-            p, changes = sheet_ops.stage_rule_operation(p, rule_kind, body.get('ids'),
+            p, changes = sheet_ops.stage_rule_operation(p, rule_kind, target_ids,
                 body.get('column'), body.get('operation', 'set'), body.get('value'))
             report = {'changes':changes}
         elif action == 'paste' and rule_kind:
             p, changes = sheet_ops.stage_rule_cells(p, rule_kind, body.get('cells'))
             report = {'changes':changes}
         elif action=='operate':
-            p,changes=sheet_ops.stage_operation(mod,p,body.get('ids'),str(body.get('column','')),
+            p,changes=sheet_ops.stage_operation(mod,p,target_ids,str(body.get('column','')),
                                                body.get('operation','set'),body.get('value'),body.get('other'))
             report={'changes':changes}
         elif action=='paste':
@@ -429,7 +466,7 @@ def service(mod,action,body=None):
         rows,_=sheet_ops.records(mod,p)
         comparison_group = sheet_ops.compare_group(mod, p, body.get('comparison_group'), rows)
         stale_drafts=[r['id'] for r in rows if r.get('stale_draft')]
-        if revision(p)!=before:save_project(mod,p,before)
+        if revision(p)!=before and not dry_run:save_project(mod,p,before)
         if body.get('view')=='recruitment':
             from . import edb_balance
             native = {row['id']: row for row in rows}
@@ -468,7 +505,16 @@ def service(mod,action,body=None):
                           field_info={column['name']:{'type':column['type'], 'view':body['view']}
                                       for column in p['rule_schema'][rule_kind]})
         table=sheet_ops.query(rows,body.get('where'),body.get('sort'),body.get('offset',0),body.get('limit',100))
+        if action in ('operate', 'paste'):
+            report['target_count'] = len({change['id'] for change in report['changes']})
+        if dry_run:
+            # Return the persisted state so a cancelled preview needs no undo.
+            p = original_project
+        from . import edb_balance
+        # Share server defaults without persisting them as project overrides.
         return {'project':p,'revision':revision(p),'source_token':source_token(mod),'stale_drafts':stale_drafts,
+                'balance_effective':edb_balance.profile_of(p),
+                'invalid_recipes':sheet_ops.invalid_recipes(p),
                 'comparison_group':comparison_group,
                 'table':table,'refresh':{k:v for k,v in snapshot.items() if k!='rows'},
                 'filter_info':sheet_ops.filter_info(rows, body.get('view') == 'recruitment'),

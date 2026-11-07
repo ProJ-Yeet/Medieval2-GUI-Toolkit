@@ -13719,5 +13719,41 @@
  "sheets.rule_duplicate_key": "Zduplikowany klucz reguły: {key}",
  "eng.sheets.invalid_rule_target": "Nieznany wiersz reguły lub kolumna",
  "eng.sheets.invalid_rule_operation": "Nieobsługiwana operacja na regułach",
- "eng.sheets.invalid_rule_column": "Nazwa kolumny jest pusta, zastrzeżona lub już istnieje"
+ "eng.sheets.invalid_rule_column": "Nazwa kolumny jest pusta, zastrzeżona lub już istnieje",
+ "sheets.use_clear": "Użyj operacji clear, aby wyczyścić pole",
+ "sheets.matching_targets": "Przed edycją zaznacz unikalne identyfikatory pasujące do bieżącego filtra",
+ "sheets.invalid_recipe_target": "Nieznany widok zestawu operacji, tabela reguł lub profil balansu",
+ "sheets.invalid_recipe": "Nieprawidłowa operacja zestawu, kolumna lub wartość",
+ "sheets.review_target": "Cel",
+ "sheets.review_field": "Pole",
+ "sheets.review_before": "Przed",
+ "sheets.review_after": "Po",
+ "sheets.review_confirm": "Potwierdź",
+ "sheets.recipe_invalid": "{name} (Nieprawidłowy: {reason})",
+ "sheets.recipe_run": "Uruchom",
+ "sheets.profile_recipe_key": "Klucz profilu",
+ "sheets.recipe_operation": "Operacja",
+ "sheets.recipe_op_set": "Ustaw",
+ "sheets.recipe_op_add": "Dodaj",
+ "sheets.recipe_op_subtract": "Odejmij",
+ "sheets.recipe_op_multiply": "Pomnóż",
+ "sheets.recipe_op_divide": "Podziel",
+ "sheets.recipe_op_percent": "Procent",
+ "sheets.recipe_op_min": "Minimum",
+ "sheets.recipe_op_max": "Maksimum",
+ "sheets.recipe_op_round": "Zaokrąglij",
+ "sheets.mode_selected": "Zaznaczone",
+ "sheets.mode_matching": "Pasujące do filtra",
+ "sheets.review_count": {
+  "one": "Przejrzyj {count} cel",
+  "few": "Przejrzyj {count} cele",
+  "many": "Przejrzyj {count} celów",
+  "other": "Przejrzyj {count} celu"
+ },
+ "sheets.review_more": {
+  "one": "Jeszcze {count} zmiana",
+  "few": "Jeszcze {count} zmiany",
+  "many": "Jeszcze {count} zmian",
+  "other": "Jeszcze {count} zmiany"
+ }
 }

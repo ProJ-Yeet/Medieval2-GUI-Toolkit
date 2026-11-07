@@ -4,7 +4,7 @@ _Updated: 2026-11-06 - **v2.4.11 cut**: master since v2.4.10 plus Codex's Armory
 ## Next up
 **Built 2026-11-06, uncut:** Phase 117 automatic official-release updater; portable installs update at next launch/restart with settings preserved. Source checkouts only check. See ROADMAP_ARCHIVE.md and CODEX_HANDOFF.md for validation and startup-suite limitations.
 
-**In progress 2026-11-07:** editable sheets and EDB balancing (109-116): Phases 109 and 110 complete/uncut (110 checked in the real app on DaC EUR); 111-114 implemented in part, full acceptance pending; 115-116 planned. Source review: `upstream/EDB_SHEETS_WORKFLOW.md`; implementation checkpoints: `CODEX_HANDOFF.md`.
+**In progress 2026-11-07:** editable sheets and EDB balancing (109-116): Phases 109-111 complete/uncut (110 and 111 checked in the real app on DaC EUR); 112-114 implemented in part, full acceptance pending; 115-116 planned. Source review: `upstream/EDB_SHEETS_WORKFLOW.md`; implementation checkpoints: `CODEX_HANDOFF.md`.
 
 **Planned 2026-11-06:** guided unit builder integration is scoped in ROADMAP.md, Phases 102-108; source notes in `upstream/SSR_UNIT_BUILDER.md`. Planning only, implementation not started; one independent phase at a time. Existing next-action priorities below are unchanged.
 

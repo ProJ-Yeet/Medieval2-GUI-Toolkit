@@ -12306,5 +12306,35 @@
  "eng.sheets.invalid_rule_target": "未知规则行或列",
  "eng.sheets.invalid_rule_operation": "不支持的规则操作",
  "eng.sheets.invalid_rule_column": "列名称为空、为保留名称或已存在",
- "sheets.group_note": "以只读方式对比全组，包括暂存值。筛选和分页不影响此面板。数值统计不包含缺失值和无效值。请在普通视图中编辑数值。"
+ "sheets.group_note": "以只读方式对比全组，包括暂存值。筛选和分页不影响此面板。数值统计不包含缺失值和无效值。请在普通视图中编辑数值。",
+ "sheets.use_clear": "使用 clear 操作清空字段",
+ "sheets.matching_targets": "编辑前，请选择与当前筛选匹配且不重复的 ID",
+ "sheets.invalid_recipe_target": "未知的方案视图、规则表或平衡配置",
+ "sheets.invalid_recipe": "方案操作、列或值无效",
+ "sheets.review_target": "目标",
+ "sheets.review_field": "字段",
+ "sheets.review_before": "更改前",
+ "sheets.review_after": "更改后",
+ "sheets.review_confirm": "确认",
+ "sheets.recipe_invalid": "{name}（无效：{reason}）",
+ "sheets.recipe_run": "运行",
+ "sheets.profile_recipe_key": "配置键",
+ "sheets.recipe_operation": "操作",
+ "sheets.recipe_op_set": "设置",
+ "sheets.recipe_op_add": "添加",
+ "sheets.recipe_op_subtract": "减去",
+ "sheets.recipe_op_multiply": "乘以",
+ "sheets.recipe_op_divide": "除以",
+ "sheets.recipe_op_percent": "百分比",
+ "sheets.recipe_op_min": "最小值",
+ "sheets.recipe_op_max": "最大值",
+ "sheets.recipe_op_round": "四舍五入",
+ "sheets.mode_matching": "匹配筛选",
+ "sheets.review_count": {
+  "other": "审核 {count} 个目标"
+ },
+ "sheets.review_more": {
+  "other": "另有 {count} 处更改"
+ },
+ "sheets.mode_selected": "已选择"
 }

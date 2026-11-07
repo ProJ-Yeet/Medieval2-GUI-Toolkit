@@ -39,6 +39,8 @@ CONTEXT={'id','Name','ownership','model','mount','projectile','needs_classificat
 
 def number(value):
     try:
+        if isinstance(value, bool):
+            raise ValueError()
         n=float(value)
         if not math.isfinite(n):raise ValueError()
         return n
@@ -357,6 +359,193 @@ def expression(text,row):
     return number(walk(tree))
 
 
+def require_value(value):
+    # Zero is a value; empty edits must never silently become removals.
+    if value is None:
+        sheets.fail(_i18n.msg('eng.sheets.explicit_clear_required', 'Missing values cannot be copied or set; use Clear explicitly'))
+    if isinstance(value, str) and not value.strip() or value == []:
+        sheets.fail(_i18n.msg('sheets.use_clear', 'Use the clear operation to empty a field'))
+
+
+def operation_targets(rows, ids, mode='selected', where=None):
+    """Resolve stable IDs against the full current filter, never a page of rows."""
+    matching = [row['id'] for row in rows if matches(row, where)]
+    if mode == 'matching':
+        return matching
+    matching_ids = set(matching)
+    if (mode != 'selected' or not isinstance(ids, list) or not ids
+            or any(not isinstance(uid, str) or uid not in matching_ids for uid in ids)
+            or len(ids) != len(set(ids))):
+        sheets.fail(_i18n.msg('sheets.matching_targets',
+            'Select distinct IDs that match the current filter before editing'))
+    return ids
+
+
+def recipe_columns(project, target):
+    """Resolve optional recipe scope using existing rule tables or named profile."""
+    native = {name:definition[2] for name, definition in FIELDS.items()}
+    native.update({name:'text' for name in META})
+    if target is None:
+        return native, False
+    if not isinstance(target, dict):
+        sheets.fail(_i18n.msg('sheets.invalid_recipe_target', 'Unknown recipe view, rule table or balance profile'))
+    if set(target) == {'profile'}:
+        from . import edb_balance
+        profile = edb_balance.profile_of(project)
+        # Unsaved profiles use the same identity as the creator in the UI.
+        profile_name = profile.get('name') or 'default'
+        if not isinstance(target['profile'], str) or not target['profile'] or target['profile'] != profile_name:
+            sheets.fail(_i18n.msg('sheets.invalid_recipe_target', 'Unknown recipe view, rule table or balance profile'))
+        return {name:('bool' if isinstance(value, bool) else 'text' if isinstance(value, str) else 'number')
+                for name, value in profile.items() if name != 'name'}, False
+    view = target.get('view')
+    table = target.get('rule_table')
+    if isinstance(view, str) and view.startswith('rules:'):
+        if table is not None and table != view[6:]:
+            sheets.fail(_i18n.msg('sheets.invalid_recipe_target', 'Unknown recipe view, rule table or balance profile'))
+        table = view[6:]
+    if view == 'rules' or isinstance(view, str) and view.startswith('rules:'):
+        if (set(target) - {'view','rule_table'} or not isinstance(table, str)
+                or table not in sheets.RULE_KEYS
+                or table not in project['rules'] or table not in project['rule_schema']):
+            sheets.fail(_i18n.msg('sheets.invalid_recipe_target', 'Unknown recipe view, rule table or balance profile'))
+        return {column['name']:column['type'] for column in project['rule_schema'][table]}, True
+    if set(target) != {'view'} or view not in ('base','attributes','soft','classification'):
+        sheets.fail(_i18n.msg('sheets.invalid_recipe_target', 'Unknown recipe view, rule table or balance profile'))
+    return {name:kind for name, kind in native.items()
+            if name in META or FIELDS[name][3] == view}, False
+
+
+def validate_recipes(project, stored=None):
+    """Validate saved instructions without coercing values or executing edits."""
+    arithmetic = {'add','subtract','multiply','divide','percent','min','max','round'}
+    operations = arithmetic | {'set','clear','copy','expression','replace','append','remove','deduplicate'}
+    for name, recipe in project['recipes'].items():
+        if stored is not None and name in stored['recipes'] and recipe == stored['recipes'][name]:
+            continue
+        if not isinstance(name, str) or not name.strip() or not isinstance(recipe, dict):
+            sheets.fail(_i18n.msg('sheets.invalid_recipe', 'Invalid recipe operation, column or value'))
+        columns, rule = recipe_columns(project, recipe.get('target'))
+        column = recipe.get('column')
+        operation = recipe.get('operation')
+        if (not isinstance(column, str) or column not in columns
+                or not isinstance(operation, str) or operation not in operations
+                or rule and operation not in {'set','clear','copy'}):
+            sheets.fail(_i18n.msg('sheets.invalid_recipe', 'Invalid recipe operation, column or value'))
+        kind = columns[column]
+        if (recipe.get('target') or {}).get('profile'):
+            allowed_profile_ops = {'set'} | arithmetic if kind == 'number' else {'set'}
+            if operation not in allowed_profile_ops:
+                sheets.fail(_i18n.msg('sheets.invalid_recipe', 'Invalid recipe operation, column or value'))
+        value = recipe.get('value')
+        if operation == 'clear':
+            if column in FIELDS and FIELDS[column][1] is not None:
+                sheets.fail(_i18n.msg('eng.sheets.cannot_clear_an_individual_required_tuple_member_value1',
+                    'cannot clear an individual required tuple member: {value1}', value1=column))
+            continue
+        if operation == 'deduplicate':
+            if kind != 'list':
+                sheets.fail(_i18n.msg('sheets.invalid_recipe', 'Invalid recipe operation, column or value'))
+            continue
+        require_value(value)
+        if operation in {'set','append','remove'} and (
+                kind == 'text' and not isinstance(value, str)
+                or kind == 'list' and (not isinstance(value, (str, list))
+                    or isinstance(value, list) and any(not isinstance(item, str) for item in value))):
+            sheets.fail(_i18n.msg('sheets.invalid_recipe', 'Invalid recipe operation, column or value'))
+        if operation == 'copy':
+            if not isinstance(value, str) or value not in columns or columns[value] != kind:
+                sheets.fail(_i18n.msg('eng.sheets.unknown_source_column', 'unknown source column'))
+        elif operation in arithmetic:
+            if kind not in ('int','number'):
+                sheets.fail(_i18n.msg('sheets.invalid_recipe', 'Invalid recipe operation, column or value'))
+            operand = number(value)
+            if operation == 'divide' and operand == 0:
+                sheets.fail(_i18n.msg('eng.sheets.division_by_zero', 'division by zero'))
+            if operation == 'round' and (not operand.is_integer() or not -6 <= operand <= 6):
+                sheets.fail(_i18n.msg('eng.sheets.rounding_digits_must_be_between_6_and_6', 'rounding digits must be between -6 and 6'))
+        elif operation == 'expression':
+            try:
+                tree = ast.parse(value, mode='eval') if isinstance(value, str) else None
+            except (SyntaxError, ValueError):
+                tree = None
+            allowed = (ast.Expression, ast.BinOp, ast.UnaryOp, ast.Add, ast.Sub,
+                       ast.Mult, ast.Div, ast.UAdd, ast.USub, ast.Load, ast.Name, ast.Constant)
+            nodes = list(ast.walk(tree)) if tree else []
+            if (kind not in ('int','number') or not nodes or len(nodes) > 64
+                    or any(not isinstance(node, allowed)
+                        or isinstance(node, ast.Name) and columns.get(node.id) not in ('int','number')
+                        or isinstance(node, ast.Constant) and (type(node.value) not in (int,float)
+                            or not math.isfinite(node.value))
+                        for node in nodes)):
+                sheets.fail(_i18n.msg('eng.sheets.invalid_arithmetic_expression', 'invalid arithmetic expression'))
+        elif operation == 'replace':
+            if kind not in ('text','list') or not isinstance(value, str) or not isinstance(recipe.get('other', ''), str):
+                sheets.fail(_i18n.msg('sheets.invalid_recipe', 'Invalid recipe operation, column or value'))
+        elif operation in ('append','remove'):
+            if kind != 'list':
+                sheets.fail(_i18n.msg('sheets.invalid_recipe', 'Invalid recipe operation, column or value'))
+            typed(column, value)
+        elif rule:
+            rule_value({'type':kind}, value)
+        elif (recipe.get('target') or {}).get('profile'):
+            if kind == 'number':
+                number(value)
+            elif kind == 'bool' and not isinstance(value, bool) or kind == 'text' and not isinstance(value, str):
+                sheets.fail(_i18n.msg('sheets.invalid_recipe', 'Invalid recipe operation, column or value'))
+        else:
+            require_value(typed(column, value))
+
+
+def invalid_recipes(project):
+    """Report legacy instructions without changing their saved payloads."""
+    invalid = {}
+    for name, recipe in project['recipes'].items():
+        try:
+            validate_recipes(dict(project, recipes={name:recipe}))
+        except sheets.SheetError as error:
+            invalid[name] = str(error)
+    return invalid
+
+
+def stage_profile_recipe(project, recipe):
+    """Use profile defaults for missing keys and save through project history."""
+    from . import edb_balance
+    p = copy.deepcopy(project)
+    profile = edb_balance.profile_of(p)
+    column = recipe['column']
+    old = profile[column]
+    value = recipe['value']
+    operation = recipe['operation']
+    new = value
+    if operation != 'set':
+        a, b = number(old), number(value)
+        if operation == 'add':
+            new = a + b
+        elif operation == 'subtract':
+            new = a - b
+        elif operation == 'multiply':
+            new = a * b
+        elif operation == 'divide':
+            new = a / b
+        elif operation == 'percent':
+            new = a * (1 + b / 100)
+        elif operation == 'min':
+            new = max(a, b)
+        elif operation == 'max':
+            new = min(a, b)
+        elif operation == 'round':
+            new = round(a, int(b))
+    if type(old) in (int, float):
+        new = number(new)
+    # Older projects can omit the overrides object entirely.
+    p.setdefault('balance_profile', {})[column] = new
+    # Profile domain validation also runs during dry run, before any write.
+    edb_balance.profile_of(p)
+    return p, [{'id':recipe['target']['profile'], 'column':column,
+                'before':old, 'after':new}]
+
+
 def stage_operation(mod,project,ids,column,operation,value=None,other=None):
     """One all-or-nothing operation; save config only after the caller reviews it."""
     if not isinstance(ids,list) or not ids or len(ids)!=len(set(ids)):sheets.fail(_i18n.msg('eng.sheets.select_distinct_unit_ids_first','select distinct unit IDs first'))
@@ -394,8 +583,10 @@ def stage_operation(mod,project,ids,column,operation,value=None,other=None):
             new=list(dict.fromkeys(values+(target if operation=='append' else [])))
             if operation=='remove':new=[v for v in new if v not in target]
         elif operation!='set':sheets.fail(_i18n.msg('eng.sheets.unknown_edit_operation','unknown edit operation'))
-        if new is None and operation!='clear':sheets.fail(_i18n.msg('eng.sheets.explicit_clear_required','Missing values cannot be copied or set; use Clear explicitly'))
-        if new is not None:new=typed(column,new)
+        if operation != 'clear':
+            require_value(new)
+            new = typed(column, new)
+            require_value(new)
         if column in META:
             meta=p['units'].setdefault(uid,{'annotations':{},'extra':{}})
             if column=='Category override':meta['category_override']=new
@@ -416,7 +607,9 @@ def stage_cells(mod,project,cells):
         uid,column=cell.get('id'),cell.get('column')
         if uid not in units:sheets.fail(_i18n.msg('eng.sheets.unknown_unit_in_pasted_cells','unknown unit in pasted cells'))
         if before[uid].get('stale_draft'):sheets.fail(_i18n.msg('eng.sheets.stale_draft_edit','Discard stale unit drafts before editing those units again'))
+        require_value(cell.get('value'))
         value=typed(column,cell.get('value'))
+        require_value(value)
         if column in META:
             meta=p['units'].setdefault(uid,{'annotations':{},'extra':{}})
             if column=='Category override':meta['category_override']=value
@@ -545,7 +738,7 @@ def rule_records(project, kind):
     return rows, info, ['id', *keys], issues
 
 
-def stage_rule_cells(project, kind, cells):
+def stage_rule_cells(project, kind, cells, allow_clear=False):
     if not isinstance(cells, list):
         sheets.fail(_i18n.msg('eng.sheets.invalid_rule_table', 'invalid rule table'))
     p = copy.deepcopy(project)
@@ -558,6 +751,8 @@ def stage_rule_cells(project, kind, cells):
         uid, name = cell.get('id'), cell.get('column')
         if not isinstance(uid, str) or not isinstance(name, str) or uid not in rows or name not in columns:
             sheets.fail(_i18n.msg('eng.sheets.invalid_rule_target', 'Unknown rule row or column'))
+        if not allow_clear:
+            require_value(cell.get('value'))
         value = rule_value(columns[name], cell.get('value'))
         changes.append({'id':uid, 'column':name, 'before':rows[uid].get(name, ''), 'after':value})
         rows[uid][name] = value
@@ -580,8 +775,10 @@ def stage_rule_operation(project, kind, ids, column, operation, value=None):
             new = live[uid][value]
         elif operation != 'set':
             sheets.fail(_i18n.msg('eng.sheets.invalid_rule_operation', 'Unsupported rule operation'))
+        if operation != 'clear':
+            require_value(new)
         cells.append({'id':uid, 'column':column, 'value':new})
-    return stage_rule_cells(project, kind, cells)
+    return stage_rule_cells(project, kind, cells, allow_clear=operation == 'clear')
 
 
 def rule_structure(project, kind, body):

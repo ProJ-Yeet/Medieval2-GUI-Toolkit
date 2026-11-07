@@ -14175,3 +14175,50 @@ selection, undo, recruitment depth/tier, rule validation and zero, a group's
 comparison, and a saved view reopening after closing the window. Real keyboard
 and clipboard input were exercised in the Node harness, not by hand.
 `tests/test_unit_sheets.py`, `test_sheet_ops.py`, `test_unit_sheets_ui.js`.
+
+---
+
+## Phase 111 - Typed mass-edit operations and reusable recipes
+
+- Support explicit selected rows versus all matching rows, with a target count
+  and stable-ID snapshot before staging. Never edit filtered-out rows implicitly.
+- Provide set, add/subtract, multiply/divide/percentage, min/max clamp, rounding,
+  fill/copy, text replacement and attribute add/remove/deduplicate operations.
+  Add column-based arithmetic or a limited expression language, not Python/JS
+  evaluation. Support reusable named recipes and rule/profile selection.
+- Preserve explicit zero and distinguish blank/no-change from clear. Reject
+  invalid cells/types, division by zero and unintended changes to compound EDU
+  fields; show per-field before/after values and per-operation undo/redo.
+- **Depends on:** 110. **Exit:** mixed-field and filtered-selection regression
+  tests pass; cancel is a no-op, operations can be undone, unknown attributes and
+  unedited tuple members survive, and no disk writes happen while staging.
+
+**Completed 2026-11-07, uncut.** Built by Codex in two reviewed steps and three
+fixes from review and the real app. (1) The server owns the edit set: in
+"matching" mode it recomputes the filter's IDs itself, and in "selected" mode it
+refuses any ID or pasted cell outside the submitted filter, so an API caller
+cannot reach a hidden row. Numbers refuse booleans, a blank set is refused with
+"use clear" (only Clear empties a field; explicit 0 is a value), and a dry run
+returns the per-field before/after list and target count without saving.
+Regression tests cover every arithmetic branch, copy, replace, deduplicate,
+mixed-field undo/redo, unknown attributes and unedited tuple members, and a
+guard that no file under the mod changes. (2) Every mass edit, fill and recipe
+run shows a review with Confirm or Cancel; Cancel sends nothing and leaves no
+history. Recipes remember their view, rule table or balance profile, keep 0,
+and are validated when saved; an invalid stored recipe is marked and not run
+but never stops the sheet opening (the first version validated on load, which
+would have locked out any project with an old recipe). Profile recipes are made
+and run from the Balance panel against the effective profile ("default" when
+none is saved). Real-app fixes: the review repaint collapsed Mass edit and
+reset its controls, so a second run sent a blank set; and profile recipes were
+refused on any project without a named profile. Checked in the real app on
+Divide and Conquer EUR: "Halberd" matching 11 units previews attack 6 to 7,
+Cancel leaves revision and draft unchanged, Confirm stages 11, one undo and one
+redo each; an off-filter ID, a blank set and `true` are refused; a 0 recipe
+round-trips and previews 6 to 0; a divide-by-zero recipe is refused on save; a
+profile recipe previews city_multiplier 0.9 to 0.45 and undo restores it, and
+barracks_cap below T5 is refused with the profile's reason. The mod's EDU and
+EDB hashes were identical before and after. Interpretation: "no disk writes
+while staging" means no writes to mod files; the sheet project JSON is the
+staging store. `tests/test_sheet_ops.py`, `test_unit_sheets.py`,
+`test_sheet_native.py`, `test_unit_sheets_ui.js`.

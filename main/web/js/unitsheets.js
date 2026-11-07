@@ -6,12 +6,17 @@ async function unitSheetsOpen(){
  const mod=state.src || state.dst;
  if(!mod){toast(tt('sheets.pick_mod'));return;}
  USHEET={mod,view:'classification',offset:0,where:null,sort:[{column:'id',desc:false}],selected:new Set(),past:[],future:[],busy:false,hidden:[],order:[],filterRows:[],group:'all',balanceStages:['replenish','experience','pool']};
+ // Draft controls belong to the window, not the project or undo snapshots.
+ USHEET.controls={usMassDetails:false,usBalanceDetails:true,usMassColumn:'',usMassOp:'set',
+  usMassValue:'',usMassOther:'',usMassMode:'selected',usRecipeName:'',usRecipePicker:'',
+  usProfileRecipe:'',usProfileRecipeName:'',usProfileRecipeColumn:'',
+  usProfileRecipeOp:'set',usProfileRecipeValue:''};
  modal.className='modal wide';modal.innerHTML=`<div class="count">${tt('sheets.loading')}</div>`;overlay.classList.add('open');
  await unitSheetsRequest('load');
 }
 function unitSheetsBody(extra={}){
  const u=USHEET;return Object.assign({mod:u.mod,revision:u.data&&u.data.revision,source_token:u.data&&u.data.source_token,
-  view:u.view,where:u.where,sort:u.sort,offset:u.offset,limit:75,comparison_group:u.compareGroup},extra);
+  view:u.view,where:u.where,sort:u.sort,offset:u.offset,limit:75,mode:'selected',comparison_group:u.compareGroup},extra);
 }
 async function unitSheetsRequest(action,extra={},history=false){
  const u=USHEET;if(!u)return false;
@@ -68,9 +73,21 @@ function unitSheetsValue(v){return Array.isArray(v)?v.join(', '):v==null?'':Stri
 function unitSheetsEditable(col){
  if(unitSheetsRuleKind())return col!=='id'&&!!USHEET.data.field_info[col];
  return USHEET.view!=='recruitment'&&(USHEET_META.includes(col)||!!USHEET.data.field_info[col]);}
+function unitSheetsRememberControl(control){
+ // Record edits before a queued request can rebuild the window.
+ USHEET.controls[control.id]=control.tagName==='DETAILS'?control.open:control.value;
+}
 function unitSheetsPaint(){
  const u=USHEET;if(!u || !u.data){if(u&&u.err)modal.innerHTML=`<div class="w-bad">${esc(u.err)}</div>`;return;}
  const d=u.data,cols=unitSheetsColumns(),table=d.table;
+ const controls=u.controls;
+ const massColumns=unitSheetsRuleKind()?d.columns:[...USHEET_META,...d.columns];
+ const massOperations=unitSheetsRuleKind()?['set','clear','copy']:
+  ['set','clear','add','subtract','multiply','divide','percent','min','max','round',
+   'copy','expression','replace','append','remove','deduplicate'];
+ // A view or schema change can remove a previously valid choice.
+ if(!massColumns.includes(controls.usMassColumn))controls.usMassColumn=massColumns[0]??'';
+ if(!massOperations.includes(controls.usMassOp))controls.usMassOp=massOperations[0];
  const tabs=[['classification',tt('sheets.classification')],['base',tt('sheets.base')],['attributes',tt('sheets.attributes')],['soft',tt('sheets.soft')],['rules:replenish',tt('sheets.rules')],['recruitment',tt('sheets.recruitment')]];
  const option=col=>`<option value="${esc(col)}">${esc(col)}</option>`;
  const filterCols=Object.keys(d.filter_info||{});
@@ -106,9 +123,10 @@ function unitSheetsPaint(){
  <div class="us-grid" style="max-height:55vh;overflow:auto">${unitSheetsGridOpen(cols)}<thead><tr><th>✓</th>${cols.map((k,c)=>`<th class="us-kind-${unitSheetsColumnKind(k)}" ${unitSheetsFrozenStyle(k,true)} data-sort="${esc(k)}" onclick="unitSheetsSort(this.dataset.sort,event.shiftKey)" title="${ttA('sheets.sort_hint')}">${esc(unitSheetsColumnLabel(k))}</th>`).join('')}</tr></thead><tbody>
  ${table.rows.map((row,r)=>`<tr class="${row.changed?'us-changed':''}"><td><input type="checkbox"${u.selected.has(row.id)?' checked':''} onchange="unitSheetsSelect(${r},this.checked)"></td>${cols.map((col,c)=>`<td class="us-kind-${unitSheetsColumnKind(col)}" ${unitSheetsFrozenStyle(col)} data-r="${r}" data-c="${c}" onmousedown="unitSheetsRect(event,${r},${c})">${unitSheetsEditable(col)?`<input data-r="${r}" data-c="${c}" data-col="${esc(col)}" value="${esc(unitSheetsValue(row[col]))}" oninput="unitSheetsInput(${r},${c},this.value)" onchange="unitSheetsCell(${r},${c},this.value)" onkeydown="unitSheetsCellKey(event)" onpaste="unitSheetsPaste(event)">`:`<span>${esc(unitSheetsValue(row[col]))}</span>`}</td>`).join('')}</tr>`).join('')}
  </tbody></table></div>
- <details${u.view==='recruitment'?' hidden':''}><summary>${tt('sheets.mass_edit')}</summary><div class="barrow"><select id="usMassColumn">${(unitSheetsRuleKind()?d.columns:[...USHEET_META,...d.columns]).map(option).join('')}</select><select id="usMassOp">${(unitSheetsRuleKind()?['set','clear','copy']:['set','clear','add','subtract','multiply','divide','percent','min','max','round','copy','expression','replace','append','remove','deduplicate']).map(k=>`<option>${k}</option>`).join('')}</select>
- <input id="usMassValue" placeholder="${ttA('sheets.value')}"><input id="usMassOther" placeholder="${ttA('sheets.replacement')}"><button onclick="unitSheetsMass()">${tt('sheets.stage_selected')}</button><button onclick="unitSheetsFill()">${tt('sheets.fill_down')}</button></div><div class="count">${tt('sheets.fill_page_note')}</div>
- <div class="barrow"><input id="usRecipeName" placeholder="${ttA('sheets.recipe_name')}"><button onclick="unitSheetsSaveRecipe()">${tt('common.save')}</button><select onchange="unitSheetsLoadRecipe(this.value)"><option value="">${tt('sheets.recipes')}</option>${Object.keys(d.project.recipes).map(option).join('')}</select></div></details>
+ <details id="usMassDetails"${controls.usMassDetails?' open':''}${u.view==='recruitment'?' hidden':''} ontoggle="unitSheetsRememberControl(this)"><summary>${tt('sheets.mass_edit')}</summary><div class="barrow"><select id="usMassColumn" onchange="unitSheetsRememberControl(this)">${massColumns.map(col=>`<option value="${esc(col)}"${col===controls.usMassColumn?' selected':''}>${esc(col)}</option>`).join('')}</select><select id="usMassOp" onchange="unitSheetsRememberControl(this)">${massOperations.map(k=>`<option${k===controls.usMassOp?' selected':''}>${k}</option>`).join('')}</select>
+ <input id="usMassValue" value="${esc(controls.usMassValue)}" oninput="unitSheetsRememberControl(this)" onchange="unitSheetsRememberControl(this)" placeholder="${ttA('sheets.value')}"><input id="usMassOther" value="${esc(controls.usMassOther)}" oninput="unitSheetsRememberControl(this)" onchange="unitSheetsRememberControl(this)" placeholder="${ttA('sheets.replacement')}"><select id="usMassMode" onchange="unitSheetsRememberControl(this)"><option value="selected"${controls.usMassMode==='selected'?' selected':''}>${tt('sheets.mode_selected')}</option><option value="matching"${controls.usMassMode==='matching'?' selected':''}>${tt('sheets.mode_matching')}</option></select><button onclick="unitSheetsMass()">${tt('sheets.stage_selected')}</button><button onclick="unitSheetsFill()">${tt('sheets.fill_down')}</button></div><div class="count">${tt('sheets.fill_page_note')}</div>
+ <div class="barrow"><input id="usRecipeName" value="${esc(controls.usRecipeName)}" oninput="unitSheetsRememberControl(this)" onchange="unitSheetsRememberControl(this)" placeholder="${ttA('sheets.recipe_name')}"><button onclick="unitSheetsSaveRecipe()">${tt('common.save')}</button><select id="usRecipePicker" onchange="unitSheetsRememberControl(this);unitSheetsLoadRecipe(this.value)"><option value="">${tt('sheets.recipes')}</option>${unitSheetsRecipeOptions()}</select><button onclick="unitSheetsRunRecipe(document.getElementById('usRecipePicker').value)">${tt('sheets.recipe_run')}</button></div></details>
+ ${unitSheetsReviewHtml()}
  ${d.changes?`<details open><summary>${tt('sheets.change_preview')}</summary><pre style="max-height:180px;overflow:auto">${esc(JSON.stringify(d.changes,null,2))}</pre></details>`:''}
  ${u.native?`<details open><summary>${tt('sheets.native_review',{count:u.native.units})}</summary><pre style="max-height:240px;overflow:auto">${esc(u.native.files.map(f=>f.diff).join('\n\n'))}</pre><button onclick="unitSheetsNativeApply()">${tt('sheets.native_apply')}</button></details>`:''}
  <div class="foot"><button onclick="unitSheetsNativePreview()">${tt('sheets.native_preview')}</button><button onclick="unitSheetsDiscard()">${tt('sheets.discard_native')}</button><button onclick="closeModal()">${tt('common.close')}</button></div></div>`;
@@ -308,14 +326,14 @@ function unitSheetsCommit(key,u){
  const cell=u.inputs&&u.inputs.get(key);
  if(!cell||USHEET!==u)return;
  clearTimeout(cell.timer);u.inputs.delete(key);
- if(cell.value!==''||unitSheetsRuleKind()){
+ if(cell.value!==unitSheetsValue(u.data.table.rows.find(row=>row.id===cell.id)?.[cell.column])){
   return unitSheetsRequest('operate',{ids:[cell.id],column:cell.column,operation:'set',value:cell.value},true);
  }
 }
 function unitSheetsCell(r,c,value){
  const u=USHEET,col=unitSheetsColumns()[c],id=u.data.table.rows[r].id,key=id+'\u0000'+col;
  if(u.inputs&&u.inputs.has(key))return unitSheetsCommit(key,u);
- if(value!==unitSheetsValue(u.data.table.rows[r][col])&&(value!==''||unitSheetsRuleKind())){
+ if(value!==unitSheetsValue(u.data.table.rows[r][col])){
   return unitSheetsRequest('operate',{ids:[id],column:col,operation:'set',value},true);
  }
 }
@@ -373,6 +391,8 @@ async function unitSheetsUndo(redo){
 
 async function unitSheetsMass(){
  const u=USHEET;
+ // Flushing a pending cell can repaint controls, so capture the user's mode now.
+ const mode=document.getElementById('usMassMode')?.value||'selected';
  const edit={column:document.getElementById('usMassColumn').value,
   operation:document.getElementById('usMassOp').value,
   value:document.getElementById('usMassValue').value,other:document.getElementById('usMassOther').value};
@@ -380,8 +400,46 @@ async function unitSheetsMass(){
  if(USHEET!==u)return;
  unitSheetsPruneSelection();
  const ids=[...u.selected];
- if(!ids.length){toast(tt('sheets.select_first'));return;}
- return unitSheetsRequest('operate',{ids,...edit},true);
+ if(mode==='selected'&&!ids.length){toast(tt('sheets.select_first'));return;}
+ return unitSheetsPreview('operate',{ids,mode,...edit});
+}
+async function unitSheetsPreview(action,extra){
+ const u=USHEET;
+ const pending=(u.queue||Promise.resolve()).then(async()=>{
+  if(USHEET!==u||u.busy)return false;
+  u.busy=true;
+  try{
+   // Freeze concurrency tokens, filter and targets for the later confirmation.
+   const body=structuredClone(unitSheetsBody(extra));
+   const result=await unitSheetsPost('/api/unit_sheets/'+action,{...body,dry_run:true});
+   if(USHEET!==u)return false;
+   u.review={action,body,result};u.err='';unitSheetsPaint();return true;
+  }catch(error){
+   if(USHEET===u){u.review=null;u.err=errText(error);unitSheetsPaint();}
+   return false;
+  }finally{u.busy=false;}
+ });
+ u.queue=pending.catch(()=>false);return pending;
+}
+function unitSheetsReviewHtml(){
+ const review=USHEET.review;
+ if(!review)return '';
+ const changes=review.result.changes||[],shown=changes.slice(0,100);
+ return `<details open><summary>${tt('sheets.review_count',{count:review.result.target_count})}</summary>
+ <div style="max-height:260px;overflow:auto"><table><thead><tr><th>${tt('sheets.review_target')}</th><th>${tt('sheets.review_field')}</th><th>${tt('sheets.review_before')}</th><th>${tt('sheets.review_after')}</th></tr></thead><tbody>
+ ${shown.map(change=>`<tr><td>${esc(change.id)}</td><td>${esc(change.column)}</td><td>${esc(unitSheetsValue(change.before))}</td><td>${esc(unitSheetsValue(change.after))}</td></tr>`).join('')}
+ </tbody></table></div>${changes.length>shown.length?`<div>${tt('sheets.review_more',{count:changes.length-shown.length})}</div>`:''}
+ <button onclick="unitSheetsConfirmReview()">${tt('sheets.review_confirm')}</button><button onclick="unitSheetsCancelReview()">${tt('common.cancel')}</button></details>`;
+}
+function unitSheetsCancelReview(){
+ // A preview never enters project history and needs no compensating save.
+ USHEET.review=null;unitSheetsPaint();
+}
+function unitSheetsConfirmReview(){
+ const u=USHEET,review=u.review;
+ if(!review||u.busy)return false;
+ u.review=null;
+ return unitSheetsRequest(review.action,review.body,true);
 }
 async function unitSheetsFill(){
  const u=USHEET,col=document.getElementById('usMassColumn').value;
@@ -404,9 +462,9 @@ async function unitSheetsFill(){
  if(!targets.length)return;
  if(rectangle){
   const cells=targets.flatMap(id=>columns.map(column=>({id,column,value:fresh[column]})));
-  return unitSheetsRequest('paste',{cells},true);
+  return unitSheetsPreview('paste',{cells,mode:'selected'});
  }
- return unitSheetsRequest('operate',{ids:targets,column:col,operation:'set',value:fresh[col]},true);
+ return unitSheetsPreview('operate',{ids:targets,column:col,operation:'set',value:fresh[col]});
 }
 async function unitSheetsImport(input){const file=input.files[0];if(!file)return;if(file.size>20*1024*1024){toast(tt('sheets.file_large'));return;}try{const mapping=JSON.parse(document.getElementById('usMapping').value||'{}');await unitSheetsRequest('import',{kind:document.getElementById('usImportKind').value,text:await file.text(),mapping},true);}catch(e){toast(errText(e));}}
 async function unitSheetsExport(kind){try{const r=await unitSheetsPost('/api/unit_sheets/export',unitSheetsBody({kind}));const content=r.encoding==='base64'?Uint8Array.from(atob(r.text),c=>c.charCodeAt(0)):r.text;const url=URL.createObjectURL(new Blob([content],{type:r.mime}));const a=document.createElement('a');a.href=url;a.download=r.name;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}catch(e){toast(errText(e));}}
@@ -428,8 +486,51 @@ function unitSheetsExtras(show){
  return unitSheetsLayout(u=>{u.showExtras=show;},false);
 }
 function unitSheetsComparison(){const comparison={ultra_size:+document.getElementById('usUltra').value,defense_weight:+document.getElementById('usDefenseWeight').value};unitSheetsSave(p=>{p.comparison=comparison;});}
-function unitSheetsSaveRecipe(){const name=document.getElementById('usRecipeName').value.trim();if(!name)return;const recipe={column:document.getElementById('usMassColumn').value,operation:document.getElementById('usMassOp').value,value:document.getElementById('usMassValue').value,other:document.getElementById('usMassOther').value};unitSheetsSave(p=>{p.recipes[name]=recipe;});}
-function unitSheetsLoadRecipe(name){const r=USHEET.data.project.recipes[name];if(r)for(const [k,id]of [['column','usMassColumn'],['operation','usMassOp'],['value','usMassValue'],['other','usMassOther']])document.getElementById(id).value=r[k]||'';}
+function unitSheetsSaveRecipe(){
+ const name=document.getElementById('usRecipeName').value.trim();
+ if(!name)return;
+ const recipe={target:{view:USHEET.view},column:document.getElementById('usMassColumn').value,
+  operation:document.getElementById('usMassOp').value,value:document.getElementById('usMassValue').value,
+  other:document.getElementById('usMassOther').value};
+ return unitSheetsSave(project=>{project.recipes[name]=recipe;});
+}
+function unitSheetsRecipeOptions(profile=false){
+ const u=USHEET,recipes=u.data.project.recipes,invalid=u.data.invalid_recipes||{};
+ const current=recipe=>recipe?.target?.view===u.view;
+ const names=Object.keys(recipes).filter(name=>profile?!!recipes[name]?.target?.profile:!recipes[name]?.target?.profile);
+ names.sort((a,b)=>Number(current(recipes[b]))-Number(current(recipes[a]))||a.localeCompare(b));
+ return names.map(name=>{
+  const label=invalid[name]?tt('sheets.recipe_invalid',{name,reason:invalid[name]}):name;
+  const selected=u.controls[profile?'usProfileRecipe':'usRecipePicker']===name;
+  return `<option value="${esc(name)}"${selected?' selected':''}${invalid[name]?' disabled':''}>${esc(label)}</option>`;
+ }).join('');
+}
+function unitSheetsLoadRecipe(name){
+ const u=USHEET,recipe=u.data.project.recipes[name];
+ if(!recipe)return;
+ if(u.data.invalid_recipes?.[name]){toast(u.data.invalid_recipes[name]);return;}
+ u.recipeName=name;
+ u.controls.usRecipePicker=name;
+ for(const [key,id]of [['column','usMassColumn'],['operation','usMassOp'],['value','usMassValue'],['other','usMassOther']]){
+  // Numeric zero is a saved value, not an empty input.
+  u.controls[id]=recipe[key]??'';
+  document.getElementById(id).value=u.controls[id];
+ }
+}
+async function unitSheetsRunRecipe(name){
+ const u=USHEET;
+ const mode=document.getElementById('usMassMode')?.value||'selected';
+ await u.layout;await unitSheetsFlush();
+ if(USHEET!==u)return;
+ const recipe=u.data.project.recipes[name];
+ if(!recipe)return;
+ if(u.data.invalid_recipes?.[name]){toast(u.data.invalid_recipes[name]);return;}
+ const target=recipe.target||{};
+ if(!target.profile&&target.view&&target.view!==u.view){toast(tt('sheets.invalid_recipe_target'));return;}
+ unitSheetsPruneSelection();
+ if(!target.profile&&mode==='selected'&&!u.selected.size){toast(tt('sheets.select_first'));return;}
+ return unitSheetsPreview('operate',{recipe_name:name,ids:[...u.selected],mode});
+}
 function unitSheetsDiscard(){unitSheetsSave(p=>{p.draft={};p.draft_sources={};});}
 function unitSheetsRename(index){const r=USHEET.data.refresh.rename_candidates[index];unitSheetsRequest('rename',{old:r.from,new:r.to},true);}
 function unitSheetsRuleKind(){
@@ -509,11 +610,54 @@ function unitSheetsRectPaint(){
  }
 }
 
+function unitSheetsProfileRecipeOperations(column,selected=''){
+ const profile=USHEET.data.balance_effective||USHEET.data.project.balance_profile||{};
+ const labels={set:tt('sheets.recipe_op_set'),add:tt('sheets.recipe_op_add'),
+  subtract:tt('sheets.recipe_op_subtract'),multiply:tt('sheets.recipe_op_multiply'),
+  divide:tt('sheets.recipe_op_divide'),percent:tt('sheets.recipe_op_percent'),
+  min:tt('sheets.recipe_op_min'),max:tt('sheets.recipe_op_max'),round:tt('sheets.recipe_op_round')};
+ // Text and boolean profile keys only accept replacement values.
+ const operations=typeof profile[column]==='number'?Object.keys(labels):['set'];
+ return operations.map(operation=>`<option value="${operation}"${operation===selected?' selected':''}>${labels[operation]}</option>`).join('');
+}
+function unitSheetsProfileRecipeColumn(){
+ const column=document.getElementById('usProfileRecipeColumn').value;
+ const operation=document.getElementById('usProfileRecipeOp');
+ operation.innerHTML=unitSheetsProfileRecipeOperations(column);
+ operation.value='set';
+ USHEET.controls.usProfileRecipeColumn=column;
+ USHEET.controls.usProfileRecipeOp='set';
+}
+function unitSheetsSaveProfileRecipe(){
+ const name=document.getElementById('usProfileRecipeName').value.trim();
+ if(!name)return;
+ // The server supplies defaults even before a profile has been saved.
+ const profile=USHEET.data.balance_effective||USHEET.data.project.balance_profile||{};
+ const recipe={target:{profile:profile.name||'default'},
+  column:document.getElementById('usProfileRecipeColumn').value,
+  operation:document.getElementById('usProfileRecipeOp').value,
+  value:document.getElementById('usProfileRecipeValue').value};
+ // Use the shared save queue so server validation and refusal reasons apply.
+ return unitSheetsSave(project=>{project.recipes[name]=recipe;});
+}
 function unitSheetsBalanceHtml(){
  const p=USHEET.data.project,b=USHEET.balance;
- return `<details open><summary>${tt('sheets.balance')}</summary>
+ const profile=USHEET.data.balance_effective||p.balance_profile||{};
+ const keys=Object.keys(profile).filter(key=>key!=='name'),controls=USHEET.controls;
+ if(!keys.includes(controls.usProfileRecipeColumn)){
+  controls.usProfileRecipeColumn=keys[0]??'';
+  controls.usProfileRecipeOp='set';
+ }
+ // A numeric key can become text after loading another saved profile.
+ if(typeof profile[controls.usProfileRecipeColumn]!=='number'){
+  controls.usProfileRecipeOp='set';
+ }
+ return `<details id="usBalanceDetails"${controls.usBalanceDetails?' open':''} ontoggle="unitSheetsRememberControl(this)"><summary>${tt('sheets.balance')}</summary>
  <div class="barrow">${['replenish','experience','pool'].map(k=>`<label><input type="checkbox" class="us-stage" value="${k}"${USHEET.balanceStages.includes(k)?' checked':''} onchange="unitSheetsStages()"> ${k}</label>`).join('')}
  <button onclick="unitSheetsBalancePreview()">${tt('sheets.preview')}</button><button onclick="unitSheetsBalanceExport()">${tt('sheets.export_balance')}</button><label><input id="usIntermediate" type="checkbox">${tt('sheets.intermediate')}</label></div>
+ <div class="barrow"><select id="usProfileRecipe" onchange="unitSheetsRememberControl(this)"><option value="">${tt('sheets.recipes')}</option>${unitSheetsRecipeOptions(true)}</select><button onclick="unitSheetsRunRecipe(document.getElementById('usProfileRecipe').value)">${tt('sheets.recipe_run')}</button></div>
+ <div class="barrow"><input id="usProfileRecipeName" value="${esc(controls.usProfileRecipeName)}" oninput="unitSheetsRememberControl(this)" onchange="unitSheetsRememberControl(this)" placeholder="${ttA('sheets.recipe_name')}"><label>${tt('sheets.profile_recipe_key')} <select id="usProfileRecipeColumn" onchange="unitSheetsProfileRecipeColumn()">${keys.map(key=>`<option value="${esc(key)}"${key===controls.usProfileRecipeColumn?' selected':''}>${esc(key)}</option>`).join('')}</select></label>
+ <label>${tt('sheets.recipe_operation')} <select id="usProfileRecipeOp" onchange="unitSheetsRememberControl(this)">${unitSheetsProfileRecipeOperations(controls.usProfileRecipeColumn,controls.usProfileRecipeOp)}</select></label><input id="usProfileRecipeValue" value="${esc(controls.usProfileRecipeValue)}" oninput="unitSheetsRememberControl(this)" onchange="unitSheetsRememberControl(this)" placeholder="${ttA('sheets.value')}"><button onclick="unitSheetsSaveProfileRecipe()">${tt('common.save')}</button></div>
  <label>${tt('sheets.profile')}<textarea id="usProfile" rows="4" style="width:100%">${esc(JSON.stringify(b?b.profile:p.balance_profile||{},null,2))}</textarea></label>
  <label>${tt('sheets.overrides')}<textarea id="usOverrides" rows="3" style="width:100%">${esc(JSON.stringify(p.balance_overrides||[],null,2))}</textarea></label><button onclick="unitSheetsBalanceProfile()">${tt('common.save')}</button>
  ${b?`<button onclick="unitSheetsBalanceApply()"${b.changed_fields?'':' disabled'}>${tt('sheets.apply_balance')}</button><div>${tt('sheets.balance_count',{rows:b.recruitment_rows,changes:b.changed_fields})}</div><pre style="max-height:160px;overflow:auto">${esc(JSON.stringify(Object.fromEntries(Object.entries(b.logs).map(([k,v])=>[k,v.counts])),null,2))}</pre>

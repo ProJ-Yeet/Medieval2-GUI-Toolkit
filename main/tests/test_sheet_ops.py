@@ -132,4 +132,217 @@ class SheetOperationTests(unittest.TestCase):
   with self.assertRaises(sheets.SheetError):
    ops.stage_operation(self.mod,self.project,['Guard'],'groups','set','Other')
 
+class MassSafetyTests(unittest.TestCase):
+ setUp = SheetOperationTests.setUp
+ def request(self, **edit):
+  current = sheets.service(self.mod, 'load')
+  return sheets.service(self.mod, 'operate', {
+   'revision':current['revision'], 'source_token':current['source_token'], **edit})
+
+ def test_matching_recomputes_ids_from_filter_without_pagination(self):
+  result = self.request(mode='matching', ids=['Horse'], column='Tier', value='T2',
+   where={'column':'category', 'value':'infantry'}, limit=1)
+  self.assertEqual([c['id'] for c in result['changes']], ['Guard'])
+  self.assertEqual(result['target_count'], 1)
+  result = self.request(mode='matching', column='Tier', value='T3', limit=1)
+  self.assertEqual(result['target_count'], 2)
+
+ def test_selected_filtered_out_id_refuses_all_and_preserves_file(self):
+  sheets.service(self.mod, 'load')
+  path = sheets.project_path(self.mod)
+  before = path.read_bytes()
+  with self.assertRaisesRegex(sheets.SheetError, 'match'):
+   self.request(mode='selected', ids=['Guard','Horse'], column='Tier', value='T2',
+    where={'column':'category', 'value':'infantry'})
+  self.assertEqual(path.read_bytes(), before)
+
+ def test_rule_targets_obey_filter_in_both_modes(self):
+  p = sheets.empty_project()
+  p['rules']['pool'] = [{'id':'a','T0':1}, {'id':'b','T0':2}]
+  sheets.save_project(self.mod, p)
+  edit = dict(view='rules:pool', column='T0', value=0,
+   where={'column':'T0','op':'gt','value':1})
+  with self.assertRaises(sheets.SheetError):
+   self.request(mode='selected', ids=['a','b'], **edit)
+  result = self.request(mode='matching', ids=['a'], **edit)
+  self.assertEqual([c['id'] for c in result['changes']], ['b'])
+
+ def test_native_numeric_booleans_are_rejected(self):
+  for column in ('attack','movement'):
+   for value in (True, False):
+    with self.subTest(column=column, value=value):
+     with self.assertRaises(sheets.SheetError):
+      ops.stage_operation(self.mod, self.project, ['Guard'], column, 'set', value)
+     with self.assertRaises(sheets.SheetError):
+      ops.stage_cells(self.mod, self.project, [{'id':'Guard','column':column,'value':value}])
+  with self.assertRaises(sheets.SheetError):
+   ops.stage_operation(self.mod, self.project, ['Guard'], 'attack', 'add', True)
+
+ def test_blank_sets_require_clear_for_all_field_kinds(self):
+  for column in ('Tier','formation','movement','attributes'):
+   for value in ('', None, '   ', *([[]] if column == 'attributes' else [])):
+    with self.subTest(column=column, value=value):
+     with self.assertRaisesRegex(sheets.SheetError, '[Cc]lear'):
+      ops.stage_operation(self.mod, self.project, ['Guard'], column, 'set', value)
+  for value in ('', None, []):
+   with self.assertRaisesRegex(sheets.SheetError, '[Cc]lear'):
+    ops.stage_cells(self.mod, self.project, [{'id':'Guard','column':'attributes','value':value}])
+  for column in ('Tier','class','movement','attributes'):
+   p, changes = ops.stage_operation(self.mod, self.project, ['Guard'], column, 'clear')
+   self.assertIn(changes[0]['after'], ('', None, []))
+  with self.assertRaises(sheets.SheetError):
+   ops.stage_operation(self.mod, self.project, ['Guard'], 'attack', 'clear')
+  p, changes = ops.stage_operation(self.mod, self.project, ['Guard'], 'attack', 'set', 0)
+  self.assertEqual(changes[0]['after'], 0)
+
+ def test_paste_cannot_bypass_submitted_filter(self):
+  first = sheets.service(self.mod, 'load')
+  before = sheets.project_path(self.mod).read_bytes()
+  with self.assertRaisesRegex(sheets.SheetError, 'match'):
+   sheets.service(self.mod, 'paste', {**first,
+    'where':{'column':'category','value':'infantry'},
+    'cells':[{'id':'Horse','column':'Tier','value':'T2'}]})
+  self.assertEqual(sheets.project_path(self.mod).read_bytes(), before)
+
+ def test_rule_blank_set_requires_clear_and_zero_is_value(self):
+  p = sheets.validate_project(sheets.empty_project())
+  p['rules']['pool'] = [{'id':'a','T0':1}]
+  for value in ('', None):
+   with self.assertRaisesRegex(sheets.SheetError, '[Cc]lear'):
+    ops.stage_rule_operation(p, 'pool', ['a'], 'T0', 'set', value)
+  cleared, _ = ops.stage_rule_operation(p, 'pool', ['a'], 'T0', 'clear')
+  self.assertEqual(cleared['rules']['pool'][0]['T0'], '')
+  zero, _ = ops.stage_rule_operation(p, 'pool', ['a'], 'T0', 'set', 0)
+  self.assertEqual(zero['rules']['pool'][0]['T0'], 0)
+
+ def test_rule_blank_paste_requires_clear(self):
+  p = sheets.validate_project(sheets.empty_project())
+  p['rules']['pool'] = [{'id':'a','T0':1}]
+  for value in ('', None):
+   with self.assertRaisesRegex(sheets.SheetError, '[Cc]lear'):
+    ops.stage_rule_cells(p, 'pool', [{'id':'a','column':'T0','value':value}])
+
+ def test_rule_dry_run_is_byte_identical(self):
+  p = sheets.empty_project()
+  p['rules']['pool'] = [{'id':'a','T0':1}]
+  sheets.save_project(self.mod, p)
+  current = sheets.service(self.mod, 'load')
+  path = sheets.project_path(self.mod)
+  before = path.read_bytes()
+  result = self.request(view='rules:pool', ids=['a'], column='T0', value=0, dry_run=True)
+  self.assertEqual(result['changes'], [{'id':'a','column':'T0','before':1,'after':0}])
+  self.assertEqual(result['target_count'], 1)
+  self.assertEqual(result['revision'], current['revision'])
+  self.assertEqual(path.read_bytes(), before)
+
+ def test_dry_run_has_same_changes_without_writes_or_revision(self):
+  first = sheets.service(self.mod, 'load')
+  path = sheets.project_path(self.mod)
+  before = path.read_bytes()
+  stamp = path.stat().st_mtime_ns
+  edit = dict(ids=['Guard'], column='attack', operation='add', value=2)
+  preview = self.request(dry_run=True, **edit)
+  self.assertEqual(path.read_bytes(), before)
+  self.assertEqual(path.stat().st_mtime_ns, stamp)
+  self.assertEqual(preview['revision'], first['revision'])
+  self.assertEqual(preview['project'], first['project'])
+  actual = self.request(**edit)
+  self.assertEqual(preview['changes'], actual['changes'])
+  self.assertEqual(preview['target_count'], actual['target_count'])
+
+ def test_dry_run_does_not_create_or_migrate_project_file(self):
+  body = {'revision':sheets.revision(sheets.empty_project()),
+   'source_token':sheets.source_token(self.mod), 'ids':['Guard'],
+   'column':'attack', 'value':9, 'dry_run':True}
+  sheets.service(self.mod, 'operate', body)
+  self.assertFalse(sheets.project_path(self.mod).exists())
+  import json
+  legacy = sheets.empty_project()
+  del legacy['rule_schema']
+  path = sheets.project_path(self.mod)
+  path.parent.mkdir(parents=True, exist_ok=True)
+  path.write_text(json.dumps(legacy), encoding='utf-8')
+  before = path.read_bytes()
+  body['revision'] = sheets.revision(sheets.validate_project(copy.deepcopy(legacy)))
+  sheets.service(self.mod, 'operate', body)
+  self.assertEqual(path.read_bytes(), before)
+
+ def check_arithmetic(self, operation, value, expected):
+  _, changes = ops.stage_operation(self.mod, self.project, ['Guard'],
+   'attack', operation, value)
+  self.assertEqual(changes, [{'id':'Guard','column':'attack','before':5,'after':expected}])
+
+ def test_add_branch(self):
+  self.check_arithmetic('add', 2, 7)
+ def test_subtract_branch(self):
+  self.check_arithmetic('subtract', 2, 3)
+ def test_multiply_branch(self):
+  self.check_arithmetic('multiply', 2, 10)
+ def test_divide_branch(self):
+  self.check_arithmetic('divide', 5, 1)
+ def test_percentage_branch(self):
+  self.check_arithmetic('percent', 100, 10)
+ def test_minimum_clamp_branch(self):
+  self.check_arithmetic('min', 8, 8)
+ def test_maximum_clamp_branch(self):
+  self.check_arithmetic('max', 3, 3)
+ def test_round_branch(self):
+  self.check_arithmetic('round', -1, 0)
+
+ def test_copy_branch(self):
+  _, changes = ops.stage_operation(self.mod, self.project, ['Guard'], 'attack', 'copy', 'charge')
+  self.assertEqual(changes[0]['after'], 2)
+
+ def test_text_replace_branch(self):
+  _, changes = ops.stage_operation(self.mod, self.project, ['Guard'], 'class', 'replace', 'heavy', 'light')
+  self.assertEqual(changes[0]['after'], 'light')
+
+ def test_attribute_deduplicate_preserves_unknown(self):
+  self.mod.edu = edu.parse_text(FULL.replace('hardy, unknown_custom', 'hardy, unknown_custom, hardy'))
+  _, changes = ops.stage_operation(self.mod, self.project, ['Guard'], 'attributes', 'deduplicate')
+  self.assertEqual(changes[0]['after'], ['hardy','unknown_custom'])
+
+ def test_recipe_validation_is_transactional_and_zero_roundtrips(self):
+  first = sheets.service(self.mod, 'load')
+  path = sheets.project_path(self.mod)
+  before = path.read_bytes()
+  bad_recipes = [
+   {'column':'attack','operation':'surprise','value':1},
+   {'column':'unknown','operation':'set','value':1},
+   {'column':'attack','operation':'set','value':True},
+   {'column':'attack','operation':'set','value':{}},
+   {'column':'attributes','operation':'set','value':{}},
+   {'column':'attributes','operation':'set','value':[True]},
+   {'column':'class','operation':'set','value':True},
+   {'column':'attack','operation':'set','value':''},
+   {'column':'attack','operation':'copy','value':'unknown'},
+   {'column':'class','operation':'multiply','value':2},
+   {'column':'attack','operation':'set','value':2,'target':{'view':'soft'}},
+   {'column':'T0','operation':'set','value':2,'target':{'view':'rules','rule_table':'missing'}},
+   {'column':'city_multiplier','operation':'set','value':1,'target':{'profile':'missing'}},
+   {'column':'T0','operation':'set','value':True,'target':{'view':'rules:pool'}},
+   {'column':'T0','operation':'surprise','value':1,'target':{'view':'rules:pool'}},
+   {'column':'attack','operation':'expression','value':'__import__("os")'},
+   {'column':'attack','operation':'divide','value':0},
+   {'column':'attack','operation':'round','value':7},
+   {'column':'attack','operation':'expression','value':'1e999'},
+  ]
+  for recipe in bad_recipes:
+   with self.subTest(recipe=recipe):
+    p = copy.deepcopy(first['project'])
+    p['recipes']['bad'] = recipe
+    with self.assertRaises(sheets.SheetError):
+     sheets.service(self.mod, 'save', {**first, 'project':p})
+    self.assertEqual(path.read_bytes(), before)
+  p = copy.deepcopy(first['project'])
+  p['balance_profile'] = {'name':'Custom'}
+  p['recipes'] = {
+   'zero':{'column':'attack','operation':'set','value':0},
+   'null_target':{'column':'attack','operation':'set','value':0,'target':None},
+   'pool':{'column':'T0','operation':'set','value':0,'target':{'view':'rules','rule_table':'pool'}},
+   'profile':{'column':'city_multiplier','operation':'set','value':0.5,'target':{'profile':'Custom'}},
+  }
+  sheets.service(self.mod, 'save', {**first, 'project':p})
+  self.assertEqual(sheets.load_project(self.mod)['recipes'], p['recipes'])
+
 if __name__=='__main__':unittest.main()

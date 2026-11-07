@@ -24,6 +24,135 @@ class SheetProjectTests(unittest.TestCase):
   self.tmp=tempfile.TemporaryDirectory();self.addCleanup(self.tmp.cleanup)
   self.root=Path(self.tmp.name);self.mod=SimpleNamespace(data=self.root/'mod/data',edu=edu.parse_text(TEXT),name='Example')
   self.patch=patch.object(sheets.config,'CONFIG_DIR',self.root/'config');self.patch.start();self.addCleanup(self.patch.stop)
+ def test_effective_profile_response(self):
+  from unittransfer import edb_balance
+  result = sheets.service(self.mod, 'load')
+  self.assertEqual(result['balance_effective'], edb_balance.profile_of(result['project']))
+
+ def test_effective_profile_recipe_columns(self):
+  from unittransfer import sheet_ops
+  project = sheets.empty_project()
+  project['balance_profile'] = {'name':'Custom', 'extra_text':'keep', 'extra_bool':True,
+                                'extra_number':2}
+  columns, rule = sheet_ops.recipe_columns(project, {'profile':'Custom'})
+  self.assertFalse(rule)
+  self.assertNotIn('name', columns)
+  self.assertEqual(columns['extra_text'], 'text')
+  self.assertEqual(columns['extra_bool'], 'bool')
+  self.assertEqual(columns['extra_number'], 'number')
+  self.assertIn('barracks_cap', columns)
+  recipe = {'target':{'profile':'Custom'}, 'column':'extra_number', 'operation':'add', 'value':1}
+  staged, changes = sheet_ops.stage_profile_recipe(project, recipe)
+  self.assertEqual(staged['balance_profile']['extra_number'], 3)
+
+ def test_default_profile_recipe_preview_run_and_undo(self):
+  current = sheets.service(self.mod, 'load')
+  project = copy.deepcopy(current['project'])
+  self.assertEqual(project.get('balance_profile', {}), {})
+  project['balance_profile'] = {}
+  project['recipes']['cap'] = {'target':{'profile':'default'}, 'column':'barracks_cap',
+                              'operation':'set', 'value':5}
+  current = sheets.service(self.mod, 'save', dict(current, project=project))
+  before = copy.deepcopy(current['project'])
+  raw = sheets.project_path(self.mod).read_bytes()
+  body = dict(recipe_name='cap', revision=current['revision'], source_token=current['source_token'])
+  preview = sheets.service(self.mod, 'operate', dict(body, dry_run=True))
+  self.assertEqual(preview['changes'], [{'id':'default', 'column':'barracks_cap', 'before':5, 'after':5}])
+  self.assertEqual(preview['project'], before)
+  self.assertEqual(sheets.project_path(self.mod).read_bytes(), raw)
+  current = sheets.service(self.mod, 'operate', body)
+  self.assertEqual(current['changes'], preview['changes'])
+  self.assertEqual(current['project']['balance_profile']['barracks_cap'], 5)
+  current = sheets.service(self.mod, 'save', dict(current, project=before))
+  self.assertEqual(current['project'], before)
+  self.assertEqual(current['project']['balance_profile'], {})
+  refused = copy.deepcopy(before)
+  refused['recipes']['cap']['target']['profile'] = 'another'
+  with self.assertRaises(sheets.SheetError):
+   sheets.service(self.mod, 'save', dict(current, project=refused))
+
+ def test_invalid_legacy_recipes_load_query_and_unchanged_save(self):
+  project=sheets.empty_project()
+  project['recipes']={'old rule':{'column':'T0','operation':'set','value':2},
+                      'blank':{'column':'attack','operation':'set','value':''}}
+  path=sheets.project_path(self.mod)
+  path.parent.mkdir(parents=True,exist_ok=True)
+  path.write_text(json.dumps(project),encoding='utf-8')
+  result=sheets.service(self.mod,'load')
+  self.assertEqual(result['project']['recipes'],project['recipes'])
+  self.assertEqual(set(result['invalid_recipes']),{'old rule','blank'})
+  self.assertTrue(all(result['invalid_recipes'].values()))
+  queried=sheets.service(self.mod,'query')
+  self.assertEqual(queried['table']['total'],2)
+  changed=copy.deepcopy(result['project']);changed['views']['test']={}
+  saved=sheets.service(self.mod,'save',dict(project=changed,revision=result['revision'],source_token=result['source_token']))
+  self.assertEqual(saved['project']['recipes'],project['recipes'])
+  changed['recipes']['blank']['value']=' '
+  with self.assertRaises(sheets.SheetError):
+   sheets.service(self.mod,'save',dict(project=changed,revision=saved['revision'],source_token=saved['source_token']))
+
+ def test_recipe_execution_revalidates_legacy_and_preserves_scope_and_zero(self):
+  project=sheets.empty_project()
+  project['recipes']={'zero':{'target':{'view':'base'},'column':'attack','operation':'set','value':0},
+                      'rule':{'target':{'view':'rules:experience'},'column':'T0','operation':'set','value':0},
+                      'bad':{'column':'attack','operation':'set','value':''}}
+  project['rules']['experience']=[{'id':'row','Unit Race':'Human','Category':'infantry','BarracksTier':'T1','T0':2}]
+  path=sheets.project_path(self.mod);path.parent.mkdir(parents=True,exist_ok=True)
+  path.write_text(json.dumps(project),encoding='utf-8')
+  current=sheets.service(self.mod,'load')
+  for name,view in [('bad','base'),('zero','soft')]:
+   with self.assertRaises(sheets.SheetError):
+    sheets.service(self.mod,'operate',dict(recipe_name=name,view=view,ids=['Guard'],revision=current['revision'],source_token=current['source_token']))
+  for name,view,uid in [('zero','base','Guard'),('rule','rules:experience','row')]:
+   body=dict(recipe_name=name,view=view,ids=[uid],revision=current['revision'],source_token=current['source_token'])
+   preview=sheets.service(self.mod,'operate',dict(body,dry_run=True))
+   self.assertEqual(preview['changes'][0]['after'],0)
+   current=sheets.service(self.mod,'operate',body)
+   self.assertEqual(current['changes'],preview['changes'])
+
+ def test_profile_recipe_arithmetic_and_refusals(self):
+  for operation,value,expected in [('set',1.2,1.2),('add',.1,1),('subtract',.1,.8),
+      ('multiply',2,1.8),('divide',2,.45),('percent',100,1.8),('min',1,1),('max',.5,.5),('round',0,1)]:
+   with self.subTest(operation=operation):
+    project=sheets.empty_project();project['balance_profile']={'name':'P'}
+    project['recipes']['recipe']={'target':{'profile':'P'},'column':'city_multiplier','operation':operation,'value':value}
+    sheets.save_project(self.mod,project)
+    current=sheets.service(self.mod,'load')
+    body=dict(recipe_name='recipe',revision=current['revision'],source_token=current['source_token'])
+    preview=sheets.service(self.mod,'operate',dict(body,dry_run=True))
+    self.assertAlmostEqual(preview['changes'][0]['after'],expected)
+  before=sheets.project_path(self.mod).read_bytes()
+  with self.assertRaises(sheets.SheetError):
+   sheets.service(self.mod,'operate',dict(body,revision='stale'))
+  for column,value in [('city_multiplier',True),('fractional_pool_exception','false'),('branch_policy',False)]:
+   project=copy.deepcopy(current['project'])
+   project['recipes']['recipe']={'target':{'profile':'P'},'column':column,'operation':'set','value':value}
+   with self.assertRaises(sheets.SheetError):sheets.save_project(self.mod,project)
+   self.assertEqual(sheets.project_path(self.mod).read_bytes(),before)
+
+ def test_profile_recipe_preview_stage_and_snapshot_history(self):
+  project=sheets.empty_project();project['balance_profile']={'name':'Example'}
+  project['recipes']={'numeric':{'target':{'profile':'Example'},'column':'city_multiplier','operation':'add','value':.1},
+                      'text':{'target':{'profile':'Example'},'column':'branch_policy','operation':'set','value':'reject_ambiguous'},
+                      'bool':{'target':{'profile':'Example'},'column':'fractional_pool_exception','operation':'set','value':False}}
+  sheets.save_project(self.mod,project)
+  current=sheets.service(self.mod,'load')
+  for name,key,expected in [('numeric','city_multiplier',1),('text','branch_policy','reject_ambiguous'),('bool','fractional_pool_exception',False)]:
+   with self.subTest(name=name):
+    before=copy.deepcopy(current['project']);raw=sheets.project_path(self.mod).read_bytes()
+    body=dict(recipe_name=name,revision=current['revision'],source_token=current['source_token'])
+    preview=sheets.service(self.mod,'operate',dict(body,dry_run=True))
+    self.assertEqual(preview['target_count'],1)
+    self.assertEqual(preview['changes'][0]['after'],expected)
+    self.assertEqual(sheets.project_path(self.mod).read_bytes(),raw)
+    current=sheets.service(self.mod,'operate',body)
+    self.assertEqual(current['project']['balance_profile'][key],expected)
+    staged=copy.deepcopy(current['project'])
+    current=sheets.service(self.mod,'save',dict(project=before,revision=current['revision'],source_token=current['source_token']))
+    self.assertEqual(current['project'],before)
+    current=sheets.service(self.mod,'save',dict(project=staged,revision=current['revision'],source_token=current['source_token']))
+    self.assertEqual(current['project'],staged)
+
  def test_refresh_is_read_only_and_retains_missing_annotations(self):
   p=sheets.empty_project();p['units']['Removed']={'annotations':{'Unit Race':'Elf','Tier':'T2'},'extra':{'Future':'keep'}};p['known']=['Removed']
   new,r=sheets.refresh(self.mod,p)
@@ -198,7 +327,7 @@ class SheetProjectTests(unittest.TestCase):
   result = self.rule_call('save', result, project=original)
   self.assertEqual(result['project']['rules']['pool'], [])
 
- def test_rule_numeric_validation_paste_is_atomic_and_blank_is_blank(self):
+ def test_rule_numeric_validation_paste_is_atomic_and_clear_is_explicit(self):
   result = self.rule_call('rule_structure', operation='add_row')
   uid = result['table']['rows'][0]['id']
   for value in ('bad','NaN',True):
@@ -207,7 +336,9 @@ class SheetProjectTests(unittest.TestCase):
      {'id':uid,'column':'T1','value':value}])
    self.assertEqual(sheets.load_project(self.mod)['rules']['pool'][0]['T0'], '')
   result = self.rule_call('operate', result, ids=[uid], column='T0', value='0')
-  result = self.rule_call('operate', result, ids=[uid], column='T0', value='')
+  with self.assertRaisesRegex(sheets.SheetError, 'clear'):
+   self.rule_call('operate', result, ids=[uid], column='T0', value='')
+  result = self.rule_call('operate', result, ids=[uid], column='T0', operation='clear')
   self.assertEqual(result['table']['rows'][0]['T0'], '')
 
  def test_rule_query_uses_shared_filters_sort_and_pages_and_named_conflicts(self):

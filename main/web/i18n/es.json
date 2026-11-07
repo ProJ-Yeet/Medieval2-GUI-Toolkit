@@ -13499,5 +13499,39 @@
  "sheets.rule_duplicate_key": "Clave de regla duplicada: {key}",
  "eng.sheets.invalid_rule_target": "Fila de regla o columna desconocida",
  "eng.sheets.invalid_rule_operation": "Operación de regla no compatible",
- "eng.sheets.invalid_rule_column": "El nombre de la columna está vacío, está reservado o ya existe"
+ "eng.sheets.invalid_rule_column": "El nombre de la columna está vacío, está reservado o ya existe",
+ "sheets.use_clear": "Usa la operación clear para vaciar un campo",
+ "sheets.matching_targets": "Selecciona los ID únicos que coincidan con el filtro actual antes de editar",
+ "sheets.invalid_recipe_target": "Vista de receta, tabla de reglas o perfil de equilibrado desconocidos",
+ "sheets.invalid_recipe": "Operación de receta, columna o valor no válidos",
+ "sheets.review_target": "Destino",
+ "sheets.review_field": "Campo",
+ "sheets.review_before": "Antes",
+ "sheets.review_after": "Después",
+ "sheets.review_confirm": "Confirmar",
+ "sheets.recipe_invalid": "{name} (No válido: {reason})",
+ "sheets.recipe_run": "Ejecutar",
+ "sheets.profile_recipe_key": "Clave del perfil",
+ "sheets.recipe_operation": "Operación",
+ "sheets.recipe_op_set": "Establecer",
+ "sheets.recipe_op_add": "Añadir",
+ "sheets.recipe_op_subtract": "Restar",
+ "sheets.recipe_op_multiply": "Multiplicar",
+ "sheets.recipe_op_divide": "Dividir",
+ "sheets.recipe_op_percent": "Porcentaje",
+ "sheets.recipe_op_min": "Mínimo",
+ "sheets.recipe_op_max": "Máximo",
+ "sheets.recipe_op_round": "Redondear",
+ "sheets.mode_selected": "Seleccionados",
+ "sheets.mode_matching": "Coincidentes con el filtro",
+ "sheets.review_count": {
+  "one": "Revisar {count} destino",
+  "many": "Revisar {count} destinos",
+  "other": "Revisar {count} destinos"
+ },
+ "sheets.review_more": {
+  "one": "{count} cambio más",
+  "many": "{count} cambios más",
+  "other": "{count} cambios más"
+ }
 }

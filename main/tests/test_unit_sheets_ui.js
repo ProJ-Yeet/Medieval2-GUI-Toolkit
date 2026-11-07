@@ -13,9 +13,15 @@ function harness(){
   tt:(key,p)=>key+Object.values(p||{}).join(' '),ttA:key=>key,toast(){},errText:e=>e.message,
   esc:v=>String(v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])),
   api:{post:async(url,body)=>{await new Promise(r=>setTimeout(r,2));calls.push(structuredClone(body));
+   if(url.endsWith('/operate')&&body.dry_run){
+    return {...structuredClone(response),target_count:1,changes:[{id:'first',column:body.column||'city_multiplier',before:5,after:body.value??0}]};
+   }
    if(url.endsWith('/operate')){
     assert.equal(body.revision,response.revision);
-    response.project.draft[body.ids[0]]={[body.column]:body.value};response.revision='r'+calls.length;
+    if(body.recipe_name&&response.project.recipes[body.recipe_name]?.target?.profile){
+     const recipe=response.project.recipes[body.recipe_name];response.project.balance_profile[recipe.column]=recipe.value;
+    }else{response.project.draft[body.ids[0]]={[body.column]:body.value};}
+    response.revision='r'+calls.length;
    }else if(url.endsWith('/save')){
     assert.equal(body.revision,response.revision);
     response.project=structuredClone(body.project);response.revision='r'+calls.length;
@@ -29,12 +35,332 @@ function massControls(h){
  h.elements.usMassValue={value:'20'};
  h.elements.usMassOther={value:''};
 }
+// Rebuild these controls like innerHTML does in the browser, including defaults.
+function repaintingControls(h){
+ let html=h.c.modal.innerHTML;
+ const decode=value=>value.replace(/&quot;/g,'"').replace(/&#39;/g,"'")
+  .replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&amp;/g,'&');
+ function attributes(source){
+  const result={};
+  for(const match of source.matchAll(/([\w-]+)="([^"]*)"/g)){
+   result[match[1]]=decode(match[2]);
+  }
+  return result;
+ }
+ function render(value){
+  html=value;
+  for(const id of Object.keys(h.elements)){
+   if(/^us(Mass|Recipe|ProfileRecipe|BalanceDetails)/.test(id))delete h.elements[id];
+  }
+  for(const match of html.matchAll(/<input\b([^>]*)>|<select\b([^>]*)>([\s\S]*?)<\/select>/g)){
+   const attrs=attributes(match[1]??match[2]);
+   if(!attrs.id||!/^us(Mass|Recipe|ProfileRecipe)/.test(attrs.id))continue;
+   const element={...attrs,value:attrs.value??''};
+   if(match[2]!==undefined){
+    const options=[...match[3].matchAll(/<option([^>]*)>([\s\S]*?)<\/option>/g)];
+    const chosen=options.find(option=>/(?:^|\s)selected(?:\s|$)/.test(option[1]))||options[0];
+    element.value=chosen?(attributes(chosen[1]).value??decode(chosen[2])):'';
+   }
+   h.elements[attrs.id]=element;
+  }
+  for(const match of html.matchAll(/<details([^>]*)><summary>([^<]*)<\/summary>/g)){
+   const id=match[2]==='sheets.mass_edit'?'usMassDetails':
+    match[2]==='sheets.balance'?'usBalanceDetails':null;
+   if(id)h.elements[id]={...attributes(match[1]),tagName:'DETAILS',open:/\bopen\b/.test(match[1])};
+  }
+ }
+ Object.defineProperty(h.c.modal,'innerHTML',{get:()=>html,set:render});
+ render(html);
+ return (id,value,event='change')=>{
+  const element=h.elements[id];
+  assert(element,'missing control '+id);
+  element[event==='toggle'?'open':'value']=value;
+  if(element['on'+event]){
+   h.c.eventElement=element;
+   h.set('(function(){'+element['on'+event]+'}).call(eventElement)');
+  }
+ };
+}
 async function safetyRegressions(){
  const failures=[];
  async function check(name,run){
   try{await run();console.log('PASS: '+name);}
   catch(error){failures.push(name+': '+error.message);}
  }
+ await check('mass controls survive review Cancel repeated run Confirm history and query',async()=>{
+  const h=harness();await h.c.unitSheetsOpen();
+  h.set("USHEET.view='base';USHEET.selected=new Set(['first'])");
+  h.c.unitSheetsPaint();
+  const change=repaintingControls(h);
+  const expected={usMassColumn:'attack',usMassOp:'add',usMassValue:'12',
+   usMassOther:'replacement',usMassMode:'matching'};
+  change('usMassDetails',true,'toggle');
+  for(const [id,value]of Object.entries(expected)){
+   change(id,value,id==='usMassValue'||id==='usMassOther'?'input':'change');
+  }
+  function assertControls(){
+   assert.equal(h.elements.usMassDetails.open,true,'Mass edit stays open');
+   for(const [id,value]of Object.entries(expected))assert.equal(h.elements[id].value,value,id);
+  }
+  await h.c.unitSheetsMass();assertControls();
+  h.c.unitSheetsCancelReview();assertControls();
+  await h.c.unitSheetsMass();assertControls();
+  for(const [key,value]of Object.entries({column:'attack',operation:'add',value:'12',other:'replacement',mode:'matching'})){
+   assert.equal(h.calls.at(-1)[key],value,key);
+  }
+  await h.c.unitSheetsConfirmReview();assertControls();
+  await h.c.unitSheetsUndo(false);assertControls();
+  await h.c.unitSheetsUndo(true);assertControls();
+  await h.c.unitSheetsRequest('query');assertControls();
+  change('usMassDetails',false,'toggle');h.c.unitSheetsPaint();
+  assert.equal(h.elements.usMassDetails.open,false);
+ });
+ await check('recipe name picker and loaded zero values survive repaint',async()=>{
+  const h=harness();await h.c.unitSheetsOpen();
+  h.set("USHEET.data.project.recipes={zero:{target:{view:'base'},column:'attack',operation:'set',value:0,other:'x'}}");
+  h.c.unitSheetsPaint();const change=repaintingControls(h);
+  change('usRecipeName',' draft <name> ','input');
+  change('usRecipePicker','zero');h.c.unitSheetsPaint();
+  assert.equal(h.elements.usRecipeName.value,' draft <name> ');
+  assert.equal(h.elements.usRecipePicker.value,'zero');
+  assert.equal(h.elements.usMassColumn.value,'attack');
+  assert.equal(h.elements.usMassOp.value,'set');
+  assert.equal(h.elements.usMassValue.value,'0');
+  assert.equal(h.elements.usMassOther.value,'x');
+ });
+ await check('Balance recipe creator and picker survive review history and query',async()=>{
+  const h=harness();await h.c.unitSheetsOpen();
+  h.set("USHEET.view='rules:pool';USHEET.data.project.balance_profile={name:'P',city_multiplier:1.2,enabled:true};USHEET.data.project.recipes={boost:{target:{profile:'P'},column:'city_multiplier',operation:'set',value:2}}");
+  h.response.project=structuredClone(h.get('USHEET.data.project'));
+  h.c.unitSheetsPaint();const change=repaintingControls(h);
+  const expected={usProfileRecipeName:' draft & boost ',usProfileRecipeColumn:'city_multiplier',
+   usProfileRecipeOp:'multiply',usProfileRecipeValue:'0',usProfileRecipe:'boost'};
+  for(const [id,value]of Object.entries(expected)){
+   change(id,value,id==='usProfileRecipeName'||id==='usProfileRecipeValue'?'input':'change');
+  }
+  change('usBalanceDetails',false,'toggle');
+  function assertControls(){
+   assert.equal(h.elements.usBalanceDetails.open,false,'Balance stays collapsed');
+   for(const [id,value]of Object.entries(expected))assert.equal(h.elements[id].value,value,id);
+  }
+  await h.c.unitSheetsRunRecipe('boost');assertControls();
+  h.c.unitSheetsCancelReview();assertControls();
+  await h.c.unitSheetsRunRecipe('boost');await h.c.unitSheetsConfirmReview();assertControls();
+  await h.c.unitSheetsUndo(false);assertControls();
+  await h.c.unitSheetsUndo(true);assertControls();
+  await h.c.unitSheetsRequest('query');assertControls();
+  change('usBalanceDetails',true,'toggle');h.c.unitSheetsPaint();
+  assert.equal(h.elements.usBalanceDetails.open,true);
+  change('usProfileRecipeColumn','enabled');h.c.unitSheetsPaint();
+  assert.equal(h.elements.usProfileRecipeColumn.value,'enabled');
+  assert.equal(h.elements.usProfileRecipeOp.value,'set');
+ });
+ await check('unavailable remembered columns fall back to first offered column',async()=>{
+  const h=harness();await h.c.unitSheetsOpen();
+  const change=repaintingControls(h);
+  change('usMassColumn','attack');change('usMassOp','multiply');
+  h.c.unitSheetsPaint();
+  assert.equal(h.elements.usMassColumn.value,'attack');
+  assert.equal(h.elements.usMassOp.value,'multiply');
+  h.set("USHEET.view='rules:pool';USHEET.data.columns=['T0','T1'];USHEET.data.project.balance_profile={name:'P',city_multiplier:1}");
+  h.c.unitSheetsPaint();
+  assert.equal(h.elements.usMassColumn.value,'T0');
+  assert.equal(h.elements.usMassOp.value,'set');
+  change('usProfileRecipeColumn','city_multiplier');change('usProfileRecipeOp','multiply');
+  h.set("USHEET.data.project.balance_profile={name:'Other'}");h.c.unitSheetsPaint();
+  assert.equal(h.elements.usProfileRecipeColumn.value,'');
+  assert.equal(h.elements.usProfileRecipeOp.value,'set');
+ });
+ await check('mass preview Cancel Confirm and one-step undo redo',async()=>{
+  const h=harness();await h.c.unitSheetsOpen();massControls(h);
+  h.set("USHEET.view='base';USHEET.selected=new Set(['first']);USHEET.where={column:'id',op:'eq',value:'first'}");
+  const before=structuredClone(h.get('USHEET.data.project'));
+  await h.c.unitSheetsMass();
+  assert.equal(h.calls.at(-1).dry_run,true);
+  assert.equal(h.calls.at(-1).mode,'selected');
+  assert.equal(h.calls.at(-1).where.value,'first');
+  assert(h.c.modal.innerHTML.includes('unitSheetsConfirmReview()'));
+  assert(h.c.modal.innerHTML.includes('sheets.review_count'));
+  assert(h.c.modal.innerHTML.includes('attack'));
+  const count=h.calls.length;
+  h.c.unitSheetsCancelReview();
+  assert.equal(h.calls.length,count);
+  assert.equal(h.get('USHEET.past.length'),0);
+  assert.deepEqual(h.get('USHEET.data.project'),before);
+  await h.c.unitSheetsMass();const preview=h.calls.at(-1);
+  await h.c.unitSheetsConfirmReview();
+  assert.equal(h.calls.length,count+2);
+  assert.equal(h.calls.at(-1).dry_run,undefined);
+  assert.equal(h.calls.at(-1).revision,preview.revision);
+  assert.equal(h.calls.at(-1).source_token,preview.source_token);
+  assert.equal(h.get('USHEET.past.length'),1);
+  const staged=structuredClone(h.get('USHEET.data.project'));
+  await h.c.unitSheetsUndo(false);assert.deepEqual(h.get('USHEET.data.project'),before);
+  await h.c.unitSheetsUndo(true);assert.deepEqual(h.get('USHEET.data.project'),staged);
+ });
+ await check('blank grid set is sent to server instead of skipped',async()=>{
+  const h=harness();await h.c.unitSheetsOpen();h.set("USHEET.view='base'");
+  h.c.api.post=async(url,body)=>{h.calls.push(body);return {error:'use clear'};};
+  await h.c.unitSheetsCell(0,1,'');
+  assert.equal(h.calls.at(-1).value,'');assert.equal(h.get('USHEET.err'),'use clear');
+  h.c.unitSheetsInput(0,1,'');await h.c.unitSheetsFlush();
+  assert.equal(h.calls.at(-1).value,'');assert.equal(h.get('USHEET.err'),'use clear');
+ });
+ await check('review caps changes and freezes the entire Confirm request',async()=>{
+  const h=harness();await h.c.unitSheetsOpen();massControls(h);h.set("USHEET.selected=new Set(['first'])");
+  const post=h.c.api.post;
+  h.c.api.post=async(url,body)=>{
+   const result=await post(url,body);
+   if(body.dry_run){result.changes=Array.from({length:105},(_,i)=>({id:'row'+i,column:'attack',before:i,after:i+1}));result.target_count=105;}
+   return result;
+  };
+  await h.c.unitSheetsMass();const preview=structuredClone(h.calls.at(-1));delete preview.dry_run;
+  assert(h.c.modal.innerHTML.includes('sheets.review_more5'));
+  assert(h.c.modal.innerHTML.includes('row99'));assert(!h.c.modal.innerHTML.includes('row100'));
+  h.set("USHEET.where={column:'id',value:'second'};USHEET.selected=new Set(['second'])");
+  await h.c.unitSheetsConfirmReview();assert.deepEqual(h.calls.at(-1),preview);
+  const count=h.calls.length;await h.c.unitSheetsConfirmReview();assert.equal(h.calls.length,count);
+ });
+ await check('blank sets reach error path and clear stays explicit',async()=>{
+  const h=harness();await h.c.unitSheetsOpen();massControls(h);
+  h.set("USHEET.selected=new Set(['first'])");h.elements.usMassValue.value='';
+  h.c.api.post=async(url,body)=>{h.calls.push(body);return {error:'use clear'};};
+  await h.c.unitSheetsMass();assert.equal(h.get('USHEET.err'),'use clear');
+  assert.equal(h.calls.at(-1).value,'');assert.equal(h.get('USHEET.past.length'),0);
+  assert(h.c.modal.innerHTML.includes('<option>clear</option>'));
+ });
+ await check('scoped recipes preserve zero mark invalid and run through review',async()=>{
+  const h=harness();await h.c.unitSheetsOpen();massControls(h);
+  h.set("USHEET.view='rules:experience'");h.elements.usRecipeName={value:'zero'};
+  await h.c.unitSheetsSaveRecipe();
+  assert.deepEqual(h.get('USHEET.data.project.recipes.zero.target'),{view:'rules:experience'});
+  h.set("USHEET.view='base';USHEET.selected=new Set(['first']);USHEET.data.project.recipes={zero:{target:{view:'base'},column:'attack',operation:'set',value:0,other:'x'},bad:{column:'attack',operation:'set',value:''},foreign:{target:{view:'soft'},column:'attack',operation:'set',value:2}};USHEET.data.invalid_recipes={bad:'use clear'}");
+  h.c.unitSheetsLoadRecipe('zero');assert.equal(h.elements.usMassValue.value,0);
+  assert.equal(h.elements.usMassOther.value,'x');assert.equal(h.elements.usMassOp.value,'set');
+  h.c.unitSheetsPaint();const html=h.c.modal.innerHTML;
+  assert(html.includes('sheets.recipe_invalid'));assert(html.indexOf('value="zero"')<html.indexOf('value="foreign"'));
+  const count=h.calls.length;await h.c.unitSheetsRunRecipe('bad');assert.equal(h.calls.length,count);
+  await h.c.unitSheetsRunRecipe('zero');assert.equal(h.calls.at(-1).dry_run,true);
+  h.c.unitSheetsCancelReview();assert.equal(h.get('USHEET.past.length'),1);
+ });
+ await check('default profile creator uses effective response keys and name',async()=>{
+  const h=harness();
+  h.response.project.balance_profile={};
+  h.response.balance_effective={barracks_cap:5,branch_policy:'shortest',fractional_pool_exception:true};
+  await h.c.unitSheetsOpen();
+  h.set("USHEET.view='rules:pool'");
+  repaintingControls(h);
+  h.c.unitSheetsPaint();
+  const html=h.c.unitSheetsBalanceHtml();
+  for(const key of Object.keys(h.response.balance_effective)){
+   assert(html.includes('value="'+key+'"'),key+' must be offered');
+  }
+  const operations=html=>[...html.matchAll(/<option value="([^"]+)"/g)].map(match=>match[1]);
+  assert(operations(h.c.unitSheetsProfileRecipeOperations('barracks_cap')).includes('multiply'));
+  for(const key of ['branch_policy','fractional_pool_exception']){
+   assert.deepEqual(operations(h.c.unitSheetsProfileRecipeOperations(key)),['set']);
+  }
+  h.elements.usProfileRecipeName.value='cap';
+  h.elements.usProfileRecipeColumn.value='barracks_cap';
+  h.elements.usProfileRecipeValue.value='5';
+  await h.c.unitSheetsSaveProfileRecipe();
+  assert.deepEqual(h.calls.at(-1).project.recipes.cap,{
+   target:{profile:'default'},column:'barracks_cap',operation:'set',value:'5'
+  });
+  h.set("USHEET.data.balance_effective.name='Custom'");
+  const named=h.c.unitSheetsBalanceHtml();
+  const keys=named.match(/<select id="usProfileRecipeColumn"[^>]*>([\s\S]*?)<\/select>/)[1];
+  assert(!keys.includes('value="name"'));
+ });
+ await check('profile recipe creator saves its scope and refreshes the profile picker',async()=>{
+  const h=harness();
+  await h.c.unitSheetsOpen();
+  h.set("USHEET.view='rules:pool';USHEET.data.project.balance_profile={name:'P',city_multiplier:1.2,enabled:true}");
+  const html=h.c.unitSheetsBalanceHtml();
+  for(const id of ['usProfileRecipeName','usProfileRecipeColumn','usProfileRecipeOp','usProfileRecipeValue']){
+   assert(html.includes('id="'+id+'"'),id+' must appear in Balance');
+  }
+  assert(html.includes('onclick="unitSheetsSaveProfileRecipe()"'));
+  assert(html.includes('onchange="unitSheetsProfileRecipeColumn()"'));
+  assert(html.includes('value="city_multiplier"'));
+  h.elements.usProfileRecipeName={value:' boost '};
+  h.elements.usProfileRecipeColumn={value:'city_multiplier'};
+  h.elements.usProfileRecipeOp={value:'multiply'};
+  h.elements.usProfileRecipeValue={value:'0'};
+  await h.c.unitSheetsSaveProfileRecipe();
+  assert.deepEqual(h.calls.at(-1).project.recipes.boost,{
+   target:{profile:'P'},column:'city_multiplier',operation:'multiply',value:'0'
+  });
+  assert(h.c.unitSheetsRecipeOptions(true).includes('<option value="boost">boost</option>'));
+  assert(!h.c.unitSheetsRecipeOptions().includes('value="boost"'));
+  assert(h.c.modal.innerHTML.includes('value="boost"'));
+ });
+ await check('profile recipe operations follow numeric text and boolean keys',async()=>{
+  const h=harness();
+  await h.c.unitSheetsOpen();
+  h.set("USHEET.data.project.balance_profile={city_multiplier:1.2,name:'P',enabled:true}");
+  const operations=html=>[...html.matchAll(/<option value="([^"]+)">/g)].map(match=>match[1]);
+  assert.deepEqual(operations(h.c.unitSheetsProfileRecipeOperations('city_multiplier')),
+   ['set','add','subtract','multiply','divide','percent','min','max','round']);
+  for(const key of ['name','enabled']){
+   assert.deepEqual(operations(h.c.unitSheetsProfileRecipeOperations(key)),['set']);
+  }
+  h.elements.usProfileRecipeColumn={value:'enabled'};
+  h.elements.usProfileRecipeOp={value:'multiply',innerHTML:''};
+  h.c.unitSheetsProfileRecipeColumn();
+  assert.deepEqual(operations(h.elements.usProfileRecipeOp.innerHTML),['set']);
+  assert.equal(h.elements.usProfileRecipeOp.value,'set');
+ });
+ await check('profile recipe save refusals display the server reason',async()=>{
+  const h=harness();
+  await h.c.unitSheetsOpen();
+  h.set("USHEET.view='rules:pool';USHEET.data.project.balance_profile={name:'P',city_multiplier:1.2}");
+  h.elements.usProfileRecipeName={value:'refused'};
+  h.elements.usProfileRecipeColumn={value:'city_multiplier'};
+  h.elements.usProfileRecipeOp={value:'divide'};
+  h.elements.usProfileRecipeValue={value:'0'};
+  h.c.api.post=async()=>({error:'profile recipe refused: division by zero'});
+  assert.equal(await h.c.unitSheetsSaveProfileRecipe(),false);
+  assert.equal(h.get('USHEET.err'),'profile recipe refused: division by zero');
+  assert(h.c.modal.innerHTML.includes('profile recipe refused: division by zero'));
+  assert.equal(h.get('USHEET.data.project.recipes.refused'),undefined);
+  assert.equal(h.get('USHEET.past.length'),0);
+ });
+ await check('profile picker uses shared review and matching mode reaches server',async()=>{
+  const h=harness();await h.c.unitSheetsOpen();massControls(h);
+  h.set("USHEET.data.project.balance_profile={name:'P'};USHEET.data.project.recipes={p:{target:{profile:'P'},column:'city_multiplier',operation:'set',value:1.2}};USHEET.view='rules:pool'");
+  assert(h.c.unitSheetsBalanceHtml().includes('usProfileRecipe'));
+  await h.c.unitSheetsRunRecipe('p');assert.equal(h.calls.at(-1).recipe_name,'p');
+  assert.equal(h.calls.at(-1).dry_run,true);const count=h.calls.length;h.c.unitSheetsCancelReview();
+  assert.equal(h.calls.length,count);assert.equal(h.get('USHEET.past.length'),0);
+  h.response.project=structuredClone(h.get('USHEET.data.project'));
+  await h.c.unitSheetsRunRecipe('p');await h.c.unitSheetsConfirmReview();
+  assert.equal(h.get('USHEET.data.project.balance_profile.city_multiplier'),1.2);
+  assert.equal(h.get('USHEET.past.length'),1);
+  await h.c.unitSheetsUndo(false);assert.equal(h.get('USHEET.data.project.balance_profile.city_multiplier'),undefined);
+  await h.c.unitSheetsUndo(true);assert.equal(h.get('USHEET.data.project.balance_profile.city_multiplier'),1.2);
+  h.set("USHEET.view='base';USHEET.selected=new Set()");h.elements.usMassMode={value:'matching'};
+  await h.c.unitSheetsMass();assert.equal(h.calls.at(-1).mode,'matching');
+ });
+ await check('matching mode survives a pending cell repaint for mass and recipes',async()=>{
+  for(const recipe of [false,true]){
+   const h=harness();await h.c.unitSheetsOpen();massControls(h);
+   h.set("USHEET.view='base';USHEET.selected=new Set(['first']);USHEET.data.project.recipes={saved:{target:{view:'base'},column:'attack',operation:'set',value:2}}");
+   h.response.project.recipes=structuredClone(h.get('USHEET.data.project.recipes'));
+   h.elements.usMassMode={value:'matching'};
+   const paint=h.c.unitSheetsPaint;
+   h.c.unitSheetsPaint=()=>{paint();h.elements.usMassMode.value='selected';};
+   h.c.unitSheetsInput(0,1,'17');
+   if(recipe)await h.c.unitSheetsRunRecipe('saved');else await h.c.unitSheetsMass();
+   assert.equal(h.calls.at(-1).mode,'matching');assert.equal(h.calls.at(-1).dry_run,true);
+  }
+ });
+ await check('refused Confirm stages nothing and retains server reason',async()=>{
+  const h=harness();await h.c.unitSheetsOpen();massControls(h);h.set("USHEET.selected=new Set(['first'])");
+  await h.c.unitSheetsMass();h.c.api.post=async()=>({error:'source changed'});
+  assert.equal(await h.c.unitSheetsConfirmReview(),false);
+  assert.equal(h.get('USHEET.err'),'source changed');assert.equal(h.get('USHEET.past.length'),0);
+ });
  await check('filter drops hidden selected rows before mass edit',async()=>{
   const h=harness();await h.c.unitSheetsOpen();massControls(h);
   h.set("USHEET.selected=new Set(['second','first']);USHEET.filterRows=[{column:'id',op:'eq',value:'first'}]");
@@ -64,6 +390,7 @@ async function safetyRegressions(){
   await h.c.unitSheetsPaste({clipboardData:{getData:()=>"11\n12"},preventDefault(){},currentTarget:{dataset:{r:'0',c:'1'}}});
   await filtering;await h.get('USHEET.queue');
   assert.deepEqual(h.calls.at(-1).cells,[{id:'first',column:'attack',value:'12'}]);
+  assert.equal(h.calls.at(-1).mode,'selected');assert.deepEqual(h.calls.at(-1).where,h.get('USHEET.where'));
  });
  await check('rectangle stores row IDs and column names',async()=>{
   const h=harness();await h.c.unitSheetsOpen();h.set("USHEET.view='base'");
@@ -92,6 +419,9 @@ async function safetyRegressions(){
   h.c.unitSheetsRect({},0,1);h.c.unitSheetsRect({shiftKey:true,preventDefault(){}},1,1);
   const post=h.c.api.post;
   h.c.api.post=async(url,body)=>{
+   if(url.endsWith('/operate')&&body.dry_run){
+    return {...structuredClone(response),target_count:1,changes:[{id:'first',column:body.column||'city_multiplier',before:5,after:body.value??0}]};
+   }
    if(url.endsWith('/operate')){
     h.response.table.rows[0].attack=17;h.response.table.rows.reverse();
    }

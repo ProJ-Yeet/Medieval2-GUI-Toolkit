@@ -4,6 +4,269 @@ Newest entries first. This records Codex's work for Claude; project status and
 release rules remain in STATE.md and RELEASE.md. Do not assume the working tree's
 other changes belong to Codex.
 
+## 2026-11-07 - Phase 111 effective balance profile recipe fix
+
+- Profile recipes now resolve the single project profile through
+  edb_balance.profile_of. Its saved name is used when set, otherwise the
+  effective name is default. Other profile names are refused. Target columns
+  come from effective values, including defaults and custom keys, with name
+  excluded and boolean, text and numeric types retained. Execution uses the
+  effective old value for numeric coercion and creates the overrides object
+  if an older project omitted it.
+- Sheet service responses now include balance_effective without storing defaults
+  in the project. The Balance creator uses those response values for its keys,
+  operation choices and profile target. It excludes name, saves default when no
+  name is set, and offers only set for non-numeric keys. The frontend retains
+  its saved-profile fallback for responses without balance_effective.
+- Test first: observed Python failures for the default target, missing effective
+  response and missing custom effective keys; observed Node failures for the
+  default-profile picker and the formerly offered name key before implementation.
+  Passing regressions verify barracks_cap with balance_profile {}, save, dry-run
+  preview without disk writes, real run, snapshot undo restoring {}, and refusal
+  of another profile name. The cap remains 5 because the compatibility profile
+  requires it. Node verifies response keys, default target, numeric operations,
+  text/bool set-only choices and exclusion of name. Python also verifies typed
+  custom effective keys and numeric execution for a key outside static defaults.
+- Files changed in this fix: unittransfer/sheet_ops.py,
+  unittransfer/unit_sheets.py, web/js/unitsheets.js,
+  tests/test_unit_sheets.py, tests/test_unit_sheets_ui.js and
+  docs/CODEX_HANDOFF.md. Existing uncommitted work was preserved. No new
+  user-visible strings were needed and no translation files were edited in
+  this fix. No commit or release was made.
+- Required checks actually run and passed:
+  python -m tests.test_unit_sheets: 36 tests;
+  python -m tests.test_sheet_ops: 41 tests;
+  python -m tests.test_sheet_pipeline: 9 tests;
+  python -m tests.test_sheet_native: 8 tests;
+  python -m tests.test_edb_balance: 12 tests;
+  python -m tests.test_web_modules: 130/130 checks;
+  python -m tests.test_i18n: 45/45 checks;
+  node tests/test_unit_sheets_ui.js: all named cases and VM assertions passed,
+  exit 0; git diff --check: passed. Python used UT_NO_BROWSER=1 and the
+  existing ignored .tmp/phase110-step4-runner/sitecustomize.py via PYTHONPATH
+  for the previously documented sandbox temporary-directory mode issue. No
+  runner edits made. Git reported existing LF-to-CRLF warnings only.
+- Live account checks succeeded at 25% and 26% used in the five-hour window,
+  below the authorized 90%-used stop. Weekly usage was 55% and is not the stop
+  threshold. No credits or reset used.
+- No requested implementation remains. No manual browser or installed-game
+  check was performed. UI verification uses the Node VM with stub responses
+  and reconstructed controls; undo uses the service's saved project snapshot.
+
+## 2026-11-07 - Phase 111 repaint control-state regression fix
+
+- Mass edit now stores its open state, column, operation, value, replacement,
+  mode, recipe name and recipe picker in USHEET.controls. Input, change and
+  toggle handlers record choices before asynchronous requests rebuild the UI.
+  Paint restores those choices through review, Cancel, Confirm, undo/redo and
+  query. A missing column falls back to the first currently offered column;
+  an unavailable operation falls back to set.
+- Balance stores its open state, profile recipe picker and creator name, key,
+  operation and value in the same window state. Changing the profile key still
+  resets the operation to set. Rendering checks removed keys and keys whose
+  value changed from numeric to text/bool. Draft controls remain outside saved
+  projects and history snapshots. Loading a recipe also records its values,
+  including numeric zero, so later repaints preserve them.
+- Test first: added four Node regressions and observed all four fail before
+  implementation. The focused harness now reconstructs these controls from
+  rendered HTML and dispatches their inline handlers, rather than retaining
+  stale mock controls across innerHTML replacement. Verified review and Cancel
+  preserve all five Mass edit controls and its open state; the second run sends
+  the same column, operation, value, other and matching mode. Also verified
+  Confirm, undo, redo, query, closing/reopening sections, recipe picker/name,
+  zero loading, escaped input values and missing-column/key fallback.
+- Files changed for this fix: web/js/unitsheets.js,
+  tests/test_unit_sheets_ui.js and docs/CODEX_HANDOFF.md. Preserved prior
+  uncommitted work. Added no user-visible strings or translation edits.
+  No commit or release was made. No prohibited files were edited.
+- Required checks actually run and passed:
+  python -m tests.test_unit_sheets: 33 tests;
+  python -m tests.test_sheet_ops: 41 tests;
+  python -m tests.test_sheet_pipeline: 9 tests;
+  python -m tests.test_sheet_native: 8 tests;
+  python -m tests.test_edb_balance: 12 tests;
+  python -m tests.test_web_modules: 130/130 checks;
+  python -m tests.test_i18n: 45/45 checks;
+  node tests/test_unit_sheets_ui.js: all named cases and VM assertions passed;
+  git diff --check: passed. Python used UT_NO_BROWSER=1 and the existing ignored
+  .tmp/phase110-step4-runner/sitecustomize.py via PYTHONPATH for the previously
+  documented sandbox temporary-directory mode issue. No runner edits made.
+- Live account usage checks succeeded at 22% and 23% used in the five-hour
+  window, below the authorized 90%-used stop. Weekly usage was 55% and is not
+  the stop threshold. No credits or reset used.
+- No requested implementation remains. No manual browser or installed-game
+  check was performed. UI verification uses Node VM tests with stubbed API
+  responses and reconstructed controls, not a full browser DOM.
+
+## 2026-11-07 - Phase 111 follow-up Balance profile recipe creator
+
+- Added a small creator beside the Balance profile recipe picker: name, current
+  saved profile key, operation, value and Save. Numeric keys offer set, add,
+  subtract, multiply, divide, percent, min, max and round. Text and boolean keys
+  offer only set; changing the key resets the operation to set.
+- Saves target.profile using the current saved profile name, plus column,
+  operation and value, through unitSheetsSave. Server validation and its refusal
+  reason use the existing request/error path. A successful save refreshes the
+  profile picker. Values remain input strings for server validation.
+- Files changed in this follow-up: web/js/unitsheets.js,
+  tests/test_unit_sheets_ui.js, web/i18n/en.json and docs/CODEX_HANDOFF.md.
+  Added 11 English message IDs only. Preserved all earlier uncommitted work and
+  unrelated changes. No commit or release was made. No prohibited files edited.
+- Test first: added three Node regressions before implementation. The initial
+  run failed on missing creator controls, operation helper and save handler.
+  After implementation, all three and all existing Node assertions passed.
+  Tests verify the profile-target save payload, picker refresh, numeric/text/bool
+  operation choices, key-change reset and visible server refusal reason without
+  saving a recipe or adding history.
+- Final checks actually run and passed:
+  python -m tests.test_unit_sheets: 33 tests;
+  python -m tests.test_sheet_ops: 41 tests;
+  python -m tests.test_sheet_pipeline: 9 tests;
+  python -m tests.test_sheet_native: 8 tests;
+  python -m tests.test_edb_balance: 12 tests;
+  python -m tests.test_web_modules: 130/130 checks;
+  python -m tests.test_i18n: 45/45 checks;
+  node tests/test_unit_sheets_ui.js: all named cases and VM assertions passed;
+  git diff --check: passed. Python used UT_NO_BROWSER=1 and the existing ignored
+  .tmp/phase110-step4-runner/sitecustomize.py via PYTHONPATH for the known sandbox
+  temporary-directory mode issue. No runner changes were made.
+- Live account usage checks succeeded at 17% and 18% used in the five-hour
+  window, below the authorized 90%-used stop. Weekly usage was 54% at both
+  checkpoints and does not set the stop threshold. No credits or reset used.
+- No requested implementation remains. No manual browser visual check or
+  installed-game apply was performed. UI behavior is verified by Node VM tests
+  with stubbed API responses; the required Python suites also passed.
+
+## 2026-11-07 - Phase 111 step 2 recipe recovery and mass-edit review
+
+- Completed requested items (a)-(f). No commit or release was made. Preserved
+  step 1 changes and unrelated working-tree changes. Did not edit viewer3d.js,
+  ROADMAP.md, STATE.md, other web/i18n catalogues or dev/i18n files.
+- (a) Removed recipe execution validation from validate_project/load_project.
+  save_project compares recipes with the stored project under the project lock
+  and validates only new or changed instructions. Invalid legacy recipes remain
+  untouched across load, query and unrelated saves. API responses include an
+  invalid_recipes name-to-reason map; explicit recipe execution revalidates the
+  stored instructions. Regression fixtures include a targetless rule-column
+  recipe and a blank set recipe, both surviving successful load and query.
+- (b) Mass operations and fill first request dry_run. A separate review displays
+  target_count and per-field before/after rows, capped at 100 with a remaining
+  count. Confirm submits the captured request without dry_run, retaining the
+  revision, source token, filter, mode and targets. Cancel makes no request and
+  adds no history. Refusals show the server reason and add no history. Operate
+  and paste include selected/matching mode and current where; matching mode is
+  captured before pending cell edits can repaint its control.
+- (c) Blank native grid sets now reach unitSheetsPost and show the server's
+  explicit-clear error, as mass blank sets already did. Clear remains an
+  explicit operation choice.
+- (d) Saved recipes include target.view, including rules:<kind>. The picker
+  sorts current-view recipes first and labels/disables invalid recipes with
+  their reported reasons. Loading restores column, operation, value and other
+  using nullish fallback so zero survives. Recipe Run uses the shared review.
+  The backend executes saved recipe fields and checks the native/rule scope.
+- (e) Profile recipes resolve target.profile against balance_profile.name and
+  update the matching known profile key, using defaults for absent keys. Numeric
+  set/arithmetic and text/bool set validate before staging, including during
+  preview. Changes use save_project and normal UI snapshot history. The Balance
+  panel has a profile-recipe picker and Run button using the same review.
+- (f) Node request-stub tests verify Cancel has no staging request/history,
+  Confirm stages once, repeated Confirm cannot duplicate it, and confirmed mass
+  and profile operations undo and redo with one project save each.
+- Changed unittransfer/sheet_ops.py, unittransfer/unit_sheets.py,
+  web/js/unitsheets.js, web/i18n/en.json, tests/test_unit_sheets.py,
+  tests/test_unit_sheets_ui.js and this file. Added 11 English message IDs only.
+- Test-first evidence: initial Python regressions failed on legacy recipe loads
+  and profile execution; initial Node regressions failed on missing review,
+  scoped recipe saves/zero loading and the profile picker. Separate regressions
+  reproduced silent blank grid sets and mode reset during a pending-cell
+  repaint before their fixes. One intermediate i18n check failed on a joined
+  invalid-recipe label; using a complete translated template fixed it.
+- Final checks actually run, all passed with UT_NO_BROWSER=1 for Python:
+  python -m tests.test_unit_sheets: 33 tests;
+  python -m tests.test_sheet_ops: 41 tests;
+  python -m tests.test_sheet_pipeline: 9 tests;
+  python -m tests.test_sheet_native: 8 tests;
+  python -m tests.test_edb_balance: 12 tests;
+  python -m tests.test_web_modules: 130/130 checks;
+  python -m tests.test_i18n: 45/45 checks;
+  node tests/test_unit_sheets_ui.js: all named cases and VM assertions passed;
+  git diff --check: passed. Python used the existing ignored
+  .tmp/phase110-step4-runner/sitecustomize.py via PYTHONPATH for the known
+  sandbox temporary-directory mode issue. No tracked runner change was added.
+- Live account usage checks succeeded at 12%, 14% and 16% used in the five-hour
+  window, below the authorized 90%-used stop. The first proxied request failed;
+  direct endpoint requests succeeded. Weekly usage was 54% at the final check
+  and is not the stop threshold. No credits were purchased or limits reset.
+- No requested implementation remains. No live-browser visual check or
+  installed-game apply was run; verified behavior is based on Python service
+  regressions and Node VM request-stub tests, not manual browser interaction.
+
+## 2026-11-07 - Phase 111 step 1 backend mass-operation safety
+
+- Completed the authorized backend step. No commit or release was made. Kept
+  pre-existing Reference/TWCenter deletions and unrelated untracked files intact.
+  Did not change JavaScript, viewer3d.js, ROADMAP.md, STATE.md, other web/i18n
+  catalogues or dev/i18n files. Step 2 UI work remains outside this request.
+- (a) operate accepts optional mode selected (default) or matching and the
+  existing where expression. The server resolves matching IDs from the full
+  current native or rule table, independent of pagination and submitted IDs.
+  Selected IDs outside that set reject the complete operation before staging.
+  Missing where means the unfiltered table. Paste also checks its IDs against
+  where. Recruitment rows remain read-only.
+- (b) Numeric conversion rejects booleans, including native sets, pasted cells
+  and arithmetic operands. Explicit numeric zero remains a value.
+- (c) Empty strings, whitespace, None and empty lists cannot set or paste empty
+  fields. Non-clear operations cannot produce an empty replacement either.
+  Errors direct callers to clear. Explicit clear still refuses required tuple
+  members. Rule operations/paste follow the same rule; an older test expecting
+  blank set to clear a rule value now verifies refusal then explicit clear.
+- (d) operate and paste accept dry_run true. They validate and return the same
+  changes and target_count as staging, with the original project/revision and
+  prospective table rows. No project save or history entry occurs, including
+  when a file is absent or requires legacy schema migration. Tests verify exact
+  project bytes and the existing file's mtime remain unchanged.
+- (e) Project validation checks recipes on save/import and load. It validates
+  operation names, writable columns, types, expression syntax, arithmetic
+  operands and optional scope. Native scopes use view; rule scopes accept
+  view rules with rule_table or rules:<table>. Profile scope resolves the
+  existing singleton balance_profile.name and its known settings, not an
+  invented profile collection. Unknown tables/profiles fail. Zero and a null
+  optional target round-trip without coercing the saved recipe payload.
+- (f) Added individual arithmetic branch tests plus copy, text replace and
+  attribute deduplicate coverage. Mixed unit-size, attack, attribute and
+  classification operations across Guard/Horse are staged, undone one operation
+  at a time through project snapshots, then redone using the existing save API,
+  exactly as native sheet UI history does. These are staging undo/redo checks,
+  not game-file apply/transfer undo. Unknown attributes and unedited weapon tuple
+  members survive. Every fixture mod file is snapshotted for bytes and mtime
+  before staging and compared after each dry run, stage, undo and redo.
+- Changed unittransfer/sheet_ops.py, unittransfer/unit_sheets.py,
+  tests/test_sheet_ops.py, tests/test_unit_sheets.py, tests/test_sheet_native.py,
+  web/i18n/en.json and this file. Added four English message IDs using _i18n.msg.
+- Test-first evidence: new regressions failed on filtered targets, native
+  booleans, blank edits, dry-run writes and unvalidated recipes before fixes.
+  Follow-up regressions failed on rule blank paste, invalid recipe container
+  values, infinite expression constants and null targets before fixes. Existing
+  arithmetic/copy/replace/deduplicate behavior already passed its new coverage.
+  Initial i18n run was 44/45 because the old missing-value message became unused;
+  keeping that message in the shared validator restored 45/45.
+- Final checks actually run, all passed with UT_NO_BROWSER=1 for Python:
+  python -m tests.test_unit_sheets: 29 tests;
+  python -m tests.test_sheet_ops: 41 tests;
+  python -m tests.test_sheet_pipeline: 9 tests;
+  python -m tests.test_sheet_native: 8 tests;
+  python -m tests.test_edb_balance: 12 tests;
+  python -m tests.test_web_modules: 130/130 checks;
+  python -m tests.test_i18n: 45/45 checks;
+  node tests/test_unit_sheets_ui.js: all named cases and VM assertions passed;
+  git diff --check: passed. Python used the existing ignored
+  .tmp/phase110-step4-runner/sitecustomize.py via PYTHONPATH for the known sandbox
+  mode-0700 temporary-directory issue. No tracked runner workaround was added.
+- Live account usage endpoint checks succeeded at 5%, 7% and finally 9% used in
+  the five-hour window. Completed below the authorized 90%-used stop. Weekly
+  usage was 53% at the last check and is not the stop threshold. No credits were
+  purchased or limits reset. No installed-game or live-browser check was run.
+
 ## 2026-11-07 - Phase 110 step 4 comparison groups and column kinds
 
 - Read Phase 110 in docs/ROADMAP.md and the workbook comparison workflow in

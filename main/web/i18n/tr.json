@@ -12512,5 +12512,37 @@
  "sheets.rule_duplicate_key": "Yinelenen kural anahtarı: {key}",
  "eng.sheets.invalid_rule_target": "Bilinmeyen kural satırı veya sütunu",
  "eng.sheets.invalid_rule_operation": "Desteklenmeyen kural işlemi",
- "eng.sheets.invalid_rule_column": "Sütun adı boş, ayrılmış veya zaten mevcut"
+ "eng.sheets.invalid_rule_column": "Sütun adı boş, ayrılmış veya zaten mevcut",
+ "sheets.use_clear": "Bir alanı boşaltmak için clear işlemini kullanın",
+ "sheets.matching_targets": "Düzenlemeden önce geçerli filtreyle eşleşen benzersiz kimlikleri seçin",
+ "sheets.invalid_recipe_target": "Bilinmeyen reçete görünümü, kural tablosu veya dengeleme profili",
+ "sheets.invalid_recipe": "Geçersiz reçete işlemi, sütun veya değer",
+ "sheets.review_target": "Hedef",
+ "sheets.review_field": "Alan",
+ "sheets.review_before": "Önce",
+ "sheets.review_after": "Sonra",
+ "sheets.review_confirm": "Onayla",
+ "sheets.recipe_invalid": "{name} (Geçersiz: {reason})",
+ "sheets.recipe_run": "Çalıştır",
+ "sheets.profile_recipe_key": "Profil anahtarı",
+ "sheets.recipe_operation": "İşlem",
+ "sheets.recipe_op_set": "Ayarla",
+ "sheets.recipe_op_add": "Ekle",
+ "sheets.recipe_op_subtract": "Çıkar",
+ "sheets.recipe_op_multiply": "Çarp",
+ "sheets.recipe_op_divide": "Böl",
+ "sheets.recipe_op_percent": "Yüzde",
+ "sheets.recipe_op_min": "En düşük",
+ "sheets.recipe_op_max": "En yüksek",
+ "sheets.recipe_op_round": "Yuvarla",
+ "sheets.mode_selected": "Seçili",
+ "sheets.mode_matching": "Filtreyle eşleşen",
+ "sheets.review_count": {
+  "one": "{count} hedefi incele",
+  "other": "{count} hedefi incele"
+ },
+ "sheets.review_more": {
+  "one": "{count} değişiklik daha",
+  "other": "{count} değişiklik daha"
+ }
 }

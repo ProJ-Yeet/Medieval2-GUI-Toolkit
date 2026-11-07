@@ -12995,5 +12995,37 @@
  "sheets.rule_duplicate_key": "Doppelter Regelschlüssel: {key}",
  "eng.sheets.invalid_rule_target": "Unbekannte Regelzeile oder Spalte",
  "eng.sheets.invalid_rule_operation": "Nicht unterstützte Regeloperation",
- "eng.sheets.invalid_rule_column": "Spaltenname ist leer, reserviert oder existiert bereits"
+ "eng.sheets.invalid_rule_column": "Spaltenname ist leer, reserviert oder existiert bereits",
+ "sheets.use_clear": "Verwende die Operation clear, um ein Feld zu leeren",
+ "sheets.matching_targets": "Wähle vor dem Bearbeiten eindeutige IDs aus, die dem aktuellen Filter entsprechen",
+ "sheets.invalid_recipe_target": "Unbekannte Rezeptansicht, Regeltabelle oder unbekanntes Balance-Profil",
+ "sheets.invalid_recipe": "Ungültige Rezeptoperation, Spalte oder ungültiger Wert",
+ "sheets.review_target": "Ziel",
+ "sheets.review_field": "Feld",
+ "sheets.review_before": "Vorher",
+ "sheets.review_after": "Nachher",
+ "sheets.review_confirm": "Bestätigen",
+ "sheets.recipe_invalid": "{name} (Ungültig: {reason})",
+ "sheets.recipe_run": "Ausführen",
+ "sheets.profile_recipe_key": "Profilschlüssel",
+ "sheets.recipe_operation": "Operation",
+ "sheets.recipe_op_set": "Setzen",
+ "sheets.recipe_op_add": "Hinzufügen",
+ "sheets.recipe_op_subtract": "Subtrahieren",
+ "sheets.recipe_op_multiply": "Multiplizieren",
+ "sheets.recipe_op_divide": "Dividieren",
+ "sheets.recipe_op_percent": "Prozent",
+ "sheets.recipe_op_min": "Minimum",
+ "sheets.recipe_op_max": "Maximum",
+ "sheets.recipe_op_round": "Runden",
+ "sheets.mode_selected": "Ausgewählt",
+ "sheets.mode_matching": "Dem Filter entsprechend",
+ "sheets.review_count": {
+  "one": "{count} Ziel prüfen",
+  "other": "{count} Ziele prüfen"
+ },
+ "sheets.review_more": {
+  "one": "{count} weitere Änderung",
+  "other": "{count} weitere Änderungen"
+ }
 }

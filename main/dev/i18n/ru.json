@@ -13821,5 +13821,41 @@
  "eng.sheets.invalid_rule_target": "Неизвестная строка правила или столбец",
  "eng.sheets.invalid_rule_operation": "Неподдерживаемая операция с правилами",
  "eng.sheets.invalid_rule_column": "Имя столбца пустое, зарезервировано или уже существует",
- "sheets.group_note": "Сравнение всей группы только для чтения, включая подготовленные значения. Фильтры и разбиение на страницы не ограничивают эту панель. Отсутствующие и некорректные значения исключаются из числовой статистики. Изменяйте значения в обычных представлениях."
+ "sheets.group_note": "Сравнение всей группы только для чтения, включая подготовленные значения. Фильтры и разбиение на страницы не ограничивают эту панель. Отсутствующие и некорректные значения исключаются из числовой статистики. Изменяйте значения в обычных представлениях.",
+ "sheets.use_clear": "Используйте операцию clear, чтобы очистить поле",
+ "sheets.matching_targets": "Перед редактированием выделите уникальные идентификаторы, соответствующие текущему фильтру",
+ "sheets.invalid_recipe_target": "Неизвестное представление рецепта, таблица правил или профиль баланса",
+ "sheets.invalid_recipe": "Некорректная операция рецепта, столбец или значение",
+ "sheets.review_target": "Цель",
+ "sheets.review_field": "Поле",
+ "sheets.review_before": "До",
+ "sheets.review_after": "После",
+ "sheets.review_confirm": "Подтвердить",
+ "sheets.recipe_invalid": "{name} (Некорректно: {reason})",
+ "sheets.recipe_run": "Запустить",
+ "sheets.profile_recipe_key": "Ключ профиля",
+ "sheets.recipe_operation": "Операция",
+ "sheets.recipe_op_set": "Задать",
+ "sheets.recipe_op_add": "Добавить",
+ "sheets.recipe_op_subtract": "Вычесть",
+ "sheets.recipe_op_multiply": "Умножить",
+ "sheets.recipe_op_divide": "Разделить",
+ "sheets.recipe_op_percent": "Процент",
+ "sheets.recipe_op_min": "Минимум",
+ "sheets.recipe_op_max": "Максимум",
+ "sheets.recipe_op_round": "Округлить",
+ "sheets.mode_selected": "Выделенные",
+ "sheets.mode_matching": "Соответствующие фильтру",
+ "sheets.review_count": {
+  "one": "Проверить {count} цель",
+  "few": "Проверить {count} цели",
+  "many": "Проверить {count} целей",
+  "other": "Проверить {count} цели"
+ },
+ "sheets.review_more": {
+  "one": "Ещё {count} изменение",
+  "few": "Ещё {count} изменения",
+  "many": "Ещё {count} изменений",
+  "other": "Ещё {count} изменения"
+ }
 }
