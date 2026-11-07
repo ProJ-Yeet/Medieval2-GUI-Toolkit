@@ -730,6 +730,15 @@
   ],
   "sheets.mapping_example": [
    "unit"
+  ],
+  "charmodels.help": [
+   "general"
+  ],
+  "charmodels.horse": [
+   "mount"
+  ],
+  "eng.charmodels.horse": [
+   "mount"
   ]
  },
  "ancillaries.a_character_holds_one_ancillary_per": "Un personnage détient un accessoire par type ; c’est donc celui que remplace un nouvel accessoire",
@@ -5360,7 +5369,6 @@
  "eng.characters.has_no_battle_model_so_it": "{who} n’a aucun battle_model et donc aucun modèle pour combattre",
  "eng.characters.has_no_strat_model_so_it": "{who} n’a aucun strat_model et donc aucune apparence sur la carte",
  "eng.characters.has_no_type_section": "{REL} n’a aucune section type",
- "eng.characters.has_strat_model_s_a_named": "{who} possède {models_n} modèle(s) de campagne ; un personnage nommé en possède un pour chaque état : normal, héritier et chef",
  "eng.characters.has_two_blocks_lines_and_only": "{name} : {f} possède deux blocs (lignes {seen} et {x}) ; un seul est lu",
  "eng.characters.is_not_a_faction_in_descr": "{fac} n’est pas une faction de descr_sm_factions.txt",
  "eng.characters.is_not_a_faction_in_descr_2": "{who} : {f} n’est pas une faction de descr_sm_factions.txt",
@@ -13201,5 +13209,30 @@
  "sheets.interchange_preview": "Aperçu des ID et champs associés",
  "sheets.interchange_stage": "Mettre cette importation validée en attente",
  "sheets.interchange_formula_issues": "Problèmes de formules importées",
- "sheets.interchange_help": "Choisissez la vue et la ligne d’en-tête de chaque feuille, puis associez explicitement les colonnes. Associez l’ID d’unité exact ou toutes les colonnes constituant la clé de règle. Les colonnes non associées sont conservées comme données supplémentaires. Sélectionnez le même champ de liste pour chacune des colonnes entre lesquelles il est réparti. Les cellules natives vides laissent les champs inchangés ; [] vide une liste. Vérifiez l’aperçu avant de préparer les modifications. Les exports CSV utilisent les valeurs calculées ; les formules prises en charge nécessitent un fichier XLSX avec la mise en page importée. Consultez docs/SHEET_INTERCHANGE.md pour des exemples et les limites des formules."
+ "sheets.interchange_help": "Choisissez la vue et la ligne d’en-tête de chaque feuille, puis associez explicitement les colonnes. Associez l’ID d’unité exact ou toutes les colonnes constituant la clé de règle. Les colonnes non associées sont conservées comme données supplémentaires. Sélectionnez le même champ de liste pour chacune des colonnes entre lesquelles il est réparti. Les cellules natives vides laissent les champs inchangés ; [] vide une liste. Vérifiez l’aperçu avant de préparer les modifications. Les exports CSV utilisent les valeurs calculées ; les formules prises en charge nécessitent un fichier XLSX avec la mise en page importée. Consultez docs/SHEET_INTERCHANGE.md pour des exemples et les limites des formules.",
+ "charmodels.title": "Modèles de faction",
+ "charmodels.characters": "Personnages",
+ "charmodels.level": "niveau {level}",
+ "charmodels.line": "ligne {line}",
+ "charmodels.default": "Par défaut",
+ "charmodels.no_trait": "Aucun trait ne confère ce niveau",
+ "charmodels.more": "{names} +{n} autres",
+ "charmodels.pick": "Choisir une faction",
+ "charmodels.help": "La position d'une ligne strat_model détermine le niveau du personnage : les traits confèrent des niveaux et les commentaires servent uniquement de libellés. Le type general correspond au capitaine. Toute modification d'un bloc partagé par plusieurs factions s'applique à toutes ces factions. Utilisez « Aperçu » avant « Appliquer » ; chaque enregistrement dispose de sa propre copie de sauvegarde et de l'option « Annuler » dans Log. Les gardes du corps sont des unités et se modifient dans l'Éditeur d'unités.",
+ "charmodels.horse": "Aucune animation de cheval : les généraux et les capitaines utilisent le même modèle de bataille à pied et à cheval.",
+ "charmodels.campaign_characters": "Chefs et héritiers de campagne et modèles de bataille des personnages",
+ "charmodels.scripts": "Modifications du script de campagne (lecture seule)",
+ "charmodels.symbols": "Symboles de faction (lecture seule)",
+ "charmodels.textures": "Modèles de campagne avec cette texture de faction (lecture seule)",
+ "charmodels.commented": "Mis en commentaire",
+ "charmodels.failed": "Échec de la planification ou de l'enregistrement",
+ "charmodels.applied": "Enregistré ({count}) et rechargé. Chaque enregistrement peut être annulé dans Log.",
+ "charmodels.role_generals": "Généraux de la famille de la faction",
+ "charmodels.role_captain": "Capitaine",
+ "charmodels.role_general": "Général de la famille",
+ "charmodels.role_leader": "Chef de faction",
+ "charmodels.role_heir": "Héritier de faction",
+ "eng.charmodels.unreached": "{type}, niveau {level} : aucun trait de ce type de personnage ne confère ce niveau",
+ "eng.charmodels.missing": "{model} n'est pas une entrée de modeldb",
+ "eng.charmodels.horse": "{model} n'a aucune animation de cheval ; les généraux et les capitaines utilisent le même modèle à pied et à cheval"
 }

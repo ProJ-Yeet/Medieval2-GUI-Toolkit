@@ -846,7 +846,7 @@ async function openBmdbEntry(name){
     facOpen:{},folder:{},
     d:{type:'',dictionary:'',fields:[],loc:{},models:[r.model],model_names:r.model_names,skeleton_names:r.skeleton_names||[],
        all_factions:r.all_factions,faction_names:r.faction_names,
-       unknown_factions:r.unknown_factions}};
+       unknown_factions:r.unknown_factions},characters:r.characters||[],characterHorse:r.character_horse};
   undoReset();
   resetPlace();
   renderBmdbEditor();
@@ -950,11 +950,12 @@ function renderBmdbEditor(){
   document.getElementById('modal').innerHTML=`
     <h2>${tt('bmdb.battle_model')} <span class="pill">${esc(e.mod)}</span></h2>
     <div class="ehead">
+      <button onclick="openFactionModels()">${tt('charmodels.title')}</button>
       <div><div class="nm" style="font-family:ui-monospace,Consolas,monospace">${esc(m.name)}</div>
         <div class="count">${tt('bmdb.lods_faction_skins_used_by',{lods:ttN('bmdb.lod_count',m.lods.length),skins:ttN('bmdb.faction_skin_count',m.factions.length),used_by:m.used_by.length?tt('bmdb.used_by',{used_by_n:m.used_by.length}):`<span class="w-warn">${tt('bmdb.referenced_by_nothing_2')}</span>`})}</div></div>
     </div>
     <div class="cvsplit${e.cv?'':' off'}" style="padding:0 14px">
-      <div id="bmGui"><div class="mbody" id="edBody" style="padding:0"></div></div>
+      <div id="bmGui">${cmUsersHtml(e.characters,e.characterHorse)}<div class="mbody" id="edBody" style="padding:0"></div></div>
       ${e.cv?`<div id="bmCodeCol" style="padding-top:12px">${cvHtml(e.cv)}</div>`:''}
     </div>
     <div class="foot">

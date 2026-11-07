@@ -735,6 +735,15 @@
   ],
   "sheets.interchange_help": [
    "header"
+  ],
+  "charmodels.help": [
+   "general"
+  ],
+  "charmodels.horse": [
+   "mount"
+  ],
+  "eng.charmodels.horse": [
+   "mount"
   ]
  },
  "ancillaries.a_character_holds_one_ancillary_per": "人物每种类型只能持有一个随从，因此此项决定新随从会替换哪个随从",
@@ -5027,7 +5036,6 @@
  "eng.characters.has_no_battle_model_so_it": "{who} 没有 battle_model，因此没有用于战斗的模型",
  "eng.characters.has_no_strat_model_so_it": "{who} 没有 strat_model，因此没有用于显示在地图上的模型",
  "eng.characters.has_no_type_section": "{REL} 没有 type 部分",
- "eng.characters.has_strat_model_s_a_named": "{who} 有 {models_n} 个战略模型；具名人物在普通、继承人和领袖状态下各有一个",
  "eng.characters.has_two_blocks_lines_and_only": "{name}：{f} 有两个块（第 {seen} 和 {x} 行），只有一个会被读取",
  "eng.characters.is_not_a_faction_in_descr": "{fac} 不是 descr_sm_factions.txt 中的派系",
  "eng.characters.is_not_a_faction_in_descr_2": "{who}：{f} 不是 descr_sm_factions.txt 中的派系",
@@ -12389,5 +12397,30 @@
  "sheets.interchange_preview": "预览映射的 ID 和字段",
  "sheets.interchange_stage": "暂存此已验证的导入",
  "sheets.interchange_formula_issues": "导入公式的问题",
- "sheets.interchange_help": "为每个工作表选择视图和表头行，然后明确映射各列。映射准确的部队 ID 或全部规则键列。未映射的列将作为额外数据保留。对于同一列表字段拆分出的各列，请选择同一个列表字段。空白原生单元格会使字段保持不变；[] 会清空列表。暂存前请先预览。CSV 导出使用计算结果；受支持的公式需要使用带有已导入布局的 XLSX。示例和公式限制请参阅 docs/SHEET_INTERCHANGE.md。"
+ "sheets.interchange_help": "为每个工作表选择视图和表头行，然后明确映射各列。映射准确的部队 ID 或全部规则键列。未映射的列将作为额外数据保留。对于同一列表字段拆分出的各列，请选择同一个列表字段。空白原生单元格会使字段保持不变；[] 会清空列表。暂存前请先预览。CSV 导出使用计算结果；受支持的公式需要使用带有已导入布局的 XLSX。示例和公式限制请参阅 docs/SHEET_INTERCHANGE.md。",
+ "charmodels.title": "派系模型",
+ "charmodels.characters": "人物",
+ "charmodels.level": "等级 {level}",
+ "charmodels.line": "第 {line} 行",
+ "charmodels.default": "默认",
+ "charmodels.no_trait": "没有特质赋予此等级",
+ "charmodels.more": "{names}，另有 {n} 个",
+ "charmodels.pick": "选择派系",
+ "charmodels.help": "strat_model 行的位置决定人物等级：特质赋予等级，注释仅作标签。general 类型指的是队长。多个派系共用的块一经修改，就会影响所有这些派系。请先点击“预览”，再点击“应用”；每次保存都有独立备份，并可在 Log 中使用“撤销”。卫队属于部队，请在部队编辑器中编辑。",
+ "charmodels.horse": "无马匹动画：将军和队长在步行及骑乘时使用同一战斗模型。",
+ "charmodels.campaign_characters": "战役领袖、继承人及人物战斗模型",
+ "charmodels.scripts": "战役脚本更改（只读）",
+ "charmodels.symbols": "派系标志（只读）",
+ "charmodels.textures": "使用此派系贴图的战略模型（只读）",
+ "charmodels.commented": "已注释禁用",
+ "charmodels.failed": "规划或保存失败",
+ "charmodels.applied": "已保存（{count}）并重新加载。每次保存均可在 Log 中撤销。",
+ "charmodels.role_generals": "派系家族将军",
+ "charmodels.role_captain": "队长",
+ "charmodels.role_general": "家族将军",
+ "charmodels.role_leader": "派系领袖",
+ "charmodels.role_heir": "派系继承人",
+ "eng.charmodels.unreached": "{type}，等级 {level}：此人物类型没有特质赋予此等级",
+ "eng.charmodels.missing": "{model} 不是 modeldb 条目",
+ "eng.charmodels.horse": "{model} 没有马匹动画；将军和队长在步行及骑乘时使用同一模型"
 }

@@ -7,7 +7,7 @@
    finding; every line read back as it was; and the join - a strat model's
    users named by type, faction and slot.
 2. The rules on a fixture: a strat model, battle model and faction the mod
-   lacks, a named character short of its three models, a general with no
+   lacks, a valid named character with one slot, a general with no
    battle model, a faction twice in a type, a number that is not one.
 3. Saves on a temp copy of DaC's file: a value changed keeping its comment,
    a strat model added and one removed, a block copied for another faction
@@ -123,8 +123,8 @@ check("a strat model and a battle model the mod lacks are warnings",
       ("strat", "warn") in got and ("battle", "warn") in got
       and any("missing_model" in f["message"] for f in fs) and any("missing_battle" in f["message"] for f in fs))
 check("a faction not in the roster is a warning", ("roster", "warn") in got)
-check("a named character with fewer than three strat models is a warning",
-      any(f["code"] == "strat" and "default, heir and leader" in f["message"] for f in fs))
+check("a named character with one strat model is valid",
+      not any(f["code"] == "strat" and "default, heir and leader" in f["message"] for f in fs))
 check("a general with no battle model is a warning",
       any(f["code"] == "battle" and "no battle_model" in f["message"] for f in fs))
 check("a faction twice in one type is a warning", ("duplicate", "warn") in got)

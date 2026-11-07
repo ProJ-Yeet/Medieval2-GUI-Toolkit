@@ -775,7 +775,7 @@ from . import engines as engines_mod
 from . import menusheets
 from . import stratscene
 from . import manytowns
-from . import ancillaries, areaeffects, campimport, edbimport, mapbundle, osmmap, osmsites, settlemodel, heroabilities, hordestart, walls, characters, projectzip, campaint, campdb, campevents, campfiles, campmap, campnew, campstrat, cas, casanim, animedit, animpack, animslot, animview, modelexport, launchcheck, packhouse, settlemech, fileswap, factionsites, sidefiles, banners, changesets, health, climatenew, guilds, mapcheck, mapfe, mapquery, mapterrain, mercpools, regiondel, edusort, factionaudit, factionbring, factionclone, factions, images, mesh, minorfiles, namekeys, portrecords, rawtext, rebelpools, renames, soundbanks, soundscripts, spawns, sprites, stratcamp, stratchar, stratedit, stratobj, strings, traits, triggers, winconds
+from . import ancillaries, areaeffects, campimport, edbimport, mapbundle, osmmap, osmsites, settlemodel, heroabilities, hordestart, walls, characters, charmodels, projectzip, campaint, campdb, campevents, campfiles, campmap, campnew, campstrat, cas, casanim, animedit, animpack, animslot, animview, modelexport, launchcheck, packhouse, settlemech, fileswap, factionsites, sidefiles, banners, changesets, health, climatenew, guilds, mapcheck, mapfe, mapquery, mapterrain, mercpools, regiondel, edusort, factionaudit, factionbring, factionclone, factions, images, mesh, minorfiles, namekeys, portrecords, rawtext, rebelpools, renames, soundbanks, soundscripts, spawns, sprites, stratcamp, stratchar, stratedit, stratobj, strings, traits, triggers, winconds
 from . import unrecruitable, unusedunits
 from . import eop as _eop
 from . import logutil
@@ -2204,7 +2204,12 @@ class Handler(BaseHTTPRequestHandler):
                 if u.path == "/api/bmdb/entries":
                     return self._json(bmdb.overview(mod, progress=sink))
                 if u.path == "/api/bmdb/entry":
-                    return self._json(bmdb.entry_detail(mod, (q.get("name") or [""])[0]))
+                    entry_name = (q.get("name") or [""])[0]
+                    out = bmdb.entry_detail(mod, entry_name)
+                    out["characters"] = charmodels.entry_characters(mod, entry_name)
+                    entry = mod.modeldb.by_name().get(entry_name.lower())
+                    out["character_horse"] = bool(entry and any(a.mount_type.lower() == "horse" for a in entry.animations))
+                    return self._json(out)
                 if u.path == "/api/bmdb/skeletons":
                     return self._json(bmdb.skeleton_index(mod))
                 if u.path == "/api/bmdb/ownership":
@@ -2244,7 +2249,7 @@ class Handler(BaseHTTPRequestHandler):
                     out = stratmap.entry_detail(mod, (q.get("name") or [""])[0])
                     if not out.get("error"):
                         # 69: which character blocks draw it, each one a link
-                        out["characters"] = characters.users_of(mod, out["name"])
+                        out["characters"] = charmodels.strat_characters(mod, out["name"])
                     return self._json(out)
                 log.info("STRAT  audit of %s", name)
                 return self._json(stratmap.audit(mod, progress=sink))
@@ -2656,6 +2661,12 @@ class Handler(BaseHTTPRequestHandler):
                     return self._json(campdb.overview(self.registry.get(name)))
                 except campdb.CampDbError as e:
                     return self._err(404, e.message)
+            if u.path == "/api/charmodels":
+                name = (q.get("mod") or [None])[0]
+                if not name or name not in self.registry.names():
+                    return self._err(404, "unknown mod")
+                return self._json(charmodels.faction_models(
+                    self.registry.get(name), (q.get("faction") or [""])[0]))
             if u.path in ("/api/walls", "/api/characters"):
                 # 68 and 69. descr_walls.txt and descr_character.txt
                 name = (q.get("mod") or [None])[0]

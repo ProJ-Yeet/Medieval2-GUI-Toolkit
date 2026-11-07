@@ -1393,7 +1393,8 @@ const BMDB_TABS=[{mode:'bmdb',label:tt('core.model_entries')},{mode:'sprites',la
 const bmdbTabsHtml=note=>`<div class="mftabs">${BMDB_TABS.filter(t=>!modeOff(modeDef(t.mode))).map(t=>
   `<button class="mftab${state.mode===t.mode?' on':''}" onclick="setAppMode('${t.mode}')"
     >${esc(t.label)}</button>`).join('')}${
-  note?`<span class="count" style="margin-left:auto">${esc(note)}</span>`:''}</div>`;
+  note?`<span class="count" style="margin-left:auto">${esc(note)}</span>`:''}${
+  ['bmdb','stratmap'].includes(state.mode)?`<button class="mftab" onclick="openFactionModels()">${tt('charmodels.title')}</button>`:''}</div>`;
 /* 93b: a screen switch is a real link to its `navUrl`, so a middle click, a
    Ctrl+click and the context menu's "Open in new tab" are the browser's own,
    and a plain left click still switches this tab in place. Space presses it as
@@ -1485,7 +1486,7 @@ function syncNav(){
    Back press reaches us at all by spending a spare history entry pushed AHEAD
    of the page, so there is deliberately nothing ahead for Forward to land on. */
 
-const NAV_KEYS = ['name', 'tab', 'rel', 'line', 'key'];
+const NAV_KEYS = ['name', 'tab', 'rel', 'line', 'key', 'campaign', 'faction'];
 //: The same ceiling the old mode-only trail carried: a session wanders, and
 //: twenty-four steps back is already further than anybody presses.
 const NAV_MAX = 24;
@@ -1572,6 +1573,7 @@ function navGo(r){
                           ()=>openBuilding(name));
     if(o.mode==='campmap')
       return void navWhen(()=>state.cmap&&state.cmap.mod===state.src,()=>{
+        if(o.faction && name) return void cmMapCharacter(o);
         cchkOpen();
         if(!state.cchk.open)cchkToggle();
         if(o.key)navWhen(()=>state.cchk&&state.cchk.rep,()=>cchkGoKey(o.key));
@@ -2178,6 +2180,7 @@ async function openCredits(){
   overlay.classList.add('open');
 }
 function closeModal(){
+  state.cm=null;
   // "…and did they save it?" is half of what makes a log readable
   if(overlay.classList.contains('open')&&undo.past.length)
     activity(tt('core.closed_dialog'),tt('core.with_unsaved_change_s',{past_n:undo.past.length}));

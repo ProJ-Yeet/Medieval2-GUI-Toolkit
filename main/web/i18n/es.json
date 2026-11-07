@@ -55,10 +55,6 @@
   "eng.casanim.turns_bones_and_the_skeleton_has": [
    "turn"
   ],
-  "eng.characters.has_strat_model_s_a_named": [
-   "heir",
-   "leader"
-  ],
   "eng.climatenew.a_climate_name_the_battle_map": [
    "ship"
   ],
@@ -1150,6 +1146,9 @@
   ],
   "sheets.interchange_help": [
    "header"
+  ],
+  "charmodels.help": [
+   "general"
   ]
  },
  "ancillaries.a_character_holds_one_ancillary_per": "Un personaje solo puede tener un séquito de cada tipo, así que este es el que sustituiría uno nuevo",
@@ -4935,7 +4934,6 @@
  "eng.characters.has_no_battle_model_so_it": "{who} no tiene battle_model, así que no tiene modelo con el que combatir",
  "eng.characters.has_no_strat_model_so_it": "{who} no tiene strat_model, así que no tiene nada con lo que aparecer en el mapa",
  "eng.characters.has_no_type_section": "{REL} no tiene sección type",
- "eng.characters.has_strat_model_s_a_named": "{who} tiene {models_n} modelo estratégico(s); un personaje con nombre tiene uno para default, heir y leader",
  "eng.characters.has_two_blocks_lines_and_only": "{name}: {f} tiene dos bloques (líneas {seen} y {x}); solo se lee uno de ellos",
  "eng.characters.is_not_a_faction_in_descr": "{fac} no es una facción de descr_sm_factions.txt",
  "eng.characters.is_not_a_faction_in_descr_2": "{who}: {f} no es una facción de descr_sm_factions.txt",
@@ -13586,5 +13584,30 @@
  "sheets.interchange_preview": "Vista previa de IDs y campos asignados",
  "sheets.interchange_stage": "Preparar esta importación validada",
  "sheets.interchange_formula_issues": "Problemas con las fórmulas importadas",
- "sheets.interchange_help": "Selecciona la vista y la fila de encabezados de cada hoja y, después, asigna las columnas explícitamente. Asigna el ID exacto de unidad o todas las columnas de clave de regla. Las columnas sin asignar se conservan como datos adicionales. Selecciona el mismo campo de lista para cada una de las columnas en las que se divide. Las celdas nativas vacías dejan los campos sin cambios; [] vacía una lista. Revisa la vista previa antes de preparar los cambios. Las exportaciones CSV utilizan valores calculados; las fórmulas compatibles requieren XLSX con el diseño importado. Consulta docs/SHEET_INTERCHANGE.md para ver ejemplos y las limitaciones de las fórmulas."
+ "sheets.interchange_help": "Selecciona la vista y la fila de encabezados de cada hoja y, después, asigna las columnas explícitamente. Asigna el ID exacto de unidad o todas las columnas de clave de regla. Las columnas sin asignar se conservan como datos adicionales. Selecciona el mismo campo de lista para cada una de las columnas en las que se divide. Las celdas nativas vacías dejan los campos sin cambios; [] vacía una lista. Revisa la vista previa antes de preparar los cambios. Las exportaciones CSV utilizan valores calculados; las fórmulas compatibles requieren XLSX con el diseño importado. Consulta docs/SHEET_INTERCHANGE.md para ver ejemplos y las limitaciones de las fórmulas.",
+ "charmodels.title": "Modelos de facción",
+ "charmodels.characters": "Personajes",
+ "charmodels.level": "nivel {level}",
+ "charmodels.line": "línea {line}",
+ "charmodels.default": "Predeterminado",
+ "charmodels.no_trait": "Ningún rasgo otorga este nivel",
+ "charmodels.more": "{names} +{n} más",
+ "charmodels.pick": "Selecciona una facción",
+ "charmodels.help": "La posición de una línea strat_model determina el nivel del personaje: los rasgos otorgan niveles y los comentarios solo sirven de etiquetas. El tipo general corresponde al capitán. Los cambios en un bloque compartido por varias facciones afectan a todas ellas. Usa «Vista previa» antes de «Aplicar»; cada guardado tiene su propia copia de seguridad y la opción «Deshacer» en Log. Las escoltas son unidades y se editan en el Editor de unidades.",
+ "charmodels.horse": "Sin animación de caballo: los generales y capitanes usan el mismo modelo de batalla a pie y montados.",
+ "charmodels.campaign_characters": "Líderes y herederos de campaña y modelos de batalla de personajes",
+ "charmodels.scripts": "Cambios en el script de campaña (solo lectura)",
+ "charmodels.symbols": "Símbolos de facción (solo lectura)",
+ "charmodels.textures": "Modelos estratégicos con esta textura de facción (solo lectura)",
+ "charmodels.commented": "Desactivado mediante comentarios",
+ "charmodels.failed": "Error al planificar o guardar",
+ "charmodels.applied": "Guardado ({count}) y recargado. Cada guardado se puede deshacer en Log.",
+ "charmodels.role_generals": "Generales de la familia de la facción",
+ "charmodels.role_captain": "Capitán",
+ "charmodels.role_general": "General de la familia",
+ "charmodels.role_leader": "Líder de facción",
+ "charmodels.role_heir": "Heredero de facción",
+ "eng.charmodels.unreached": "{type}, nivel {level}: ningún rasgo de este tipo de personaje otorga este nivel",
+ "eng.charmodels.missing": "{model} no es una entrada de modeldb",
+ "eng.charmodels.horse": "{model} no tiene animación de caballo; los generales y capitanes usan el mismo modelo a pie y montados"
 }

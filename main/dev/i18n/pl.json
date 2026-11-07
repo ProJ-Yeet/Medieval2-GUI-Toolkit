@@ -903,6 +903,15 @@
   ],
   "sheets.mapping_example": [
    "unit"
+  ],
+  "charmodels.help": [
+   "general"
+  ],
+  "charmodels.horse": [
+   "mount"
+  ],
+  "eng.charmodels.horse": [
+   "mount"
   ]
  },
  "ancillaries.a_character_holds_one_ancillary_per": "Postać może mieć po jednym akcesorium każdego typu. Nowe akcesorium zastąpi więc właśnie to.",
@@ -5747,7 +5756,6 @@
  "eng.characters.has_no_battle_model_so_it": "{who} nie ma battle_model, więc nie ma modelu do użycia w bitwie",
  "eng.characters.has_no_strat_model_so_it": "{who} nie ma strat_model, więc nie ma modelu do wyświetlenia na mapie",
  "eng.characters.has_no_type_section": "{REL} nie ma sekcji typu",
- "eng.characters.has_strat_model_s_a_named": "{who} ma modele strategiczne (liczba: {models_n}); postać imienna ma po jednym dla default (domyślny), heir (następca) i leader (przywódca)",
  "eng.characters.has_two_blocks_lines_and_only": "{name}: {f} ma dwa bloki (wiersze {seen} i {x}); odczytywany jest tylko jeden",
  "eng.characters.is_not_a_faction_in_descr": "{fac} nie jest frakcją w descr_sm_factions.txt",
  "eng.characters.is_not_a_faction_in_descr_2": "{who}: {f} nie jest frakcją w descr_sm_factions.txt",
@@ -13805,5 +13813,30 @@
  "sheets.interchange_preview": "Podgląd przypisanych ID i pól",
  "sheets.interchange_stage": "Przygotuj zweryfikowany import do zastosowania",
  "sheets.interchange_formula_issues": "Problemy z importowanymi formułami",
- "sheets.interchange_help": "Wybierz widok i wiersz nagłówków dla każdego arkusza, a następnie jawnie przypisz kolumny. Przypisz dokładny ID jednostki lub wszystkie kolumny klucza reguły. Nieprzypisane kolumny zostaną zachowane jako dane dodatkowe. Wybierz to samo pole listy dla każdej z kolumn, na które zostało podzielone. Puste komórki natywne pozostawiają pola bez zmian; [] czyści listę. Sprawdź podgląd przed przygotowaniem zmian. Eksporty CSV używają obliczonych wartości; obsługiwane formuły wymagają formatu XLSX z zaimportowanym układem. Przykłady i ograniczenia formuł znajdziesz w docs/SHEET_INTERCHANGE.md."
+ "sheets.interchange_help": "Wybierz widok i wiersz nagłówków dla każdego arkusza, a następnie jawnie przypisz kolumny. Przypisz dokładny ID jednostki lub wszystkie kolumny klucza reguły. Nieprzypisane kolumny zostaną zachowane jako dane dodatkowe. Wybierz to samo pole listy dla każdej z kolumn, na które zostało podzielone. Puste komórki natywne pozostawiają pola bez zmian; [] czyści listę. Sprawdź podgląd przed przygotowaniem zmian. Eksporty CSV używają obliczonych wartości; obsługiwane formuły wymagają formatu XLSX z zaimportowanym układem. Przykłady i ograniczenia formuł znajdziesz w docs/SHEET_INTERCHANGE.md.",
+ "charmodels.title": "Modele frakcji",
+ "charmodels.characters": "Postacie",
+ "charmodels.level": "poziom {level}",
+ "charmodels.line": "wiersz {line}",
+ "charmodels.default": "Domyślny",
+ "charmodels.no_trait": "Żadna cecha nie nadaje tego poziomu",
+ "charmodels.more": "{names} +{n} więcej",
+ "charmodels.pick": "Wybierz frakcję",
+ "charmodels.help": "Pozycja wiersza strat_model określa poziom postaci: cechy nadają poziomy, a komentarze służą tylko jako etykiety. Typ general oznacza kapitana. Zmiana bloku wspólnego dla kilku frakcji dotyczy ich wszystkich. Użyj „Probe” przed „Apply”; każdy zapis ma własną kopię zapasową i opcję „Cofnij” w Log. Straże przyboczne to jednostki edytowane w Edytorze jednostek.",
+ "charmodels.horse": "Brak animacji konia: generałowie i kapitanowie używają tego samego modelu bitewnego pieszo i konno.",
+ "charmodels.campaign_characters": "Przywódcy i następcy w kampanii oraz modele bitewne postaci",
+ "charmodels.scripts": "Zmiany w skrypcie kampanii (tylko do odczytu)",
+ "charmodels.symbols": "Symbole frakcji (tylko do odczytu)",
+ "charmodels.textures": "Modele strategiczne z tą teksturą frakcji (tylko do odczytu)",
+ "charmodels.commented": "Wyłączone komentarzem",
+ "charmodels.failed": "Planowanie lub zapis nie powiodły się",
+ "charmodels.applied": "Zapisano ({count}) i wczytano ponownie. Każdy zapis można cofnąć w Log.",
+ "charmodels.role_generals": "Generałowie z rodziny frakcji",
+ "charmodels.role_captain": "Kapitan",
+ "charmodels.role_general": "Generał z rodziny",
+ "charmodels.role_leader": "Przywódca frakcji",
+ "charmodels.role_heir": "Następca frakcji",
+ "eng.charmodels.unreached": "{type}, poziom {level}: żadna cecha tego typu postaci nie nadaje tego poziomu",
+ "eng.charmodels.missing": "{model} nie jest wpisem w modeldb",
+ "eng.charmodels.horse": "{model} nie ma animacji konia; generałowie i kapitanowie używają tego samego modelu pieszo i konno"
 }

@@ -4,8 +4,8 @@ Twelve ``type`` sections (named character, general, the agents, princess,
 admiral, heretic, witch, inquisitor), each with its ``actions``,
 ``wage_base`` and ``starting_action_points``, then one block per faction: its
 ``dictionary``, its ``strat_model`` lines (the campaign-map model, from
-``descr_model_strat.txt``; a named character has one for default, heir and
-leader and may have more), and for the two that fight, a ``battle_model``
+``descr_model_strat.txt``; successive slots are levels 0 and above, reached
+through trait Level effects), and for the two that fight, a ``battle_model``
 (from ``battle_models.modeldb``) and its ``battle_equip``.
 
 Six modules read this file and none wrote it: the faction audit, the faction
@@ -31,10 +31,9 @@ lines, 30 factions; DaC 1 707 lines, 31):
   roster. A miss is a warning.
 * DaC lists ``england`` twice under ``inquisitor``: a warning, since only one
   of the two blocks can be the one read.
-* Every named character block has at least three strat models (default, heir,
-  leader; ROCSS three or four, DaC up to eleven), every named character and
-  general block a ``battle_model``, every block at least one strat model.
-  Warnings when they fail.
+* Every named character and general block needs a ``battle_model``, and every
+  block at least one strat model. Vanilla normally uses a single level-0 slot;
+  additional slots are optional and selected by trait Level effects.
 * Which types a faction has is not a rule: ``slave`` has no diplomat,
   princess or priest in ROCSS, heretics and witches are the rebels' alone in
   both, and ROCSS gives inquisitors to 16 factions of 30. The screen shows the
@@ -288,9 +287,6 @@ def check(doc: Doc, refs: Optional[Refs] = None) -> List[Dict]:
             models = b.values("strat_model")
             if not models:
                 out.append(finding("strat", "warn", _i18n.msg("eng.characters.has_no_strat_model_so_it", "{who} has no strat_model, so it has nothing to stand on the map with", who=who), key, b.line))
-            elif low == "named character" and len(models) < 3:
-                out.append(finding("strat", "warn", _i18n.msg("eng.characters.has_strat_model_s_a_named", "{who} has {models_n} strat model(s); a named character has one each for default, heir and leader", who=who, models_n=len(models)),
-                                   key, b.line))
             if low in FIGHTERS and not b.values("battle_model"):
                 out.append(finding("battle", "warn", _i18n.msg("eng.characters.has_no_battle_model_so_it", "{who} has no battle_model, so it has no model to fight with", who=who), key, b.line))
     return out

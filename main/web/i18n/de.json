@@ -631,10 +631,6 @@
   "eng.campstrat.unit_line_does_not_read_as": [
    "armour"
   ],
-  "eng.characters.has_strat_model_s_a_named": [
-   "heir",
-   "leader"
-  ],
   "eng.animslot.this_mod_ships_no_animation_packs": [
    "ship"
   ],
@@ -1011,6 +1007,15 @@
   ],
   "sheets.interchange_help": [
    "header"
+  ],
+  "charmodels.help": [
+   "general"
+  ],
+  "charmodels.horse": [
+   "mount"
+  ],
+  "eng.charmodels.horse": [
+   "mount"
   ]
  },
  "ancillaries.a_character_holds_one_ancillary_per": "Ein Charakter hat pro Typ ein Gefolgsmitglied; das ist also das, was ein neues ersetzt",
@@ -4638,7 +4643,6 @@
  "eng.characters.has_no_battle_model_so_it": "{who} hat kein battle_model und daher kein Modell, mit dem es kämpfen kann",
  "eng.characters.has_no_strat_model_so_it": "{who} hat kein strat_model und daher nichts, womit es auf der Karte stehen kann",
  "eng.characters.has_no_type_section": "{REL} hat keinen type-Abschnitt",
- "eng.characters.has_strat_model_s_a_named": "{who} hat {models_n} Strategiemodell(e); ein benannter Charakter hat je eines für default, heir und leader",
  "eng.characters.has_two_blocks_lines_and_only": "{name}: {f} hat den Block doppelt (Zeilen {seen} und {x}); nur einer davon wird gelesen",
  "eng.characters.is_not_a_faction_in_descr": "{fac} ist keine Fraktion in descr_sm_factions.txt",
  "eng.characters.is_not_a_faction_in_descr_2": "{who}: {f} ist keine Fraktion in descr_sm_factions.txt",
@@ -13080,5 +13084,30 @@
  "sheets.interchange_preview": "Vorschau der zugeordneten IDs und Felder",
  "sheets.interchange_stage": "Diesen geprüften Import vormerken",
  "sheets.interchange_formula_issues": "Probleme mit importierten Formeln",
- "sheets.interchange_help": "Wähle für jedes Tabellenblatt die Ansicht und die Kopfzeile aus und ordne die Spalten anschließend ausdrücklich zu. Ordne die exakte Einheiten-ID oder alle Regelschlüsselspalten zu. Nicht zugeordnete Spalten bleiben als zusätzliche Daten erhalten. Wähle für jede aufgeteilte Spalte eines Listenfelds dasselbe Listenfeld aus. Leere native Zellen lassen Felder unverändert; [] leert eine Liste. Prüfe die Vorschau vor dem Vormerken. CSV-Exporte verwenden berechnete Werte; unterstützte Formeln erfordern XLSX mit importiertem Layout. Beispiele und Einschränkungen für Formeln findest du unter docs/SHEET_INTERCHANGE.md."
+ "sheets.interchange_help": "Wähle für jedes Tabellenblatt die Ansicht und die Kopfzeile aus und ordne die Spalten anschließend ausdrücklich zu. Ordne die exakte Einheiten-ID oder alle Regelschlüsselspalten zu. Nicht zugeordnete Spalten bleiben als zusätzliche Daten erhalten. Wähle für jede aufgeteilte Spalte eines Listenfelds dasselbe Listenfeld aus. Leere native Zellen lassen Felder unverändert; [] leert eine Liste. Prüfe die Vorschau vor dem Vormerken. CSV-Exporte verwenden berechnete Werte; unterstützte Formeln erfordern XLSX mit importiertem Layout. Beispiele und Einschränkungen für Formeln findest du unter docs/SHEET_INTERCHANGE.md.",
+ "charmodels.title": "Fraktionsmodelle",
+ "charmodels.characters": "Charaktere",
+ "charmodels.level": "Stufe {level}",
+ "charmodels.line": "Zeile {line}",
+ "charmodels.default": "Standard",
+ "charmodels.no_trait": "Keine Eigenschaft verleiht diese Stufe",
+ "charmodels.more": "{names} +{n} weitere",
+ "charmodels.pick": "Fraktion auswählen",
+ "charmodels.help": "Die Position einer strat_model-Zeile bestimmt die Stufe des Charakters: Eigenschaften verleihen Stufen, Kommentare dienen nur als Beschriftung. Der Typ general bezeichnet den Hauptmann. Änderungen an einem Block, den mehrere Fraktionen gemeinsam nutzen, gelten für alle diese Fraktionen. Vor „Übernehmen“ auf „Vorschau“ klicken; jeder Speichervorgang hat eine eigene Sicherung und kann über „Rückgängig“ im Log rückgängig gemacht werden. Leibwachen sind Einheiten und werden im Einheiteneditor bearbeitet.",
+ "charmodels.horse": "Keine Pferdeanimation: Generäle und Hauptleute verwenden zu Fuß und beritten dasselbe Schlachtmodell.",
+ "charmodels.campaign_characters": "Anführer und Erben der Kampagne sowie Schlachtmodelle der Charaktere",
+ "charmodels.scripts": "Änderungen am Kampagnenskript (schreibgeschützt)",
+ "charmodels.symbols": "Fraktionssymbole (schreibgeschützt)",
+ "charmodels.textures": "Strategiemodelle mit dieser Fraktionstextur (schreibgeschützt)",
+ "charmodels.commented": "Auskommentiert",
+ "charmodels.failed": "Planung oder Speichern fehlgeschlagen",
+ "charmodels.applied": "Gespeichert ({count}) und neu geladen. Jeder Speichervorgang kann im Log rückgängig gemacht werden.",
+ "charmodels.role_generals": "Generäle aus der Fraktionsfamilie",
+ "charmodels.role_captain": "Hauptmann",
+ "charmodels.role_general": "Familiengeneral",
+ "charmodels.role_leader": "Fraktionsanführer",
+ "charmodels.role_heir": "Fraktionserbe",
+ "eng.charmodels.unreached": "{type}, Stufe {level}: Keine Eigenschaft dieses Charaktertyps verleiht diese Stufe",
+ "eng.charmodels.missing": "{model} ist kein modeldb-Eintrag",
+ "eng.charmodels.horse": "{model} hat keine Pferdeanimation; Generäle und Hauptleute verwenden zu Fuß und beritten dasselbe Modell"
 }

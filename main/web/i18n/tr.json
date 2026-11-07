@@ -524,6 +524,15 @@
   ],
   "sheets.mapping_example": [
    "unit"
+  ],
+  "charmodels.help": [
+   "general"
+  ],
+  "charmodels.horse": [
+   "mount"
+  ],
+  "eng.charmodels.horse": [
+   "mount"
   ]
  },
  "ancillaries.a_character_holds_one_ancillary_per": "Bir karakter'de tür başına bir ancillary bulunur; dolayısıyla yenisi bunun yerini alır",
@@ -5002,7 +5011,6 @@
  "eng.characters.has_no_battle_model_so_it": "{who}'nin battle_model'i yok, dolayısıyla savaşacak modeli yok",
  "eng.characters.has_no_strat_model_so_it": "{who}'nin strat_model'i yok, dolayısıyla haritada duracak hiçbir şeyi yok",
  "eng.characters.has_no_type_section": "{REL}'de tip bölümü yok",
- "eng.characters.has_strat_model_s_a_named": "{who}, {models_n} strateji model(ler)ine sahiptir; adlandırılmış bir karakterin her biri varsayılan, varis ve lider için birer taneye sahiptir",
  "eng.characters.has_two_blocks_lines_and_only": "{name} : {f}'de iki blok bulunur ({seen} ve {x} satırları); sadece bir tanesi okunuyor",
  "eng.characters.is_not_a_faction_in_descr": "{fac}, descr_sm_factions.txt'deki bir fraksiyon değil",
  "eng.characters.is_not_a_faction_in_descr_2": "{who} : {f}, descr_sm_factions.txt'deki bir fraksiyon değil",
@@ -12594,5 +12602,30 @@
  "sheets.interchange_preview": "Eşleştirilen kimlikleri ve alanları önizle",
  "sheets.interchange_stage": "Doğrulanan bu içe aktarımı uygulamaya hazırla",
  "sheets.interchange_formula_issues": "İçe aktarılan formüllerdeki sorunlar",
- "sheets.interchange_help": "Her sayfanın görünümünü ve başlık satırını seçin, ardından sütunları açıkça eşleyin. Tam birim kimliğini veya tüm kural anahtarı sütunlarını eşleyin. Eşlenmeyen sütunlar ek veri olarak korunur. Bir liste alanının bölündüğü her sütun için aynı liste alanını seçin. Boş yerel hücreler alanları değiştirmez; [] bir listeyi temizler. Değişiklikleri hazırlamadan önce önizlemeyi kontrol edin. CSV dışa aktarımları hesaplanan değerleri kullanır; desteklenen formüller için içe aktarılmış düzene sahip XLSX gerekir. Örnekler ve formül sınırlamaları için docs/SHEET_INTERCHANGE.md dosyasına bakın."
+ "sheets.interchange_help": "Her sayfanın görünümünü ve başlık satırını seçin, ardından sütunları açıkça eşleyin. Tam birim kimliğini veya tüm kural anahtarı sütunlarını eşleyin. Eşlenmeyen sütunlar ek veri olarak korunur. Bir liste alanının bölündüğü her sütun için aynı liste alanını seçin. Boş yerel hücreler alanları değiştirmez; [] bir listeyi temizler. Değişiklikleri hazırlamadan önce önizlemeyi kontrol edin. CSV dışa aktarımları hesaplanan değerleri kullanır; desteklenen formüller için içe aktarılmış düzene sahip XLSX gerekir. Örnekler ve formül sınırlamaları için docs/SHEET_INTERCHANGE.md dosyasına bakın.",
+ "charmodels.title": "Fraksiyon modelleri",
+ "charmodels.characters": "Karakterler",
+ "charmodels.level": "seviye {level}",
+ "charmodels.line": "satır {line}",
+ "charmodels.default": "Varsayılan",
+ "charmodels.no_trait": "Hiçbir özellik bu seviyeyi vermez",
+ "charmodels.more": "{names} +{n} tane daha",
+ "charmodels.pick": "Bir fraksiyon seçin",
+ "charmodels.help": "Bir strat_model satırının konumu karakterin seviyesini belirler: özellikler seviye verir, yorumlar ise yalnızca etikettir. general türü yüzbaşıyı belirtir. Birkaç fraksiyonun paylaştığı bir blok değiştirildiğinde hepsi etkilenir. Önce “Önizleme”, sonra “Uygula” düğmesini kullanın; her kaydın kendi yedeği ve Log içinde “Geri al” seçeneği vardır. Muhafızlar birimdir ve Birim Düzenleyicisi'nde düzenlenir.",
+ "charmodels.horse": "At animasyonu yok: generaller ve yüzbaşılar yaya ve atlıyken aynı savaş modelini kullanır.",
+ "charmodels.campaign_characters": "Kampanya liderleri, varisleri ve karakter savaş modelleri",
+ "charmodels.scripts": "Kampanya script değişiklikleri (salt okunur)",
+ "charmodels.symbols": "Fraksiyon simgeleri (salt okunur)",
+ "charmodels.textures": "Bu fraksiyon dokusunu kullanan strateji modelleri (salt okunur)",
+ "charmodels.commented": "Yorum satırı olarak devre dışı",
+ "charmodels.failed": "Planlama veya kaydetme başarısız oldu",
+ "charmodels.applied": "Kaydedildi ({count}) ve yeniden yüklendi. Her kayıt Log içinde geri alınabilir.",
+ "charmodels.role_generals": "Fraksiyon ailesinden generaller",
+ "charmodels.role_captain": "Yüzbaşı",
+ "charmodels.role_general": "Aile generali",
+ "charmodels.role_leader": "Fraksiyon lideri",
+ "charmodels.role_heir": "Fraksiyon varisi",
+ "eng.charmodels.unreached": "{type}, seviye {level}: bu karakter türünün hiçbir özelliği bu seviyeyi vermez",
+ "eng.charmodels.missing": "{model}, modeldb içinde bir girdi değil",
+ "eng.charmodels.horse": "{model} için at animasyonu yok; generaller ve yüzbaşılar yaya ve atlıyken aynı modeli kullanır"
 }
