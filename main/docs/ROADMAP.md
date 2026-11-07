@@ -1492,12 +1492,6 @@ installed mods to read, measure or check against:
   model names (85 reports them and never removes them), duplicate animations
   under different paths, and folding loose `.cas` files back into the pack.
   Measure each on Reforged and DaC first.
-* **101i - Strat model cleaner.** The campaign-map counterpart of the BMDB
-  cleanup: `descr_model_strat.txt` entries no character, faction or script
-  names, and the `.cas` / texture files under `data/models_strat` nothing
-  points at, moved out with one Undo. Which files name a strat model has to be
-  measured over the installed mods (descr_character.txt, descr_sm_factions.txt,
-  descr_strat.txt, campaign scripts, EOP Lua) before anything is removed.
 * **101j - Captains, leaders and each faction's unique models in the Models
   Editor.** Editable: the general's / captain's bodyguard and the faction
   leader / heir models (`descr_character.txt` per faction, and the

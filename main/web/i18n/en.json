@@ -6126,6 +6126,7 @@
 "eng.stratmap.is_not_in_any_more_skipped": "{raw} is not in {REL} any more - skipped",
 "eng.stratmap.is_not_there_any_more_skipped": "{rel} is not there any more - skipped",
 "eng.stratmap.is_used_by_kept": "{name} is used by {who} - kept",
+"eng.stratmap.not_the_mods_own_file": "{file} is not {mod}'s own file (it is read from the game's packs), so nothing is cleaned",
 "eng.stratmap.no_strat_model_in": "no strat model {name} in {name2}",
 "eng.stratmap.nothing_is_ticked": "nothing is ticked",
 "eng.stratobj.a_resource_line_names_the_resource": "A resource line names the resource first, and this one names nothing.",

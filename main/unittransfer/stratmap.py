@@ -21,7 +21,18 @@ its 2 MB texture sit unnoticed, because nothing in game ever draws them.
   * anything else: any ``data/descr_*.txt``, and every campaign's
     ``descr_strat.txt`` / ``campaign_script.txt``, that merely *mentions* the
     name counts too, bar :data:`DESCR_SKIP`. Over-cautious on purpose - a false
-    "still used" costs nothing, a false "unused" silently breaks a mod.
+    "still used" costs nothing, a false "unused" silently breaks a mod;
+  * **the copies outside ``data/``** (101i): every ``descr_character.txt``,
+    ``descr_*.txt`` and campaign script anywhere else in the mod, such as an
+    installer's ``Activate/NORMAL/data/``. Those become the live files the
+    moment somebody runs the mod's own switcher, and Divide and Conquer names
+    five strat models only there. See :func:`_scanned`;
+  * **the game's packs**, for a mod that keeps its files there (the base game,
+    a Kingdoms campaign): ``descr_character.txt`` and the other reference files
+    are read through :meth:`Mod.game_or`, as ``descr_model_strat.txt`` already
+    was. Without that the base game showed 67 of its 78 models as unused. Such
+    a mod has no ``descr_model_strat.txt`` of its own to rewrite, so
+    :func:`plan_cleanup` refuses it.
 
 **What names a file under ``data/models_strat``**:
 
@@ -402,15 +413,138 @@ def campaign_files(mod: Mod) -> List[Path]:
     return out
 
 
-def _scanned_files(mod: Mod) -> List[Path]:
-    """Every mod file this module reads looking for a name or a path.
+#: Read through :meth:`Mod.game_or` even when the mod has no loose copy, so a
+#: mod whose files are in packs (the base game, a Kingdoms campaign) is checked
+#: against the same files the game reads. The four that name strat models.
+PACKED_REFS = ("descr_character.txt", "descr_sm_factions.txt",
+               "descr_sm_resources.txt", "descr_cultures.txt")
 
-    One list, used by both nets, so "which files were consulted" has a single
-    answer the dialog can print rather than two that could drift apart.
+
+def _in(path: Path, folder: Path) -> bool:
+    try:
+        path.resolve().relative_to(folder.resolve())
+        return True
+    except (OSError, ValueError):
+        return False
+
+
+def _label(mod: Mod, path: Path) -> str:
+    """How a scanned file is named in the dialog.
+
+    The mod's own ``data/descr_*.txt`` by its name and a campaign's files as
+    ``<campaign>/<file>``, as they always were; anything outside ``data/`` (a
+    switch folder's copy, ``eopData/``) by its path from the mod root, because
+    there the same filename turns up in several trees.
     """
-    out = [p for p in sorted(mod.data.glob("descr_*.txt"))
-           if p.name.lower() not in DESCR_SKIP]
-    return out + campaign_files(mod)
+    try:
+        rel = path.resolve().relative_to(mod.root.resolve()).as_posix()
+    except (OSError, ValueError):
+        return path.name
+    low = rel.lower()
+    if low.count("/") == 1 and low.startswith("data/"):
+        return path.name
+    if low.startswith("data/world/maps/campaign/") and low.count("/") == 5:
+        return f"{path.parent.name}/{path.name}"
+    return rel
+
+
+def _packed_files(mod: Mod) -> List[Tuple[Path, str]]:
+    """``(path, label)`` for the reference files a pack mod keeps in its packs.
+
+    Empty for a plain mod. For the base game, or a Kingdoms campaign, every
+    ``data/descr_*.txt`` and campaign file its own packs hold, plus
+    :data:`PACKED_REFS` wherever the game would find them (a campaign leans on
+    the base game for what it does not ship), each read out through
+    :meth:`Mod.game_or`.
+    """
+    prefix = gamepack.own_prefix(mod)
+    if not prefix:
+        return []
+    rels: List[str] = list(PACKED_REFS)
+    try:
+        packs = gamepack.packs(mod.root)
+    except (OSError, ValueError):
+        packs = []
+    for pack in packs:
+        for name in pack.entries:
+            if not name.startswith(prefix):
+                continue
+            rest = name[len(prefix):]
+            parts = rest.split("/")
+            if (len(parts) == 1 and rest.startswith("descr_") and rest.endswith(".txt")
+                    and rest not in DESCR_SKIP):
+                rels.append(rest)
+            elif (len(parts) == 5 and rest.startswith("world/maps/campaign/")
+                    and parts[4] in CAMPAIGN_FILES):
+                rels.append(rest)
+    out: List[Tuple[Path, str]] = []
+    for rel in dict.fromkeys(rels):
+        loose = mod.data / rel
+        if loose.is_file():
+            continue                            # the loose walk has it already
+        path = mod.game_or(loose)
+        if path.is_file():
+            parts = rel.split("/")
+            out.append((path, rel if len(parts) == 1 else f"{parts[3]}/{parts[4]}"))
+    return out
+
+
+def _alternate(mod: Mod, path: Path) -> bool:
+    """Is ``path`` outside the mod's ``data/``: a switch folder's copy, say?"""
+    return not _in(path, mod.data)
+
+
+def _scanned(mod: Mod) -> List[Tuple[Path, str]]:
+    """``(path, label)`` for every file this module reads for a name or a path.
+
+    One list, used by every net, so "which files were consulted" has a single
+    answer the dialog can print rather than several that could drift apart:
+
+      * the mod's own ``data/descr_*.txt`` and its campaigns' files;
+      * the same files in packs, for a mod that keeps them there;
+      * every campaign / battle script anywhere in the mod, and every
+        ``descr_*.txt`` outside ``data/`` - an installer's ``Activate/`` copy
+        becomes the live mod the moment somebody runs the mod's own switcher
+        (Divide and Conquer names five strat models only there). These come out
+        of the one walk of the mod root :attr:`Mod.scanned_files` already makes
+        for the Lua net, the same walk :func:`unittransfer.bmdb.campaign_files`
+        uses for the same reason.
+    """
+    paths = [p for p in sorted(mod.data.glob("descr_*.txt"))
+             if p.name.lower() not in DESCR_SKIP]
+    paths += campaign_files(mod)
+    walked = mod.scanned_files if mod.root.is_dir() else {}
+    paths += list(walked.get("campaign", []))
+    paths += [p for p in walked.get("text", [])
+              if p.name.lower().startswith("descr_") and p.suffix.lower() == ".txt"
+              and p.name.lower() not in DESCR_SKIP and _alternate(mod, p)]
+    out: List[Tuple[Path, str]] = []
+    seen: set = set()
+    for p in paths:
+        try:
+            key = str(p.resolve()).lower()
+        except OSError:
+            key = str(p).lower()
+        if key in seen:
+            continue
+        seen.add(key)
+        out.append((p, _label(mod, p)))
+    return out + _packed_files(mod)
+
+
+def _character_files(mod: Mod) -> List[Tuple[Path, str]]:
+    """``(path, where)``: the live ``descr_character.txt``, then every other copy.
+
+    The live one through :meth:`Mod.game_or`, so a mod that keeps it in packs is
+    read too. ``where`` is ``""`` for it and the copy's folder for the others.
+    """
+    live = mod.game_or(mod.data / "descr_character.txt")
+    out = [(live, "")]
+    walked = mod.scanned_files if mod.root.is_dir() else {}
+    for p in walked.get("text", []):
+        if p.name.lower() == "descr_character.txt" and _alternate(mod, p):
+            out.append((p, _label(mod, p.parent)))
+    return out
 
 
 def entry_users(mod: Mod) -> Dict[str, Dict[str, List[str]]]:
@@ -432,15 +566,17 @@ def entry_users(mod: Mod) -> Dict[str, Dict[str, List[str]]]:
         if who not in slot[kind]:
             slot[kind].append(who)
 
-    text = _strip_comments(_read(mod.data / "descr_character.txt"))
-    block = ""
-    for line in text.splitlines():
-        parts = line.split(None, 1)
-        if parts and parts[0].lower() == "type" and len(parts) > 1:
-            block = parts[1].strip()
-        elif parts and parts[0].lower() == "strat_model" and len(parts) > 1:
-            add(parts[1].split()[0], "character",
-                f"character:{block or 'descr_character.txt'}")
+    for path, where in _character_files(mod):
+        text = _strip_comments(_read(path))
+        block = ""
+        for line in text.splitlines():
+            parts = line.split(None, 1)
+            if parts and parts[0].lower() == "type" and len(parts) > 1:
+                block = parts[1].strip()
+            elif parts and parts[0].lower() == "strat_model" and len(parts) > 1:
+                who = f"character:{block or 'descr_character.txt'}"
+                add(parts[1].split()[0], "character",
+                    f"{who} ({where})" if where else who)
     for e in strat_file(mod).entries:
         if e.sprite_of:
             add(e.sprite_of, "sprite", f"sprite:{e.name}")
@@ -450,11 +586,10 @@ def entry_users(mod: Mod) -> Dict[str, Dict[str, List[str]]]:
 def _descr_tokens(mod: Mod) -> Dict[str, str]:
     """``token -> the file it appeared in``, for the "somebody names it" net."""
     out: Dict[str, str] = {}
-    for path in _scanned_files(mod):
+    for path, label in _scanned(mod):
         text = _read(path).lower()
         if not text:
             continue
-        label = path.name if path.parent == mod.data else f"{path.parent.name}/{path.name}"
         for tok in set(_TOKEN_RE.findall(text)):
             out.setdefault(tok, label)
     return out
@@ -509,14 +644,16 @@ def file_users(mod: Mod) -> Dict[str, List[str]]:
     for e in strat_file(mod).entries:
         for p in e.paths():
             add(p, f"entry:{e.name}")
-    for path in _scanned_files(mod) + list(mod.lua_files):
+    lua = []
+    for path in mod.lua_files:
+        try:
+            lua.append((path, path.relative_to(mod.root).as_posix()))
+        except ValueError:
+            lua.append((path, path.name))
+    for path, label in _scanned(mod) + lua:
         text = _read(path)
         if MODELS_DIR not in text and MODELS_DIR.upper() not in text.upper():
             continue
-        try:
-            label = path.relative_to(mod.root).as_posix()
-        except ValueError:
-            label = path.name
         for hit in _PATH_RE.findall(text):
             add(hit, label)
     return out
@@ -669,8 +806,7 @@ def audit(mod: Mod, scan_orphans: bool = True, progress: Progress = None) -> dic
         "held_file_count": len(held),
         "referenced_files": len(refs),
         "skipped_dir": f"{MODELS_DIR}/{SKIP_SUBDIR}",
-        "scanned": [p.name if p.parent == mod.data else f"{p.parent.name}/{p.name}"
-                    for p in _scanned_files(mod)],
+        "scanned": [label for _p, label in _scanned(mod)],
         "lua_files": lua_count,
         "lua_kept": [m for m in mentioned if m.get("lua")],
     }
@@ -844,6 +980,13 @@ def plan_cleanup(mod: Mod, req: CleanupRequest) -> CleanupPlan:
 
     sf = strat_file(mod)
     entries = sf.by_name()
+    if sf.entries and not (mod.data / REL).is_file():
+        # Read out of the game's packs: there is no file of the mod's own to
+        # rewrite, and writing one would lay a cut-down copy over the packs'.
+        plan.errors.append(_i18n.msg(
+            "eng.stratmap.not_the_mods_own_file",
+            "{file} is not {mod}'s own file (it is read from the game's packs), "
+            "so nothing is cleaned", file=REL, mod=mod.name))
     # Re-checked against the mod rather than trusted: a scan can be older than the
     # mod it describes, and a request can arrive from a saved selection. This is
     # the last line of defence, not a duplicate of the audit - the audit decides

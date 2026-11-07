@@ -323,5 +323,125 @@ check("says so rather than raising",
       empty["has_file"] is False and empty["entry_count"] == 0
       and empty["unused"] == [])
 
+print("\n== 101i: a switch folder's own data/ (Divide and Conquer's Activate/) ==")
+# DaC ships Activate/NORMAL/data and Activate/SPEED/data, which its launcher
+# copies over data/ when that option is picked. A model only the copied-in
+# descr_character.txt names is still used, and so is a file only the copied-in
+# descr_cultures.txt names.
+alt_root = fresh_mod()
+alt = alt_root / "Activate" / "NORMAL" / "data"
+alt.mkdir(parents=True)
+(alt / "descr_character.txt").write_text(
+    "type\t\t\tnamed character\r\nfaction\t\t\tengland\r\n"
+    "strat_model\t\tdead_general\t; 0 (Default)\r\n", encoding="latin-1")
+(alt / "descr_cultures.txt").write_text(
+    "fort\r\n\tnormal\tdata/models_strat/orphan.CAS,\tlevel_1\r\n", encoding="latin-1")
+kd = alt_root / "Activate" / "KD_SKIP"
+kd.mkdir(parents=True)
+(kd / "campaign_script.txt").write_text(
+    "spawn_character england named_general_alt, strat_model lua_general\r\n",
+    encoding="latin-1")
+alt_mod = Mod(alt_root)
+a3 = stratmap.audit(alt_mod)
+unused3 = {u["entry"] for u in a3["unused"]}
+orphans3 = {o["rel"] for o in a3["orphans"]}
+check("a model only the switch folder's descr_character.txt names is not unused",
+      "dead_general" not in unused3)
+check("…and the scan says the switch folder named it",
+      any("Activate/NORMAL/data" in w
+          for w in stratmap.entry_users(alt_mod).get("dead_general", {}).get("character", [])))
+check("a file only the switch folder's descr_cultures.txt names is not an orphan",
+      "models_strat/orphan.CAS" not in orphans3)
+check("the file nothing anywhere names is still an orphan",
+      "models_strat/textures/orphan.tga" in orphans3)
+check("the scanned-file list names the switch folder's files",
+      "Activate/NORMAL/data/descr_character.txt" in a3["scanned"]
+      and "Activate/NORMAL/data/descr_cultures.txt" in a3["scanned"])
+check("a campaign script in a switch folder is read too",
+      "Activate/KD_SKIP/campaign_script.txt" in a3["scanned"])
+check("the mod's own data/ files keep their short labels",
+      "descr_character.txt" in a3["scanned"]
+      and "data/descr_character.txt" not in a3["scanned"])
+alt_target = Path(_tmp.mkdtemp(prefix="ut_strat_alt_out_"))
+plan3 = stratmap.plan_cleanup(alt_mod, stratmap.cleanup_request_from_dict({
+    "target": str(alt_target), "entries": ["dead_general"],
+    "orphans": ["models_strat/orphan.CAS"]}))
+check("a cleanup asked to remove it keeps it, and says the switch folder uses it",
+      not plan3.entry_deletes
+      and any("dead_general" in w and "Activate/NORMAL/data" in w for w in plan3.warnings))
+check("…and keeps the file the switch folder names",
+      "models_strat/orphan.cas" in plan3.kept_files and not plan3.deletes)
+
+
+print("\n== 101i: a mod whose files are in packs (the base game) ==")
+
+
+def write_pack(path: Path, files):
+    """A PACK file holding ``files`` ({name: bytes}), every block stored.
+
+    The writer tests/test_gamepack.py holds the reader to; copied rather than
+    imported, because importing that module runs its checks.
+    """
+    import struct
+    from unittransfer import gamepack
+    names = list(files)
+    blocks, firsts = [], []
+    for name in names:
+        firsts.append(len(blocks))
+        blob = files[name]
+        blocks += [len(blob[i:i + gamepack.BLOCK]) for i in range(0, len(blob), gamepack.BLOCK)]
+
+    def records(data_at):
+        out, starts = b"", []
+        for name, first in zip(names, firsts):
+            starts.append(len(out))
+            rec = struct.pack("<4I", data_at, first, len(files[name]), len(files[name]))
+            rec += name.encode() + b"\0"
+            out += rec + b"\0" * (-len(rec) % 4)
+            data_at += len(files[name])
+        return out, starts
+
+    head = 24 + 4 * (len(names) - 1) + 4 * len(blocks)
+    index, starts = records(head + len(records(0)[0]))
+    path.write_bytes(b"PACK" + struct.pack("<HHIIII", 0, 3, len(names), len(index), len(blocks), 0)
+                     + struct.pack(f"<{len(names) - 1}I", *starts[1:])
+                     + struct.pack(f"<{len(blocks)}I", *blocks) + index
+                     + b"".join(files[n] for n in names))
+
+
+game = Path(_tmp.mkdtemp(prefix="ut_strat_game_"))
+(game / "packs").mkdir()
+(game / "mods").mkdir()
+(game / "data").mkdir()
+write_pack(game / "packs" / "data_0.pack", {
+    "data/descr_model_strat.txt": STRAT.encode("latin-1"),
+    "data/descr_character.txt": CHARACTER.encode("latin-1"),
+    "data/descr_names.txt": NAMES.encode("latin-1"),
+    "data/descr_sm_factions.txt": FACTIONS.encode("latin-1"),
+})
+game_mod = Mod(game)
+a4 = stratmap.audit(game_mod, scan_orphans=False)
+unused4 = {u["entry"] for u in a4["unused"]}
+check("the packed descr_model_strat.txt is read", a4["entry_count"] == 7)
+check("the packed descr_character.txt is read, so its models are not unused",
+      "used_general" not in unused4 and "sprite_borrower" not in unused4)
+check("a name in a packed descr_*.txt keeps a model too",
+      "named_general" not in unused4)
+check("only the model nothing names is unused (the fixture's packs hold no .lua, "
+      "so the Lua-only one is unused here too)",
+      unused4 == {"dead_general", "lua_general"})
+game_target = Path(_tmp.mkdtemp(prefix="ut_strat_game_out_"))
+plan4 = stratmap.plan_cleanup(game_mod, stratmap.cleanup_request_from_dict({
+    "target": str(game_target), "entries": ["dead_general"]}))
+check("a cleanup refuses when descr_model_strat.txt is not the mod's own loose file",
+      bool(plan4.errors) and any(stratmap.REL in e for e in plan4.errors))
+try:
+    stratmap.apply_cleanup(plan4)
+    applied = True
+except ValueError:
+    applied = False
+check("…and applying that plan raises, writing nothing",
+      not applied and not (game / "data" / stratmap.REL).exists())
+
 print(f"\n{sum(ok)}/{len(ok)} checks - {'ALL PASSED' if all(ok) else 'FAILURES ABOVE'}")
 sys.exit(0 if all(ok) else 1)
