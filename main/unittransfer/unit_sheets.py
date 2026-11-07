@@ -331,14 +331,26 @@ def service(mod,action,body=None,cancelled=None):
     """Sheet API. Everything here writes project config only, never game data."""
     from . import sheet_ops
     body=body or {}
+    if action=='import' and body.get('kind','csv') not in ('project','edb_json'):
+        from . import sheet_interchange
+        sheet_interchange.refuse('explicit_mapping_required')
     with _LOCK:
         dry_run = body.get('dry_run') is True and action in ('operate', 'paste')
-        p=load_project(mod, persist_migration=not dry_run and action not in ('balance_preview','balance_export','balance_apply'));before=revision(p)
+        p=load_project(mod, persist_migration=not dry_run and action not in ('balance_preview','balance_export','balance_apply','interchange_inspect','interchange_preview','interchange_import','interchange_export'));before=revision(p)
         original_project = copy.deepcopy(p)
         if action not in ('load','query','export'):
             if body.get('revision')!=before:fail(_i18n.msg('eng.sheets.the_sheet_project_changed_reload_before_editing','the sheet project changed; reload before editing'))
             if body.get('source_token')!=source_token(mod):fail(_i18n.msg('eng.sheets.game_data_changed_refresh_before_editing','game data changed; refresh before editing'))
         report={}
+        if action.startswith('interchange_'):
+            from . import sheet_interchange
+            if action=='interchange_inspect':return sheet_interchange.inspect(body)
+            if action=='interchange_export':return sheet_interchange.export(mod,p,body)
+            if action=='interchange_preview':return sheet_interchange.prepare(mod,p,body)[1]
+            if action=='interchange_import':
+                if body.get('preview_token')!=sheet_interchange.token(mod,p,body):
+                    sheet_interchange.refuse('preview_changed')
+                p,report=sheet_interchange.prepare(mod,p,body)
         recipe = None
         if action == 'operate' and 'recipe_name' in body:
             name = body['recipe_name']
@@ -419,13 +431,11 @@ def service(mod,action,body=None,cancelled=None):
         if action=='import':
             kind=body.get('kind','csv');text=body.get('text','')
             if len(text)>20*1024*1024:fail(_i18n.msg('eng.sheets.import_is_larger_than_20_mb','import is larger than 20 MB'))
-            if kind in RULE_KEYS:p=import_rules(p,text,kind)
-            elif kind=='project':
+            if kind=='project':
                 try:p=validate_project(json.loads(text))
                 except json.JSONDecodeError as e:fail(str(e))
             elif kind=='edb_json':
                 report={'snapshot_recruits':len(import_edb_json(text))}
-            else:p,report=import_reference(p,text,kind,body.get('mapping'))
         elif action == 'group':
             p = change_group(mod, p, body)
         elif action == 'rule_structure':
@@ -460,7 +470,7 @@ def service(mod,action,body=None,cancelled=None):
                 out=io.StringIO(newline='');writer=csv.DictWriter(out,fieldnames=headers);writer.writeheader();writer.writerows(rows)
                 return {'name':kind+'.csv','text':out.getvalue(),'mime':'text/csv'}
             return {'name':'unit_sheets_project.json','text':json.dumps(p,indent=2,ensure_ascii=False),'mime':'application/json'}
-        elif action not in ('load','query'):fail(_i18n.msg('eng.sheets.unknown_sheet_action','unknown sheet action'))
+        elif action not in ('load','query','interchange_import'):fail(_i18n.msg('eng.sheets.unknown_sheet_action','unknown sheet action'))
         if action == 'save' or action == 'import' and body.get('kind') == 'project':
             # Project replacement cannot bypass typed rule-cell validation.
             for kind in RULE_KEYS:
@@ -476,7 +486,7 @@ def service(mod,action,body=None,cancelled=None):
         rows,_=sheet_ops.records(mod,p)
         comparison_group = sheet_ops.compare_group(mod, p, body.get('comparison_group'), rows)
         stale_drafts=[r['id'] for r in rows if r.get('stale_draft')]
-        if revision(p)!=before and not dry_run:save_project(mod,p,before)
+        if revision(p)!=before and not dry_run and action!='interchange_import':save_project(mod,p,before)
         if body.get('view')=='recruitment':
             from . import edb_balance
             native = {row['id']: row for row in rows}
@@ -515,6 +525,7 @@ def service(mod,action,body=None,cancelled=None):
                           field_info={column['name']:{'type':column['type'], 'view':body['view']}
                                       for column in p['rule_schema'][rule_kind]})
         table=sheet_ops.query(rows,body.get('where'),body.get('sort'),body.get('offset',0),body.get('limit',100))
+        if action=='interchange_import' and revision(p)!=before:save_project(mod,p,before)
         if action in ('operate', 'paste'):
             report['target_count'] = len({change['id'] for change in report['changes']})
         if dry_run:
@@ -523,6 +534,7 @@ def service(mod,action,body=None,cancelled=None):
         from . import edb_balance
         # Share server defaults without persisting them as project overrides.
         return {'project':p,'revision':revision(p),'source_token':source_token(mod),'stale_drafts':stale_drafts,
+                'formula_issues':[issue for row in rows for issue in row.get('formula_issues',[])],
                 'balance_effective':edb_balance.profile_of(p),
                 'balance_profile_rules':dict(edb_balance.PROFILE_RULES),
                 'invalid_recipes':sheet_ops.invalid_recipes(p),

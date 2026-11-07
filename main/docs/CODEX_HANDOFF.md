@@ -4,6 +4,121 @@ Newest entries first. This records Codex's work for Claude; project status and
 release rules remain in STATE.md and RELEASE.md. Do not assume the working tree's
 other changes belong to Codex.
 
+## 2026-11-08 - Phase 115 completed and fixture-verified, ready for Claude review
+
+- Exit items 1-6: DONE in automated fixtures. In-app CSV and standard-library
+  XLSX import/export cover classifications, Base stats, Attributes, Soft stats
+  and all three rule tables. Keyed Fynn EDU JSON uses the same mapping/preview.
+  No dependency added. docs/SHEET_INTERCHANGE.md documents choices and limits.
+- New isolated adapter reads relationships, shared/inline strings and actual
+  populated cells with zipfile/XML, without extraction, executing links/macros,
+  or trusting declared dimensions. Formatted and empty inline/CSV cells do not
+  create records. Compressed/uncompressed/cell/XML bounds are documented.
+- Explicit per-worksheet view/header/column mapping distinguishes duplicates by
+  source index. Arrays explicitly combine split list columns. Preview exposes
+  validated IDs, fields, before/after changes, ignored rows and formula issues.
+  Its token binds source/mappings/project/native source. Mapping changes clear
+  the UI preview. Only live EDU IDs match; joins and rule merges use identity,
+  never position. Duplicate identities/targets/keys and invalid cells refuse
+  the entire import. The old direct CSV/rule/Fynn EDU HTTP import now refuses
+  preview bypass. Pure legacy adapter helpers remain for offline compatibility.
+- Import validates a private project copy, including the resulting response
+  filter, before saving. Staged work, omitted fields/rule rows and existing rule
+  IDs survive. Empty native cells mean unchanged, explicit zero remains zero,
+  blank annotations/rule cells remain blank and [] clears a list. Explicit no
+  also clears a split list with no other entries. Absent lists do not create
+  defaults. Unknown unit/rule columns survive either export layout with
+  collision-safe labels. Imported-layout list overflow refuses truncation;
+  native editing/native-header export continue to accept the full list.
+- Imported layouts retain headers, source positions, presentation rows and
+  header-row gaps. CSV has no worksheet title, so its layout is named CSV.
+  The existing native patcher still owns omitted tuple members, unknown fields,
+  comments and Apply/backup/Undo; no converter defaults rebuild game fields.
+- Documented formula subset: finite numeric constants, parentheses, unary +/-
+  and binary + - * /, same-sheet A1 references with optional $ anchors.
+  Limits: 1024 characters, 64 AST nodes and dependency depth 64. Functions,
+  ranges, cross-sheet/named/structured/shared/array formulas and other syntax
+  are unsupported. Cycles, missing inputs, division by zero and nonfinite
+  results are unavailable, never zero. Missing caches and differing supported
+  caches are named; unsupported caches are never trusted. EDU AND rule formula
+  extras recalculate against current staged mapped values, remain read-only
+  derived columns and expose issues on preview/reopen/export.
+- Export choices: computed values for CSV/XLSX; supported formulas with current
+  caches only when XLSX plus imported layout is explicitly selected. Native
+  header/formula requests are refused rather than moving references. Unsupported
+  formulas export blank plus named issues. Macros/styles/tables/links are not
+  copied. This is data interchange, not a formatting/Excel-feature round trip.
+- Read original workbook headers and converter text only, never their scripts
+  or macros as executable code. The fixture JSON copies ONLY the actual 40
+  Base stats headings from (20)/(17) and Attributes/Soft stats header shapes;
+  data rows are synthetic. (17) also uses A although the converter expects type.
+  Column 3/925 are mapped explicitly. Original workbooks and real mods unchanged.
+- Tests FIRST: initial backend run had 10 errors on the absent interchange API
+  or module: all_views_csv_and_xlsx_round_trip;
+  current_archived_shapes_and_sparse_formatted_rows;
+  inspect_duplicate_headings_and_reject_ambiguous_mapping;
+  mapping_preview_required_and_atomic_with_zero;
+  keyed_cross_sheet_join_and_explicit_list_clear;
+  formulas_are_derived_named_and_never_native_updates;
+  formula_export_choice_and_recalculation_after_native_edit;
+  rule_import_merges_by_key_preserving_omitted_values;
+  fynn_mapping_validates_ids_and_does_not_substitute_native_stats;
+  preview_token_binds_source_mapping_and_project. Duplicate-refusal assertions
+  initially passed on the old unknown-action refusal and now pass on actual
+  implemented routes. The new Node suite first failed on absent XLSX input.
+- Later tests FIRST failed for absent-list reconstruction, missing canonical
+  unknown columns/formula issues, duplicate/native header collisions, split
+  lists, old list-capacity blocking native edits, save-before-filter-validation,
+  CSV title/header gaps, empty inline/CSV rows, legacy HTTP preview bypass,
+  derived-kind metadata and rule formula recalculation. These now pass. A test
+  assertion was corrected to inspect the worksheet title after CSV import,
+  which necessarily uses CSV. The HTTP/UI acceptance test passed when added:
+  actual unitsheets.js handlers map/preview/stage, project undo/redo, XLSX
+  download and native Apply against a self-cleaning fixture mod/server. Exact
+  bytes change only the requested size tokens; backup Undo restores the original.
+- Files changed by THIS run: unittransfer/sheet_interchange.py,
+  unittransfer/unit_sheets.py, unittransfer/sheet_ops.py, web/js/unitsheets.js,
+  web/i18n/en.json, tests/test_sheet_interchange.py,
+  tests/test_sheet_interchange_ui.js, tests/test_sheet_pipeline.py,
+  tests/fixtures/sheet_workbook_headers.json,
+  docs/SHEET_INTERCHANGE.md and this handoff. NO server.py/protected Armory file
+  or test/.tmp/armory_* edit. Concurrent changes/commits and pre-existing
+  TWCenter deletions/untracked files preserved. No STATE/ROADMAP/ARCHIVE edit.
+  No commit, tag, build or release by this run.
+- New IDs (English ONLY, new catalogue lines unindented):
+  sheets.interchange_invalid, sheets.interchange_file, sheets.interchange_csv,
+  sheets.interchange_xlsx, sheets.interchange_values,
+  sheets.interchange_formulas, sheets.interchange_canonical,
+  sheets.interchange_imported, sheets.interchange_export,
+  sheets.interchange_help, sheets.interchange_skip, sheets.interchange_header,
+  sheets.interchange_extra, sheets.interchange_preview,
+  sheets.interchange_stage, sheets.interchange_formula_issues. Claude translates.
+  Removed six unused English IDs for replaced controls: sheets.column_mapping,
+  sheets.mapping_example, sheets.import_csv, sheets.import_replenish,
+  sheets.import_experience, sheets.import_pool. No other catalogue/dev/i18n edit.
+- Final verification with UT_NO_BROWSER=1: unit_sheets 36, sheet_ops 41,
+  sheet_pipeline 23, sheet_native 8, edb_balance 35, sheet_interchange 29 passed;
+  web_modules 130/130; both Node sheet suites passed; diff check exit 0.
+  First i18n run failed 43/45 due to our obsolete IDs/uncatalogued labels;
+  fixed, subsequent and final runs passed 45/45 including current Armory IDs.
+  The final required run's first pipeline pass found one existing custom-key
+  test still calling the intentionally retired direct import action. Migrated
+  it to explicit preview/import and selected-row editing, additionally verifying
+  that pre-existing rule rows survive. Rerun: 23/23 pipeline tests pass. All
+  required checks now pass. No unrelated i18n failure is being hidden. Added
+  em dash scan: zero. Neither server.py nor any protected file was edited.
+- Python uses the existing ignored .tmp/phase110-step4-runner/sitecustomize.py
+  through PYTHONPATH for the documented sandbox TemporaryDirectory mode issue;
+  runner unchanged. Fixtures clean up with TemporaryDirectory; HTTP servers
+  shut down/join. No task scratch fixture folder/downloaded workbook left.
+- Live usage succeeded at 31%, 36%, 42%, 44%, 48% and finally 50% used in the five-hour window,
+  below this continuation's authorized 90%-used stop. Weekly usage is not the
+  stop threshold. No credits spent/reset. No unresolved policy question.
+- NOT verified: interactive browser/file picker, Excel/LibreOffice opening or
+  recalculation, original user-data round trips, installed-game behavior or
+  Phase 116 real-data/non-EUR/builder integration. Unsupported-cache freshness
+  cannot be verified. Formula/list/layout limits above are explicit, not guesses.
+
 ## 2026-11-07 - Armory requests (a), (b), (c) implemented, ready for Claude review
 
 - (c) Done: default remains soldier. The Armory panel reads the selected unit's

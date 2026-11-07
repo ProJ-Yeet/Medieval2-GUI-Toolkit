@@ -274,13 +274,21 @@ vm.runInContext(fs.readFileSync('web/js/settings.js','utf8'),c);
 
  def test_custom_lookup_keys_import_edit_and_reload_per_project(self):
   for stage in ('experience','pool'):
-   sheets.service(self.mod,'import',{**self.body(),'kind':stage,
-    'text':'Unit Race,Category,BarracksTier,T0,T1,T2,T3,T4\nAurora,levy,T1,1,2,3,4,5\n'})
-   p=sheets.load_project(self.mod);row=p['rules'][stage][0]
+   previous=copy.deepcopy(sheets.load_project(self.mod)['rules'][stage])
+   headers=['Unit Race','Category','BarracksTier','T0','T1','T2','T3','T4']
+   body={**self.body(),'format':'csv',
+    'text':','.join(headers)+'\nAurora,levy,T1,1,2,3,4,5\n',
+    'plans':[{'sheet':'CSV','view':'rules:'+stage,'header_row':1,
+     'mapping':{name:i for i,name in enumerate(headers)}}]}
+   preview=sheets.service(self.mod,'interchange_preview',body)
+   sheets.service(self.mod,'interchange_import',{**body,'preview_token':preview['preview_token']})
+   p=sheets.load_project(self.mod);row=next(r for r in p['rules'][stage] if r['Unit Race']=='Aurora')
    self.assertEqual((row['Unit Race'],row['Category']),('Aurora','levy'))
    result=sheets.service(self.mod,'operate',{**self.body(),'view':'rules:'+stage,
-    'mode':'matching','column':'T1','operation':'set','value':7})
-   self.assertEqual(sheets.load_project(self.mod)['rules'][stage][0]['T1'],7)
+    'mode':'selected','ids':[row['id']],'column':'T1','operation':'set','value':7})
+   current=sheets.load_project(self.mod)['rules'][stage]
+   self.assertEqual(next(r for r in current if r['id']==row['id'])['T1'],7)
+   self.assertEqual([r for r in current if r['id']!=row['id']],previous)
    self.assertEqual(sheets.empty_project()['rules'][stage],[])
 
  def test_invalid_profile_import_is_transactional(self):

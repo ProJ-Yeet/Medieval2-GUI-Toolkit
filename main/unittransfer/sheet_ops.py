@@ -164,7 +164,8 @@ def filter_info(rows, recruitment=False):
                         kinds[key] = 'list'
                     elif value is not None or key not in kinds:
                         kinds[key] = 'text'
-    return {key: {'type': kind, 'kind': column_kind(key),
+    derived = {key for row in rows for key in row.get('derived_columns',[])}
+    return {key: {'type': kind, 'kind': 'derived' if key in derived else column_kind(key),
                   'readonly': recruitment or key not in FIELDS and key not in META}
             for key, kind in kinds.items()}
 
@@ -222,6 +223,9 @@ def records(mod,project):
             row[name]=row[col]/denom if valid_number(row, col) is not None and denom not in (None,0) else None
         for k,v in source['extra'].items():row['extra:'+k]=v
         rows.append(row)
+    if project.get('interchange'):
+        from . import sheet_interchange
+        sheet_interchange.derived_records(rows, project)
     extras={key for row in rows for key in row if key.startswith('extra:')}
     for row in rows:
         for key in extras:row.setdefault(key,None)
@@ -600,16 +604,20 @@ def stage_operation(mod,project,ids,column,operation,value=None,other=None):
     return p,changes
 
 
-def stage_cells(mod,project,cells):
+def stage_cells(mod,project,cells,allow_clear=False):
     if not isinstance(cells,list) or not cells or len(cells)>10000:sheets.fail(_i18n.msg('eng.sheets.paste_must_contain_1_10000_cells','paste must contain 1-10000 cells'))
     p=copy.deepcopy(project);units=sheets.live_units(mod);rows,_=records(mod,p);before={r['id']:r for r in rows};changes=[]
     for cell in cells:
         uid,column=cell.get('id'),cell.get('column')
         if uid not in units:sheets.fail(_i18n.msg('eng.sheets.unknown_unit_in_pasted_cells','unknown unit in pasted cells'))
         if before[uid].get('stale_draft'):sheets.fail(_i18n.msg('eng.sheets.stale_draft_edit','Discard stale unit drafts before editing those units again'))
-        require_value(cell.get('value'))
-        value=typed(column,cell.get('value'))
-        require_value(value)
+        raw = cell.get('value')
+        if allow_clear and column in META and raw in ('',None):
+            value = ''
+        else:
+            if not (allow_clear and raw == []):require_value(raw)
+            value=typed(column,raw)
+            if not (allow_clear and value == []):require_value(value)
         if column in META:
             meta=p['units'].setdefault(uid,{'annotations':{},'extra':{}})
             if column=='Category override':meta['category_override']=value
@@ -735,6 +743,11 @@ def rule_records(project, kind):
             issues.append({'code':code, 'ids':[row['id'] for row in members], 'message':message})
     info = {'id':{'type':'text', 'readonly':True}}
     info.update({name:{'type':column['type'], 'readonly':False} for name,column in columns.items()})
+    if project.get('interchange'):
+        from . import sheet_interchange
+        sheet_interchange.derived_records(rows,project,rule=kind)
+        extras = filter_info(rows)
+        info.update({key:value for key,value in extras.items() if key.startswith('extra:')})
     return rows, info, ['id', *keys], issues
 
 

@@ -1147,6 +1147,9 @@
   ],
   "sheets.mapping_example": [
    "unit"
+  ],
+  "sheets.interchange_help": [
+   "header"
   ]
  },
  "ancillaries.a_character_holds_one_ancillary_per": "Un personaje solo puede tener un séquito de cada tipo, así que este es el que sustituiría uno nuevo",
@@ -13567,5 +13570,21 @@
  "armory.anim_scale_saved": "Acción escalada guardada. «Deshacer» en el registro permite restaurarla.",
  "eng.armunit.invalid_slot": "elige una ranura de soldado, oficial o grado de armadura",
  "eng.armunit.choose_character": "elige una campaña, una facción y un personaje",
- "eng.armunit.character_changed": "el personaje seleccionado o su rango ha cambiado; vuelve a elegir el destino"
+ "eng.armunit.character_changed": "el personaje seleccionado o su rango ha cambiado; vuelve a elegir el destino",
+ "sheets.interchange_invalid": "Datos de intercambio no válidos: {code}",
+ "sheets.interchange_file": "Hoja CSV o XLSX",
+ "sheets.interchange_csv": "CSV",
+ "sheets.interchange_xlsx": "XLSX",
+ "sheets.interchange_values": "Valores calculados",
+ "sheets.interchange_formulas": "Fórmulas compatibles (XLSX, diseño importado)",
+ "sheets.interchange_canonical": "Vista actual con cabeceras nativas",
+ "sheets.interchange_imported": "Cabeceras y diseño importados",
+ "sheets.interchange_export": "Exportar esta vista de hoja",
+ "sheets.interchange_skip": "Omitir esta hoja de cálculo",
+ "sheets.interchange_header": "Fila de cabecera",
+ "sheets.interchange_extra": "Conservar como columna adicional",
+ "sheets.interchange_preview": "Vista previa de IDs y campos asignados",
+ "sheets.interchange_stage": "Preparar esta importación validada",
+ "sheets.interchange_formula_issues": "Problemas con las fórmulas importadas",
+ "sheets.interchange_help": "Selecciona la vista y la fila de encabezados de cada hoja y, después, asigna las columnas explícitamente. Asigna el ID exacto de unidad o todas las columnas de clave de regla. Las columnas sin asignar se conservan como datos adicionales. Selecciona el mismo campo de lista para cada una de las columnas en las que se divide. Las celdas nativas vacías dejan los campos sin cambios; [] vacía una lista. Revisa la vista previa antes de preparar los cambios. Las exportaciones CSV utilizan valores calculados; las fórmulas compatibles requieren XLSX con el diseño importado. Consulta docs/SHEET_INTERCHANGE.md para ver ejemplos y las limitaciones de las fórmulas."
 }

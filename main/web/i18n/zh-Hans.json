@@ -732,6 +732,9 @@
   ],
   "sheets.group_note": [
    "stats"
+  ],
+  "sheets.interchange_help": [
+   "header"
   ]
  },
  "ancillaries.a_character_holds_one_ancillary_per": "人物每种类型只能持有一个随从，因此此项决定新随从会替换哪个随从",
@@ -12370,5 +12373,21 @@
  "armory.anim_scale_saved": "已保存缩放后的动作。可通过日志中的“撤销”恢复。",
  "eng.armunit.invalid_slot": "请选择士兵、军官或盔甲层级槽位",
  "eng.armunit.choose_character": "请选择战役、派系和人物",
- "eng.armunit.character_changed": "所选人物或其身份已更改；请重新选择目标"
+ "eng.armunit.character_changed": "所选人物或其身份已更改；请重新选择目标",
+ "sheets.interchange_invalid": "交换数据无效：{code}",
+ "sheets.interchange_file": "CSV 或 XLSX 表格",
+ "sheets.interchange_csv": "CSV",
+ "sheets.interchange_xlsx": "XLSX",
+ "sheets.interchange_values": "计算值",
+ "sheets.interchange_formulas": "支持的公式（XLSX，使用导入布局）",
+ "sheets.interchange_canonical": "使用原生文件头的当前视图",
+ "sheets.interchange_imported": "导入的文件头和布局",
+ "sheets.interchange_export": "导出此表格视图",
+ "sheets.interchange_skip": "跳过此工作表",
+ "sheets.interchange_header": "文件头行",
+ "sheets.interchange_extra": "保留为附加列",
+ "sheets.interchange_preview": "预览映射的 ID 和字段",
+ "sheets.interchange_stage": "暂存此已验证的导入",
+ "sheets.interchange_formula_issues": "导入公式的问题",
+ "sheets.interchange_help": "为每个工作表选择视图和表头行，然后明确映射各列。映射准确的部队 ID 或全部规则键列。未映射的列将作为额外数据保留。对于同一列表字段拆分出的各列，请选择同一个列表字段。空白原生单元格会使字段保持不变；[] 会清空列表。暂存前请先预览。CSV 导出使用计算结果；受支持的公式需要使用带有已导入布局的 XLSX。示例和公式限制请参阅 docs/SHEET_INTERCHANGE.md。"
 }

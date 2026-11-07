@@ -14282,3 +14282,24 @@ staging store. `tests/test_sheet_ops.py`, `test_unit_sheets.py`,
 
 **Finished 2026-11-07.** The pipeline runs refresh and classification, replenish, experience and pool in that order on one staged document, whole or per stage, and shows the order. Preview and export can be cancelled from the window; a cancelled or failed run writes nothing. Every entry is logged with reason, line, rule and before/after, counts reconcile across preview, logs and export, and the preview groups outcomes by status, unit, building, level and field. Apply goes once through backups, My Changes and Log Undo from the window, refuses an EDB edited since the preview, and a failure mid-write leaves the original.
 
+## Phase 115 - CSV, Excel and Fynn interchange without destructive defaults
+
+- Import/export the three rule sheets, classifications and EDU sheet views from
+  inside the app. Provide explicit schema/header mapping for changed names,
+  duplicated columns and workbook versions, previewing IDs and fields before use.
+- The supplied `(20)` Base stats headings differ from the converter's expected
+  `type`, `Tier`, `Campaign cost`; its sheets also contain group/separator rows.
+  Match only validated unit IDs, preserve unknown columns, ignore presentation
+  rows and never interpret formatted empty rows as units. Read actual populated
+  cells rather than trusting a workbook's maximum used range.
+- Support formulas as derived columns through a documented safe subset; show
+  unsupported/stale formulas and missing caches. Export computed values or
+  supported formulas explicitly. Never execute macros or silently recalculate an
+  unsupported formula as zero. Keep cross-sheet identity joins independent of order.
+- **Depends on:** 114. **Exit:** supplied/current and archived workbook variants
+  round-trip through documented mappings, blank versus zero and list clearing are
+  preserved, invalid imports leave staged work intact, and omitted fields/comments
+  do not get rebuilt from converter defaults.
+
+**Finished 2026-11-08.** The rule sheets, classifications and EDU sheet views import and export as CSV and XLSX from the window, with XLSX read and written by the standard library alone. Columns are mapped explicitly and previewed before staging; only validated unit IDs match, unknown columns are kept, separator and formatted-empty rows are ignored. Formulas: a small documented subset (numbers, + - * /, same-sheet A1 references) is evaluated, anything else is named, macros never run. Blank, zero and a cleared list survive round trips, and a refused import leaves the staged work as it was. Details in docs/SHEET_INTERCHANGE.md. Checked on DaC EUR: the classification view exported as XLSX and read back.
+

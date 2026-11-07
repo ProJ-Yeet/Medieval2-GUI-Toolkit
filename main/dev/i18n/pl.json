@@ -13789,5 +13789,21 @@
  "armory.anim_scale_saved": "Zapisano przeskalowaną akcję. Opcja „Cofnij” w dzienniku pozwala ją przywrócić.",
  "eng.armunit.invalid_slot": "wybierz slot żołnierza, oficera lub tieru pancerza",
  "eng.armunit.choose_character": "wybierz kampanię, frakcję i postać",
- "eng.armunit.character_changed": "wybrana postać lub jej ranga uległa zmianie; wybierz cel ponownie"
+ "eng.armunit.character_changed": "wybrana postać lub jej ranga uległa zmianie; wybierz cel ponownie",
+ "sheets.interchange_invalid": "Nieprawidłowe dane wymiany: {code}",
+ "sheets.interchange_file": "Arkusz CSV lub XLSX",
+ "sheets.interchange_csv": "CSV",
+ "sheets.interchange_xlsx": "XLSX",
+ "sheets.interchange_values": "Obliczone wartości",
+ "sheets.interchange_formulas": "Obsługiwane formuły (XLSX, importowany układ)",
+ "sheets.interchange_canonical": "Bieżący widok z natywnymi nagłówkami",
+ "sheets.interchange_imported": "Importowane nagłówki i układ",
+ "sheets.interchange_export": "Eksportuj ten widok arkusza",
+ "sheets.interchange_skip": "Pomiń ten arkusz",
+ "sheets.interchange_header": "Wiersz nagłówka",
+ "sheets.interchange_extra": "Zachowaj jako dodatkową kolumnę",
+ "sheets.interchange_preview": "Podgląd przypisanych ID i pól",
+ "sheets.interchange_stage": "Przygotuj zweryfikowany import do zastosowania",
+ "sheets.interchange_formula_issues": "Problemy z importowanymi formułami",
+ "sheets.interchange_help": "Wybierz widok i wiersz nagłówków dla każdego arkusza, a następnie jawnie przypisz kolumny. Przypisz dokładny ID jednostki lub wszystkie kolumny klucza reguły. Nieprzypisane kolumny zostaną zachowane jako dane dodatkowe. Wybierz to samo pole listy dla każdej z kolumn, na które zostało podzielone. Puste komórki natywne pozostawiają pola bez zmian; [] czyści listę. Sprawdź podgląd przed przygotowaniem zmian. Eksporty CSV używają obliczonych wartości; obsługiwane formuły wymagają formatu XLSX z zaimportowanym układem. Przykłady i ograniczenia formuł znajdziesz w docs/SHEET_INTERCHANGE.md."
 }

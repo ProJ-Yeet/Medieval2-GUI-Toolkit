@@ -55,7 +55,7 @@ function unitSheetsColumns(includeHidden=false){
  else cols=['id',...Object.keys(d.field_info).filter(k=>d.field_info[k].view===u.view),
    ...(u.view==='base'?['groups','defense_total','ultra_size','cost_efficiency','upkeep_efficiency',
     ...Object.keys(d.filter_info||{}).filter(key=>/^(pri|sec)_(weapon|tech)_type$/.test(key))]:[])];
- if(u.showExtras&&!unitSheetsRuleKind())cols.push(...d.extra_columns);
+ if(u.showExtras)cols.push(...d.extra_columns);
  if(u.order.length)cols.sort((a,b)=>(u.order.includes(a)?u.order.indexOf(a):999)-(u.order.includes(b)?u.order.indexOf(b):999));
  const frozen=unitSheetsRuleKind()?(d.frozen_columns||['id']):['id'];
  return [...frozen,...cols.filter(k=>!frozen.includes(k)&&(includeHidden||!u.hidden.includes(k)))];
@@ -100,12 +100,17 @@ function unitSheetsPaint(){
  <button class="mini" onclick="unitSheetsUndo(false)"${u.past.length?'':' disabled'}>↶</button><button class="mini" onclick="unitSheetsUndo(true)"${u.future.length?'':' disabled'}>↷</button></div>
  ${d.stale_drafts&&d.stale_drafts.length?`<div class="w-bad">${tt('sheets.stale_drafts')} ${esc(d.stale_drafts.join(', '))}</div>`:''}
  ${u.err?`<div class="w-bad">${esc(u.err)}</div>`:''}
+ ${d.formula_issues?.length?`<details><summary>${tt('sheets.interchange_formula_issues')}</summary><pre>${esc(JSON.stringify(d.formula_issues,null,2))}</pre></details>`:''}
  <div class="count">${tt('sheets.refresh_summary',{added:d.refresh.added.length,removed:d.refresh.removed.length,missing:d.refresh.missing_classifications.length})}</div>
  ${d.refresh.rename_candidates.length?`<details><summary>${tt('sheets.renames')}</summary>${d.refresh.rename_candidates.map((r,i)=>`<div>${esc(r.from)} → ${esc(r.to)} <button onclick="unitSheetsRename(${i})">${tt('sheets.transfer_notes')}</button></div>`).join('')}</details>`:''}
- <details><summary>${tt('sheets.import_export')}</summary><div class="barrow"><select id="usImportKind"><option value="csv">${tt('sheets.import_csv')}</option><option value="edu_json">${tt('sheets.import_edu_json')}</option><option value="edb_json">${tt('sheets.import_edb_json')}</option><option value="project">${tt('sheets.import_project')}</option><option value="replenish">${tt('sheets.import_replenish')}</option><option value="experience">${tt('sheets.import_experience')}</option><option value="pool">${tt('sheets.import_pool')}</option></select>
- <input type="file" accept=".csv,.json" onchange="unitSheetsImport(this)">
+ <details${u.interchange?' open':''}><summary>${tt('sheets.import_export')}</summary><div class="barrow"><select id="usImportKind"><option value="sheet">${tt('sheets.interchange_file')}</option><option value="edu_json">${tt('sheets.import_edu_json')}</option><option value="edb_json">${tt('sheets.import_edb_json')}</option><option value="project">${tt('sheets.import_project')}</option></select>
+ <input type="file" accept=".csv,.xlsx,.json" onchange="unitSheetsImport(this)">
  <button onclick="unitSheetsExport('project')">${tt('sheets.export_project')}</button><button onclick="unitSheetsExport('reference')">${tt('sheets.export_reference')}</button></div>
- <label>${tt('sheets.column_mapping')}<input id="usMapping" placeholder="${ttA('sheets.mapping_example')}"></label></details>
+ <div class="barrow"><select id="usExportFormat"><option value="csv">${tt('sheets.interchange_csv')}</option><option value="xlsx">${tt('sheets.interchange_xlsx')}</option></select>
+ <select id="usExportFormulas"><option value="values">${tt('sheets.interchange_values')}</option><option value="supported">${tt('sheets.interchange_formulas')}</option></select>
+ <select id="usExportLayout"><option value="canonical">${tt('sheets.interchange_canonical')}</option><option value="imported">${tt('sheets.interchange_imported')}</option></select>
+ <button onclick="unitSheetsExport('sheet')">${tt('sheets.interchange_export')}</button></div>
+ ${unitSheetsInterchangeHtml()}</details>
  ${unitSheetsGroupsHtml()}
  <div class="barrow us-legend">${['native','annotation','derived'].map(kind=>`<span class="us-kind-${kind}">${unitSheetsKindLabel(kind)}</span>`).join('')}</div>
  ${unitSheetsRuleKind()?unitSheetsRulesHtml():''}
@@ -466,8 +471,96 @@ async function unitSheetsFill(){
  }
  return unitSheetsPreview('operate',{ids:targets,column:col,operation:'set',value:fresh[col]});
 }
-async function unitSheetsImport(input){const file=input.files[0];if(!file)return;if(file.size>20*1024*1024){toast(tt('sheets.file_large'));return;}try{const mapping=JSON.parse(document.getElementById('usMapping').value||'{}');await unitSheetsRequest('import',{kind:document.getElementById('usImportKind').value,text:await file.text(),mapping},true);}catch(e){toast(errText(e));}}
-async function unitSheetsExport(kind){try{const r=await unitSheetsPost('/api/unit_sheets/export',unitSheetsBody({kind}));const content=r.encoding==='base64'?Uint8Array.from(atob(r.text),c=>c.charCodeAt(0)):r.text;const url=URL.createObjectURL(new Blob([content],{type:r.mime}));const a=document.createElement('a');a.href=url;a.download=r.name;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}catch(e){toast(errText(e));}}
+async function unitSheetsImport(input){
+ const file=input.files[0];if(!file)return;
+ if(file.size>20*1024*1024){toast(tt('sheets.file_large'));return;}
+ const u=USHEET,kind=document.getElementById('usImportKind').value;
+ try{
+  await unitSheetsFlush();if(USHEET!==u)return;
+  if(kind==='project'||kind==='edb_json'){
+   await unitSheetsRequest('import',{kind,text:await file.text()},true);return;
+  }
+  const format=kind==='edu_json'?'edu_json':/\.xlsx$/i.test(file.name)?'xlsx':'csv';
+  let text;
+  if(format==='xlsx'){
+   const bytes=new Uint8Array(await file.arrayBuffer()),chunks=[];
+   for(let i=0;i<bytes.length;i+=8192)chunks.push(String.fromCharCode(...bytes.subarray(i,i+8192)));
+   text=btoa(chunks.join(''));
+  }else text=await file.text();
+  const info=await unitSheetsPost('/api/unit_sheets/interchange_inspect',unitSheetsBody({format,text}));
+  if(USHEET!==u)return;
+  u.interchange={format,text,info,preview:null,plans:info.sheets.map((sheet,i)=>({sheet:sheet.name,
+   view:i===0&&u.view!=='recruitment'?u.view:'',header_row:sheet.rows[0]?.number||1,mapping:{}}))};
+  unitSheetsPaint();
+ }catch(e){toast(errText(e));}
+}
+function unitSheetsMappingColumn(index,column,target){
+ const draft=USHEET.interchange,plan=draft.plans[index];
+ for(const key of Object.keys(plan.mapping)){
+  const remaining=[].concat(plan.mapping[key]).filter(c=>c!==column);
+  if(!remaining.length)delete plan.mapping[key];
+  else plan.mapping[key]=Array.isArray(plan.mapping[key])?remaining:remaining[0];
+ }
+ if(target){
+  const list=USHEET.data.field_info[target]?.type==='list';
+  plan.mapping[target]=list?[...new Set([].concat(plan.mapping[target]??[],column))].sort((a,b)=>a-b):column;
+ }
+ draft.preview=null;unitSheetsPaint();
+}
+function unitSheetsMappingPlan(index,key,value){
+ const draft=USHEET.interchange;draft.plans[index][key]=key==='header_row'?Number(value):value;
+ draft.plans[index].mapping={};draft.preview=null;unitSheetsPaint();
+}
+function unitSheetsInterchangeHtml(){
+ const draft=USHEET.interchange;if(!draft)return '';
+ const views=['classification','base','attributes','soft','rules:replenish','rules:experience','rules:pool'];
+ return `<div class="count">${tt('sheets.interchange_help')}</div>${draft.plans.map((plan,i)=>{
+  const sheet=draft.info.sheets[i],head=sheet.rows.find(r=>r.number===plan.header_row)?.values||[];
+  const kind=plan.view.startsWith('rules:')?plan.view.slice(6):null;
+  const targets=kind?[...new Set([...(USHEET.data.project.rule_schema?.[kind]||[]).map(c=>c.name),
+   ...(kind==='replenish'?['Tier']:[USHEET_META[0],USHEET_CATEGORY,'BarracksTier','T0','T1','T2','T3','T4'])])]:['id',...USHEET_META,...USHEET.data.columns];
+  return `<fieldset><legend>${esc(plan.sheet)}</legend><select onchange="unitSheetsMappingPlan(${i},'view',this.value)"><option value="">${tt('sheets.interchange_skip')}</option>${views.map(view=>`<option value="${view}"${view===plan.view?' selected':''}>${esc(view)}</option>`).join('')}</select>
+  <label>${tt('sheets.interchange_header')}<select onchange="unitSheetsMappingPlan(${i},'header_row',this.value)">${sheet.rows.map(row=>`<option value="${row.number}"${row.number===plan.header_row?' selected':''}>${row.number}</option>`).join('')}</select></label>
+  <pre>${esc(JSON.stringify(sheet.rows.slice(0,4),null,2))}</pre>
+  ${plan.view?head.map((header,c)=>{
+   const target=Object.keys(plan.mapping).find(k=>[].concat(plan.mapping[k]).includes(c))||'';
+   return `<label>${esc(header)} [${c+1}] ${kind?`<input value="${esc(target)}" list="usMapTargets${i}" data-column="${c}" onchange="unitSheetsMappingColumn(${i},${c},this.value)">`:
+    `<select onchange="unitSheetsMappingColumn(${i},${c},this.value)"><option value="">${tt('sheets.interchange_extra')}</option>${targets.map(t=>`<option value="${esc(t)}"${t===target?' selected':''}>${esc(t)}</option>`).join('')}</select>`}</label>`;
+  }).join(''):''}${kind?`<datalist id="usMapTargets${i}">${targets.map(t=>`<option value="${esc(t)}"></option>`).join('')}</datalist>`:''}</fieldset>`;
+ }).join('')}<button onclick="unitSheetsInterchangePreview()">${tt('sheets.interchange_preview')}</button>
+ ${draft.preview?`<pre>${esc(JSON.stringify(draft.preview,null,2))}</pre><button onclick="unitSheetsInterchangeStage()">${tt('sheets.interchange_stage')}</button>`:''}`;
+}
+function unitSheetsInterchangeBody(){
+ const d=USHEET.interchange;return {format:d.format,text:d.text,plans:structuredClone(d.plans.filter(p=>p.view))};
+}
+async function unitSheetsInterchangePreview(){
+ const u=USHEET,d=u.interchange;d.preview=null;
+ try{
+  await unitSheetsFlush();if(USHEET!==u)return;
+  const body=unitSheetsInterchangeBody(),signature=JSON.stringify(body);
+  const result=await unitSheetsPost('/api/unit_sheets/interchange_preview',unitSheetsBody(body));
+  if(USHEET!==u||u.interchange!==d||signature!==JSON.stringify(unitSheetsInterchangeBody()))return;
+  d.preview=result;unitSheetsPaint();
+ }catch(e){toast(errText(e));}
+}
+async function unitSheetsInterchangeStage(){
+ const d=USHEET.interchange;if(!d?.preview)return;
+ const body={...unitSheetsInterchangeBody(),preview_token:d.preview.preview_token};
+ await unitSheetsFlush();
+ if(await unitSheetsRequest('interchange_import',body,true)){d.preview=null;unitSheetsPaint();}
+}
+async function unitSheetsExport(kind){
+ try{
+  const extra=kind==='sheet'?{format:document.getElementById('usExportFormat').value,
+   formulas:document.getElementById('usExportFormulas').value,layout:document.getElementById('usExportLayout').value}:{kind};
+  await unitSheetsFlush();
+  const r=await unitSheetsPost('/api/unit_sheets/'+(kind==='sheet'?'interchange_export':'export'),unitSheetsBody(extra));
+  if(r.formula_issues?.length){USHEET.err=JSON.stringify(r.formula_issues);unitSheetsPaint();}
+  const content=r.encoding==='base64'?Uint8Array.from(atob(r.text),c=>c.charCodeAt(0)):r.text;
+  const url=URL.createObjectURL(new Blob([content],{type:r.mime}));const a=document.createElement('a');
+  a.href=url;a.download=r.name;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
+ }catch(e){toast(errText(e));}
+}
 function unitSheetsSave(change){return unitSheetsRequest('save',()=>{const project=structuredClone(USHEET.data.project);change(project);return {project};},true);}
 function unitSheetsSaveView(){const name=document.getElementById('usViewName').value.trim();if(!name)return;const view=structuredClone({view:USHEET.view,where:USHEET.where,sort:USHEET.sort,hidden:USHEET.hidden,order:USHEET.order,showExtras:USHEET.showExtras});unitSheetsSave(p=>{p.views[name]=view;});}
 function unitSheetsLoadView(name){

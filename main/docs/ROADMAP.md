@@ -1433,7 +1433,7 @@ or bulk copy of generated HTML/assets.
 reference tables and Fynn JSON export, plus the `Unit script` workbook/converters,
 with editable sheets inside our tool, deep filtering and mass editing. This is
 authorized for implementation on 2026-11-06, progressing in numbered increments
-with verification at each checkpoint. Phases 109-114 are complete; 115-116 are
+with verification at each checkpoint. Phases 109-115 are complete; 116 is
 planned. Research and exact source locations are in
 [upstream/EDB_SHEETS_WORKFLOW.md](upstream/EDB_SHEETS_WORKFLOW.md).
 
@@ -1444,31 +1444,12 @@ and rule tables per mod as project data, not invented EDU fields. Share unit
 identity, projects and staging contracts with 102-108, but this track can begin
 independently after its own audit. Existing priorities remain unchanged.
 
-**Implementation checkpoint, 2026-11-07:** 109-114 complete (archived).
+**Implementation checkpoint, 2026-11-07:** 109-115 complete (archived).
 Typed staging/recipes, native review/apply, all three EDB stages, audit ZIP
 exports, cancellation and backed-up Apply/Undo are implemented and
-fixture-tested; 115-116 planned. XLSX/native sheet interchange and
-non-EUR/builder integration remain. See CODEX_HANDOFF.md for exact checks, changed files and
+fixture-tested, with CSV/XLSX interchange; 116 planned. Non-EUR checks
+and builder integration remain. See CODEX_HANDOFF.md for exact checks, changed files and
 limits.
-
-## Phase 115 - CSV, Excel and Fynn interchange without destructive defaults
-
-- Import/export the three rule sheets, classifications and EDU sheet views from
-  inside the app. Provide explicit schema/header mapping for changed names,
-  duplicated columns and workbook versions, previewing IDs and fields before use.
-- The supplied `(20)` Base stats headings differ from the converter's expected
-  `type`, `Tier`, `Campaign cost`; its sheets also contain group/separator rows.
-  Match only validated unit IDs, preserve unknown columns, ignore presentation
-  rows and never interpret formatted empty rows as units. Read actual populated
-  cells rather than trusting a workbook's maximum used range.
-- Support formulas as derived columns through a documented safe subset; show
-  unsupported/stale formulas and missing caches. Export computed values or
-  supported formulas explicitly. Never execute macros or silently recalculate an
-  unsupported formula as zero. Keep cross-sheet identity joins independent of order.
-- **Depends on:** 114. **Exit:** supplied/current and archived workbook variants
-  round-trip through documented mappings, blank versus zero and list clearing are
-  preserved, invalid imports leave staged work intact, and omitted fields/comments
-  do not get rebuilt from converter defaults.
 
 ## Phase 116 - Real-data verification and shared builder integration
 

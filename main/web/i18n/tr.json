@@ -12578,5 +12578,21 @@
  "armory.anim_scale_saved": "Ölçeklenmiş eylem kaydedildi. Günlükteki «Geri al» ile geri yüklenebilir.",
  "eng.armunit.invalid_slot": "asker, subay veya zırh kademesi yuvası seçin",
  "eng.armunit.choose_character": "bir kampanya, fraksiyon ve karakter seçin",
- "eng.armunit.character_changed": "seçili karakter veya rütbesi değişti; hedefi yeniden seçin"
+ "eng.armunit.character_changed": "seçili karakter veya rütbesi değişti; hedefi yeniden seçin",
+ "sheets.interchange_invalid": "Geçersiz veri alışverişi verileri: {code}",
+ "sheets.interchange_file": "CSV veya XLSX sayfası",
+ "sheets.interchange_csv": "CSV",
+ "sheets.interchange_xlsx": "XLSX",
+ "sheets.interchange_values": "Hesaplanan değerler",
+ "sheets.interchange_formulas": "Desteklenen formüller (XLSX, içe aktarılan düzen)",
+ "sheets.interchange_canonical": "Yerel başlıklarla geçerli görünüm",
+ "sheets.interchange_imported": "İçe aktarılan başlıklar ve düzen",
+ "sheets.interchange_export": "Bu sayfa görünümünü dışa aktar",
+ "sheets.interchange_skip": "Bu çalışma sayfasını atla",
+ "sheets.interchange_header": "Başlık satırı",
+ "sheets.interchange_extra": "Ek sütun olarak koru",
+ "sheets.interchange_preview": "Eşleştirilen kimlikleri ve alanları önizle",
+ "sheets.interchange_stage": "Doğrulanan bu içe aktarımı uygulamaya hazırla",
+ "sheets.interchange_formula_issues": "İçe aktarılan formüllerdeki sorunlar",
+ "sheets.interchange_help": "Her sayfanın görünümünü ve başlık satırını seçin, ardından sütunları açıkça eşleyin. Tam birim kimliğini veya tüm kural anahtarı sütunlarını eşleyin. Eşlenmeyen sütunlar ek veri olarak korunur. Bir liste alanının bölündüğü her sütun için aynı liste alanını seçin. Boş yerel hücreler alanları değiştirmez; [] bir listeyi temizler. Değişiklikleri hazırlamadan önce önizlemeyi kontrol edin. CSV dışa aktarımları hesaplanan değerleri kullanır; desteklenen formüller için içe aktarılmış düzene sahip XLSX gerekir. Örnekler ve formül sınırlamaları için docs/SHEET_INTERCHANGE.md dosyasına bakın."
 }

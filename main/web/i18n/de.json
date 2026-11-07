@@ -1008,6 +1008,9 @@
   ],
   "eng.scriptaddons.older_moved": [
    "script"
+  ],
+  "sheets.interchange_help": [
+   "header"
   ]
  },
  "ancillaries.a_character_holds_one_ancillary_per": "Ein Charakter hat pro Typ ein Gefolgsmitglied; das ist also das, was ein neues ersetzt",
@@ -13061,5 +13064,21 @@
  "armory.anim_scale_saved": "Skalierte Aktion gespeichert. „Rückgängig“ im Protokoll kann sie wiederherstellen.",
  "eng.armunit.invalid_slot": "einen slot für soldaten, offizier oder eine ausbaustufe der rüstung wählen",
  "eng.armunit.choose_character": "eine kampagne, fraktion und einen charakter wählen",
- "eng.armunit.character_changed": "der gewählte charakter oder rang hat sich geändert; ziel erneut wählen"
+ "eng.armunit.character_changed": "der gewählte charakter oder rang hat sich geändert; ziel erneut wählen",
+ "sheets.interchange_invalid": "Ungültige Austauschdaten: {code}",
+ "sheets.interchange_file": "CSV- oder XLSX-Tabelle",
+ "sheets.interchange_csv": "CSV",
+ "sheets.interchange_xlsx": "XLSX",
+ "sheets.interchange_values": "Berechnete Werte",
+ "sheets.interchange_formulas": "Unterstützte Formeln (XLSX, importiertes Layout)",
+ "sheets.interchange_canonical": "Aktuelle Ansicht mit nativen Headern",
+ "sheets.interchange_imported": "Importierte Header und Layout",
+ "sheets.interchange_export": "Diese Tabellenansicht exportieren",
+ "sheets.interchange_skip": "Dieses Arbeitsblatt überspringen",
+ "sheets.interchange_header": "Headerzeile",
+ "sheets.interchange_extra": "Als Zusatzspalte beibehalten",
+ "sheets.interchange_preview": "Vorschau der zugeordneten IDs und Felder",
+ "sheets.interchange_stage": "Diesen geprüften Import vormerken",
+ "sheets.interchange_formula_issues": "Probleme mit importierten Formeln",
+ "sheets.interchange_help": "Wähle für jedes Tabellenblatt die Ansicht und die Kopfzeile aus und ordne die Spalten anschließend ausdrücklich zu. Ordne die exakte Einheiten-ID oder alle Regelschlüsselspalten zu. Nicht zugeordnete Spalten bleiben als zusätzliche Daten erhalten. Wähle für jede aufgeteilte Spalte eines Listenfelds dasselbe Listenfeld aus. Leere native Zellen lassen Felder unverändert; [] leert eine Liste. Prüfe die Vorschau vor dem Vormerken. CSV-Exporte verwenden berechnete Werte; unterstützte Formeln erfordern XLSX mit importiertem Layout. Beispiele und Einschränkungen für Formeln findest du unter docs/SHEET_INTERCHANGE.md."
 }

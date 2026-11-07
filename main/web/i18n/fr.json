@@ -13185,5 +13185,21 @@
  "armory.anim_scale_saved": "Action redimensionnée enregistrée. « Annuler » dans le journal permet de la restaurer.",
  "eng.armunit.invalid_slot": "choisissez un emplacement de soldat, d'officier ou de palier d'armure",
  "eng.armunit.choose_character": "choisissez une campagne, une faction et un personnage",
- "eng.armunit.character_changed": "le personnage sélectionné ou son rang a changé ; choisissez à nouveau la cible"
+ "eng.armunit.character_changed": "le personnage sélectionné ou son rang a changé ; choisissez à nouveau la cible",
+ "sheets.interchange_invalid": "Données d’échange non valides : {code}",
+ "sheets.interchange_file": "Feuille CSV ou XLSX",
+ "sheets.interchange_csv": "CSV",
+ "sheets.interchange_xlsx": "XLSX",
+ "sheets.interchange_values": "Valeurs calculées",
+ "sheets.interchange_formulas": "Formules prises en charge (XLSX, disposition importée)",
+ "sheets.interchange_canonical": "Vue actuelle avec les en-têtes natifs",
+ "sheets.interchange_imported": "En-têtes et disposition importés",
+ "sheets.interchange_export": "Exporter cette vue de feuille",
+ "sheets.interchange_skip": "Ignorer cette feuille de calcul",
+ "sheets.interchange_header": "Ligne d’en-tête",
+ "sheets.interchange_extra": "Conserver comme colonne supplémentaire",
+ "sheets.interchange_preview": "Aperçu des ID et champs associés",
+ "sheets.interchange_stage": "Mettre cette importation validée en attente",
+ "sheets.interchange_formula_issues": "Problèmes de formules importées",
+ "sheets.interchange_help": "Choisissez la vue et la ligne d’en-tête de chaque feuille, puis associez explicitement les colonnes. Associez l’ID d’unité exact ou toutes les colonnes constituant la clé de règle. Les colonnes non associées sont conservées comme données supplémentaires. Sélectionnez le même champ de liste pour chacune des colonnes entre lesquelles il est réparti. Les cellules natives vides laissent les champs inchangés ; [] vide une liste. Vérifiez l’aperçu avant de préparer les modifications. Les exports CSV utilisent les valeurs calculées ; les formules prises en charge nécessitent un fichier XLSX avec la mise en page importée. Consultez docs/SHEET_INTERCHANGE.md pour des exemples et les limites des formules."
 }
