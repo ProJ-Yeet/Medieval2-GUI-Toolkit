@@ -460,9 +460,13 @@ function v3Close(){
   if(v3 && v3.host) return v3Unmount();
   v3Stop();
   const modal = document.getElementById('modal');
-  if(v3Back && v3Back.html !== undefined){
-    modal.className = v3Back.cls; modal.innerHTML = v3Back.html;
-    usePlace(v3Back.scroll);
+  // Let go first: the repaints below remount the docked preview, which resets
+  // v3Back and sets a new v3 that must survive this close.
+  const back = v3Back;
+  v3Back = null; v3 = null;
+  if(back && back.html !== undefined){
+    modal.className = back.cls; modal.innerHTML = back.html;
+    usePlace(back.scroll);
     // the restored markup is inert until its own module rebinds it, and only
     // the model card ever opens this - so it is the one that gets asked
     if(typeof edRenderTab === 'function' && state.ed) edRenderTab();
@@ -470,12 +474,11 @@ function v3Close(){
     if(typeof edPrevAttach === 'function' && state.ed) edPrevAttach();
     if(typeof cmpPrevAttach === 'function' && !state.ed) cmpPrevAttach();
     // a dialog that opened the viewer over itself repaints itself live (100j)
-    if(v3Back.after) v3Back.after();
+    if(back.after) back.after();
   }else{
     document.getElementById('overlay').classList.remove('open');
     modal.className = 'modal'; modal.innerHTML = '';
   }
-  v3Back = null; v3 = null;
 }
 
 // Stop drawing without giving anything up. See the tick loop in v3Start.
