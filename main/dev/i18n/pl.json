@@ -906,6 +906,15 @@
   ],
   "sheets.help_interchange": [
    "header"
+  ],
+  "charmodels.help": [
+   "general"
+  ],
+  "charmodels.horse": [
+   "mount"
+  ],
+  "eng.charmodels.horse": [
+   "mount"
   ]
  },
  "ancillaries.a_character_holds_one_ancillary_per": "Postać może mieć po jednym akcesorium każdego typu. Nowe akcesorium zastąpi więc właśnie to.",
@@ -5750,7 +5759,6 @@
  "eng.characters.has_no_battle_model_so_it": "{who} nie ma battle_model, więc nie ma modelu do użycia w bitwie",
  "eng.characters.has_no_strat_model_so_it": "{who} nie ma strat_model, więc nie ma modelu do wyświetlenia na mapie",
  "eng.characters.has_no_type_section": "{REL} nie ma sekcji typu",
- "eng.characters.has_strat_model_s_a_named": "{who} ma modele strategiczne (liczba: {models_n}); postać imienna ma po jednym dla default (domyślny), heir (następca) i leader (przywódca)",
  "eng.characters.has_two_blocks_lines_and_only": "{name}: {f} ma dwa bloki (wiersze {seen} i {x}); odczytywany jest tylko jeden",
  "eng.characters.is_not_a_faction_in_descr": "{fac} nie jest frakcją w descr_sm_factions.txt",
  "eng.characters.is_not_a_faction_in_descr_2": "{who}: {f} nie jest frakcją w descr_sm_factions.txt",
@@ -13814,5 +13822,30 @@
  "sheets.help_example": "Przykład: ustaw filtr „Tier równa się T1”, wybierz „Zaznacz pasujące”, a następnie w „Edycji zbiorczej” wyświetl podgląd zwiększenia ataku o 1. Przed wybraniem „Potwierdź” sprawdź liczbę elementów objętych zmianą oraz wartości przed zmianą i po niej. Zaznaczone wiersze i wszystkie pasujące wiersze to odrębne zakresy działania. Filtrowanie usuwa ukryte wiersze z zaznaczenia. Klawisze strzałek pozwalają poruszać się między komórkami; wklej prostokątny blok danych rozdzielonych tabulatorami, zaczynając od zaznaczonej komórki kotwiczącej. Zero jest wartością; użyj „Wyczyść”, aby usunąć adnotację.",
  "sheets.help_interchange": "Import/eksport: wybierz widok i wiersz nagłówków dla każdego arkusza, przypisz dokładne identyfikatory jednostek i pola, sprawdź podgląd, a następnie wybierz „Przygotuj”. Wiersze są łączone według identyfikatora, nigdy według pozycji. W przypadku pliku CSV z klasyfikacjami przypisz „Nazwa” do id, a pola „Rasa jednostki” i „Tier” przypisz według nazwy. Puste komórki natywne pozostawiają wartości bez zmian; puste klasyfikacje je usuwają; [] czyści listę. Eksportuj natywne nagłówki, aby uzyskać komplet bieżących danych, lub zaimportowane nagłówki, aby zachować przypisany układ.",
  "sheets.help_limits": "CSV i XLSX służą do wymiany danych, ale nie stylów, tabel, reguł poprawności danych ani makr programu Excel. Obsługa formuł jest ograniczona do liczb, + - * /, nawiasów i odwołań A1 w tym samym arkuszu; funkcje, zakresy i formuły odwołujące się do innych arkuszy są niedostępne i zgłaszane. Obsługiwane formuły są eksportowane tylko w formacie XLSX z zaimportowanym układem. Brakujące klasyfikacje, klasyfikacje BG i nieobsługiwane reguły pozostają widoczne jako pominięte. Funkcja balansu używa nagłówka miasta/zamku dla każdego poziomu, zgłasza niejednoznaczne łańcuchy i zachowuje ułamkowe wartości maksymalnych pul. Rekrutacja w siatce jest tylko do odczytu; przed wybraniem „Zastosuj” skorzystaj z podglądu balansu i eksportu.",
- "eng.stratmap.not_the_mods_own_file": "{file} nie jest własnym plikiem {mod} (jest czytany z pakietów gry), więc nic nie zostanie wyczyszczone"
+ "eng.stratmap.not_the_mods_own_file": "{file} nie jest własnym plikiem {mod} (jest czytany z pakietów gry), więc nic nie zostanie wyczyszczone",
+ "charmodels.title": "Modele frakcji",
+ "charmodels.characters": "Postacie",
+ "charmodels.level": "poziom {level}",
+ "charmodels.line": "wiersz {line}",
+ "charmodels.default": "Domyślny",
+ "charmodels.no_trait": "Żadna cecha nie nadaje tego poziomu",
+ "charmodels.more": "{names} +{n} więcej",
+ "charmodels.pick": "Wybierz frakcję",
+ "charmodels.help": "Pozycja wiersza strat_model określa poziom postaci: cechy nadają poziomy, a komentarze służą tylko jako etykiety. Typ general oznacza kapitana. Zmiana bloku wspólnego dla kilku frakcji dotyczy ich wszystkich. Użyj „Probe” przed „Apply”; każdy zapis ma własną kopię zapasową i opcję „Cofnij” w Log. Straże przyboczne to jednostki edytowane w Edytorze jednostek.",
+ "charmodels.horse": "Brak animacji konia: generałowie i kapitanowie używają tego samego modelu bitewnego pieszo i konno.",
+ "charmodels.campaign_characters": "Przywódcy i następcy w kampanii oraz modele bitewne postaci",
+ "charmodels.scripts": "Zmiany w skrypcie kampanii (tylko do odczytu)",
+ "charmodels.symbols": "Symbole frakcji (tylko do odczytu)",
+ "charmodels.textures": "Modele strategiczne z tą teksturą frakcji (tylko do odczytu)",
+ "charmodels.commented": "Wyłączone komentarzem",
+ "charmodels.failed": "Planowanie lub zapis nie powiodły się",
+ "charmodels.applied": "Zapisano ({count}) i wczytano ponownie. Każdy zapis można cofnąć w Log.",
+ "charmodels.role_generals": "Generałowie z rodziny frakcji",
+ "charmodels.role_captain": "Kapitan",
+ "charmodels.role_general": "Generał z rodziny",
+ "charmodels.role_leader": "Przywódca frakcji",
+ "charmodels.role_heir": "Następca frakcji",
+ "eng.charmodels.unreached": "{type}, poziom {level}: żadna cecha tego typu postaci nie nadaje tego poziomu",
+ "eng.charmodels.missing": "{model} nie jest wpisem w modeldb",
+ "eng.charmodels.horse": "{model} nie ma animacji konia; generałowie i kapitanowie używają tego samego modelu pieszo i konno"
 }

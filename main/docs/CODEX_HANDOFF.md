@@ -237,6 +237,100 @@ The remaining stage-specific numeric differences are all enumerated here.
   five-hour window, with final checkpoint 68 percent used, under the active
   continuation's 90-percent-used stop. Weekly
   usage is not the threshold. No credits spent or limits reset.
+## 2026-11-08 - Phase 101j implemented and fixture-verified, ready for Claude review
+
+- Continued the original checkpoint in place, under the user's 2026-11-08
+  Phase 101j-only override: stop at 90% used in the five-hour window. Live
+  session rate_limits checks: 71%, 73%, 76%, 78%, 79%, 80%, 81%, 83% and 85% used.
+  No credits spent or limits reset. GitHub report check explicitly skipped.
+- Added unittransfer/charmodels.py, a read-only join: EDCT Effect Level effects
+  (family -> named character), zero-based slots, preserved comment labels,
+  named generals/captains/agents, campaign named-character battle overrides,
+  active/commented script changes, faction symbols and strat texture entries.
+  Nested campaigns are included. Missing battle entries/no horse animations
+  warn; slots above zero without matching traits are notes. Shared faction
+  blocks retain all owners, and the dialog identifies those shared edits.
+- Added GET /api/charmodels (roster without faction, details with faction),
+  characters/horse metadata on /api/bmdb/entry, and levels/traits on
+  /api/stratmap/entry. Removed the invalid three-slot minimum warning from
+  characters.check and corrected its module docstring and existing assertion.
+- Added the Faction models dialog from both Models Editor tabs and entry
+  cards. Named/captain/agent strat and battle fields and campaign-character
+  battle fields use model-name datalists. Probe shows the existing plans'
+  changes, warnings and errors; Apply requires an unchanged successful preview,
+  calls the existing apply routes and reloads. Each save keeps its existing
+  backup, My Changes/Log record and Undo. Multiple saves are separate records,
+  not an atomic transaction; partial failure reloads completed saves and reports
+  the error. No new writer, file format or dependency.
+- Model entry cards show character uses/roles and no-horse warnings. Strat
+  entry character rows show actual level, matching traits and comment together.
+  Links open the Characters block, raw script line or the campaign character.
+  Campaign/faction survive navigation URLs, including nested campaigns; the
+  map link selects the person by name and line and surfaces the People panel.
+- Read-only measurements before drawing UI confirmed vanilla packs vs DaC:
+  24/31 faction rosters, 78/237 strat entries, vanilla named slots 23 x one
+  plus Pope x two, DaC named slots 3-11. Both use only dictionary, strat_model,
+  battle_model and battle_equip within descr_character faction blocks.
+  Sicily ownership was inspected explicitly. All 48 vanilla and 62 DaC
+  named/captain battle_model lines exist and have horse animations; no false
+  warning on either set. Script join found six DaC changes, zero vanilla.
+  Sicily detail joins were read on both: correct symbols and 21/22 texture
+  entries, one/eleven named slots, zero findings. Real mods/game unchanged.
+- Tests FIRST: five Python fixture tests initially failed ImportError on the
+  absent charmodels module; Node initially failed ENOENT on the absent dialog.
+  The later HTTP join test first failed 404 before adding the route. Python's
+  first attempt hit the sandbox temp-directory mode issue before assertions;
+  a local runner made mkdir use 0777, after which the missing-module failures
+  were observed. Corrected two fixture assumptions: valid models_strat path
+  syntax, and signatures from raw disk line endings rather than LF literals.
+- Final new tests: tests.test_charmodels 7/7, Node test_charmodels_ui.js PASS.
+  Synthetic fixtures cover vanilla one-slot/Pope, DaC heir/leader/hero traits,
+  priest levels, misleading labels, duplicate trait effects, shared blocks,
+  missing/foot-only battle entries, active/commented scripts, nested campaigns,
+  roster/entry HTTP joins and both existing plan/apply routes plus Log Undo.
+  Save assertions verify only the requested token changes and Undo restores
+  exact bytes; stale descr_character signature is refused. JS exercises real
+  handlers/cards, preview invalidation/refusal, partial save reload and map
+  character selection, with fixture API responses.
+- Required regression commands used UT_NO_BROWSER=1 and were run separately
+  via python -m unittest (these legacy modules call sys.exit during import, so
+  a combined invocation stops at the first). web_modules 130/130;
+  characters 24/24; i18n initially 43/45 on a dynamic role ID, fixed with
+  explicit IDs, then 45/45. stratchar 88/89: installed DaC has 302/307 spans
+  ending on separating blanks. bmdb and bmdb_http fail on missing expected
+  Third_Age_Reforged fixture inputs (battle_models.modeldb and EDU respectively).
+  All three failures reproduced on unchanged HEAD sources extracted under the
+  workspace with the same settings and runner. No installed-data failures
+  have been attributed to this change. Baseline scratch remains under
+  .tmp/101j-baseline (HEAD sources/settings copy), with .tmp/101j-*.log,
+  .tmp/101j-baseline.zip and the test runner. Automatic command approval rejected
+  both scoped PowerShell cleanup attempts as blocked by policy; no more specific
+  reason was supplied. Scratch is untracked and not part of the implementation.
+- git diff --check passed. New-line/new-file em dash scan: zero. English-only
+  strings added to web/i18n/en.json, including three matching Python defaults;
+  removed the obsolete three-slot-warning English ID. Other catalogues and
+  dev/i18n untouched. No graphify-out/graph.json exists at the workspace parent,
+  so no existing graph was available to query/update. No commit or release.
+- Changed files: unittransfer/charmodels.py, unittransfer/characters.py,
+  unittransfer/server.py, web/js/charmodels.js, web/js/bmdb.js,
+  web/js/stratmap.js, web/js/core.js, web/index.html, web/i18n/en.json,
+  tests/test_charmodels.py, tests/test_charmodels_ui.js,
+  tests/test_characters.py and this handoff. Previous handoff entries preserved.
+- Limits: browser layout and installed-game behavior were not interactively
+  verified. Scripts, symbols and strat texture ownership are read only.
+  EDU general_unit bodyguards remain outside this phase's scope. The three
+  baseline regression failures above remain unresolved as unrelated inputs.
+- Claude's review, same day, before the commit: a level's trait list is
+  shown four names deep with "+N more" and the rest on hover (DaC gives
+  level 3 to 22 traits), and `levels_of` puts the heir and leader traits
+  first (named Factionheir/Factionleader, or given by a BecomesFactionHeir/
+  BecomesFactionLeader trigger), with a test written first; the model boxes
+  are wider; "General" in the role list is "Family general"; the help and
+  applied strings reworded. Translated into de, es, fr, pl, ru, tr and
+  zh-Hans (0 missing, 0 stale each), and the obsolete three-slot warning ID
+  removed from every catalogue. The .tmp scratch was deleted. Checked in the
+  app on DaC with previews only (a descr_character battle_model and a
+  descr_strat leader); nothing applied.
 
 ## 2026-11-08 - Phase 115 completed and fixture-verified, ready for Claude review
 

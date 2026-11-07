@@ -733,6 +733,15 @@
   ],
   "sheets.help_interchange": [
    "header"
+  ],
+  "charmodels.help": [
+   "general"
+  ],
+  "charmodels.horse": [
+   "mount"
+  ],
+  "eng.charmodels.horse": [
+   "mount"
   ]
  },
  "ancillaries.a_character_holds_one_ancillary_per": "Un personnage détient un accessoire par type ; c’est donc celui que remplace un nouvel accessoire",
@@ -5363,7 +5372,6 @@
  "eng.characters.has_no_battle_model_so_it": "{who} n’a aucun battle_model et donc aucun modèle pour combattre",
  "eng.characters.has_no_strat_model_so_it": "{who} n’a aucun strat_model et donc aucune apparence sur la carte",
  "eng.characters.has_no_type_section": "{REL} n’a aucune section type",
- "eng.characters.has_strat_model_s_a_named": "{who} possède {models_n} modèle(s) de campagne ; un personnage nommé en possède un pour chaque état : normal, héritier et chef",
  "eng.characters.has_two_blocks_lines_and_only": "{name} : {f} possède deux blocs (lignes {seen} et {x}) ; un seul est lu",
  "eng.characters.is_not_a_faction_in_descr": "{fac} n’est pas une faction de descr_sm_factions.txt",
  "eng.characters.is_not_a_faction_in_descr_2": "{who} : {f} n’est pas une faction de descr_sm_factions.txt",
@@ -13210,5 +13218,30 @@
  "sheets.help_example": "Exemple : filtrez sur « Palier égal à T1 », choisissez « Sélectionner les correspondances », puis prévisualisez une augmentation de l'attaque de 1 dans « Modification en masse ». Vérifiez le nombre d'éléments ciblés et les valeurs avant/après avant de cliquer sur « Confirmer ». Les lignes sélectionnées et toutes les lignes correspondantes constituent deux périmètres distincts. Le filtrage retire de la sélection les lignes masquées. Les touches fléchées permettent de parcourir les cellules ; collez un bloc rectangulaire séparé par des tabulations à partir de la cellule d'ancrage sélectionnée. Zéro est une valeur ; utilisez « Effacer » pour supprimer une annotation.",
  "sheets.help_interchange": "Importation/exportation : choisissez une vue et une ligne d'en-têtes pour chaque feuille de calcul, associez les identifiants exacts des unités et les champs, vérifiez l'aperçu, puis cliquez sur « Mettre en attente ». Les lignes sont associées par identifiant, jamais par position. Pour un CSV de classifications, associez « Nom » à id et associez « Race de l'unité » et « Palier » par leur nom. Les cellules natives vides laissent les valeurs inchangées ; les classifications vides les effacent ; [] vide une liste. Exportez les en-têtes natifs pour obtenir toutes les données actuelles, ou les en-têtes importés pour conserver la disposition associée.",
  "sheets.help_limits": "CSV et XLSX permettent d'échanger des données, mais pas les styles, tableaux, validations ou macros Excel. Les formules prennent uniquement en charge les nombres, + - * /, les parenthèses et les références A1 de la même feuille ; les fonctions, les plages et les formules entre feuilles ne sont pas disponibles et sont signalées. Les formules prises en charge ne sont exportées qu'au format XLSX avec la disposition importée. Les classifications absentes ou BG et les règles non prises en charge restent visibles parmi les éléments ignorés. L'équilibrage utilise l'en-tête ville/château de chaque niveau, signale les chaînes ambiguës et conserve les valeurs fractionnaires des réserves maximales. Le recrutement est en lecture seule dans la grille ; utilisez l'aperçu d'équilibrage et l'exportation avant de cliquer sur « Appliquer ».",
- "eng.stratmap.not_the_mods_own_file": "{file} n’est pas un fichier propre à {mod} (il est lu dans les paquets du jeu) ; rien n’est donc nettoyé"
+ "eng.stratmap.not_the_mods_own_file": "{file} n’est pas un fichier propre à {mod} (il est lu dans les paquets du jeu) ; rien n’est donc nettoyé",
+ "charmodels.title": "Modèles de faction",
+ "charmodels.characters": "Personnages",
+ "charmodels.level": "niveau {level}",
+ "charmodels.line": "ligne {line}",
+ "charmodels.default": "Par défaut",
+ "charmodels.no_trait": "Aucun trait ne confère ce niveau",
+ "charmodels.more": "{names} +{n} autres",
+ "charmodels.pick": "Choisir une faction",
+ "charmodels.help": "La position d'une ligne strat_model détermine le niveau du personnage : les traits confèrent des niveaux et les commentaires servent uniquement de libellés. Le type general correspond au capitaine. Toute modification d'un bloc partagé par plusieurs factions s'applique à toutes ces factions. Utilisez « Aperçu » avant « Appliquer » ; chaque enregistrement dispose de sa propre copie de sauvegarde et de l'option « Annuler » dans Log. Les gardes du corps sont des unités et se modifient dans l'Éditeur d'unités.",
+ "charmodels.horse": "Aucune animation de cheval : les généraux et les capitaines utilisent le même modèle de bataille à pied et à cheval.",
+ "charmodels.campaign_characters": "Chefs et héritiers de campagne et modèles de bataille des personnages",
+ "charmodels.scripts": "Modifications du script de campagne (lecture seule)",
+ "charmodels.symbols": "Symboles de faction (lecture seule)",
+ "charmodels.textures": "Modèles de campagne avec cette texture de faction (lecture seule)",
+ "charmodels.commented": "Mis en commentaire",
+ "charmodels.failed": "Échec de la planification ou de l'enregistrement",
+ "charmodels.applied": "Enregistré ({count}) et rechargé. Chaque enregistrement peut être annulé dans Log.",
+ "charmodels.role_generals": "Généraux de la famille de la faction",
+ "charmodels.role_captain": "Capitaine",
+ "charmodels.role_general": "Général de la famille",
+ "charmodels.role_leader": "Chef de faction",
+ "charmodels.role_heir": "Héritier de faction",
+ "eng.charmodels.unreached": "{type}, niveau {level} : aucun trait de ce type de personnage ne confère ce niveau",
+ "eng.charmodels.missing": "{model} n'est pas une entrée de modeldb",
+ "eng.charmodels.horse": "{model} n'a aucune animation de cheval ; les généraux et les capitaines utilisent le même modèle à pied et à cheval"
 }

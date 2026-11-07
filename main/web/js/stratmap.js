@@ -268,6 +268,7 @@ async function openStratEntry(name){
     <div class="foot"><button onclick="closeModal()">${tt('common.close')}</button></div>`; return; }
   modal.innerHTML=`<h2>${tt('stratmap.strat_model')} <span class="pill">${esc(state.src)}</span></h2>
     <div class="ehead">
+      <button onclick="openFactionModels()">${tt('charmodels.title')}</button>
       <div><div class="nm" style="font-family:ui-monospace,Consolas,monospace">${esc(r.name)}</div>
         <div class="count">${tt('stratmap.line_of_data_descr_model_strat',{skeleton:r.skeleton?`${tt('stratmap.skeleton',{skeleton:esc(r.skeleton)})} `:'',line:r.line,x:r.used_by.length?tt('stratmap.used_by',{used_by:esc(r.used_by.slice(0,6).join(', ')),used_by2:r.used_by.length>6?` +${r.used_by.length-6}`:''})
                             :`<span class="w-warn">${tt('stratmap.referenced_by_nothing_2')}</span>`})}</div></div>
@@ -275,7 +276,7 @@ async function openStratEntry(name){
     <div class="mbody">
       ${(r.characters||[]).length?`<fieldset><legend>${tt('stratmap.the_characters_it_stands_in_for')}</legend>
         <div class="count">${r.characters.map(c=>navLinkHtml({mode:'characters', name:c.key},
-          `${esc(c.type)} · ${esc(c.faction)}${c.label?` <span class="count">(${esc(c.label)})</span>`:''}`,
+          `${esc(c.type)} · ${esc(c.faction)} ${cmLevelHtml({level:c.level,traits:c.traits,comment:c.label})}`,
           'ulink',tt('stratmap.open_this_block_in_agents_and'))).join(' · ')}</div></fieldset>`:''}
       <fieldset class="assetconf"><legend>${tt('stratmap.the_files_it_names')}</legend>
         <div class="flist">${r.files.map(f=>`<div class="frow">

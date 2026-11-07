@@ -1492,13 +1492,6 @@ installed mods to read, measure or check against:
   model names (85 reports them and never removes them), duplicate animations
   under different paths, and folding loose `.cas` files back into the pack.
   Measure each on Reforged and DaC first.
-* **101j - Captains, leaders and each faction's unique models in the Models
-  Editor.** Editable: the general's / captain's bodyguard and the faction
-  leader / heir models (`descr_character.txt` per faction, and the
-  `strat_model` / `battle_model` lines there), plus whatever else is per
-  faction (`descr_sm_factions.txt` figures, `descr_model_strat.txt` entries).
-  Read both installed mods to list exactly which lines a faction owns before
-  drawing the UI; the Models Editor's existing card is the place to show them.
 * **101k - The Unit Creator's other two ＋ modes for armour tiers.** The
   creator now draws armour tiers like the Unit Editor (chips, ✕ above, drag,
   ＋ with *repeat the last tier* and *name an existing entry*). The editor's

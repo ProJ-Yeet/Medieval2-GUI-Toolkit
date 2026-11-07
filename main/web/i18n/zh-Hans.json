@@ -738,6 +738,15 @@
   ],
   "sheets.help_interchange": [
    "header"
+  ],
+  "charmodels.help": [
+   "general"
+  ],
+  "charmodels.horse": [
+   "mount"
+  ],
+  "eng.charmodels.horse": [
+   "mount"
   ]
  },
  "ancillaries.a_character_holds_one_ancillary_per": "人物每种类型只能持有一个随从，因此此项决定新随从会替换哪个随从",
@@ -5030,7 +5039,6 @@
  "eng.characters.has_no_battle_model_so_it": "{who} 没有 battle_model，因此没有用于战斗的模型",
  "eng.characters.has_no_strat_model_so_it": "{who} 没有 strat_model，因此没有用于显示在地图上的模型",
  "eng.characters.has_no_type_section": "{REL} 没有 type 部分",
- "eng.characters.has_strat_model_s_a_named": "{who} 有 {models_n} 个战略模型；具名人物在普通、继承人和领袖状态下各有一个",
  "eng.characters.has_two_blocks_lines_and_only": "{name}：{f} 有两个块（第 {seen} 和 {x} 行），只有一个会被读取",
  "eng.characters.is_not_a_faction_in_descr": "{fac} 不是 descr_sm_factions.txt 中的派系",
  "eng.characters.is_not_a_faction_in_descr_2": "{who}：{f} 不是 descr_sm_factions.txt 中的派系",
@@ -12398,5 +12406,30 @@
  "sheets.help_example": "示例：筛选“层级等于 T1”，选择“选中匹配项”，然后在“批量编辑”中预览攻击增加 1 的效果。点击“确认”前，请检查目标数量以及更改前后的数值。选中行和所有匹配行是两个独立的作用范围。筛选会取消对隐藏行的选择。使用方向键可在单元格之间移动；粘贴以制表符分隔的矩形数据块时，将从选中的锚点单元格开始。零也是一个值；请使用“清除”移除注释。",
  "sheets.help_interchange": "导入/导出：为每个工作表选择视图和表头行，准确映射部队 ID 和字段，查看预览，然后点击“暂存”。行按 ID 关联，绝不按位置关联。对于分类 CSV，请将“名称”映射到 id，并按名称映射“部队种族”和“层级”。空白的原生数据单元格会保留原值；空白分类会清除原值；[] 会清空列表。导出原生表头可获取完整的当前数据，导出导入时的表头则可保留映射后的布局。",
  "sheets.help_limits": "CSV 和 XLSX 用于交换数据，不包含 Excel 样式、表格、数据验证或宏。公式仅支持数字、+ - * /、括号和同一工作表内的 A1 引用；不支持函数、范围及跨工作表公式，并会报告这些情况。支持的公式仅能以 XLSX 格式按导入时的布局导出。缺失的分类、BG 分类和不支持的规则仍会显示为跳过项。平衡功能使用各等级的城市/城堡文件头，报告存在歧义的链，并保留最大全池容量中的小数值。招募数据在网格中为只读；点击“应用”前，请使用平衡预览并导出。",
- "eng.stratmap.not_the_mods_own_file": "{file} 不是 {mod} 自己的文件（它从游戏包中读取），因此不会清理任何内容"
+ "eng.stratmap.not_the_mods_own_file": "{file} 不是 {mod} 自己的文件（它从游戏包中读取），因此不会清理任何内容",
+ "charmodels.title": "派系模型",
+ "charmodels.characters": "人物",
+ "charmodels.level": "等级 {level}",
+ "charmodels.line": "第 {line} 行",
+ "charmodels.default": "默认",
+ "charmodels.no_trait": "没有特质赋予此等级",
+ "charmodels.more": "{names}，另有 {n} 个",
+ "charmodels.pick": "选择派系",
+ "charmodels.help": "strat_model 行的位置决定人物等级：特质赋予等级，注释仅作标签。general 类型指的是队长。多个派系共用的块一经修改，就会影响所有这些派系。请先点击“预览”，再点击“应用”；每次保存都有独立备份，并可在 Log 中使用“撤销”。卫队属于部队，请在部队编辑器中编辑。",
+ "charmodels.horse": "无马匹动画：将军和队长在步行及骑乘时使用同一战斗模型。",
+ "charmodels.campaign_characters": "战役领袖、继承人及人物战斗模型",
+ "charmodels.scripts": "战役脚本更改（只读）",
+ "charmodels.symbols": "派系标志（只读）",
+ "charmodels.textures": "使用此派系贴图的战略模型（只读）",
+ "charmodels.commented": "已注释禁用",
+ "charmodels.failed": "规划或保存失败",
+ "charmodels.applied": "已保存（{count}）并重新加载。每次保存均可在 Log 中撤销。",
+ "charmodels.role_generals": "派系家族将军",
+ "charmodels.role_captain": "队长",
+ "charmodels.role_general": "家族将军",
+ "charmodels.role_leader": "派系领袖",
+ "charmodels.role_heir": "派系继承人",
+ "eng.charmodels.unreached": "{type}，等级 {level}：此人物类型没有特质赋予此等级",
+ "eng.charmodels.missing": "{model} 不是 modeldb 条目",
+ "eng.charmodels.horse": "{model} 没有马匹动画；将军和队长在步行及骑乘时使用同一模型"
 }

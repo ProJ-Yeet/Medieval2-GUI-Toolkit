@@ -527,6 +527,15 @@
   ],
   "sheets.help_interchange": [
    "header"
+  ],
+  "charmodels.help": [
+   "general"
+  ],
+  "charmodels.horse": [
+   "mount"
+  ],
+  "eng.charmodels.horse": [
+   "mount"
   ]
  },
  "ancillaries.a_character_holds_one_ancillary_per": "Bir karakter'de tür başına bir ancillary bulunur; dolayısıyla yenisi bunun yerini alır",
@@ -5005,7 +5014,6 @@
  "eng.characters.has_no_battle_model_so_it": "{who}'nin battle_model'i yok, dolayısıyla savaşacak modeli yok",
  "eng.characters.has_no_strat_model_so_it": "{who}'nin strat_model'i yok, dolayısıyla haritada duracak hiçbir şeyi yok",
  "eng.characters.has_no_type_section": "{REL}'de tip bölümü yok",
- "eng.characters.has_strat_model_s_a_named": "{who}, {models_n} strateji model(ler)ine sahiptir; adlandırılmış bir karakterin her biri varsayılan, varis ve lider için birer taneye sahiptir",
  "eng.characters.has_two_blocks_lines_and_only": "{name} : {f}'de iki blok bulunur ({seen} ve {x} satırları); sadece bir tanesi okunuyor",
  "eng.characters.is_not_a_faction_in_descr": "{fac}, descr_sm_factions.txt'deki bir fraksiyon değil",
  "eng.characters.is_not_a_faction_in_descr_2": "{who} : {f}, descr_sm_factions.txt'deki bir fraksiyon değil",
@@ -12603,5 +12611,30 @@
  "sheets.help_example": "Örnek: «Kademe eşittir T1» filtresini uygulayın, «Eşleşenleri seç» seçeneğini kullanın, ardından «Toplu düzenleme» bölümünde saldırı değerinin 1 artırılmasını önizleyin. «Onayla» seçeneğini kullanmadan önce hedef sayısını ve önceki/sonraki değerleri kontrol edin. Seçili satırlar ve eşleşen tüm satırlar ayrı kapsamlardır. Filtreleme, gizlenen satırları seçimden çıkarır. Ok tuşları hücreler arasında hareket etmenizi sağlar; sekmelerle ayrılmış dikdörtgen bir veri bloğunu seçili başlangıç hücresinden itibaren yapıştırın. Sıfır bir değerdir; bir açıklamayı kaldırmak için «Temizle» seçeneğini kullanın.",
  "sheets.help_interchange": "İçe/dışa aktarma: her çalışma sayfası için bir görünüm ve sütun başlıkları satırı seçin, tam birim kimliklerini ve alanları eşleştirin, önizleyin, ardından «Hazırla» seçeneğini kullanın. Satırlar konumlarına göre değil, kimliklerine göre birleştirilir. Bir sınıflandırma CSV dosyası için «Ad» alanını id ile, «Birim Irkı» ve «Kademe» alanlarını ise adlarına göre eşleştirin. Boş yerel veri hücreleri değerleri değiştirmez; boş sınıflandırmalar değerleri temizler; [] bir listeyi boşaltır. Güncel verilerin tamamını almak için yerel sütun başlıklarını, eşleştirilen düzeni korumak için ise içe aktarılan sütun başlıklarını dışa aktarın.",
  "sheets.help_limits": "CSV ve XLSX veri alışverişi sağlar; Excel stillerini, tablolarını, veri doğrulamasını veya makrolarını aktarmaz. Formül desteği sayılar, + - * /, parantezler ve aynı sayfadaki A1 başvurularıyla sınırlıdır; işlevler, aralıklar ve sayfalar arası formüller kullanılamaz ve raporlanır. Desteklenen formüller yalnızca XLSX ve içe aktarılan düzenle dışa aktarılır. Eksik veya BG sınıflandırmaları ile desteklenmeyen kurallar, atlanan öğeler olarak görünür kalır. Denge işlevi her seviyenin şehir/kale başlığını kullanır, belirsiz zincirleri raporlar ve azami havuz değerlerinin kesirli kısımlarını korur. Devşirme verileri tabloda salt okunurdur; «Uygula» seçeneğini kullanmadan önce Denge önizlemesini ve dışa aktarmayı kullanın.",
- "eng.stratmap.not_the_mods_own_file": "{file}, {mod} modunun kendi dosyası değildir (oyunun paketlerinden okunur), dolayısıyla hiçbir şey temizlenmez"
+ "eng.stratmap.not_the_mods_own_file": "{file}, {mod} modunun kendi dosyası değildir (oyunun paketlerinden okunur), dolayısıyla hiçbir şey temizlenmez",
+ "charmodels.title": "Fraksiyon modelleri",
+ "charmodels.characters": "Karakterler",
+ "charmodels.level": "seviye {level}",
+ "charmodels.line": "satır {line}",
+ "charmodels.default": "Varsayılan",
+ "charmodels.no_trait": "Hiçbir özellik bu seviyeyi vermez",
+ "charmodels.more": "{names} +{n} tane daha",
+ "charmodels.pick": "Bir fraksiyon seçin",
+ "charmodels.help": "Bir strat_model satırının konumu karakterin seviyesini belirler: özellikler seviye verir, yorumlar ise yalnızca etikettir. general türü yüzbaşıyı belirtir. Birkaç fraksiyonun paylaştığı bir blok değiştirildiğinde hepsi etkilenir. Önce “Önizleme”, sonra “Uygula” düğmesini kullanın; her kaydın kendi yedeği ve Log içinde “Geri al” seçeneği vardır. Muhafızlar birimdir ve Birim Düzenleyicisi'nde düzenlenir.",
+ "charmodels.horse": "At animasyonu yok: generaller ve yüzbaşılar yaya ve atlıyken aynı savaş modelini kullanır.",
+ "charmodels.campaign_characters": "Kampanya liderleri, varisleri ve karakter savaş modelleri",
+ "charmodels.scripts": "Kampanya script değişiklikleri (salt okunur)",
+ "charmodels.symbols": "Fraksiyon simgeleri (salt okunur)",
+ "charmodels.textures": "Bu fraksiyon dokusunu kullanan strateji modelleri (salt okunur)",
+ "charmodels.commented": "Yorum satırı olarak devre dışı",
+ "charmodels.failed": "Planlama veya kaydetme başarısız oldu",
+ "charmodels.applied": "Kaydedildi ({count}) ve yeniden yüklendi. Her kayıt Log içinde geri alınabilir.",
+ "charmodels.role_generals": "Fraksiyon ailesinden generaller",
+ "charmodels.role_captain": "Yüzbaşı",
+ "charmodels.role_general": "Aile generali",
+ "charmodels.role_leader": "Fraksiyon lideri",
+ "charmodels.role_heir": "Fraksiyon varisi",
+ "eng.charmodels.unreached": "{type}, seviye {level}: bu karakter türünün hiçbir özelliği bu seviyeyi vermez",
+ "eng.charmodels.missing": "{model}, modeldb içinde bir girdi değil",
+ "eng.charmodels.horse": "{model} için at animasyonu yok; generaller ve yüzbaşılar yaya ve atlıyken aynı modeli kullanır"
 }

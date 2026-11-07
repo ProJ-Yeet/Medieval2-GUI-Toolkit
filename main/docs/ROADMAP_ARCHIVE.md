@@ -13201,6 +13201,55 @@ user (see *Deferred to a later version* under *What else is open*).
 
 ---
 
+## Phase 101j - captains, leaders and each faction's unique models in the Models Editor
+
+**Finished 2026-11-08.** The write-up, as it stood in `ROADMAP.md`:
+
+* **101j - Captains, leaders and each faction's unique models in the Models
+  Editor.** Editable: the general's / captain's bodyguard and the faction
+  leader / heir models (`descr_character.txt` per faction, and the
+  `strat_model` / `battle_model` lines there), plus whatever else is per
+  faction (`descr_sm_factions.txt` figures, `descr_model_strat.txt` entries).
+  Read both installed mods to list exactly which lines a faction owns before
+  drawing the UI; the Models Editor's existing card is the place to show them.
+
+**What the installed mods and the TWCenter archive said, before any code.**
+A `strat_model` line's position in a `descr_character.txt` block is the
+character's level (0-10), and a level comes from a trait's `Effect Level N`
+in `export_descr_character_traits.txt`; the comment after a line is a label
+the game never reads (the TWCenter tutorial *How to add strat map character
+levels & change battle models*). Vanilla gives 23 of 24 factions one slot,
+and only `IAmPope` gives a level (1, papal_states' `pope`): its leader and
+heir look like any general. DaC has 3 to 11 slots, `FactionHeir` level 1 and
+`FactionLeader` level 2 (from EOP Lua, not a trigger), and 133 hero traits
+for levels 3-10; its `turks` labels slots 1 and 2 *Custom* although the heir
+and leader still land there. `descr_character`'s battle_model is every
+family general of the faction (`named character`) or the captain
+(`general`); a leader's or heir's own battle model is per character in
+`descr_strat.txt` (DaC 78 lines) or `change_battle_model` in the campaign
+script (DaC 6). The bodyguard is an EDU `general_unit`, not a
+`descr_character` line. Per faction otherwise: `symbol` / `rebel_symbol` in
+`descr_sm_factions.txt` and the `texture <faction>` lines of
+`descr_model_strat.txt`.
+
+**Built.** `unittransfer/charmodels.py` joins those files read-only:
+`levels_of` (traits by character type and level, the heir and leader traits
+first), `faction_models` (one faction's slots, captain, agents, descr_strat
+leaders and heirs, script lines, symbols and strat textures, with findings:
+a general's or captain's battle model missing or without a horse animation,
+which the *Captains & Generals* tutorial explains, and a slot no trait
+reaches) and `entry_characters` (who uses a modeldb entry as a battle
+model), served by `GET /api/charmodels` and added to the Model entries and
+Strat models cards. The *Faction models* dialog (`web/js/charmodels.js`),
+opened from both tabs and both cards, edits every `descr_character`
+strat_model and battle_model and every `descr_strat` battle_model through the
+existing writers (`characters.plan/apply`, `stratchar.plan_character`), so
+each save has its own backup, My Changes record and Undo; Preview comes
+first. Scripts, symbols and textures are shown, not edited. The Characters
+screen's warning that a named character needs three strat models is gone:
+vanilla's single slot is correct. Checked in the app on DaC with previews
+only.
+
 ## Phase 101 - the user's list of 2026-11-03, the part built in a cloud session
 
 Fourteen items in one message. What needs the installed mods to measure is

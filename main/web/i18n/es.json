@@ -1153,6 +1153,9 @@
   ],
   "sheets.help_interchange": [
    "header"
+  ],
+  "charmodels.help": [
+   "general"
   ]
  },
  "ancillaries.a_character_holds_one_ancillary_per": "Un personaje solo puede tener un séquito de cada tipo, así que este es el que sustituiría uno nuevo",
@@ -13595,5 +13598,30 @@
  "sheets.help_example": "Ejemplo: filtra por «Grado igual a T1», elige «Seleccionar coincidencias» y previsualiza un aumento de ataque de 1 en «Edición masiva». Comprueba la cantidad de elementos afectados y los valores anteriores y posteriores antes de pulsar «Confirmar». Las filas seleccionadas y todas las filas coincidentes son ámbitos distintos. Al filtrar, se eliminan de la selección las filas ocultas. Las teclas de dirección permiten desplazarse entre celdas; pega un bloque rectangular separado por tabulaciones desde la celda de anclaje seleccionada. Cero es un valor; usa «Borrar» para eliminar una anotación.",
  "sheets.help_interchange": "Importación/exportación: elige una vista y una fila de encabezados para cada hoja de cálculo, asigna los ID exactos de las unidades y los campos, revisa la vista previa y pulsa «Preparar». Las filas se vinculan por ID, nunca por posición. Para un CSV de clasificaciones, asigna «Nombre» a id y asigna «Raza de la unidad» y «Grado» por nombre. Las celdas nativas vacías dejan los valores sin cambios; las clasificaciones vacías los borran; [] vacía una lista. Exporta los encabezados nativos para obtener todos los datos actuales o los encabezados importados para conservar la estructura asignada.",
  "sheets.help_limits": "CSV y XLSX intercambian datos, pero no estilos, tablas, validaciones ni macros de Excel. Las fórmulas solo admiten números, + - * /, paréntesis y referencias A1 de la misma hoja; las funciones, los rangos y las fórmulas entre hojas no están disponibles y se notifican. Las fórmulas compatibles solo se exportan con XLSX y la estructura importada. Las clasificaciones ausentes o BG y las reglas no compatibles siguen apareciendo como elementos omitidos. La función de equilibrio usa la cabecera de ciudad/castillo de cada nivel, informa de las cadenas ambiguas y conserva las reservas máximas con valores fraccionarios. El reclutamiento es de solo lectura en la cuadrícula; usa la vista previa de equilibrio y la exportación antes de pulsar «Aplicar».",
- "eng.stratmap.not_the_mods_own_file": "{file} no es un archivo propio de {mod} (se lee de los packs del juego), así que no se limpia nada"
+ "eng.stratmap.not_the_mods_own_file": "{file} no es un archivo propio de {mod} (se lee de los packs del juego), así que no se limpia nada",
+ "charmodels.title": "Modelos de facción",
+ "charmodels.characters": "Personajes",
+ "charmodels.level": "nivel {level}",
+ "charmodels.line": "línea {line}",
+ "charmodels.default": "Predeterminado",
+ "charmodels.no_trait": "Ningún rasgo otorga este nivel",
+ "charmodels.more": "{names} +{n} más",
+ "charmodels.pick": "Selecciona una facción",
+ "charmodels.help": "La posición de una línea strat_model determina el nivel del personaje: los rasgos otorgan niveles y los comentarios solo sirven de etiquetas. El tipo general corresponde al capitán. Los cambios en un bloque compartido por varias facciones afectan a todas ellas. Usa «Vista previa» antes de «Aplicar»; cada guardado tiene su propia copia de seguridad y la opción «Deshacer» en Log. Las escoltas son unidades y se editan en el Editor de unidades.",
+ "charmodels.horse": "Sin animación de caballo: los generales y capitanes usan el mismo modelo de batalla a pie y montados.",
+ "charmodels.campaign_characters": "Líderes y herederos de campaña y modelos de batalla de personajes",
+ "charmodels.scripts": "Cambios en el script de campaña (solo lectura)",
+ "charmodels.symbols": "Símbolos de facción (solo lectura)",
+ "charmodels.textures": "Modelos estratégicos con esta textura de facción (solo lectura)",
+ "charmodels.commented": "Desactivado mediante comentarios",
+ "charmodels.failed": "Error al planificar o guardar",
+ "charmodels.applied": "Guardado ({count}) y recargado. Cada guardado se puede deshacer en Log.",
+ "charmodels.role_generals": "Generales de la familia de la facción",
+ "charmodels.role_captain": "Capitán",
+ "charmodels.role_general": "General de la familia",
+ "charmodels.role_leader": "Líder de facción",
+ "charmodels.role_heir": "Heredero de facción",
+ "eng.charmodels.unreached": "{type}, nivel {level}: ningún rasgo de este tipo de personaje otorga este nivel",
+ "eng.charmodels.missing": "{model} no es una entrada de modeldb",
+ "eng.charmodels.horse": "{model} no tiene animación de caballo; los generales y capitanes usan el mismo modelo a pie y montados"
 }

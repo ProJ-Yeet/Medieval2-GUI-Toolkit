@@ -1014,6 +1014,15 @@
   ],
   "sheets.help_interchange": [
    "header"
+  ],
+  "charmodels.help": [
+   "general"
+  ],
+  "charmodels.horse": [
+   "mount"
+  ],
+  "eng.charmodels.horse": [
+   "mount"
   ]
  },
  "ancillaries.a_character_holds_one_ancillary_per": "Ein Charakter hat pro Typ ein Gefolgsmitglied; das ist also das, was ein neues ersetzt",
@@ -13089,5 +13098,30 @@
  "sheets.help_example": "Beispiel: Filtere nach „Ausbaustufe gleich T1“, wähle „Treffer auswählen“ und sieh dir dann unter „Massenbearbeitung“ eine Erhöhung des Angriffs um 1 in der Vorschau an. Prüfe vor „Bestätigen“ die Anzahl der Ziele sowie die Vorher-/Nachher-Werte. Ausgewählte Zeilen und alle passenden Zeilen sind getrennte Geltungsbereiche. Beim Filtern werden ausgeblendete Zeilen aus der Auswahl entfernt. Mit den Pfeiltasten wechselst du zwischen Zellen; füge einen durch Tabulatoren getrennten rechteckigen Bereich ab der ausgewählten Ankerzelle ein. Null ist ein Wert; mit „Leeren“ entfernst du eine Anmerkung.",
  "sheets.help_interchange": "Import/Export: Wähle für jedes Arbeitsblatt eine Ansicht und eine Kopfzeile, ordne die exakten Einheiten-IDs und Felder zu, prüfe die Vorschau und wähle dann „Vormerken“. Zeilen werden anhand ihrer ID zusammengeführt, niemals anhand ihrer Position. Ordne bei einer Klassifizierungs-CSV „Name“ dem Feld id zu und ordne „Einheitenvolk“ und „Ausbaustufe“ anhand ihrer Namen zu. Leere native Zellen lassen Werte unverändert; leere Klassifizierungen löschen sie; [] leert eine Liste. Exportiere native Spaltenüberschriften für die vollständigen aktuellen Daten oder importierte Spaltenüberschriften, um die zugeordnete Struktur beizubehalten.",
  "sheets.help_limits": "CSV und XLSX übertragen Daten, aber keine Excel-Formatierungen, Tabellen, Datenvalidierungen oder Makros. Die Formelunterstützung beschränkt sich auf Zahlen, + - * /, Klammern und A1-Bezüge innerhalb desselben Arbeitsblatts; Funktionen, Bereiche und blattübergreifende Formeln sind nicht verfügbar und werden gemeldet. Unterstützte Formeln werden nur mit XLSX und importierter Struktur exportiert. Fehlende oder als BG eingestufte Klassifizierungen und nicht unterstützte Regeln bleiben als übersprungene Einträge sichtbar. Die Balance-Funktion verwendet den Stadt-/Burg-Header jeder Stufe, meldet mehrdeutige Ketten und behält Nachkommastellen bei maximalen Poolgrößen bei. Rekrutierungswerte sind im Tabellenraster schreibgeschützt; nutze vor „Anwenden“ die Balance-Vorschau und den Export.",
- "eng.stratmap.not_the_mods_own_file": "{file} ist keine eigene Datei von {mod} (sie wird aus den Packs des Spiels gelesen), daher wird nichts bereinigt"
+ "eng.stratmap.not_the_mods_own_file": "{file} ist keine eigene Datei von {mod} (sie wird aus den Packs des Spiels gelesen), daher wird nichts bereinigt",
+ "charmodels.title": "Fraktionsmodelle",
+ "charmodels.characters": "Charaktere",
+ "charmodels.level": "Stufe {level}",
+ "charmodels.line": "Zeile {line}",
+ "charmodels.default": "Standard",
+ "charmodels.no_trait": "Keine Eigenschaft verleiht diese Stufe",
+ "charmodels.more": "{names} +{n} weitere",
+ "charmodels.pick": "Fraktion auswählen",
+ "charmodels.help": "Die Position einer strat_model-Zeile bestimmt die Stufe des Charakters: Eigenschaften verleihen Stufen, Kommentare dienen nur als Beschriftung. Der Typ general bezeichnet den Hauptmann. Änderungen an einem Block, den mehrere Fraktionen gemeinsam nutzen, gelten für alle diese Fraktionen. Vor „Übernehmen“ auf „Vorschau“ klicken; jeder Speichervorgang hat eine eigene Sicherung und kann über „Rückgängig“ im Log rückgängig gemacht werden. Leibwachen sind Einheiten und werden im Einheiteneditor bearbeitet.",
+ "charmodels.horse": "Keine Pferdeanimation: Generäle und Hauptleute verwenden zu Fuß und beritten dasselbe Schlachtmodell.",
+ "charmodels.campaign_characters": "Anführer und Erben der Kampagne sowie Schlachtmodelle der Charaktere",
+ "charmodels.scripts": "Änderungen am Kampagnenskript (schreibgeschützt)",
+ "charmodels.symbols": "Fraktionssymbole (schreibgeschützt)",
+ "charmodels.textures": "Strategiemodelle mit dieser Fraktionstextur (schreibgeschützt)",
+ "charmodels.commented": "Auskommentiert",
+ "charmodels.failed": "Planung oder Speichern fehlgeschlagen",
+ "charmodels.applied": "Gespeichert ({count}) und neu geladen. Jeder Speichervorgang kann im Log rückgängig gemacht werden.",
+ "charmodels.role_generals": "Generäle aus der Fraktionsfamilie",
+ "charmodels.role_captain": "Hauptmann",
+ "charmodels.role_general": "Familiengeneral",
+ "charmodels.role_leader": "Fraktionsanführer",
+ "charmodels.role_heir": "Fraktionserbe",
+ "eng.charmodels.unreached": "{type}, Stufe {level}: Keine Eigenschaft dieses Charaktertyps verleiht diese Stufe",
+ "eng.charmodels.missing": "{model} ist kein modeldb-Eintrag",
+ "eng.charmodels.horse": "{model} hat keine Pferdeanimation; Generäle und Hauptleute verwenden zu Fuß und beritten dasselbe Modell"
 }
