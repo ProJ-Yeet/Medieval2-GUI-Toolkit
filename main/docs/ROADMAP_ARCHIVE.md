@@ -14303,3 +14303,13 @@ staging store. `tests/test_sheet_ops.py`, `test_unit_sheets.py`,
 
 **Finished 2026-11-08.** The rule sheets, classifications and EDU sheet views import and export as CSV and XLSX from the window, with XLSX read and written by the standard library alone. Columns are mapped explicitly and previewed before staging; only validated unit IDs match, unknown columns are kept, separator and formatted-empty rows are ignored. Formulas: a small documented subset (numbers, + - * /, same-sheet A1 references) is evaluated, anything else is named, macros never run. Blank, zero and a cleared list survive round trips, and a refused import leaves the staged work as it was. Details in docs/SHEET_INTERCHANGE.md. Checked on DaC EUR: the classification view exported as XLSX and read back.
 
+## Phase 101i - Strat model cleaner
+
+* **101i - Strat model cleaner.** The campaign-map counterpart of the BMDB
+  cleanup: `descr_model_strat.txt` entries no character, faction or script
+  names, and the `.cas` / texture files under `data/models_strat` nothing
+  points at, moved out with one Undo. Which files name a strat model has to be
+  measured over the installed mods (descr_character.txt, descr_sm_factions.txt,
+  descr_strat.txt, campaign scripts, EOP Lua) before anything is removed.
+
+**Finished 2026-11-08.** The measurement showed the cleaner already existed (`stratmap.py`, Phase 15) and had two safety gaps, so on the user's word it was hardened rather than rebuilt. It read only `data/`: Divide and Conquer keeps `Activate/NORMAL/data` and `Activate/SPEED/data`, which its switcher copies over `data/`, and five of the 16 models called unused (bree_general, bree_leader, amroth_prince, bree_captain, amroth_captain) are named only there. Every `descr_character.txt`, `descr_*.txt` and campaign script outside `data/` now counts, read from the one walk of the mod root the Lua net already makes. A mod that keeps its files in packs had `descr_character.txt` read loose only, so the base game showed 67 of 78 models unused; the reference files are now read through `Mod.game_or` (16 left, all `sm_*` and `pontus_*` Rome leftovers), and a cleanup refuses when `descr_model_strat.txt` is not the mod's own loose file. DaC now: 11 unused, 350 files nothing names (57.1 MB), unchanged. Checked in the app on DaC with a find run only; nothing was moved.
