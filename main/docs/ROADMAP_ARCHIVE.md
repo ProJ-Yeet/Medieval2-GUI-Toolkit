@@ -14222,3 +14222,22 @@ EDB hashes were identical before and after. Interpretation: "no disk writes
 while staging" means no writes to mod files; the sheet project JSON is the
 staging store. `tests/test_sheet_ops.py`, `test_unit_sheets.py`,
 `test_sheet_native.py`, `test_unit_sheets_ui.js`.
+## Phase 112 - Building graph and replenishment rules
+
+- Derive chain roots, upgrades, branch depths and city/castle/unspecified context
+  through the existing EDB parser. Define a visible policy for disconnected,
+  branched, merged or cyclic chains; never default an unknown level to tier zero.
+- Port the user's editable Earliest/Latest replenishment table and interpolation
+  over the chain. The compatibility profile uses `X = E + (L-E)*i/max_depth`,
+  with E for a single-level chain, reciprocal rate rounding to six decimals,
+  then city x0.9 and cavalry x0.8, then six-decimal rounding again.
+- Preserve the script's maximum-pool-below-1 exception for replenishment, Beast
+  race mapping, missing endpoint fallback and invalid/missing-rule outcomes.
+  Make multipliers, profile-specific exceptions and branch policy inspectable.
+  Malformed Beast labels must be reported, not silently treated as Orc.
+- **Depends on:** 109; editing rules uses 110. **Exit:** reference-profile golden
+  cases and boundary tests pass, explanations show exact inputs/rounding, and
+  requirements/comments/other recruitment numbers stay unchanged.
+
+**Finished 2026-11-07.** Golden replenishment cases for single, linear, branched, merged, disconnected and cyclic chains, rounding boundaries, both graph policies, Beast and malformed-Beast labels, pool below 1 and missing endpoints/rules, each with its full explanation. One intentional difference from the legacy script, on the user's word: city or castle comes from each level's own header (the legacy script used the chain's first header), so a castle level is not given the city multiplier. The engine's fixed rules are shown read-only under Compatibility rules.
+

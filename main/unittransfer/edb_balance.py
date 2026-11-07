@@ -16,6 +16,16 @@ from . import buildings, unit_sheets as sheets
 STAGES=('replenish','experience','pool')
 PROFILE={'city_multiplier':.9,'cavalry_multiplier':.8,'branch_policy':'shortest',
          'fractional_pool_exception':True,'barracks_cap':5}
+# Read-only compatibility rules, separate from editable profile/recipe keys.
+# Per-level settlement is the user's approved exception to the legacy chain header.
+PROFILE_RULES={'settlement_policy':'per_level_header','unspecified_city_multiplier':1,
+               'beast_replenish_tier':'Beast','beast_cavalry_policy':'native_category',
+               'malformed_beast_policy':'report','missing_endpoint_policy':'use_other_endpoint',
+               'single_level_policy':'earliest','rounding_digits':6,'rounding_mode':'python_round',
+               'shortest_policy':'minimum_root_distance',
+               'reject_ambiguous_policy':'reject_unequal_merge_distances',
+               'disconnected_policy':'root_zero_shared_chain_maximum',
+               'invalid_graph_policy':'preserve_and_report'}
 # This lexer locates token spans inside a line already owned by the EDB parser.
 # It does not discover buildings/levels/conditions or replace the format parser.
 TOKENS=re.compile(r'^\s*recruit_pool\s+(?:"[^"\r\n]*"|[^\s"]+)(?P<nums>(?:[ \t]+[^\s;]+){4})')
@@ -131,12 +141,29 @@ def overrides(project,stage,row):
     return values[0]
 
 
-def calculate(stage,row,unit,project,structure,profile,index):
-    explain={}
+def explanation_inputs(row,unit,project,structure,profile):
+    meta=project['units'].get(row['unit'],{})
+    native_category=(meta.get('category_override') or sheets.fields_of(unit).get('category','')) if unit else None
+    return {'inputs':{**row,'annotations':dict(meta.get('annotations',{})),
+                      'category_override':meta.get('category_override')},
+            'depth':None if structure['errors'] else structure['depths'].get(row['level']),
+            'max_depth':structure['max_depth'],'graph_errors':list(structure['errors']),
+            'graph_notes':list(structure['notes']),'branch_policy':profile['branch_policy'],
+            'settlement':row['settlement'],'settlement_policy':PROFILE_RULES['settlement_policy'],
+            'native_category':native_category,
+            'city_multiplier':profile['city_multiplier'] if row['settlement']=='city' else 1,
+            'cavalry_multiplier':profile['cavalry_multiplier'] if native_category=='cavalry' else 1,
+            'fractional_pool_exception':profile['fractional_pool_exception'],'rounding_steps':[]}
+
+
+def calculate(stage,row,unit,project,structure,profile,index,explain=None):
+    # Mutate the entry's audit context so skipped/invalid outcomes keep known inputs.
+    if explain is None:explain=explanation_inputs(row,unit,project,structure,profile)
     # An explicit override outranks classification/graph/table rules, including skips.
     override=overrides(project,stage,row)
     if override is not None:
-        value=finite(override);explain={'override':True}
+        explain.update(override=True,override_input=override)
+        value=finite(override)
     else:
         if structure['errors']:raise RuleSkip('invalid_building_graph:'+','.join(structure['errors']))
         if row['level'] not in structure['depths']:raise RuleSkip('unknown_level_depth')
@@ -145,14 +172,16 @@ def calculate(stage,row,unit,project,structure,profile,index):
         if unit is None:raise RuleSkip('unit_not_in_edu')
         race,tier,category,beast=classification(unit,project)
         depth=structure['depths'][row['level']];maximum=structure['max_depth']
-        explain={'race':race,'tier':tier,'category':category,'depth':depth,'max_depth':maximum}
+        explain.update(race=race,tier=tier,category=category,depth=depth,max_depth=maximum)
         if stage=='replenish':
             key=('Beast' if beast else tier,);rule=index.get(key)
+            explain.update(rule_key=key)
             if rule is None:raise RuleSkip('missing_replenish_tier:'+key[0])
             e=rule.get(race+'_Earliest',rule.get(race+' Earliest'));l=rule.get(race+'_Latest',rule.get(race+' Latest'))
+            explain.update(endpoint_inputs={'earliest':e,'latest':l},endpoint_fallback=None)
             missing=lambda x:x is None or str(x).strip().upper() in ('','N/A','MISSING')
-            if missing(e):e=l
-            if missing(l):l=e
+            if missing(e) and not missing(l):e=l;explain['endpoint_fallback']='earliest_from_latest'
+            if missing(l) and not missing(e):l=e;explain['endpoint_fallback']='latest_from_earliest'
             if missing(e) or missing(l):raise RuleSkip('missing_replenish_endpoints:'+race)
             e,l=finite(e),finite(l)
             if e<=0 or l<=0:raise RuleSkip('nonpositive_replenish_interval')
@@ -163,9 +192,14 @@ def calculate(stage,row,unit,project,structure,profile,index):
             # only experience/pool table lookup maps that category to "beast".
             native_category=project['units'].get(unit.type,{}).get('category_override') or sheets.fields_of(unit).get('category','')
             cavalry=profile['cavalry_multiplier'] if native_category=='cavalry' else 1
-            value=round(reciprocal*city*cavalry,6)
+            after_city=reciprocal*city;after_cavalry=after_city*cavalry
+            value=round(after_cavalry,6)
             explain.update(earliest=e,latest=l,interval=interval,reciprocal=reciprocal,
-                           city_multiplier=city,cavalry_multiplier=cavalry,native_category=native_category,rounding='reciprocal 6, multipliers, result 6')
+                           city_multiplier=city,cavalry_multiplier=cavalry,native_category=native_category,rounding='reciprocal 6, multipliers, result 6',
+                           rounding_steps=[{'operation':'reciprocal','input':1/interval,'digits':6,'output':reciprocal},
+                                           {'operation':'city_multiplier','input':reciprocal,'multiplier':city,'output':after_city},
+                                           {'operation':'cavalry_multiplier','input':after_city,'multiplier':cavalry,'output':after_cavalry},
+                                           {'operation':'result','input':after_cavalry,'digits':6,'output':value}])
         else:
             if tier not in ('T0','T1','T2','T3','T4'):raise RuleSkip('unsupported_unit_tier:'+tier)
             barracks='T'+str(min(depth+1,profile['barracks_cap']))
@@ -192,20 +226,24 @@ def run(mod,project,stages=None,edb=None):
         entries=[]
         for original in rows:
             row=dict(original);line_index=row['line']-1;raw=lines[line_index]
-            entry={**row,'stage':stage,'status':'skipped','reason':'','before':None,'after':None,'explanation':{}}
+            structure=by_name[row['building']];unit=units.get(row['unit'])
+            explanation=explanation_inputs(row,unit,project,structure,profile)
+            explanation['inputs']['raw_line']=raw
+            entry={**row,'stage':stage,'status':'skipped','reason':'','before':None,'after':None,'explanation':explanation}
             match=TOKENS.match(raw)
             if match is None:
-                entry.update(status='invalid',reason='malformed_recruit_pool');entries.append(entry);continue
+                entry.update(status='invalid',reason='malformed_recruit_pool');explanation['outcome']='malformed_recruit_pool';entries.append(entry);continue
             spans=list(re.finditer(r'\S+',match.group('nums')))
             numbers=[m.group() for m in spans]
             for field,val in zip(('initial','per_turn','maximum','experience'),numbers):row[field]=val
+            explanation['inputs'].update({field:row[field] for field in ('initial','per_turn','maximum','experience')})
             field={'replenish':'per_turn','experience':'experience','pool':'maximum'}[stage]
             slot={'per_turn':1,'maximum':2,'experience':3}[field];entry['before']=numbers[slot]
             try:
                 # Missing original values may never be invented by RecruitPool.parse padding.
                 if any(x in ('requires','{','}') for x in numbers):raise RuleSkip('malformed_recruit_pool')
                 for n in numbers:finite(n)
-                value,explanation=calculate(stage,row,units.get(row['unit']),project,by_name[row['building']],profile,indices[stage])
+                value,explanation=calculate(stage,row,unit,project,structure,profile,indices[stage],explanation)
                 text=str(int(value)) if value.is_integer() else format(value,'.12g')
                 changed=finite(numbers[slot])!=value
                 if changed:
@@ -214,10 +252,11 @@ def run(mod,project,stages=None,edb=None):
                 entry.update(status='changed' if changed else 'unchanged',after=text,explanation=explanation)
             except RuleSkip as e:
                 reason=str(e);entry.update(reason=reason,after=entry['before'],status='invalid' if reason.startswith(('invalid_','negative_','nonpositive_','experience_','malformed_','conflicting_')) else 'skipped')
+            explanation['outcome']=entry['reason'] or entry['status']
             entries.append(entry)
         counts=dict(Counter(e['status'] for e in entries));logs[stage]={'counts':counts,'all':entries,'issues':[e for e in entries if e['status'] in ('invalid','skipped')]}
         exports[stage]=''.join(lines)
-    return {'profile':profile,'structure':structures,'logs':logs,'exports':exports,'text':''.join(lines),
+    return {'profile':profile,'profile_rules':dict(PROFILE_RULES),'structure':structures,'logs':logs,'exports':exports,'text':''.join(lines),
             'source_token':hashlib.sha256(edb.to_text().encode('latin-1')).hexdigest(),
             'changed_fields':total,'recruitment_rows':len(rows),'stages':list(stages)}
 

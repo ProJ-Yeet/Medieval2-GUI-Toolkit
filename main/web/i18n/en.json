@@ -1,4 +1,6 @@
 {
+"sheets.profile_rules": "Compatibility rules",
+"sheets.settlement_exception": "City or castle is read from each building level on its own, and a level that names neither gets no city multiplier. The original EDB scripts used the first level's type for the whole chain.",
 "eng.sheets.invalid_groups": "Invalid comparison groups",
 "eng.sheets.group_exists": "A comparison group with that name already exists",
 "eng.sheets.group_unknown": "Choose an existing comparison group",

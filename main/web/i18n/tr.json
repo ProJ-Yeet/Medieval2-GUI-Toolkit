@@ -1,4 +1,6 @@
 {
+ "sheets.profile_rules": "Uyumluluk kuralları",
+ "sheets.settlement_exception": "Şehir veya kale türü, her bina seviyesinden ayrı ayrı okunur. İkisi de belirtilmeyen seviyelere şehir çarpanı uygulanmaz. Orijinal EDB scriptleri, ilk seviyenin türünü tüm zincir için kullanıyordu.",
  "_meta": {
   "lang": "tr",
   "status": "draft"

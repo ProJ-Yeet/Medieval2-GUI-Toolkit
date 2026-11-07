@@ -87,6 +87,26 @@ async function safetyRegressions(){
   try{await run();console.log('PASS: '+name);}
   catch(error){failures.push(name+': '+error.message);}
  }
+ await check('Balance shows effective multipliers and compatibility policies before preview',async()=>{
+  const h=harness();await h.c.unitSheetsOpen();
+  h.set("USHEET.data.balance_effective={city_multiplier:0.9,cavalry_multiplier:0.8,branch_policy:'shortest',fractional_pool_exception:true};USHEET.data.balance_profile_rules={settlement_policy:'per_level_header',unspecified_city_multiplier:1,malformed_beast_policy:'report',missing_endpoint_policy:'use_other_endpoint',beast_cavalry_policy:'native_category'}");
+  const html=h.c.unitSheetsBalanceHtml();
+  for(const value of ['city_multiplier','0.9','cavalry_multiplier','0.8','branch_policy','shortest','fractional_pool_exception','per_level_header','unspecified_city_multiplier','malformed_beast_policy','use_other_endpoint','native_category'])assert(html.includes(value),value);
+ });
+ await check('Balance preview renders exact outcome explanations and escapes input',async()=>{
+  const h=harness();await h.c.unitSheetsOpen();
+  const explanation={inputs:{per_turn:'0.03125',maximum:'2.50',annotations:{'Unit Race':'<Human>'}},
+   endpoint_inputs:{earliest:'N/A',latest:'8'},endpoint_fallback:'earliest_from_latest',earliest:8,latest:8,
+   depth:1,max_depth:2,interval:8,reciprocal:.125,city_multiplier:.9,cavalry_multiplier:1,
+   settlement:'city',settlement_policy:'per_level_header',branch_policy:'shortest',
+   rounding_steps:[{operation:'reciprocal',input:.125,digits:6,output:.125},{operation:'city_multiplier',input:.125,multiplier:.9,output:.1125},{operation:'result',input:.1125,digits:6,output:.1125}],outcome:'changed'};
+  h.c.previewExplanation=explanation;
+  h.set("USHEET.balance={profile:{branch_policy:'reject_ambiguous'},profile_rules:{settlement_policy:'per_level_header'},changed_fields:1,recruitment_rows:2,logs:{replenish:{counts:{changed:1,invalid:1},all:[{explanation:previewExplanation},{reason:'invalid_building_graph:cycle',explanation:{depth:null,rounding_steps:[]}}]}},structure:[]}");
+  const html=h.c.unitSheetsBalanceHtml();
+  for(const key of Object.keys(explanation))assert(html.includes(key),key);
+  for(const value of ['N/A','2.50','0.1125','earliest_from_latest','invalid_building_graph:cycle','reject_ambiguous','per_level_header','&lt;Human&gt;'])assert(html.includes(value),value);
+  assert(!html.includes('<Human>'));
+ });
  await check('mass controls survive review Cancel repeated run Confirm history and query',async()=>{
   const h=harness();await h.c.unitSheetsOpen();
   h.set("USHEET.view='base';USHEET.selected=new Set(['first'])");

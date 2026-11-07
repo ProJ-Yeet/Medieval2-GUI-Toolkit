@@ -401,6 +401,7 @@ def service(mod,action,body=None):
                         if stage in result['exports']:bundle.writestr('export_descr_buildings_'+suffix+'.txt',result['exports'][stage].encode('latin-1'))
                 bundle.writestr('building_structure_log.json',json.dumps(result['structure'],indent=2))
                 bundle.writestr('profile.json',json.dumps(result['profile'],indent=2))
+                bundle.writestr('profile_rules.json',json.dumps(result['profile_rules'],indent=2))
                 for stage,logs in result['logs'].items():
                     for kind,entries in [('all',logs['all']),('skip_error',logs['issues'])]:
                         bundle.writestr('logs/'+stage+'_'+kind+'.json',json.dumps(entries,indent=2,ensure_ascii=False))
@@ -514,6 +515,7 @@ def service(mod,action,body=None):
         # Share server defaults without persisting them as project overrides.
         return {'project':p,'revision':revision(p),'source_token':source_token(mod),'stale_drafts':stale_drafts,
                 'balance_effective':edb_balance.profile_of(p),
+                'balance_profile_rules':dict(edb_balance.PROFILE_RULES),
                 'invalid_recipes':sheet_ops.invalid_recipes(p),
                 'comparison_group':comparison_group,
                 'table':table,'refresh':{k:v for k,v in snapshot.items() if k!='rows'},

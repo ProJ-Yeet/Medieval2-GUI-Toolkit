@@ -1,4 +1,6 @@
 {
+ "sheets.profile_rules": "Kompatibilitätsregeln",
+ "sheets.settlement_exception": "Ob Stadt oder Burg, wird für jede Gebäudestufe einzeln ausgelesen. Stufen ohne eine dieser Angaben erhalten keinen Stadtmultiplikator. Die ursprünglichen EDB-Skripte verwendeten den Typ der ersten Stufe für die gesamte Gebäudekette.",
  "_meta": {
   "lang": "de",
   "status": "draft"

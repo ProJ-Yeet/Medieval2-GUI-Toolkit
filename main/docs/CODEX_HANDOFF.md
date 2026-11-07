@@ -4,6 +4,78 @@ Newest entries first. This records Codex's work for Claude; project status and
 release rules remain in STATE.md and RELEASE.md. Do not assume the working tree's
 other changes belong to Codex.
 
+## 2026-11-07 - Phase 112 completed, ready for Claude review
+
+- Updated this existing entry after the user's settlement decision resolved the
+  earlier stop. Intentional compatibility exception: use EACH LEVEL'S OWN
+  city/castle header, with unspecified levels receiving no city multiplier and
+  no inheritance. The legacy script instead uses the first explicit header
+  for the entire chain. The named golden test asserts hall-castle gives 0.2,
+  not legacy 0.18, after hut-city. Explanations and the translated UI note
+  explicitly expose the per_level_header policy.
+- Tests FIRST: added the golden, rounding, explanation, profile/API, byte and
+  Node acceptance tests before engine/UI edits. Initial test_edb_balance ran
+  22 tests with 9 errors across four new methods (six rounding subcases), for
+  absent depth/input/policy/rounding fields. Initial test_sheet_pipeline ran
+  10 tests with one error for absent profile_rules. Node failed its new
+  pre-preview effective-profile visibility check; its explanation rendering
+  check already passed because the UI renders escaped audit JSON. Numeric
+  golden values already passed. A later export-policy regression failed on
+  missing profile_rules.json before that file was added. Corrected a test
+  assumption that compact service previews contain full EDB text; they
+  intentionally omit it. Export bytes are compared with an independent fixture.
+- Engine audit context now survives changed, unchanged, skipped and invalid
+  outcomes. It includes original numeric tokens/raw line/annotations, graph
+  policy/errors/notes, known depth or null, maximum depth, settlement and
+  applicable multipliers. Replenishment includes raw and resolved endpoints,
+  fallback direction, rule tier, interval, reciprocal, sequential city/cavalry
+  products and both six-decimal rounding inputs/outputs. Empty rounding_steps
+  means no calculation was performed, including skips and explicit overrides.
+  Existing numeric behavior is retained; no guessed zero depth is introduced.
+- Read-only profile_rules describe settlement, Beast/native cavalry, malformed
+  Beast reporting, endpoint fallback, single-level, rounding and graph policies.
+  They accompany preview/load responses and exports (profile_rules.json).
+  The UI shows effective editable multipliers/policy even before a preview and
+  keeps compatibility rules separate from editable recipe keys.
+- Acceptance verified: single-level E only; three-level E=10, X=7.5, L=5;
+  branches, equal/unequal merges, disconnected root, cycle and unknown edge;
+  shortest-root and reject-ambiguous; city/castle/unspecified; cavalry and
+  infantry; Beast and malformed Beast; pool below 1; either missing endpoint,
+  both absent, missing rule and invalid endpoints. Boundary cases include
+  1/3, 1/7, exact binary half cases 1/128 and 1/640 and decimal values on either
+  side of the six-place boundary. Node checks exact explanation fields/values,
+  failure details, effective profile visibility and escaping of supplied input.
+- Replenish-only golden output masks only the rate token and compares every
+  other Latin-1/CRLF byte, including requirements, conditions, comments, initial
+  pool, experience and maximum pool. Repeat runs have zero changes. A disposable
+  temp mod also verifies exact ZIP and Apply bytes, repeat preview with zero
+  changes, and Log Undo restoring original bytes. Temp fixtures clean up.
+- Files: unittransfer/edb_balance.py, unittransfer/unit_sheets.py,
+  web/js/unitsheets.js, tests/test_edb_balance.py, tests/test_sheet_pipeline.py,
+  tests/test_unit_sheets_ui.js, web/i18n/{en,de,es,fr,pl,ru,tr,zh-Hans}.json,
+  docs/ROADMAP.md (only the permitted checkpoint paragraph), and this entry.
+  Added two messages with proper translations in all eight catalogues. Polish
+  and Russian files were absent, so new draft catalogues contain just these
+  messages; other messages retain normal English fallback. Their existence
+  also makes these draft locales available through the existing locale list.
+- Final required checks passed with UT_NO_BROWSER=1:
+  python -m tests.test_edb_balance (22), tests.test_sheet_pipeline (10),
+  tests.test_sheet_ops (41), tests.test_unit_sheets (36),
+  tests.test_sheet_native (8), tests.test_web_modules (130/130),
+  tests.test_i18n (45/45); node tests/test_unit_sheets_ui.js (all named cases
+  and VM assertions, exit 0); git diff --check (exit 0). Python used the
+  existing ignored .tmp/phase110-step4-runner/sitecustomize.py via PYTHONPATH
+  for the previously documented sandbox temp-directory mode issue. No runner
+  edits made. Git's LF-to-CRLF notices are not whitespace failures.
+- Live account usage succeeded at start/checkpoints: 31%, 34%, 35% used in
+  the five-hour window, below this run's authorized 90%-used stop. Weekly
+  usage is not the stop threshold. No credits spent or limits reset.
+- All five requested exit items are done. No manual browser or installed-game
+  verification is claimed; UI verification is the Node VM. Read the original
+  legacy script and table samples only; never executed scripts or changed real
+  mods/original references. No unresolved Phase 112 question remains. No commit,
+  tag, build or release; no STATE.md edit. Other working-tree changes preserved.
+
 ## 2026-11-07 - Phase 111 effective balance profile recipe fix
 
 - Profile recipes now resolve the single project profile through

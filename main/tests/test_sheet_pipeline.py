@@ -37,6 +37,30 @@ class PipelineTests(unittest.TestCase):
   record=result['record'];self.assertEqual(record['manifest']['backed_up'],['export_descr_buildings.txt'])
   self.assertEqual(config.load_log()[0]['id'],record['id'])
   undo(record['id']);self.assertEqual(self.mod.edb_path.read_bytes(),self.original)
+ def test_replenish_only_profile_response_export_and_apply_preserve_other_bytes(self):
+  loaded=sheets.service(self.mod,'load');body={**self.body(),'stages':['replenish']}
+  preview=sheets.service(self.mod,'balance_preview',body)
+  self.assertEqual(preview['profile']['city_multiplier'],.9)
+  self.assertEqual(preview['profile']['cavalry_multiplier'],.8)
+  self.assertEqual(preview['profile']['branch_policy'],'shortest')
+  policies=preview['profile_rules']
+  self.assertEqual(loaded['balance_profile_rules'],policies)
+  self.assertEqual(policies['settlement_policy'],'per_level_header')
+  self.assertEqual(policies['unspecified_city_multiplier'],1)
+  self.assertEqual(policies['beast_replenish_tier'],'Beast')
+  self.assertEqual(policies['beast_cavalry_policy'],'native_category')
+  self.assertEqual(policies['malformed_beast_policy'],'report')
+  self.assertEqual(policies['missing_endpoint_policy'],'use_other_endpoint')
+  expected=self.original.replace(b'1   0.1  2',b'1   0.09  2').replace(b'"Guard" 1 0.1 2',b'"Guard" 1 0.2 2')
+  exported=sheets.service(self.mod,'balance_export',body)
+  with zipfile.ZipFile(io.BytesIO(base64.b64decode(exported['text']))) as z:
+   self.assertEqual(z.read('export_descr_buildings_new.txt'),expected)
+   self.assertEqual(json.loads(z.read('profile_rules.json')),policies)
+  applied=sheets.service(self.mod,'balance_apply',{**body,'plan_token':preview['plan_token']})
+  self.assertEqual(self.mod.edb_path.read_bytes(),expected)
+  repeated=sheets.service(self.mod,'balance_preview',body)
+  self.assertEqual(repeated['changed_fields'],0);self.assertEqual(self.mod.edb_path.read_bytes(),expected)
+  undo(applied['record']['id']);self.assertEqual(self.mod.edb_path.read_bytes(),self.original)
  def test_external_edb_edit_refuses_stale_apply(self):
   preview=balance.preview(self.mod,self.project)
   self.mod.edb_path.write_bytes(self.original+b'; external\r\n')

@@ -1,4 +1,6 @@
 {
+ "sheets.profile_rules": "兼容性规则",
+ "sheets.settlement_exception": "城市或城堡类型按每个建筑等级分别读取。两种类型均未注明的等级不应用城市倍率。原始 EDB 脚本将首个等级的类型用于整条建筑链。",
  "_meta": {
   "lang": "zh-Hans",
   "status": "draft"

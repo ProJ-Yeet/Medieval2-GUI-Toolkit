@@ -1,4 +1,6 @@
 {
+ "sheets.profile_rules": "Règles de compatibilité",
+ "sheets.settlement_exception": "Le type, ville ou château, est lu séparément pour chaque niveau de bâtiment. Si un niveau n’indique ni l’un ni l’autre, aucun multiplicateur de ville ne s’applique. Les scripts EDB d’origine utilisaient le type du premier niveau pour toute la chaîne.",
  "_meta": {
   "lang": "fr",
   "status": "draft"

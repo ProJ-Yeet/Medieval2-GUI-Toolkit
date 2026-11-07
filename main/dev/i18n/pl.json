@@ -13755,5 +13755,7 @@
   "few": "Jeszcze {count} zmiany",
   "many": "Jeszcze {count} zmian",
   "other": "Jeszcze {count} zmiany"
- }
+ },
+ "sheets.profile_rules": "Zasady zgodności",
+ "sheets.settlement_exception": "Typ, miasto lub zamek, jest odczytywany osobno dla każdego poziomu budynku. Poziom bez żadnego z tych oznaczeń nie otrzymuje mnożnika miasta. Pierwotne skrypty EDB stosowały typ pierwszego poziomu do całego łańcucha."
 }

@@ -1433,7 +1433,7 @@ or bulk copy of generated HTML/assets.
 reference tables and Fynn JSON export, plus the `Unit script` workbook/converters,
 with editable sheets inside our tool, deep filtering and mass editing. This is
 authorized for implementation on 2026-11-06, progressing in numbered increments
-with verification at each checkpoint. Phases 109-111 are complete; 112-114 are
+with verification at each checkpoint. Phases 109-112 are complete; 113-114 are
 active and not yet accepted as complete. Research and exact source locations are in
 [upstream/EDB_SHEETS_WORKFLOW.md](upstream/EDB_SHEETS_WORKFLOW.md).
 
@@ -1444,30 +1444,13 @@ and rule tables per mod as project data, not invented EDU fields. Share unit
 identity, projects and staging contracts with 102-108, but this track can begin
 independently after its own audit. Existing priorities remain unchanged.
 
-**Implementation checkpoint, 2026-11-07:** 109-111 complete (archived).
+**Implementation checkpoint, 2026-11-07:** 109-112 complete (archived).
 Typed staging/recipes, native review/apply, all three EDB stages, audit ZIP
-exports and backed-up Apply/Undo are implemented and fixture-tested; 112-114
+exports and backed-up Apply/Undo are implemented and fixture-tested; 113-114
 remain active until their full acceptance criteria are verified, 115-116
 planned. Cancellation, XLSX/native sheet interchange and non-EUR/builder
 integration remain. See CODEX_HANDOFF.md for exact checks, changed files and
 limits.
-
-## Phase 112 - Building graph and replenishment rules
-
-- Derive chain roots, upgrades, branch depths and city/castle/unspecified context
-  through the existing EDB parser. Define a visible policy for disconnected,
-  branched, merged or cyclic chains; never default an unknown level to tier zero.
-- Port the user's editable Earliest/Latest replenishment table and interpolation
-  over the chain. The compatibility profile uses `X = E + (L-E)*i/max_depth`,
-  with E for a single-level chain, reciprocal rate rounding to six decimals,
-  then city x0.9 and cavalry x0.8, then six-decimal rounding again.
-- Preserve the script's maximum-pool-below-1 exception for replenishment, Beast
-  race mapping, missing endpoint fallback and invalid/missing-rule outcomes.
-  Make multipliers, profile-specific exceptions and branch policy inspectable.
-  Malformed Beast labels must be reported, not silently treated as Orc.
-- **Depends on:** 109; editing rules uses 110. **Exit:** reference-profile golden
-  cases and boundary tests pass, explanations show exact inputs/rounding, and
-  requirements/comments/other recruitment numbers stay unchanged.
 
 ## Phase 113 - Experience and maximum-pool balancing
 

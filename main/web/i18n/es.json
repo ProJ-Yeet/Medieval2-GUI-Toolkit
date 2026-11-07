@@ -1,4 +1,6 @@
 {
+ "sheets.profile_rules": "Reglas de compatibilidad",
+ "sheets.settlement_exception": "El tipo, ciudad o castillo, se lee por separado en cada nivel del edificio. Si un nivel no indica ninguno, no se aplica el multiplicador de ciudad. Los scripts originales de EDB usaban el tipo del primer nivel para toda la cadena.",
  "eng.updater.expected_a_stable_release_version": "Se esperaba una versión estable",
  "eng.updater.update_redirected_outside_github": "La actualización se redirigió fuera de GitHub",
  "eng.updater.the_release_has_no_verified_portable_download": "La versión no tiene una descarga portátil verificada",
