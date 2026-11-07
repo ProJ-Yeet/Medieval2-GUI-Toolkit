@@ -57,7 +57,7 @@ function armAnimPaint(){
         <input type="range" id="armAnimT" min="0" max="1000" value="${armAnimFrac()}" oninput="armAnimScrub(this.value)">
         <select onchange="armAnim().speed=+this.value">${[0.25, 0.5, 1, 2].map(v => `<option value="${v}"${a.speed === v ? ' selected' : ''}>${v}×</option>`).join('')}</select>
         <button class="mini" onclick="armAnimRest()" title="${esc(tt('armory.rest_title'))}">${tt('armory.rest')}</button></div>
-      <div class="count" id="armAnimNote">${armAnimNote()}</div>` : ''}
+      <div class="count" id="armAnimNote">${armAnimNote()}</div>${armAnimScaleHtml()}` : ''}
     ${a.err ? `<div class="w-bad">${esc(a.err)}</div>` : ''}`;
 }
 function armAnimFold(){ const a = armAnim(); a.open = !a.open; armAnimPaint(); }
@@ -174,7 +174,8 @@ async function armAnimPick(key){
   const sk = a.list && a.list.skeletons && a.list.skeletons[(a.skel || '').toLowerCase()];
   const row = sk && (sk.actions || []).find(r => (r.slot != null ? String(r.slot) : 'a:' + r.action) === key);
   if(!row || !row.playable) return;
-  a.key = key; a.err = '';
+  a.key = key; a.err = ''; a.source=null;
+  const pick=a.pickSerial=(a.pickSerial || 0)+1;
   const asset = p.assets.find(x => armAssetKey(x) === (p.anim || {}).asset);
   const from = asset ? asset.mod : (p.anim || {}).mod;
   if(!from) return;
@@ -184,9 +185,16 @@ async function armAnimPick(key){
   try{ data = await api.get(`/api/model/anim?mod=${enc(from)}&${q}&skel=${enc(a.skel)}`
     + (row.slot != null ? `&slot=${row.slot}` : '') + (w.length ? `&weapons=${enc(w.join(','))}` : '')); }
   catch(e){ a.err = errText(e); return armAnimPaint(); }
-  if(a.key !== key) return;
+  if(a.key !== key || a.pickSerial !== pick) return;
   data.name = row.action;
   a.data = data;
+  a.orig = data;
+  a.source = {mod:from, rel:row.rel || '', skeleton:a.skel, slot:row.slot, weapons:w};
+  a.scale = [1,1,1]; a.scalePlan = null; a.scaleBusy = false; a.scaleMsg = '';
+  a.saveAs = (row.rel || 'animations/action.cas').replace(/\.cas$/i,'') + '_scaled.cas';
+  a.packName = (row.path || row.rel || 'action').replace(/^.*[\\/]/,'').replace(/\.cas$/i,'') + '_scaled';
+  a.saveTarget = sk.packed && row.slot != null && a.list.packs && a.list.packs !== 'vanilla' ? 'pack' : 'loose';
+  if(!row.rel) a.saveTarget = 'pack';
   a.bind = v3aBind(data);
   a.travel = v3aTravel(data);
   a.carried = v3aCarried(data);
@@ -196,6 +204,82 @@ async function armAnimPick(key){
   armAnimLoop();
 }
 
+function armAnimScaleEdits(){
+  const scale=armAnim().scale || [1,1,1];
+  return scale.some(v=>+v !== 1) ? {scale:scale.map(Number)} : {};
+}
+function armAnimScaleBody(){
+  const a=armAnim();
+  return Object.assign({},a.source,{edits:armAnimScaleEdits(),target:a.saveTarget,
+    save_as:a.saveAs,name:a.packName,keep_rebuildable:true});
+}
+function armAnimScaleHtml(){
+  const a=armAnim();
+  if(!a.source) return '';
+  const scale=a.scale || [1,1,1];
+  const input=(i,value)=>`<input type="number" min="0.001" step="0.01" value="${esc(value)}" style="width:64px" onchange="armAnimScaleSet(${i},this.value)"${a.scaleBusy ? ' disabled' : ''}>`;
+  return `<div class="count">${tt('armory.anim_scale_note')}</div>
+    <label>${tt('armory.anim_scale')}${input(-1,scale.every(v=>v===scale[0]) ? scale[0] : '')}</label>
+    <details${a.scaleAxes ? ' open' : ''} ontoggle="armAnim().scaleAxes=this.open"><summary>${tt('armory.anim_scale_axes')}</summary>
+      ${['X','Y','Z'].map((axis,i)=>`<label>${axis}${input(i,scale[i])}</label>`).join('')}</details>
+    <label>${tt('armory.anim_scale_target')}<select onchange="armAnimScaleOption('saveTarget',this.value)">
+      ${a.source.slot != null ? `<option value="pack"${a.saveTarget === 'pack' ? ' selected' : ''}>${tt('armory.anim_scale_pack')}</option>` : ''}
+      ${a.source.rel ? `<option value="loose"${a.saveTarget === 'loose' ? ' selected' : ''}>${tt('armory.anim_scale_loose')}</option>` : ''}</select></label>
+    <label>${tt('armory.anim_scale_name')}<input value="${esc(a.saveTarget === 'pack' ? a.packName : a.saveAs)}"
+      onchange="armAnimScaleOption(armAnim().saveTarget === 'pack' ? 'packName' : 'saveAs',this.value)"></label>
+    <button onclick="armAnimScaleSave()"${a.scaleBusy || !armAnimScaleEdits().scale ? ' disabled' : ''}>${tt('armory.anim_scale_save')}</button>
+    ${a.scalePlan ? `<pre class="count">${esc(a.scalePlan.target || '')}\n${esc((a.scalePlan.notes || []).join('\n'))}</pre>` : ''}
+    ${a.scaleMsg ? `<div class="count">${esc(a.scaleMsg)}</div>` : ''}`;
+}
+function armAnimScaleOption(key,value){
+  const a=armAnim(); a[key]=value; a.scalePlan=null; a.scaleMsg=''; armAnimPaint();
+}
+async function armAnimScaleSet(axis,value){
+  const a=armAnim(), n=Number(value);
+  if(!a.source || !Number.isFinite(n) || n<=0){ a.scaleMsg=tt('armory.anim_scale_invalid'); armAnimPaint(); return; }
+  const scale=(a.scale || [1,1,1]).slice();
+  if(axis<0) scale.fill(n); else scale[axis]=n;
+  a.scale=scale; a.scalePlan=null; a.scaleMsg='';
+  const source=a.source, serial=a.scaleSerial=(a.scaleSerial || 0)+1;
+  if(!armAnimScaleEdits().scale){
+    a.data=a.orig; a.travel=v3aTravel(a.data); a.carried=v3aCarried(a.data);
+    a.scaleBusy=false; armAnimPaint(); armFrame(); return;
+  }
+  a.scaleBusy=true; armAnimPaint();
+  try{
+    const data=await api.post('/api/model/anim/preview',armAnimScaleBody());
+    if(a.source !== source || a.scaleSerial !== serial) return;
+    if(data.error) throw new Error(data.error);
+    data.name=a.orig.name;
+    a.data=data; a.travel=v3aTravel(data); a.carried=v3aCarried(data);
+    a.geos.forEach(g=>{g.map=null;});
+    armFrame();
+  }catch(err){ if(a.source === source && a.scaleSerial === serial) a.scaleMsg=errText(err); }
+  finally{ if(a.source === source && a.scaleSerial === serial){ a.scaleBusy=false; armAnimPaint(); } }
+}
+async function armAnimScaleSave(){
+  const a=armAnim();
+  if(!a.source || a.scaleBusy || !armAnimScaleEdits().scale) return;
+  const body=armAnimScaleBody(), source=a.source;
+  a.scaleBusy=true; a.scaleMsg=''; armAnimPaint();
+  try{
+    const r=await api.post('/api/model/anim/save_plan',body);
+    if(a.source !== source) return;
+    if(r.error || !r.plan || !r.plan.ok) throw new Error(r.error || tt('armory.anim_scale_no_plan'));
+    a.scalePlan=r.plan; armAnimPaint();
+    const text=JSON.stringify(r.plan,null,2);
+    if(!confirm(tt('armory.anim_scale_confirm',{plan:text}))) return;
+    const written=await api.post('/api/model/anim/save_apply',body);
+    if(written.error) throw new Error(written.error);
+    if(a.source !== source) return;
+    a.scalePlan=null;
+    // Read the source again: the next scale is relative to the saved action.
+    await armAnimPick(a.key);
+    a.scaleMsg=tt('armory.anim_scale_saved'); armAnimPaint();
+  }catch(err){ if(a.source === source) a.scaleMsg=errText(err); }
+  finally{ if(a.source === source){ a.scaleBusy=false; armAnimPaint(); } }
+}
+
 function armAnimLength(){ const d = armAnim().data; return d && d.times && d.times.length ? d.times[d.times.length - 1] : 0; }
 function armAnimFrac(){ const a = armAnim(), len = armAnimLength(); return len > 0 ? Math.round((((a.t % len) + len) % len) / len * 1000) : 0; }
 function armAnimPlay(){ const a = armAnim(); a.playing = !a.playing; a.last = performance.now(); armAnimPaint(); armAnimLoop(); }
@@ -203,7 +287,7 @@ function armAnimScrub(v){ const a = armAnim(); a.playing = false; a.t = armAnimL
 /* Back to the bind pose: the model as it stands still. */
 function armAnimRest(){
   const a = armAnim();
-  a.data = null; a.key = '';
+  a.data = null; a.key = ''; a.source=null; a.pickSerial=(a.pickSerial || 0)+1;
   armFrame();
 }
 function armAnimNote(){

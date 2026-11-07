@@ -831,12 +831,15 @@ function armExpFolderChoices(){
 }
 async function armExpUnitFolders(){
   const m=armExpMod(), target=m.target, unit=m.unit;
-  m.folders=[];
+  m.folders=[]; m.unitData=null;
   if(m.choice === 'skip' || !unit) return;
   try{
-    const r=await api.get('/api/unit_models?mod='+enc(target)+'&type='+enc(unit));
+    const [r, detail]=await Promise.all([
+      api.get('/api/unit_models?mod='+enc(target)+'&type='+enc(unit)),
+      api.get('/api/edit/unit?mod='+enc(target)+'&type='+enc(unit))]);
     if(m.target !== target || m.unit !== unit) return;
     m.folders=r.models || [];
+    m.unitData=detail;
   }catch(err){ if(m.target === target && m.unit === unit) m.folders=[]; }
   if(armExp().step === 'mod') armExportPaint();
 }
@@ -855,10 +858,62 @@ const armRoleLabel = r => ({heavy_infantry: tt('armory.role_heavy_infantry'), sp
   javelin: tt('armory.role_javelin'), cavalry: tt('armory.role_cavalry')})[r] || r;
 
 function armExpModStepTitle(st, m){
+  if(st.kind === 'character') return tt('armory.exp_step_character');
   if(st.kind === 'transfer') return tt('armory.exp_step_duplicate');
   if(st.kind === 'bmdb') return tt('armory.exp_step_entry');
   if(m.choice === 'new') return tt('armory.exp_step_new_unit_edit', {unit: st.on});
   return tt('armory.exp_step_unit_edit');
+}
+
+function armExpAssignSlots(){
+  const m=armExpMod(), fields=(m.unitData || {}).fields || [];
+  const out=[{v:'soldier',t:tt('editor.soldier_replace')}];
+  let officers=0;
+  fields.forEach(([label])=>{
+    if(label.replace(/#\d+$/,'') !== 'officer') return;
+    const v=label === 'officer' ? 'officer#1' : label;
+    officers++;
+    out.push({v,t:tt('armory.slot_replace',{slot:v})});
+  });
+  out.push({v:`officer#${officers+1}`,t:tt('armory.slot_add_officer',{slot:officers+1})});
+  const tiers=((fields.find(([key])=>key === 'armour_ug_models') || [])[1] || '').split(',').map(x=>x.trim()).filter(Boolean);
+  tiers.forEach((name,i)=>out.push({v:`armour_ug_models#${i+1}`,t:tt('editor.armour_ug_models_replace',{x:i+1,x2:name})}));
+  out.push({v:`armour_ug_models#${tiers.length+1}`,t:tt('editor.armour_ug_models_add_as_a',{tiers:tiers.length+1})});
+  return out;
+}
+
+function armExpCharacterHtml(){
+  const m=armExpMod(), target=m.characterTarget || {}, rows=(m.data || {}).characters || [];
+  const kinds={general:tt('armory.character_general'),leader:tt('armory.character_leader'),heir:tt('armory.character_heir')};
+  const campaign=rows.find(r=>r.campaign === target.campaign);
+  const factions=campaign ? campaign.factions : [];
+  const faction=factions.find(f=>f.name === target.faction);
+  const people=(faction ? faction.characters : []).filter(c=>target.kind === 'general' || c.rank === target.kind);
+  const options=(rows,value,label,picked)=>`<option value="">${tt('armory.choose_target')}</option>` + rows.map(r=>
+    `<option value="${esc(value(r))}"${String(value(r)) === String(picked || '') ? ' selected' : ''}>${esc(label(r))}</option>`).join('');
+  return `<div class="armexprow"><label>${tt('armory.character_target')}<select onchange="armExpCharacterKind(this.value)">
+      <option value="">${tt('armory.character_none')}</option>${['general','leader','heir'].map(kind=>
+        `<option value="${kind}"${kind === target.kind ? ' selected' : ''}>${kinds[kind]}</option>`).join('')}</select></label>
+    ${target.kind ? `<label>${tt('armory.target_campaign')}<select onchange="armExpCharacterSet('campaign',this.value)">${options(rows,r=>r.campaign,r=>r.campaign,target.campaign)}</select></label>
+      <label>${tt('armory.target_faction')}<select onchange="armExpCharacterSet('faction',this.value)">${options(factions,f=>f.name,f=>f.name,target.faction)}</select></label>
+      <label>${tt('armory.target_character')}<select onchange="armExpCharacterSet('line',this.value)">${options(people,c=>c.line,c=>c.name,target.line)}</select></label>` : ''}</div>
+    <div class="count">${tt('armory.character_note')}</div>`;
+}
+function armExpCharacterKind(kind){
+  armExpModSet('characterTarget',kind ? {kind,campaign:'',faction:'',character:'',line:0} : null);
+}
+function armExpCharacterSet(key,value){
+  const m=armExpMod(), target=Object.assign({},m.characterTarget);
+  target[key]=key === 'line' ? +value : value;
+  if(key === 'campaign') target.faction='';
+  if(key !== 'line'){ target.line=0; target.character=''; }
+  else{
+    const campaign=((m.data || {}).characters || []).find(c=>c.campaign === target.campaign);
+    const faction=campaign && campaign.factions.find(f=>f.name === target.faction);
+    const person=faction && faction.characters.find(c=>c.line === target.line);
+    target.character=person ? person.name : '';
+  }
+  armExpModSet('characterTarget',target);
 }
 
 function armExpModHtml(){
@@ -881,7 +936,9 @@ function armExpModHtml(){
       <select id="armExpFolderChoices" aria-label="${ttA('armory.folder_choices')}" onchange="armExpChooseFolder(this.value)"><option value="">${tt('armory.folder_choices')}</option>${armExpFolderChoices()}</select></div>`;
   if(m.choice !== 'skip')
     html += `<div class="armexprow"><label>${m.choice === 'new' ? tt('armory.exp_unit_from') : tt('armory.exp_unit')}<input list="armExpUnits" value="${esc(m.unit)}"
-        placeholder="${esc(tt('armory.find'))}" onchange="armExpModSet('unit', this.value)"></label>${units}</div>`;
+        placeholder="${esc(tt('armory.find'))}" onchange="armExpModSet('unit', this.value)"></label>${units}
+      <label>${tt('armory.assign_slot')}<select onchange="armExpModSet('assign_to',this.value)"${m.unitData ? '' : ' disabled'}>${armExpAssignSlots().map(s=>
+        `<option value="${esc(s.v)}"${s.v === (m.assign_to || 'soldier') ? ' selected' : ''}>${esc(s.t)}</option>`).join('')}</select></label></div>`;
   if(m.choice === 'new')
     html += `<div class="armexprow"><label>${tt('armory.exp_new_type')}<input value="${esc(m.new_type)}" oninput="armExpModSet('new_type', this.value, true)"></label>
       <label>${tt('armory.exp_new_name')}<input value="${esc(m.new_name)}" oninput="armExpModSet('new_name', this.value, true)"></label></div>`;
@@ -896,6 +953,7 @@ function armExpModHtml(){
     html += `<div class="count armnote">${tt('armory.exp_template_facts', {example: t.example, skeletons: t.skeletons.join(', '), fields})}</div>`;
     if(m.choice !== 'new') html += `<div class="count armnote">${tt('armory.exp_template_fields_new_only')}</div>`;
   }
+  html += armExpCharacterHtml();
   html += `<div class="armexprow"><button onclick="armExpModPlan()">${tt('armory.exp_plan')}</button>
       <button class="primary" onclick="armExpModApply()"${m.plan && m.plan.ok ? '' : ' disabled'}>${tt('armory.exp_write')}</button>
       <button class="mini" onclick="armExpCards()" title="${esc(tt('armory.exp_cards_later'))}">${tt('armory.exp_cards')}</button></div>`;
@@ -911,16 +969,17 @@ function armExpModBody(){
   const m = armExpMod(), e = armExp();
   return {mod: m.target, choice: m.choice, name: m.name.trim().toLowerCase(), folder: m.folder.trim(),
           template: m.template, clone_from: m.template ? '' : m.clone_from.trim().toLowerCase(),
-          unit: m.unit, new_type: m.new_type.trim(), new_name: m.new_name.trim(),
+          unit: m.unit, assign_to: m.assign_to || 'soldier', character_target: m.characterTarget || null,
+          new_type: m.new_type.trim(), new_name: m.new_name.trim(),
           bake_folder: e.done ? e.done.folder : e.folder, stem: e.stem};
 }
 function armExpModSet(k, v, live){
   const m = armExpMod();
   m[k] = v; m.plan = null; m.written = null; armSave();
-  if(k === 'unit' || k === 'choice'){ m.folders=[]; armExpUnitFolders(); }
+  if(k === 'unit' || k === 'choice'){ m.assign_to='soldier'; m.folders=[]; armExpUnitFolders(); }
   if(!live) armExportPaint();
 }
-function armExpModTarget(v){ const m=armExpMod(); m.target=v; m.folders=[]; armSave(); armExpModLoad(); }
+function armExpModTarget(v){ const m=armExpMod(); m.target=v; m.folders=[]; m.unitData=null; m.assign_to='soldier'; m.characterTarget=null; m.characters=null; m.plan=null; m.written=null; armSave(); armExpModLoad(); }
 async function armExpModPlan(){
   const m = armExpMod(), e = armExp();
   e.busy = true; armExportPaint();

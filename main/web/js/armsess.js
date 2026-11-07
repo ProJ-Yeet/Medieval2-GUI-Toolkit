@@ -19,7 +19,7 @@ function armExtrasInto(p){
   p.extra = {cam: keep(ARM.cam), card: keep(card), exp: state.armExp ? keep(state.armExp.settings) : null,
     exportOutput: state.armExp ? keep({folder: state.armExp.folder, stem: state.armExp.stem,
       mod: state.armExp.mod ? Object.fromEntries(Object.entries(state.armExp.mod).filter(([k]) =>
-        !['data','plan','written','folders'].includes(k))) : null}) : null};
+        !['data','plan','written','folders','unitData'].includes(k))) : null}) : null};
 }
 /* And taken back out when a session is opened. */
 function armExtrasFrom(p){

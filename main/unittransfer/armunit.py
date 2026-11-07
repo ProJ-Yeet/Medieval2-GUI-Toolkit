@@ -24,10 +24,11 @@ those fields on a new unit.
 from __future__ import annotations
 
 from collections import Counter
+import re
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
-from . import edit, edu
+from . import edit, edu, campstrat, stratchar
 from . import i18n as _i18n
 from .transfer import TransferOptions, apply_transfer, plan_transfer
 
@@ -183,15 +184,67 @@ def _unit_request(mod, unit_type: str, req: dict, templates: Dict[str, dict],
     ``info_src`` a picture copied in as its cards, under its dictionary name."""
     d = {"unit": unit_type, "field_overrides": dict(fields or {}),
          "card_src": req.get("card_src") or "", "info_src": req.get("info_src") or ""}
+    assign = req.get("assign_to") or "soldier"
+    if not re.fullmatch(r"soldier|officer(?:#[1-9][0-9]*)?|armour_ug_models#[1-9][0-9]*", assign):
+        raise InstallError(_i18n.msg("eng.armunit.invalid_slot", "choose a soldier, officer or armour tier slot"))
+    u = mod.edu.by_type()[unit_type]
+    name = req.get("entry") or (req.get("name") or "").strip().lower()
+    block = u.raw
+    if assign == "soldier" and u.armour_ug_models and u.armour_ug_models[0].lower() == u.soldier_model.lower():
+        block = edu.set_model_slot(block, "armour_ug_models#1", name)
     if req.get("entry"):
-        u = mod.edu.by_type()[unit_type]
-        d["raw_block"] = edu.set_model_slot(u.raw, "soldier", req["entry"])
+        block = edu.set_model_slot(block, assign, name)
+        if assign.startswith("armour_ug_models#"):
+            block = edu.sync_armour_levels(block)
     else:
-        d["new_models"] = [_new_model(req, templates, "soldier")]
+        d["new_models"] = [_new_model(req, templates, assign)]
+    if block != u.raw:
+        d["raw_block"] = block
     return edit.request_from_dict(d)
 
 
-def plan_install(mod, req: dict) -> dict:
+def character_targets(mod) -> list:
+    """Campaign characters eligible for an optional battle model assignment."""
+    out = []
+    for campaign in campstrat.campaigns(mod):
+        sf = campstrat.read_strat(mod, campaign)
+        factions = []
+        for faction in sf.of_kind("faction"):
+            people = [{"name": n.name, "line": n.start + 1, "rank": str(n.get("rank") or "")}
+                      for n in stratchar.characters_of(sf, faction)
+                      if n.get("type") == "named character"]
+            factions.append({"name": faction.name, "characters": people})
+        out.append({"campaign": campaign, "factions": factions})
+    return out
+
+
+def _character_plan(mod, req, facts_of):
+    target = req.get("character_target")
+    if not isinstance(target, dict) or not facts_of or not all(
+            target.get(k) for k in ("campaign", "faction", "character", "kind")):
+        raise InstallError(_i18n.msg("eng.armunit.choose_character", "choose a campaign, faction and character"))
+    sf = campstrat.read_strat(mod, target["campaign"])
+    node = stratchar.find_character(sf, target["faction"], target["character"], int(target.get("line") or 0))
+    kind = target["kind"]
+    if (node is None or node.name != target["character"]
+            or (target.get("line") and node.start + 1 != int(target["line"]))
+            or node.get("type") != "named character" or kind not in ("general", "leader", "heir")
+            or (kind in ("leader", "heir") and node.get("rank") != kind)):
+        raise InstallError(_i18n.msg("eng.armunit.character_changed", "the selected character or rank changed; choose the target again"))
+    name = (req.get("entry") or req.get("name") or "").strip().lower()
+    return stratchar.plan_character(mod, facts_of(target["campaign"]), {
+        "campaign": target["campaign"], "faction": target["faction"], "character": node.name,
+        "line": node.start + 1, "action": "edit", "edits": {"battle_model": name}})
+
+
+def plan_install(mod, req: dict, facts_of=None) -> dict:
+    planned = _plan_install(mod, req)
+    if req.get("character_target"):
+        planned["steps"].append({"kind": "character", "plan": _character_plan(mod, req, facts_of)})
+    return planned
+
+
+def _plan_install(mod, req: dict) -> dict:
     """What the chosen way would write, planned and not written.
 
     ``req``: ``choice`` (skip, add, new), ``name`` (the entry), ``folder``
@@ -240,19 +293,27 @@ def plan_install(mod, req: dict) -> dict:
             "steps": [{"kind": "transfer", "plan": dup}, {"kind": "edit", "plan": edit.plan_edit(mod, er), "on": unit}]}
 
 
-def apply_install(mod_of, mod_name: str, req: dict, invalidate=None) -> dict:
+def apply_install(mod_of, mod_name: str, req: dict, invalidate=None, facts_of=None) -> dict:
     """Write the chosen way, each step through its own door; a new unit's
     edit is planned again on the unit the duplicate made."""
     mod = mod_of(mod_name)
-    planned = plan_install(mod, req)
+    planned = plan_install(mod, req, facts_of=facts_of)
     shown = payload(planned)
     if not shown["ok"]:
         raise InstallError("; ".join(e for st in shown["steps"] for e in st["errors"]))
     records = []
+    def character_step():
+        if req.get("character_target"):
+            cp = _character_plan(mod_of(mod_name), req, facts_of)
+            records.append(stratchar.apply_character(cp)["record"])
+            if invalidate:
+                invalidate(mod_name)
+
     if planned["choice"] in ("skip", "add"):
         records.append(edit.apply_edit(planned["steps"][0]["plan"]))
         if invalidate:
             invalidate(mod_name)
+        character_step()
         return {"records": records}
     records.append(apply_transfer(planned["steps"][0]["plan"]))
     if invalidate:
@@ -272,6 +333,7 @@ def apply_install(mod_of, mod_name: str, req: dict, invalidate=None) -> dict:
     records.append(edit.apply_edit(plan))
     if invalidate:
         invalidate(mod_name)
+    character_step()
     return {"records": records, "new_type": new_type}
 
 

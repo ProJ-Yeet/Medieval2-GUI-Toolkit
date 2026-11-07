@@ -4,6 +4,152 @@ Newest entries first. This records Codex's work for Claude; project status and
 release rules remain in STATE.md and RELEASE.md. Do not assume the working tree's
 other changes belong to Codex.
 
+## 2026-11-07 - Armory requests (a), (b), (c) implemented, ready for Claude review
+
+- (c) Done: default remains soldier. The Armory panel reads the selected unit's
+  editor fields and offers soldier, each existing officer, add officer, replace
+  each armour model tier and append the next tier. Add and New unit send
+  assign_to. Baked entries use the existing edit assignment step, including
+  sync_armour_levels. Existing imported entries use the same slot helper and
+  level synchronization. A soldier replacement also updates the first armour
+  tier only when it names the former soldier model; distinct tiers stay intact.
+  The existing bmdb.js caller requires no payload change. Fixed officer append
+  ordering in edu.set_model_slot so adding #2 does not replace the effective #1.
+- (a) Done: the same panel offers optional General, Faction leader and Faction
+  heir targets, selected by campaign, faction, then an eligible named character.
+  Officer assignment uses the unit slot picker. Plans include the character's
+  battle_model change. Apply creates the model first, then uses the existing
+  stratchar plan/apply writer and its backups, My Changes and Log Undo record.
+  Fresh name, line and rank checks reject stale selections before writes.
+  Tests verify the battle_model-only write preserves all other character values,
+  traits, ancillaries, army lines and surrounding characters, and Undo restores
+  original CRLF bytes. A baked model plus character target has separate undo
+  records; undo the character first, then the model. No new character writer.
+- (b) Done: selected animation actions have a uniform scale and expandable X/Y/Z
+  controls. Preview uses /api/model/anim/preview; save plans and applies use
+  /api/model/anim/save_plan and save_apply with animedit's scale key. A target=pack
+  request delegates to existing pack preview/plan/apply handlers. Loose saves use
+  animedit unchanged. The destination/name is explicit and the plan is reviewed
+  before apply. Scale 1 omits scale and makes no save request. No new animation
+  writer. Bind data remains the original skeleton's, matching the Models viewer.
+  A late preview cannot restore an action after Rest or after source changes.
+- Additional Tests FIRST: the late-preview test failed because Rest could be
+  undone by an in-flight response, then passed after source invalidation. The
+  session test failed because unitData was persisted, then passed after excluding
+  that API cache. The new-unit fixture initially used identical model records,
+  which the transfer engine correctly deduplicated; its mesh paths were made
+  distinct so the test actually represents different armour tiers.
+- Changed runtime files: unittransfer/armunit.py, unittransfer/edu.py,
+  unittransfer/server.py (Armory routes, optional facts resolver and animation
+  dispatch only), web/js/armexport.js, web/js/armanim.js, web/js/armsess.js.
+  The concurrent run also has server.py changes; they were preserved.
+- New tests: tests/test_armory_install.py, tests/test_armory_anim_routes.py,
+  tests/test_armory_install_ui.js, tests/test_armory_anim_ui.js. String staging:
+  .tmp/armory_strings.json. Change record: this file. Test logs and a process-local
+  Windows test hook are under .tmp/armory_*; no shared test helper was changed.
+- Checks actually run with UT_NO_BROWSER=1:
+  - python -m tests.test_armory: PASS, 99/99.
+  - python -m tests.test_folderimport: PASS, 33/33.
+  - python -m tests.test_new_entry_and_cards: SKIPPED, Third_Age_Reforged absent.
+  - python -m tests.test_edit: FAILED while loading the absent hard-coded
+    Third_Age_Reforged modeldb; no feature assertions reached.
+  - python -m tests.test_edit_http: FAILED copying that absent mod's files;
+    no HTTP feature assertions reached.
+  - python -m tests.test_stratchar: 88/89. The installed Divide_and_Conquer_EUR
+    campaign has 302/307 character spans ending on blank lines, below the suite's
+    expected >=306. Character rendering and file round-trips pass. campstrat.py,
+    stratchar.py and this test are unchanged, confirmed by git diff --exit-code.
+  - python -m tests.test_animedit: PASS, 28/28; installed unpacked-pack save
+    section skipped by the existing suite because no unpacked pack.dat exists.
+  - python -m tests.test_web_modules: PASS, 130/130, repeated after session edit.
+  - python -m tests.test_armory_install: PASS, 9 tests, including add/new,
+    baked/existing slots, matching/distinct base tiers, rank selection, partial
+    character edits, separate model/character records and byte-exact Undo.
+  - python -m tests.test_armory_anim_routes: PASS, 1 test covering all three
+    packed dispatch operations without invoking another writer.
+  - python -m tests.test_armory_workflow: PASS, 8 tests.
+  - node tests/test_armory_install_ui.js and test_armory_anim_ui.js: PASS.
+  - Existing Node UV/session/folder suite: PASS, run from repository parent as
+    node main/tests/test_armory_uv.js because it uses main/ relative paths.
+  - git diff --check: PASS. No added em dash in the six runtime diffs or new
+    tests/string staging. No dependency added.
+  - python -m tests.test_i18n: 42/45, exactly the expected missing page IDs,
+    missing engine IDs and engine-template mismatch for staged strings. No
+    catalogue was edited. The test truncates its missing-page list to ten.
+- New string IDs, all awaiting Claude's merge of .tmp/armory_strings.json:
+  armory.anim_scale, armory.anim_scale_axes, armory.anim_scale_confirm,
+  armory.anim_scale_invalid, armory.anim_scale_loose, armory.anim_scale_name,
+  armory.anim_scale_no_plan, armory.anim_scale_note, armory.anim_scale_pack,
+  armory.anim_scale_save, armory.anim_scale_saved, armory.anim_scale_target,
+  armory.assign_slot, armory.character_general, armory.character_heir,
+  armory.character_leader, armory.character_none, armory.character_note,
+  armory.character_target, armory.choose_target, armory.exp_step_character,
+  armory.slot_add_officer, armory.slot_replace, armory.target_campaign,
+  armory.target_character, armory.target_faction, eng.armunit.character_changed,
+  eng.armunit.choose_character, eng.armunit.invalid_slot. Total: 29.
+- Verified behavior versus limits: fixture writes, backups and Undo are verified;
+  no real mod folder was written. Native visual rendering and in-game playback
+  were not exercised. Packed animation support retains the existing writer's
+  restrictions, including refusal when a writable mod-owned pack is unavailable;
+  this change does not manufacture packs for mods inheriting vanilla animations.
+  Character validation retains the existing campaign-map/vocabulary requirements.
+  Multi-step installs keep the existing independent records and are not atomic.
+  All successful test fixtures cleaned up. Initial failed tempfile setup left
+  inaccessible empty directories in system TEMP and .tmp/armory_test_tmp; the
+  attempted empty-directory cleanup command was rejected as blocked by policy.
+  That rejection supplied no more specific reason. No cleanup bypass attempted.
+- Remaining: Claude merges the 29 staged strings; rerun editor suites with the
+  required installed fixture if desired. No ambiguous mod-write decision remains.
+  No reserved EDB/sheets file, catalogue, dev/i18n, STATE.md, ROADMAP file or shared
+  docs/CODEX_HANDOFF.md was edited by this run. Latest usage checkpoint: 29% used,
+  71% remaining in the five-hour window. No credits/reset requested.
+- Commit/release status: no commit, tag, build or release. Changes are uncommitted.
+
+## 2026-11-07 - Armory assignment and scale implementation checkpoint
+
+- Scope: user requests (c) unit/officer/tier assignment, (a) optional character
+  battle models, and (b) animation scale. Concurrent EDB/sheets files and all
+  catalogues are reserved for the other run. Strings are staged separately in
+  .tmp/armory_strings.json. This entry replaces the normal shared handoff write
+  for this task, as explicitly requested.
+- Tests FIRST: after resolving a Windows tempfile permission problem in the
+  local runner and correcting the synthetic modeldb header, the assignment
+  regression suite failed eight assertions: stale base tier, ignored officer
+  and tier selections, including the baked-model path. A further officer-order
+  regression failed because officer #2 was inserted before officer #1. Character
+  tests first failed with missing character_targets / facts_of support (eight
+  errors). Node installation tests first failed on missing armExpAssignSlots.
+  Node animation tests first failed on missing armAnimScaleEdits; the Python
+  packed-route test first failed because the loose handler tried to use a
+  registry instead of dispatching to the existing pack handler.
+- Reference investigation finding (recorded here only): the armour upgrade
+  models list replaces the visible tier model array when present. The soldier
+  model remains the skeleton source. Changing soldier alone therefore leaves
+  visible tier models unchanged. Base-tier synchronization is deliberately
+  limited to a first tier that names the previous soldier model.
+- Implemented so far: Armory slot payloads and picker, soldier/base-tier sync,
+  existing-entry level sync, baked-entry assignments through edit.plan_edit,
+  officer append order; optional campaign/faction/character selection with fresh
+  rank/line validation, stratchar plan/apply and independent undo records; uniform
+  and expanded axis scale controls using animedit and the existing packed writer.
+- Verification so far: seven synthetic Python install tests, one packed-route
+  test, and the two new Node VM tests pass. Broader required suites and final
+  review remain. No real mod was written. Fixture config and logs are isolated.
+- Local runner limitation: Python 3.12's tempfile mode 0700 creates directories
+  this Windows sandbox cannot reopen. .tmp/armory_run_test.py uses inherited
+  directory permissions under .tmp/armory_test_tmp, then executes the original
+  test modules; no production or shared test helper was changed for this.
+- Usage: latest checkpoint showed 15% used in the five-hour window. Normal 50%
+  remaining stop applies to this run. No credits/reset requested.
+- Commit/release status: no commit, tag, build or release. Work is uncommitted.
+- Claude's merge, 2026-11-07: the 29 staged strings were added to en.json beside
+  the other armory keys and translated into de, es, fr, pl, ru, tr and zh-Hans
+  through i18n_todo.py --merge (two Russian strings reworded to the termbase's
+  "модель битвы"). Checked on DaC EUR in the app: the templates route lists each
+  faction's leader, heir and named characters, the slot picker on Mirkwood
+  Bodyguard offers both armour tiers plus a new one, and an install plan (no
+  apply) to armour_ug_models#3 came back clean. No apply was made to a real mod.
+
 ## 2026-11-07 - Phase 114 implemented and fixture-verified; shared i18n check blocked by concurrent Armory work
 
 - Read root ../AGENTS.md, Phases 109-116/114, archived 112/113 and Finished

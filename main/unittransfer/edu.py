@@ -955,6 +955,15 @@ def set_model_slot(block: str, slot: str, name: str) -> str:
     """
     key, occ = split_label(slot)
     if key == "officer":
+        idxs = _line_indices(block, key)
+        if idxs and occ > len(idxs):
+            lines = block.splitlines(keepends=True)
+            i = idxs[-1]
+            body = lines[i].rstrip("\r\n")
+            eol = lines[i][len(body):] or "\n"
+            lines[i] = body + eol
+            lines.insert(i + 1, f"officer\t{name}{eol}")
+            return "".join(lines)
         return set_field_indexed(block, "officer", occ, name)
     idxs = _line_indices(block, key)
     if not idxs:

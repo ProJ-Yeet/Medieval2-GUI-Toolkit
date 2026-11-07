@@ -3408,8 +3408,10 @@ class Handler(BaseHTTPRequestHandler):
                     return self._err(404, "unknown mod")
                 try:
                     if u.path.endswith("/plan"):
-                        return self._json(armunit.payload(armunit.plan_install(self.registry.get(name), body)))
-                    out = armunit.apply_install(self.registry.get, name, body, self.registry.invalidate)
+                        return self._json(armunit.payload(armunit.plan_install(self.registry.get(name), body,
+                            facts_of=lambda campaign: self.registry.map_facts(name, campaign))))
+                    out = armunit.apply_install(self.registry.get, name, body, self.registry.invalidate,
+                        facts_of=lambda campaign: self.registry.map_facts(name, campaign))
                     log.info("ARMORY installed %r into %s (%s)", body.get("name"), name, body.get("choice"))
                     return self._json(out)
                 except (armunit.InstallError, armory.ArmoryError, KeyError, ValueError, OSError) as e:
@@ -4564,6 +4566,9 @@ class Handler(BaseHTTPRequestHandler):
         :mod:`unittransfer.animedit`. The preview is the edited keys, played by
         the viewer exactly as a file's would be; nothing is written until
         ``save_apply``, which backs up and records like every other write."""
+        if body.get("target") == "pack":
+            return self._anim_pack({"preview": "pack_preview", "save_plan": "pack_plan",
+                                    "save_apply": "pack_apply"}[action], body)
         try:
             mod = self.registry.get(body["mod"])
         except (KeyError, OSError) as e:
@@ -6610,6 +6615,7 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/api/armory/templates":
             # 95k: each role as this mod plays it, and its units to duplicate
             return self._json({"templates": armunit.role_templates(mod),
+                               "characters": armunit.character_targets(mod),
                                "units": [{"type": u.type, "category": u.category, "class": u.class_type,
                                           "soldier": u.soldier_model} for u in mod.edu.units],
                                "entries": sorted(mod.modeldb.by_name())})
