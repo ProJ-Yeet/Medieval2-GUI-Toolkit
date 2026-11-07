@@ -8,6 +8,12 @@ Other worksheets can be skipped. Nothing is staged by selecting a file or making
 a preview. Staging saves one undoable project change. Native changes still require
 the existing EDU review and Apply; their backup and Log Undo path is unchanged.
 
+The sheets window also has a collapsible Sheet help and examples section. For
+example, filter Tier equals T1, select matching rows and preview an attack
+increase of 1. Review the target count before confirming. Arrow keys and a
+tab-separated rectangular paste use the selected cell as the anchor. Sheet
+undo/redo restores project edits; Log Undo restores applied game files.
+
 The preview token covers the file, mappings, project revision and native source.
 Changing any of them requires a fresh preview. A refused import preserves the
 previous project, including staged edits. Imports merge by exact live EDU type ID
@@ -91,6 +97,9 @@ unknown attributes and hand-written comments remain owned by the native patcher.
   reimport. Absent native lists remain blank and do not create default fields.
 - Required tuple members cannot be removed by importing a blank. Use the existing
   typed native editing controls for supported field removals.
+- List order and duplicate native members survive import and ordinary edits.
+  Deduplicate is an explicit mass-edit operation. Gunpowder weapon tuples keep
+  their optional firing effect when reading or editing minimum attack delay.
 
 ## Formula subset
 
@@ -153,7 +162,16 @@ The former direct CSV/rule/Fynn EDU HTTP import action now refuses imports that
 bypass this preview flow. Pure legacy adapter helpers remain available for
 offline compatibility callers; the application's validated service owns staging.
 
-Automated fixtures exercise the original/current header shapes, synthetic keyed
-rows and actual API/UI handlers. No Excel/LibreOffice recalculation, original
-workbook modification, installed-game use or interactive browser verification is
-claimed. Phase 116 owns real-data and interactive acceptance.
+The recruitment grid is read-only and is outside the CSV/XLSX mapping views.
+Use the separate Balance EDB export for recruitment. A packed roster can be read
+without extraction into a real mod, but native Apply requires an extracted EDU;
+use disposable copies for verification. Missing vanilla classifications are
+reported rather than inferred from the supplied Middle-earth profile.
+
+Phase 116 checked copied user snapshots and copied vanilla packed EDU/EDB data,
+including CSV/XLSX round trips for all seven editable views. The supplied (20)
+and (17) workbooks were read; rebuilt2.xlsx exceeds the documented archive-size
+bound and is refused. Synthetic formatted empty rows also have a bounded import
+test. Details, timings and remaining browser checks are in CODEX_HANDOFF.md.
+No original workbook modification, Excel/LibreOffice recalculation, interactive
+browser verification or in-game behavior is claimed.

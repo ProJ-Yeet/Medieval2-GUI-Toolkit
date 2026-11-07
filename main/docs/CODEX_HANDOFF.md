@@ -4,6 +4,240 @@ Newest entries first. This records Codex's work for Claude; project status and
 release rules remain in STATE.md and RELEASE.md. Do not assume the working tree's
 other changes belong to Codex.
 
+## 2026-11-08 - Phase 116 real-data verification and shared builder integration
+
+- Item 1(a): DONE on disposable copies for balance preview/export/reconciliation,
+  Apply, idempotence and Undo. Item 1(b): DONE for vanilla packed-data load, each
+  stage preview and CSV/XLSX round trips for all seven supported editable views.
+  Recruitment is a read-only grid and has no CSV/XLSX mapping route; its separate
+  EDB export was verified. Importing recruitment as an editable sheet is NOT done.
+- Item 2: DONE to the Node VM/fixture HTTP harness boundary; human browser and
+  in-game checks listed below are NOT done. Item 3: DONE, collapsible help and
+  examples in Unit sheets plus updated docs/SHEET_INTERCHANGE.md.
+- Builder bridge: WAITING ON 106. Phases 102-108 were not built or stubbed here.
+  This entry does not mark the whole phase's interactive exit complete.
+- Read ../AGENTS.md, Phase 116, archived 109-115, latest handoffs,
+  SHEET_INTERCHANGE.md and upstream/EDB_SHEETS_WORKFLOW.md. Copied the complete
+  supplied EDB Reader directory into .tmp/phase116/snapshot, then copied EDU/EDB
+  again into .tmp/phase116/snapshot_mod/data. Config, backups, logs and all writes
+  were redirected under .tmp/phase116. All 29 copied files still hash-identically
+  to their originals after Apply/Undo. No real mod folder was written. The five
+  external Python sources were read/AST-parsed as data only; their SHA-256 values
+  match the workflow document. The BAT, JSON, CSV, text and legacy logs/outputs
+  were read, never executed. Original source/workbook scripts and macros did not
+  run. No dependency added. UT_NO_BROWSER=1 throughout verification.
+
+### Snapshot counts and reconciliation
+
+846 native units, 846 keyed Fynn EDU objects, 128 building chains and 8,055
+recruitment rows in both native EDB and Fynn EDB. Exact unit IDs match; refresh
+has no additions/deletions. There are 34 units missing race or tier and 40 BG
+annotations. Rule inputs contain 6/80/80 keyed rows. Graphs have 15 branched and
+4 multiple-root notes, no invalid graphs. Sources are the named paths in the
+upstream workflow document, including References and Output, not a live mod.
+
+| Stage | Legacy OK / skip / total logged | Ours changed / unchanged / skipped / invalid | Numeric differences from legacy in this stage's own field |
+| --- | --- | --- | --- |
+| Replenish | 7,109 / 945 / 8,054 | 159 / 6,575 / 1,320 / 1 | 224 |
+| Experience | 6,975 / 1,079 / 8,054 | 105 / 6,870 / 1,079 / 1 | 5 |
+| Pool | 6,608 / 1,446 / 8,054 | 278 / 6,330 / 1,446 / 1 | 5 |
+
+Legacy OK combines our changed/unchanged meanings. Each of our stage logs covers
+all 8,055 entries. Counts also reconcile with exported full and skip/error logs
+in the required pipeline suite. Numeric comparisons join the same ordered
+building/level/unit occurrences, including duplicate recruitments and conditions;
+all 8,055 identities match in each output. Initial pools have zero differences.
+Replenishment differences persist into later exports, and the five experience
+differences persist into the final export. Those are inherited fields, not extra
+unclassified differences.
+
+| Difference class | Concrete scope | Legacy | Ours / explanation |
+| --- | --- | --- | --- |
+| Intentional fix: stale saved artifacts, fractional-pool rule | 215 replenishment numbers: 8 avari_retraining, 3 guild_horse_breeders_guild, 204 professional_military | Recalculates rates for maximum < 1 | Preserve original rates as the documented rule requires. The supplied current script explicitly skips these pools, so the saved output is not reproducible from that script. Historical generation/version is unverified; no new policy was chosen. Exact value groups below. |
+| Intentional fix: stale JSON and regex context | 5 replenish, 5 experience, 5 pool values in hinterland_farms and breed | Saved structure gives every +N child depth 1; legacy regex recognizes only the word before + and carries its earlier context | Native graph reads full level IDs and follows actual upgrade edges. Exact values below. hinterland_mines also has corrected depths 0/1/2 instead of 0/1/1 but contains zero recruitment rows. |
+| Approved Phase 112 per-level settlement rule | 4 replenish values in hinterland_unique4 | First chain header is city, applies x0.9 to unspecified later headers | Later levels have unspecified headers and use x1. Exact values below. No new city/castle decision needed. |
+| Intentional fix: comment stripping | Legacy replaces comments on 8,054 recruit lines in r and exp; 6,235 differ from source comments in new | Strips semicolon suffix and inserts generated notes | Preserve original notes verbatim, including any already-stale generated notes; explanations belong to logs. All 8,179 comment-bearing source lines survive. No nonnumeric/noncomment line differences remain after normalization against each legacy output. |
+| Intentional fix: complete logs / malformed input | One Muhad Berserkers line has no space after closing unit quote | Retained in output but missing from every 8,054-entry legacy log | Unchanged bytes plus explicit malformed_recruit_pool outcome in all three 8,055-entry logs. Existing malformed-input tests pass. |
+| Intentional fix: complete skip reasons | Replenish log counts | Saved legacy log treats 375 fractional entries as OK, 218 as SKIP; current script also contains early skip branches without log_entry | Ours records all 593 as fractional_pool_preserved. 215 differ numerically; the other 160 formerly OK entries already have the preserved value. Missing race 216, BG tier 511 account for the other 727 skips. |
+| Bugs found in toolkit | Vanilla interchange only, described below | Gunpowder delay offset; implicit list deduplication | Both fixed after failing tests. No unexplained balance number remains. |
+
+The fractional-pool value groups below enumerate all 215 differences. Their
+maximum pools remain unchanged and below 1. Column values are rates, not turns.
+
+| Building | Legacy rate | Ours (original rate) | Rows | Class |
+| --- | --- | --- | --- | --- |
+| avari_retraining | 0.0625 | 0.1 | 2 | Intentional stale-artifact/fractional-rule fix |
+| avari_retraining | 0.05 | 0.1 | 1 | Intentional stale-artifact/fractional-rule fix |
+| avari_retraining | 0.053334 | 0.1 | 2 | Intentional stale-artifact/fractional-rule fix |
+| avari_retraining | 0.066667 | 0.1 | 3 | Intentional stale-artifact/fractional-rule fix |
+| guild_horse_breeders_guild | 0.08 | 0.025 | 1 | Intentional stale-artifact/fractional-rule fix |
+| guild_horse_breeders_guild | 0.106666 | 0.025 | 1 | Intentional stale-artifact/fractional-rule fix |
+| guild_horse_breeders_guild | 0.16 | 0.025 | 1 | Intentional stale-artifact/fractional-rule fix |
+| professional_military | 0.076923 | 0.1 | 21 | Intentional stale-artifact/fractional-rule fix |
+| professional_military | 0.083333 | 0.1 | 14 | Intentional stale-artifact/fractional-rule fix |
+| professional_military | 0.066667 | 0.1 | 6 | Intentional stale-artifact/fractional-rule fix |
+| professional_military | 0.0625 | 0.1 | 10 | Intentional stale-artifact/fractional-rule fix |
+| professional_military | 0.061538 | 0.1 | 2 | Intentional stale-artifact/fractional-rule fix |
+| professional_military | 0.071429 | 0.1 | 26 | Intentional stale-artifact/fractional-rule fix |
+| professional_military | 0.058824 | 0.1 | 24 | Intentional stale-artifact/fractional-rule fix |
+| professional_military | 0.057143 | 0.1 | 7 | Intentional stale-artifact/fractional-rule fix |
+| professional_military | 0.047059 | 0.1 | 12 | Intentional stale-artifact/fractional-rule fix |
+| professional_military | 0.052632 | 0.1 | 18 | Intentional stale-artifact/fractional-rule fix |
+| professional_military | 0.042106 | 0.1 | 3 | Intentional stale-artifact/fractional-rule fix |
+| professional_military | 0.032 | 0.1 | 15 | Intentional stale-artifact/fractional-rule fix |
+| professional_military | 0.053334 | 0.1 | 2 | Intentional stale-artifact/fractional-rule fix |
+| professional_military | 0.05 | 0.1 | 3 | Intentional stale-artifact/fractional-rule fix |
+| professional_military | 0.04 | 0.1 | 20 | Intentional stale-artifact/fractional-rule fix |
+| professional_military | 0.044445 | 0.1 | 3 | Intentional stale-artifact/fractional-rule fix |
+| professional_military | 0.055556 | 0.1 | 6 | Intentional stale-artifact/fractional-rule fix |
+| professional_military | 0.08 | 0.1 | 6 | Intentional stale-artifact/fractional-rule fix |
+| professional_military | 0.166667 | 0.1 | 2 | Intentional stale-artifact/fractional-rule fix |
+| professional_military | 0.066666 | 0.1 | 4 | Intentional stale-artifact/fractional-rule fix |
+
+The remaining stage-specific numeric differences are all enumerated here.
+
+| Stage | Building / level / unit | Legacy | Ours | Class |
+| --- | --- | --- | --- | --- |
+| replenish | hinterland_farms / farms+1 / Faolan Borderguard | 0.166667 | 0.2 | Intentional stale-JSON/level-context fix |
+| replenish | hinterland_farms / farms+2 / Faolan Borderguard | 0.166667 | 0.25 | Intentional stale-JSON/level-context fix |
+| replenish | hinterland_farms / farms+3 / Faolan Borderguard | 0.166667 | 0.333333 | Intentional stale-JSON/level-context fix |
+| replenish | breed / breed+1 / Fylani Herders | 0.08 | 0.106666 | Intentional stale-JSON/level-context fix |
+| replenish | breed / breed+2 / Fylani Herders | 0.08 | 0.16 | Intentional stale-JSON/level-context fix |
+| replenish | hinterland_unique4 / gundabad_gate / Snow Trolls | 0.065454 | 0.072727 | Approved Phase 112 per-level rule |
+| replenish | hinterland_unique4 / gundabad_gate / Wulfguard Axemen | 0.069231 | 0.076923 | Approved Phase 112 per-level rule |
+| replenish | hinterland_unique4 / gundabad_gate / Wulfguard Pikes | 0.069231 | 0.076923 | Approved Phase 112 per-level rule |
+| replenish | hinterland_unique4 / durin_hall_rebuilt / Hammers of Gundabad | 0.05 | 0.055556 | Approved Phase 112 per-level rule |
+| experience | hinterland_farms / farms+1 / Faolan Borderguard | 0 | 1 | Intentional stale-JSON/level-context fix |
+| experience | hinterland_farms / farms+2 / Faolan Borderguard | 0 | 2 | Intentional stale-JSON/level-context fix |
+| experience | hinterland_farms / farms+3 / Faolan Borderguard | 0 | 2 | Intentional stale-JSON/level-context fix |
+| experience | breed / breed+1 / Fylani Herders | 0 | 1 | Intentional stale-JSON/level-context fix |
+| experience | breed / breed+2 / Fylani Herders | 0 | 2 | Intentional stale-JSON/level-context fix |
+| pool | hinterland_farms / farms+1 / Faolan Borderguard | 3 | 4 | Intentional stale-JSON/level-context fix |
+| pool | hinterland_farms / farms+2 / Faolan Borderguard | 3 | 5 | Intentional stale-JSON/level-context fix |
+| pool | hinterland_farms / farms+3 / Faolan Borderguard | 3 | 6 | Intentional stale-JSON/level-context fix |
+| pool | breed / breed+1 / Fylani Herders | 1 | 2 | Intentional stale-JSON/level-context fix |
+| pool | breed / breed+2 / Fylani Herders | 1 | 3 | Intentional stale-JSON/level-context fix |
+
+- For all three generated outputs, line-by-line assertions mask only the four
+  numeric tokens and require the entire remaining source text, comments,
+  requirements, whitespace, CRLF and unrelated capabilities to remain identical.
+  All pass. Native Apply writes exactly the preview's final bytes: 542 changed
+  fields (159 + 105 + 278). Repeat preview gives zero changes; Log Undo restores
+  the original EDB bytes. Measured full pipeline preview: 14.095 s cold and
+  7.430 s later; Apply including revalidation: 7.548 s. These are local elapsed
+  samples, not a general throughput guarantee.
+- No legacy/spec question requiring a new user policy decision was found.
+  Fractional preservation and per-level settlement were already specified;
+  parser-backed depths supersede stale JSON. Historical script/output provenance
+  cannot be established beyond the explicit non-reproducibility described above.
+
+### Vanilla packed data and workbook results
+
+- Selected the installed toolkit entry Medieval II Total War at the root in
+  config/settings.json. Read EDU (513,960 bytes, 0.355 s) and EDB (274,393 bytes,
+  0.281 s) from its packs with gamepack.read_bytes, copied the bytes into
+  .tmp/phase116/vanilla/data, then used Mod and the sheet service on that copy.
+  No packs were modified or real-game extraction performed. Final load took
+  0.507 s: 413 units, 1,475 recruitments, all 413 units in the missing queue.
+- Used the supplied editable rule tables as an explicit profile, without
+  assigning Middle-earth races or tiers to vanilla units. Each stage preview
+  correctly has 1,475 skips and zero changes: replenish/pool have 1,375 missing
+  race and 100 fractional-pool reasons; experience has 1,475 missing race.
+  This verifies named missing-data behavior, not a playable vanilla balance.
+  replenish preview: 1.169 s.
+  experience preview: 0.563 s.
+  pool preview: 0.569 s.
+- All 14 exports were inspected, explicitly mapped, previewed and imported
+  through the validated service. The row counts below are full identities, not
+  the inspector's 12-row display sample. Each unit view has 413 IDs; rules have
+  6/80/80 complete keys. Imports were staged sequentially in one disposable
+  project, so later timing includes accumulated saved layouts. Import timing
+  includes inspect, preview and validated stage. Preview changes include
+  same-value field assignments and are not counts of actual native differences.
+  After both fixes, native review of all accumulated round trips has ZERO changed
+  units and ZERO output files. Reopen uses the persisted project successfully.
+
+| View | IDs/rows | CSV export / import (s) | XLSX export / import (s) |
+| --- | --- | --- | --- |
+| classification | 413 | 0.221 / 0.791 | 0.252 / 1.126 |
+| base | 413 | 0.449 / 3.342 | 1.364 / 7.595 |
+| attributes | 413 | 1.163 / 6.001 | 1.764 / 4.359 |
+| soft | 413 | 1.202 / 4.946 | 1.403 / 10.194 |
+| rules:replenish | 6 | 1.222 / 5.932 | 0.770 / 5.558 |
+| rules:experience | 80 | 0.820 / 5.102 | 0.698 / 4.387 |
+| rules:pool | 80 | 0.674 / 4.644 | 0.727 / 5.975 |
+
+- Read copied workbook (20) in 1.080 s and archived (17) in 1.373 s with the
+  standard-library adapter. Populated Base stats/Attributes/Soft stats rows:
+  (20) 1,231/929/904; (17) 1,228/926/897. Group rows are included in these counts,
+  not asserted to be live units. Also read both converter Python sources and
+  both archived EDU text outputs as data. The copy of rebuilt2.xlsx is refused
+  in 0.048 s at archive_size because its aggregate uncompressed data exceeds
+  80 MB. This documented bound remains a known limitation, not an untested
+  claim of successful real rebuilt2 import. No Excel/macros/recalculation ran.
+
+### Fixes, automation and limits
+
+- Tests FIRST: test_gunpowder_optional_effect_keeps_delay_and_other_members
+  failed with 'musket_shot_set' != 25. Added a shared tuple-member resolver for
+  reading AND patching minimum delay in 12-member stat_pri/stat_sec tuples.
+  It preserves optional firing effect, lethality and all unedited members.
+  Added CSV/XLSX test_gunpowder_delay_round_trip_and_native_patch as a second
+  end-to-end check. A new test initially omitted required formulas='values';
+  its fixture request was corrected, with no runtime bypass added.
+- Tests FIRST: test_list_round_trip_preserves_duplicate_native_members failed
+  with ['hardy','stakes'] instead of ['hardy','stakes','stakes']. Typed list
+  parsing now preserves duplicates during set/paste/import/patch. The explicit
+  append/remove/deduplicate operation semantics and existing dedup test pass.
+  This removed the unwanted changes to 18 vanilla units after unchanged import.
+- Help regression failed first on missing sheets.help_title, then passed after
+  adding a collapsible section in the window using only English catalogue text.
+  It covers selected vs matching scope, filter/edit/review example, keyboard and
+  paste, staging/Apply/Undo, mapped IDs, blanks/zero/clear and known limitations.
+- New Node cases cover help, a 75-row page with total 1,000,000 in <2 s and
+  <300,000 HTML characters, refresh addition/deletion/missing counts and BG,
+  plus branched structure/fractional/BG/missing outcome rendering and escaped
+  special requirements. The page test uses a mocked API; it does not pretend to
+  load a million-unit mod. Its first assertion used a nonexistent DOM attribute;
+  corrected to count actual row checkbox handlers, no production change needed.
+- New backend sparse test reads 50,000 formatted empty rows plus actual data,
+  requires exactly Guard, no phantom/ignored records and <10 s. It passes.
+  Existing tests cover nested AND/OR/NOT filters, real keyboard/paste handlers,
+  mixed typed mass edits and Cancel/Confirm, stable IDs through sorting, saved
+  views, project undo/redo, new/deleted refresh, branched/merged graph policies,
+  fractional pools, special conditions and native byte preservation. Both
+  Node suites pass. Required pipeline and interchange suites also run actual
+  unitsheets.js and HTTP routes on self-cleaning mods for export, native/EDB
+  Apply and existing Log Undo; those are stronger than mocked response checks.
+- Human browser checks NOT done: native file picker/downloads; actual clipboard
+  permissions and OS keyboard/focus/selection behavior; frozen headers/identity
+  columns while scrolling; visual layout and responsiveness on real workbooks;
+  interactive reload/reopen, mass review, Apply confirmation and Log navigation;
+  opening XLSX in Excel/LibreOffice and recalculation; installed-game gameplay.
+  Snapshot Apply/Undo above is service-level and existing fixture HTTP tests
+  exercise UI handlers, not a claim of human browser acceptance.
+- Required final tests with UT_NO_BROWSER=1: unit_sheets 36, sheet_ops 42,
+  sheet_pipeline 23, sheet_native 8, edb_balance 35, sheet_interchange 32 PASS;
+  web_modules 130/130 and i18n 45/45 PASS; both Node sheet suites PASS.
+  Final git diff --check: PASS (exit 0). Added-line em dash scan: zero;
+  pre-existing catalogue text is preserved. All five new IDs confirmed by
+  comparison with HEAD, no IDs removed.
+  Existing .tmp/phase110-step4-runner/sitecustomize.py is unchanged and supplied
+  via PYTHONPATH for the previously documented sandbox mkdir mode limitation.
+  Disposable real-data copies/logs remain in ignored .tmp/phase116 for review.
+- Changed files: unittransfer/sheet_ops.py; web/js/unitsheets.js;
+  web/i18n/en.json; tests/test_sheet_ops.py; tests/test_sheet_interchange.py;
+  tests/test_unit_sheets_ui.js; docs/SHEET_INTERCHANGE.md; docs/CODEX_HANDOFF.md.
+  New IDs: sheets.help_title, sheets.help_edits, sheets.help_example,
+  sheets.help_interchange, sheets.help_limits. New catalogue lines unindented,
+  English ONLY. Claude translates; no other catalogue or dev/i18n edit.
+- Preserved pre-existing TWCenter INDEX deletions and all unrelated untracked
+  paths. No STATE/ROADMAP/ROADMAP_ARCHIVE edit. No commit, tag, build or release.
+  Live usage checks succeeded at 53, 56, 59, 60, 63 and 65 percent used in the
+  five-hour window, with final checkpoint 68 percent used, under the active
+  continuation's 90-percent-used stop. Weekly
+  usage is not the threshold. No credits spent or limits reset.
+
 ## 2026-11-08 - Phase 115 completed and fixture-verified, ready for Claude review
 
 - Exit items 1-6: DONE in automated fixtures. In-app CSV and standard-library

@@ -47,12 +47,20 @@ def number(value):
     except (ValueError,TypeError):sheets.fail(_i18n.msg('eng.sheets.expected_a_finite_number','expected a finite number'))
 
 
+def member_index(key,index,parts):
+    # Gunpowder tuples have an optional firing effect before minimum delay.
+    if key in ('stat_pri','stat_sec') and index==9 and len(parts)==12:
+        return 10
+    return index
+
+
 def value_of(fields,definition):
     key,index,kind,_=definition
     text=fields.get(key)
     if text is None:return None
     if index is not None:
         parts=text.split(',')
+        index=member_index(key,index,parts)
         if index>=len(parts):return None
         text=parts[index].strip()
     if kind=='list':return [x.strip() for x in text.split(',') if x.strip() and x.strip()!='no']
@@ -83,7 +91,7 @@ def typed(column,value):
         if not isinstance(value,list) and not str(value).strip():sheets.fail(_i18n.msg('eng.sheets.explicit_list_clear','Use Clear to remove a list; an empty edit is not a replacement'))
         values=value if isinstance(value,list) else str(value).split(',')
         if any(any(c in str(x) for c in '\r\n;') for x in values):sheets.fail(_i18n.msg('eng.sheets.invalid_list_item','invalid list item'))
-        return list(dict.fromkeys(str(x).strip() for x in values if str(x).strip() and str(x).strip()!='no'))
+        return [str(x).strip() for x in values if str(x).strip() and str(x).strip()!='no']
     text=str(value).strip()
     if any(c in text for c in '\r\n;,'):sheets.fail(_i18n.msg('eng.sheets.invalid_text_value','invalid text value'))
     if column=='category' and text not in {'infantry','cavalry','siege','ship','handler','non_combatant'}:sheets.fail(_i18n.msg('eng.sheets.unknown_edu_category','unknown EDU category'))
@@ -107,6 +115,7 @@ def field_changes(unit,columns):
         if isinstance(value,float) and value.is_integer():text=str(int(value))
         if index is None:changed[key]=text;continue
         parts=(changed.get(key,fields.get(key,''))).split(',')
+        index=member_index(key,index,parts)
         if index>=len(parts):sheets.fail(_i18n.msg('eng.sheets.the_original_field_has_no_requested_tuple_member_value1','the original field has no requested tuple member: {value1}',value1=column))
         old=parts[index];lead=old[:len(old)-len(old.lstrip())];tail=old[len(old.rstrip()):]
         parts[index]=lead+text+tail;changed[key]=','.join(parts)

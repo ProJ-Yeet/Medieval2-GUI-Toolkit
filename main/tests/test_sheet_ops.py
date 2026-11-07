@@ -5,6 +5,15 @@ TEXT=fixture.TEXT
 
 FULL=TEXT.replace('; keep','stat_pri_armour 6, 4, 2, metal ; armor note\nstat_sec 3, 1, no, 0, 0, melee, simple, piercing, sword, 20, 1\nstat_cost 1, 100, 40, 0, 0, 100, 4, 1\n; keep')
 class SheetOperationTests(unittest.TestCase):
+ def test_gunpowder_optional_effect_keeps_delay_and_other_members(self):
+  for field,column in [('stat_pri','attack_delay'),('stat_sec','sec_delay')]:
+   original='20, 3, bullet, 45, 20, missile, missile_gunpowder, piercing, none, musket_shot_set, 25, 1'
+   self.mod.edu=edu.parse_text('type Gunner\ncategory infantry\n'+field+' '+original+' ; retain\n')
+   self.assertEqual(ops.records(self.mod,self.project)[0][0][column],25)
+   p,_=ops.stage_operation(self.mod,self.project,['Gunner'],column,'set',0)
+   fields,_=ops.field_changes(self.mod.edu.units[0],p['draft']['Gunner'])
+   self.assertEqual(fields[field],original.replace('25, 1','0, 1'))
+   self.assertIn('; retain',self.mod.edu.units[0].raw)
  def setUp(self):
   fixture.SheetProjectTests.setUp(self);self.mod.edu=edu.parse_text(FULL);self.project=sheets.empty_project()
  def test_staging_does_not_mutate_project_or_unit_and_preserves_tuple_members(self):

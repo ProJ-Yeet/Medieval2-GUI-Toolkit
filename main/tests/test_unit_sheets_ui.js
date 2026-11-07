@@ -87,6 +87,45 @@ async function safetyRegressions(){
   try{await run();console.log('PASS: '+name);}
   catch(error){failures.push(name+': '+error.message);}
  }
+ await check('sheet help explains staging, mappings and limitations',async()=>{
+  const h=harness();await h.c.unitSheetsOpen();
+  for(const id of ['help_title','help_edits','help_example','help_interchange','help_limits']){
+   assert(h.c.modal.innerHTML.includes('sheets.'+id),id);
+  }
+ });
+ await check('large sparse sheet renders one page within a bounded time',async()=>{
+  const h=harness();
+  h.response.table={rows:Array.from({length:75},(_,i)=>({id:'unit-'+i,attack:i})),
+   total:1000000,matched_ids:['unit-0']};
+  const start=Date.now();await h.c.unitSheetsOpen();
+  assert.equal((h.c.modal.innerHTML.match(/onchange="unitSheetsSelect\(/g)||[]).length,75);
+  assert(h.c.modal.innerHTML.length<300000);
+  assert(Date.now()-start<2000);
+  assert.equal(h.calls[0].limit,75);
+ });
+ await check('refresh shows additions deletions and missing classifications',async()=>{
+  const h=harness();h.response.refresh={added:['New'],removed:['Deleted'],
+   missing_classifications:[{id:'New',missing:['Tier']}],rename_candidates:[]};
+  h.response.table.rows[0].Tier='BG';await h.c.unitSheetsOpen();
+  assert(h.c.modal.innerHTML.includes('sheets.refresh_summary1 1 1'));
+  h.set("USHEET.view='classification';USHEET.order=['id','Tier']");h.c.unitSheetsPaint();
+  assert(h.c.modal.innerHTML.includes('BG'));
+ });
+ await check('balance renders branch fractional BG and special condition evidence',async()=>{
+  const h=harness();await h.c.unitSheetsOpen();
+  h.set(`USHEET.balance={profile:{},logs:{},pipeline_order:['refresh','classification','replenish'],
+   structure:[{building:'fork',notes:['branched'],depths:{root:0,left:1,right:1}}],
+   groups:['fractional_pool_preserved','unsupported_unit_tier:BG','missing_race'].map(reason=>({
+    status:'skipped',unit:'Guard',building:'fork',level:'left',field:'per_turn',
+    entries:[{stage:'replenish',line:8,before:'0.125',after:'0.125',reason,rule:null}]}))}`);
+  const html=h.c.unitSheetsBalanceHtml();
+  for(const value of ['branched','fractional_pool_preserved','unsupported_unit_tier:BG','missing_race','0.125']){
+   assert(html.includes(value),value);
+  }
+  h.response.table={rows:[{id:'8',requires:'event_counter gate 1 and hidden_resource <gate>',maximum:0.5}],total:1,matched_ids:['8']};
+  h.response.columns=['requires','maximum'];await h.c.unitSheetsTab('recruitment');
+  assert(h.c.modal.innerHTML.includes('&lt;gate&gt;'));assert(h.c.modal.innerHTML.includes('0.5'));
+ });
  await check('Running preview and export cancel without publishing late results',async()=>{
   for(const action of ['Preview','Export']){
    const h=harness();await h.c.unitSheetsOpen();

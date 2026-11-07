@@ -4,6 +4,7 @@ import copy
 import io
 import json
 import unittest
+import time
 import zipfile
 from xml.sax.saxutils import escape
 from tests import test_unit_sheets as fixture, test_sheet_pipeline as pipeline_fixture
@@ -33,6 +34,52 @@ def workbook(tables):
 
 class InterchangeTests(unittest.TestCase):
     setUp = fixture.SheetProjectTests.setUp
+
+    def test_gunpowder_delay_round_trip_and_native_patch(self):
+        from unittransfer import edu
+        native='20, 3, bullet, 45, 20, missile, missile_gunpowder, piercing, none, musket_shot_set, 25, 1'
+        self.mod.edu=edu.parse_text('type Guard\ncategory infantry\nstat_pri '+native+' ; keep\n')
+        for fmt in ('csv','xlsx'):
+            exported=self.request('interchange_export',view='base',format=fmt,formulas='values')
+            table=self.request('interchange_inspect',format=fmt,text=exported['text'])['sheets'][0]
+            headers=table['rows'][0]['values']
+            body=dict(format=fmt,text=exported['text'],plans=[dict(sheet=table['name'],view='base',header_row=1,
+                mapping={'id':headers.index('id'),'attack_delay':headers.index('attack_delay')})])
+            p=self.accept(body)['project']
+            self.assertEqual(p['draft']['Guard']['attack_delay'],25)
+            fields,_=sheet_ops.field_changes(self.mod.edu.units[0],p['draft']['Guard'])
+            self.assertEqual(fields['stat_pri'],native)
+
+    def test_fifty_thousand_formatted_empty_rows_are_bounded(self):
+        source=base64.b64decode(workbook({'Base stats':{'A1':'type','B1':'Attack','A2':'Guard','B2':0}}))
+        out=io.BytesIO()
+        with zipfile.ZipFile(io.BytesIO(source)) as src,zipfile.ZipFile(out,'w',zipfile.ZIP_DEFLATED) as dest:
+            for name in src.namelist():
+                value=src.read(name)
+                if name.endswith('sheet1.xml'):
+                    empty=''.join('<row r="'+str(r)+'"><c r="B'+str(r)+'" s="1"/></row>' for r in range(3,50003))
+                    value=value.replace(b'</sheetData>',empty.encode()+b'</sheetData>')
+                dest.writestr(name,value)
+        start=time.perf_counter()
+        body=self.spec();body.update(format='xlsx',text=base64.b64encode(out.getvalue()).decode())
+        body['plans'][0]['sheet']='Base stats'
+        preview=self.request('interchange_preview',**body)
+        self.assertEqual(preview['ids'],['Guard']);self.assertEqual(preview['ignored'],[])
+        self.assertLess(time.perf_counter()-start,10,'formatted empty rows must not become records')
+
+    def test_list_round_trip_preserves_duplicate_native_members(self):
+        from unittransfer import edu
+        self.mod.edu=edu.parse_text('type Guard\ncategory infantry\nattributes hardy, stakes, stakes ; keep\n')
+        for fmt in ('csv','xlsx'):
+            exported=self.request('interchange_export',view='attributes',format=fmt,formulas='values')
+            table=self.request('interchange_inspect',format=fmt,text=exported['text'])['sheets'][0]
+            headers=table['rows'][0]['values']
+            body=dict(format=fmt,text=exported['text'],plans=[dict(sheet=table['name'],view='attributes',header_row=1,
+                mapping={'id':headers.index('id'),'attributes':headers.index('attributes')})])
+            p=self.accept(body)['project']
+            self.assertEqual(p['draft']['Guard']['attributes'],['hardy','stakes','stakes'])
+            fields,_=sheet_ops.field_changes(self.mod.edu.units[0],p['draft']['Guard'])
+            self.assertEqual(fields['attributes'],'hardy, stakes, stakes')
 
     def request(self, action, **kw):
         current=sheets.service(self.mod,'load')

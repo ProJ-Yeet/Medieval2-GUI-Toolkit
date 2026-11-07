@@ -1433,8 +1433,8 @@ or bulk copy of generated HTML/assets.
 reference tables and Fynn JSON export, plus the `Unit script` workbook/converters,
 with editable sheets inside our tool, deep filtering and mass editing. This is
 authorized for implementation on 2026-11-06, progressing in numbered increments
-with verification at each checkpoint. Phases 109-115 are complete; 116 is
-planned. Research and exact source locations are in
+with verification at each checkpoint. Phases 109-115 are complete; 116's
+real-data checks are done and its builder bridge waits on 106. Research and exact source locations are in
 [upstream/EDB_SHEETS_WORKFLOW.md](upstream/EDB_SHEETS_WORKFLOW.md).
 
 Use the toolkit's existing EDU/EDB parsers and edit planners. Read the selected
@@ -1465,6 +1465,8 @@ limits.
   fixture and interactive test results, known limitations, help/examples and
   translation checks. No release implied; archive each finished phase normally.
 
+
+**Progress 2026-11-08.** Done: the supplied snapshots reconciled with the legacy outputs on disposable copies (8,055 recruitment rows; every difference classified as the per-level settlement rule, an intentional fix or a bug; Apply, repeat and Undo restore the bytes), vanilla's 413 units round-tripped through CSV and XLSX in all seven editable views, the automated UI checks, and help with examples in the sheets window. Two bugs fixed: the gunpowder minimum delay read from the wrong tuple slot, and lists merged duplicate attributes. Open: the builder bridge (needs 106), importing recruitment as an editable sheet, and the checks that need a person in a browser (listed in CODEX_HANDOFF.md).
 ---
 
 # What else is open

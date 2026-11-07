@@ -524,6 +524,9 @@
   ],
   "sheets.mapping_example": [
    "unit"
+  ],
+  "sheets.help_interchange": [
+   "header"
   ]
  },
  "ancillaries.a_character_holds_one_ancillary_per": "Bir karakter'de tür başına bir ancillary bulunur; dolayısıyla yenisi bunun yerini alır",
@@ -12594,5 +12597,10 @@
  "sheets.interchange_preview": "Eşleştirilen kimlikleri ve alanları önizle",
  "sheets.interchange_stage": "Doğrulanan bu içe aktarımı uygulamaya hazırla",
  "sheets.interchange_formula_issues": "İçe aktarılan formüllerdeki sorunlar",
- "sheets.interchange_help": "Her sayfanın görünümünü ve başlık satırını seçin, ardından sütunları açıkça eşleyin. Tam birim kimliğini veya tüm kural anahtarı sütunlarını eşleyin. Eşlenmeyen sütunlar ek veri olarak korunur. Bir liste alanının bölündüğü her sütun için aynı liste alanını seçin. Boş yerel hücreler alanları değiştirmez; [] bir listeyi temizler. Değişiklikleri hazırlamadan önce önizlemeyi kontrol edin. CSV dışa aktarımları hesaplanan değerleri kullanır; desteklenen formüller için içe aktarılmış düzene sahip XLSX gerekir. Örnekler ve formül sınırlamaları için docs/SHEET_INTERCHANGE.md dosyasına bakın."
+ "sheets.interchange_help": "Her sayfanın görünümünü ve başlık satırını seçin, ardından sütunları açıkça eşleyin. Tam birim kimliğini veya tüm kural anahtarı sütunlarını eşleyin. Eşlenmeyen sütunlar ek veri olarak korunur. Bir liste alanının bölündüğü her sütun için aynı liste alanını seçin. Boş yerel hücreler alanları değiştirmez; [] bir listeyi temizler. Değişiklikleri hazırlamadan önce önizlemeyi kontrol edin. CSV dışa aktarımları hesaplanan değerleri kullanır; desteklenen formüller için içe aktarılmış düzene sahip XLSX gerekir. Örnekler ve formül sınırlamaları için docs/SHEET_INTERCHANGE.md dosyasına bakın.",
+ "sheets.help_title": "Sayfa yardımı ve örnekler",
+ "sheets.help_edits": "Düzenlemeler sayfa projesine kaydedilir. Yerel EDU verilerindeki değişiklikleri gözden geçirin, ardından oyun dosyalarına yazmak için «Uygula» seçeneğini kullanın. Denge önizlemeleri kayıtlı birim listesini okur; bu nedenle önce yerel veri taslaklarını uygulayın veya atın. Uygulanan değişikliklerden önceki dosyaları geri yüklemek için «Günlükten geri al» seçeneğini kullanın; sayfadaki geri alma ve yineleme işlemleri proje düzenlemelerini geri yükler.",
+ "sheets.help_example": "Örnek: «Kademe eşittir T1» filtresini uygulayın, «Eşleşenleri seç» seçeneğini kullanın, ardından «Toplu düzenleme» bölümünde saldırı değerinin 1 artırılmasını önizleyin. «Onayla» seçeneğini kullanmadan önce hedef sayısını ve önceki/sonraki değerleri kontrol edin. Seçili satırlar ve eşleşen tüm satırlar ayrı kapsamlardır. Filtreleme, gizlenen satırları seçimden çıkarır. Ok tuşları hücreler arasında hareket etmenizi sağlar; sekmelerle ayrılmış dikdörtgen bir veri bloğunu seçili başlangıç hücresinden itibaren yapıştırın. Sıfır bir değerdir; bir açıklamayı kaldırmak için «Temizle» seçeneğini kullanın.",
+ "sheets.help_interchange": "İçe/dışa aktarma: her çalışma sayfası için bir görünüm ve sütun başlıkları satırı seçin, tam birim kimliklerini ve alanları eşleştirin, önizleyin, ardından «Hazırla» seçeneğini kullanın. Satırlar konumlarına göre değil, kimliklerine göre birleştirilir. Bir sınıflandırma CSV dosyası için «Ad» alanını id ile, «Birim Irkı» ve «Kademe» alanlarını ise adlarına göre eşleştirin. Boş yerel veri hücreleri değerleri değiştirmez; boş sınıflandırmalar değerleri temizler; [] bir listeyi boşaltır. Güncel verilerin tamamını almak için yerel sütun başlıklarını, eşleştirilen düzeni korumak için ise içe aktarılan sütun başlıklarını dışa aktarın.",
+ "sheets.help_limits": "CSV ve XLSX veri alışverişi sağlar; Excel stillerini, tablolarını, veri doğrulamasını veya makrolarını aktarmaz. Formül desteği sayılar, + - * /, parantezler ve aynı sayfadaki A1 başvurularıyla sınırlıdır; işlevler, aralıklar ve sayfalar arası formüller kullanılamaz ve raporlanır. Desteklenen formüller yalnızca XLSX ve içe aktarılan düzenle dışa aktarılır. Eksik veya BG sınıflandırmaları ile desteklenmeyen kurallar, atlanan öğeler olarak görünür kalır. Denge işlevi her seviyenin şehir/kale başlığını kullanır, belirsiz zincirleri raporlar ve azami havuz değerlerinin kesirli kısımlarını korur. Devşirme verileri tabloda salt okunurdur; «Uygula» seçeneğini kullanmadan önce Denge önizlemesini ve dışa aktarmayı kullanın."
 }

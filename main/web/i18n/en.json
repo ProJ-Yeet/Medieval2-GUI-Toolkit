@@ -11986,5 +11986,10 @@
 "sheets.interchange_extra": "Preserve as extra column",
 "sheets.interchange_preview": "Preview mapped IDs and fields",
 "sheets.interchange_stage": "Stage this validated import",
-"sheets.interchange_formula_issues": "Imported formula issues"
+"sheets.interchange_formula_issues": "Imported formula issues",
+"sheets.help_title": "Sheet help and examples",
+"sheets.help_edits": "Edits are saved in the sheet project. Review native EDU changes, then Apply to write game files. Balance previews read the saved roster, so apply or discard native drafts first. Use Log Undo to restore applied files; sheet undo and redo restore project edits.",
+"sheets.help_example": "Example: filter Tier equals T1, choose Select matches, then preview an attack increase of 1 in Mass edit. Check the target count and before/after values before Confirm. Selected rows and all matching rows are separate scopes. Filtering removes hidden selections. Arrow keys move through cells; paste a tab-separated rectangle from its selected anchor. Zero is a value; use Clear to remove an annotation.",
+"sheets.help_interchange": "Import/export: choose a view and header row for each worksheet, map exact unit IDs and fields, preview, then Stage. Rows join by ID, never position. For a classification CSV, map Name to id and map Unit Race and Tier by name. Blank native cells leave values unchanged; blank classifications clear them; [] clears a list. Export native headers for the complete current data, or imported headers to retain the mapped layout.",
+"sheets.help_limits": "CSV and XLSX exchange data, not Excel styles, tables, validation or macros. Formula support is limited to numbers, + - * /, parentheses and same-sheet A1 references; functions, ranges and cross-sheet formulas are unavailable and reported. Supported formulas export only with XLSX and imported layout. Missing or BG classifications and unsupported rules remain visible skips. Balance uses each level's city/castle header, reports ambiguous chains and preserves fractional maximum pools. Recruitment is read-only in the grid; use Balance preview and export before Apply."
 }

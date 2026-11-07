@@ -95,6 +95,9 @@ function unitSheetsPaint(){
  <h3>${tt('sheets.title')} · ${esc(u.mod)}</h3>
  <div class="count">${tt('sheets.staged_note')}</div>
  <div class="count">${tt('sheets.formulas')}</div>
+ <details><summary>${tt('sheets.help_title')}</summary>
+ <p>${tt('sheets.help_edits')}</p><p>${tt('sheets.help_example')}</p>
+ <p>${tt('sheets.help_interchange')}</p><p>${tt('sheets.help_limits')}</p></details>
  <div class="barrow">${tabs.map(([id,label])=>`<button class="mini${u.view===id?' primary':''}" onclick="unitSheetsTab('${id}')">${label}</button>`).join('')}
  <button class="mini" onclick="unitSheetsRequest('load')">${tt('sheets.refresh')}</button>
  <button class="mini" onclick="unitSheetsUndo(false)"${u.past.length?'':' disabled'}>↶</button><button class="mini" onclick="unitSheetsUndo(true)"${u.future.length?'':' disabled'}>↷</button></div>
