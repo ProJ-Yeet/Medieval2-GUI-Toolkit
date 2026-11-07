@@ -152,6 +152,8 @@ finishes; the schedule holds only what is left.
 | 98 | Six reports: the Spanish wording, Ko-fi, the Strat map panel, building art, texture paths, vanilla out of the packs | v2.4.6 |
 | 99 | Armory Studio after its first use, 99a-99o | beta 2026-10-15 |
 | 100 | Armory Studio's second round, and faction cards in the Unit Editor, 100a-100n | uncut |
+| 109 | Native sheet projects, parser-owned refresh, classifications and CSV/Fynn adapters | Built, uncut 2026-11-06 |
+| 117 | Verified automatic GitHub release checks, downloads and deferred portable updates | uncut |
 
 Nothing below Phase 16 gates anything still to be built - the dependency rules
 that mattered while V2 was being built are recorded in the archive. What *does*
@@ -436,6 +438,8 @@ and their lettered pieces are commits. Build the majors in this order.
 | | 96e4 | A new region wizard; many towns at once with auto-garrison | one | beta |
 | **III. Factions, units and mod data** | 96a | `can_homeless` on M2EX mods | one | both |
 | | 96e1-3, 96e5-7 | From the Oogway editor: the script builder and add-ons, checking (log, deep check, report), characters (family tree, portraits), units (model swap, voices), art (emblem, banners, recolouring), rules and mods (vanilla values, hard-link mod folders) | six areas | both |
+| **IV. Guided unit builder** | 102-108 | Stainless Steel: Reforged / Combat Reforged builder integration: source audit, calculator, designer, portable projects, Unit Editor installation, mercenary pools, and validation | seven independent phases; planned only | both |
+| **IV b. Editable sheets and EDB balancing** | 109-116 | In-app EDU/rule sheets, deep filtering and bulk edits, the user's replenish/experience/pool pipeline, import/export and verification | eight independent phases; planned only | both |
 | **V. Translations** | 88 | The remaining catalogues through 88d's workflow: 88h Portuguese (Brazil), 88i Polish, 88m Russian, 88p Traditional Chinese, 88q Japanese, 88r Korean. French (88e), Simplified Chinese (88o) and Turkish (88l) are complete drafts | six catalogues | both |
 
 **Finished phases archived on 2026-10-20** (the user: "archive the completed phases"): 77-86, 89-95, 98, 99 (but 99p) and 100 moved to `ROADMAP_ARCHIVE.md` verbatim, their rows up into the phase index. The rows this table still held for 89-94 were left over from the 2026-10-06 regroup: all six were finished on 2026-09-30, so major IV, which was 90 and 93, is gone with them.
@@ -1285,6 +1289,294 @@ the default. Measured on the four soldiers 99l was measured on, at 512.
 * **Automatic is slower**: 39 s on the knights where 99l took 10 s (the
   scale is found with 99l's ways first, then searched above it with every
   way, a trial stopping at its first block that will not go).
+
+# Phases 102-108 - Guided unit builder integration, planned 2026-11-06
+
+**User request:** incorporate [lupinemaverick's Stainless Steel: Reforged Unit
+Builder](https://github.com/lupinemaverick/stainless-steel-reforged-unit-builder),
+with the author's permission to reuse code as reported by the user, then
+"dont do it all in one go make phases in the roadmap".
+
+**Status: scoped, implementation not started.** This request schedules the work;
+it does not start a port. Work through 102 to 108 in order, one numbered phase
+per reviewable increment, with its own tests and Claude handoff. Stop at the
+phase boundary rather than treating these as seven commits in one large port.
+This specific instruction overrides the older instruction to finish a whole
+major grouping in one go for this integration. Existing scheduled work is not
+silently displaced. No release is implied.
+
+Initial source inspection is pinned to commit
+`d4ed9368d0db3da2000bc895e96f52a83b93cb67` (2026-10-15 UTC). Evidence, source-file
+mapping, compatibility questions and attribution are in
+[upstream/SSR_UNIT_BUILDER.md](upstream/SSR_UNIT_BUILDER.md).
+
+**Architecture across these phases:** a guided designer inside the existing Unit
+Editor/New unit flow; Python owns calculations, validation and file writes;
+plain JS presents the inputs and results. Reuse the existing EDU parser, Code
+View, transfer/edit planners, vocabulary and backup/undo paths. Combat Reforged
+balance is an explicitly selected rules profile, never silently applied to
+vanilla or another mod. Keep custom ability proposals as design metadata unless
+the target's runtime support has been independently established. No iframe of
+the hosted tool, second EDU parser, frontend build step, battle-runtime port,
+or bulk copy of generated HTML/assets.
+
+## Phase 102 - Source audit, rule profiles and data contract
+
+- Map the upstream archetypes/subtypes, weapons, armor layers, offhands, mounts,
+  grades, attributes, formulas, project schema and exporters to our existing
+  modules; distinguish reusable behavior from SSR-specific balance.
+- Confirm the authoritative source revision and preserve author/MUG attribution
+  on reused code or data. Record the user's reuse permission and provenance.
+- Specify a versioned design/project schema, rules-profile selection, native EDU
+  output mapping and metadata-only fields. Decide how manual overrides survive
+  recalculation and how designer data is stored without claiming an EDU block
+  contains enough information to reconstruct its original design inputs.
+- Resolve the inspected revision's custom-attribute inconsistency: its README
+  and notices describe metadata-only effects, but `exportableAttrs` currently
+  allows custom weapon tags and converts `hook_drag` to `hook`.
+- **Exit:** reviewed feature/module map, compatibility matrix, sample projects,
+  output contract, and representative golden cases. No app behavior changes or
+  mod writes. Upstream disagreements and unverified formulas are explicit.
+
+## Phase 103 - Deterministic calculation engine and rules data
+
+- Port the selected profile's reusable rule tables and arithmetic into Python:
+  archetype/training, quality versus equipment grade, primary/secondary weapons,
+  defending-slot skill, armor/offhand tradeoffs, barding, heat/terrain, formation,
+  recruit cost and upkeep. Preserve rounding order and manual overrides.
+- Return an explanation of each calculated contribution with the derived fields;
+  evaluate natively supported values separately from design-only annotations.
+- Use upstream regression cases as evidence, including grade changes, two-handed
+  offhand suppression, barding counted once and attribute opt-outs. Clarify
+  differences instead of silently reproducing a demonstrated upstream defect.
+- **Depends on:** 102. **Exit:** calculator/golden tests pass, inputs do not mutate,
+  repeated evaluations agree, unsupported fields cannot leak into EDU, and no
+  game files are written. A UI is not required to finish this phase.
+
+## Phase 104 - Guided designer and editable presets
+
+- Add the designer entry point to the Unit Editor/New unit workflow. Build the
+  archetype, subtype, weapon, equipment, armor-layer, offhand, mounted and grouped
+  attribute controls using our UI and translations.
+- Offer editable presets with reset-to-profile defaults, manual overrides and
+  eligibility explanations. Keep typed fields focused during live recalculation.
+- Show live calculated stats/costs, contribution explanations and an EDU Code
+  View preview; integrate undo/redo and save/reopen of the draft.
+- **Depends on:** 103. **Exit:** infantry, missile, cavalry and two-handed example
+  designs work interactively; changing a preset/grade preserves intentional
+  overrides, and undo/reopen restore the design. This phase previews and saves
+  drafts; applying changes to a unit waits for 106.
+
+## Phase 105 - Portable projects and interchange
+
+- Import/export the upstream `combat-reforged-builder` version-1 projects through
+  a documented adapter, retaining custom presets, explicit overrides and unknown
+  metadata where safe. Use a versioned native project format for our additions.
+- Add project/preset JSON, EDU and CSV downloads/copy actions with schema checks,
+  output escaping and clear messages for unsupported/newer versions. Use the
+  existing EDU implementation; document any deliberate export differences.
+- Import transactionally: a malformed project leaves the current draft intact.
+  Unknown custom abilities stay in metadata rather than becoming engine syntax.
+- **Depends on:** 104. **Exit:** representative upstream projects open, native
+  save/load round-trips without drift, exports validate, and failed imports do
+  not destroy drafts. No writes into an installed mod.
+
+## Phase 106 - Apply designs to existing and new units
+
+- Let a design stage selected fields on an existing unit or create a new unit
+  from an existing donor through our New unit/transfer and edit planners.
+- Offer the selected mod's existing models, factions, mounts and projectiles;
+  resolve localization/dictionary keys and names with the existing workflows.
+  Preserve fields/comments the user did not choose to replace.
+- Preview the exact changes before Apply. Reuse backup, My Changes, Log Undo,
+  registry/cache refresh and existing Armory model/card assignment entry points.
+  Missing model/projectile/runtime prerequisites are shown before writing.
+- **Depends on:** 105. **Exit:** existing-unit and new-unit examples apply through
+  the normal planners on throwaway mods; unrelated content survives and Undo
+  restores every changed file. Applying SSR balance to another mod requires an
+  explicit profile choice, not automatic detection by a loose folder name.
+
+## Phase 107 - Mercenary-pool integration
+
+- Turn the builder's optional mercenary settings into a plan for selected existing
+  campaign pools using `mercpools.py` and the toolkit's existing write path.
+- Support experience, cost, replenishment, maximum and initial counts where the
+  game's verified syntax supports them. Preserve pool regions, restrictions,
+  events and unrelated entries. Avoid duplicate unit lines on repeated applies.
+- Keep unconfigured armor/weapon-level extensions and campaign automation ideas
+  as project metadata. Do not implement their runtime behavior in this phase.
+- **Depends on:** 106. **Exit:** pool preview/apply/undo tests pass, repeated applies
+  are safe, existing gates are preserved, and a non-mercenary design touches no
+  pool file. This phase does not silently create recruitment building entries.
+
+## Phase 108 - Compatibility, interactive verification and documentation
+
+- Run the relevant calculator, project adapter, EDU/edit/new-unit, mercenary,
+  localization and frontend checks together. Check installed SSR if available,
+  vanilla and an unrelated mod; report unavailable targets rather than claiming
+  they were tested. Use throwaway copies for write verification.
+- Exercise the full designer -> save/reopen -> export -> existing/new unit ->
+  optional mercenary-pool -> Undo workflows in the real UI, including narrow
+  layouts, keyboard navigation and failed requests.
+- Finish attribution/provenance, profile documentation, contribution explanations,
+  unsupported-effect descriptions and example projects. Reconcile completed
+  phases into the archive under the existing roadmap rules.
+- **Depends on:** 107. **Exit:** documented test matrix and known limitations,
+  successful preview/apply/undo, and a feature ready for normal use. No release
+  or blanket claim of battle-balance accuracy without separate verification.
+
+---
+
+# Phases 109-116 - Editable sheets and bulk EDB balancing, started 2026-11-06
+
+**User request:** incorporate the workflow in the local `EDB Reader` scripts,
+reference tables and Fynn JSON export, plus the `Unit script` workbook/converters,
+with editable sheets inside our tool, deep filtering and mass editing. This is
+authorized for implementation on 2026-11-06, progressing in numbered increments
+with verification at each checkpoint. Phase 109 is complete; 110-114 are active
+and not yet accepted as complete. Research and exact source locations are in
+[upstream/EDB_SHEETS_WORKFLOW.md](upstream/EDB_SHEETS_WORKFLOW.md).
+
+Use the toolkit's existing EDU/EDB parsers and edit planners. Read the selected
+mod directly by default; importing Fynn JSON, CSV or Excel is an adapter, not a
+mandatory second parser or an executable dependency. Keep user classification
+and rule tables per mod as project data, not invented EDU fields. Share unit
+identity, projects and staging contracts with 102-108, but this track can begin
+independently after its own audit. Existing priorities remain unchanged.
+
+**Implementation checkpoint, 2026-11-06:** 109 complete. Shared sheet views,
+typed staging/recipes, native review/apply, all three EDB stages, audit ZIP exports
+and backed-up Apply/Undo are implemented and fixture-tested. 110-114 remain active
+until their full acceptance criteria are verified; 115-116 remain planned. Full
+interactive verification was interrupted by browser localhost access denial.
+Cancellation, comparison groups, deeper rule-table editing, XLSX/native sheet
+interchange and non-EUR/builder integration remain. See CODEX_HANDOFF.md for exact
+checks, changed files and limits. Paused at the user's 90%-used five-hour guard.
+
+## Phase 110 - Native editable sheet views and deep filters
+
+- Provide EDU Base stats, Attributes and Soft stats views, classification and
+  Barracks rule tables, and an EDB recruitment view with building/level/condition
+  context. Keep shared identity and field values synchronized across views.
+- Add typed cell editing, rectangular selection/paste, keyboard movement,
+  fill-down, undo/redo, frozen identifiers/headers, hide/reorder columns, stable
+  multi-column sorting and saved per-mod views. Paginate or virtualize large data.
+- Filter by text/substring, exact/not equal, numeric ranges and comparisons,
+  blank/missing/invalid/changed states, attribute contains/not contains and
+  combined AND/OR/NOT groups. Include unit, faction, race, tier, category/class,
+  weapon/mount/projectile, ownership/AOR and building chain/type/level filters
+  where their data exists. Show active filters and matching row counts.
+- Include comparison groups and derived Defense Total, Ultra Size and cost/upkeep
+  efficiency columns like the workbook, with visible formulas and configurable
+  coefficients. Distinguish editable native values, classifications and derived
+  columns. Do not impose its 2.5 size or 0.8 defense coefficient on every mod.
+- **Depends on:** 109. **Exit:** live editing and filters work on the supplied
+  workbook's scale, saved views reopen, sorting never moves an edit to another
+  unit, and hiding/filtering rows does not silently change the intended edit set.
+
+## Phase 111 - Typed mass-edit operations and reusable recipes
+
+- Support explicit selected rows versus all matching rows, with a target count
+  and stable-ID snapshot before staging. Never edit filtered-out rows implicitly.
+- Provide set, add/subtract, multiply/divide/percentage, min/max clamp, rounding,
+  fill/copy, text replacement and attribute add/remove/deduplicate operations.
+  Add column-based arithmetic or a limited expression language, not Python/JS
+  evaluation. Support reusable named recipes and rule/profile selection.
+- Preserve explicit zero and distinguish blank/no-change from clear. Reject
+  invalid cells/types, division by zero and unintended changes to compound EDU
+  fields; show per-field before/after values and per-operation undo/redo.
+- **Depends on:** 110. **Exit:** mixed-field and filtered-selection regression
+  tests pass; cancel is a no-op, operations can be undone, unknown attributes and
+  unedited tuple members survive, and no disk writes happen while staging.
+
+## Phase 112 - Building graph and replenishment rules
+
+- Derive chain roots, upgrades, branch depths and city/castle/unspecified context
+  through the existing EDB parser. Define a visible policy for disconnected,
+  branched, merged or cyclic chains; never default an unknown level to tier zero.
+- Port the user's editable Earliest/Latest replenishment table and interpolation
+  over the chain. The compatibility profile uses `X = E + (L-E)*i/max_depth`,
+  with E for a single-level chain, reciprocal rate rounding to six decimals,
+  then city x0.9 and cavalry x0.8, then six-decimal rounding again.
+- Preserve the script's maximum-pool-below-1 exception for replenishment, Beast
+  race mapping, missing endpoint fallback and invalid/missing-rule outcomes.
+  Make multipliers, profile-specific exceptions and branch policy inspectable.
+  Malformed Beast labels must be reported, not silently treated as Orc.
+- **Depends on:** 109; editing rules uses 110. **Exit:** reference-profile golden
+  cases and boundary tests pass, explanations show exact inputs/rounding, and
+  requirements/comments/other recruitment numbers stay unchanged.
+
+## Phase 113 - Experience and maximum-pool balancing
+
+- Import/edit both lookup tables keyed by Unit Race, Category and BarracksTier;
+  select the unit-tier column T0-T4. Compatibility uses barracks depth + 1 capped
+  at T5; Beast X uses race X and category beast. Keep these keys configurable
+  rather than hardcoding Middle-earth races into the app's global vocabulary.
+- Change only starting experience or maximum pool as selected. Preserve initial
+  pool, replenishment and conditions. Keep the pool-below-1 exception on maximum
+  pool updates; experience does not inherit that skip from the other stages.
+- Show BG/missing unit tiers, missing rows/columns, invalid values and unsupported
+  unit categories as named outcomes, not zeros. Detect conflicting duplicate
+  table keys. Allow explicit unit/building/level overrides above table rules.
+- **Depends on:** 112. **Exit:** both stages match approved reference cases,
+  independent stage execution changes only its own field, and skips preserve
+  existing values and hand-written comments.
+
+## Phase 114 - Pipeline preview, staged exports, complete logs and Apply/Undo
+
+- Offer reference refresh/classification -> replenish -> experience -> pool as a
+  pipeline with individual-stage controls and cancellation. Run rules against a
+  shared staged document so calculations are reproducible and order is visible.
+- Default export is `export_descr_buildings_new.txt`. Optional troubleshooting
+  exports retain `_r.txt` and `_exp.txt`; expose the structure report and all-entry
+  plus skip/error-only logs for each stage with reason, source line, rule and
+  before/after values. Cover every matched/skipped/error entry, including early
+  branches the original scripts do not always log.
+- Preview all proposed changes grouped by unit/building/level/field; distinguish
+  changed, unchanged, skipped and invalid. Preserve original comments, conditions,
+  encoding/newlines and unrelated capability/sibling blocks. Check for external
+  file edits between preview and apply instead of applying stale row positions.
+- Apply once through existing EDB planners, backups, My Changes and Log Undo.
+  Export-only remains available; no copy-overwrite workflow or external process
+  is required. Re-running with unchanged inputs must not accumulate edits/comments.
+- **Depends on:** 111 and 113. **Exit:** single-stage/full-pipeline/export/apply/undo
+  work on temporary fixtures; interrupted/invalid runs cannot leave half an EDB
+  written, and counts reconcile with the complete and skip/error logs.
+
+## Phase 115 - CSV, Excel and Fynn interchange without destructive defaults
+
+- Import/export the three rule sheets, classifications and EDU sheet views from
+  inside the app. Provide explicit schema/header mapping for changed names,
+  duplicated columns and workbook versions, previewing IDs and fields before use.
+- The supplied `(20)` Base stats headings differ from the converter's expected
+  `type`, `Tier`, `Campaign cost`; its sheets also contain group/separator rows.
+  Match only validated unit IDs, preserve unknown columns, ignore presentation
+  rows and never interpret formatted empty rows as units. Read actual populated
+  cells rather than trusting a workbook's maximum used range.
+- Support formulas as derived columns through a documented safe subset; show
+  unsupported/stale formulas and missing caches. Export computed values or
+  supported formulas explicitly. Never execute macros or silently recalculate an
+  unsupported formula as zero. Keep cross-sheet identity joins independent of order.
+- **Depends on:** 114. **Exit:** supplied/current and archived workbook variants
+  round-trip through documented mappings, blank versus zero and list clearing are
+  preserved, invalid imports leave staged work intact, and omitted fields/comments
+  do not get rebuilt from converter defaults.
+
+## Phase 116 - Real-data verification and shared builder integration
+
+- Verify the supplied EDB/EDU/reference snapshots on disposable copies and a
+  non-EUR mod. Reconcile differences from legacy outputs, including intentional
+  fixes to comment stripping, missing log branches, stale JSON and ambiguous chains.
+- Exercise deep filters, keyboard/paste, mixed mass edits, new/deleted units,
+  missing/BG classifications, branched chains, fractional pools, special conditions,
+  save/reopen, export and Apply/Undo in the real UI. Check large/mostly-empty sheets.
+- Connect designs from 102-108 to the same classifications, recipes and preview
+  model when that track is available; no duplicate stat or recruitment pipeline.
+- **Depends on:** 115; builder bridge additionally needs 106. **Exit:** documented
+  fixture and interactive test results, known limitations, help/examples and
+  translation checks. No release implied; archive each finished phase normally.
+
+---
 
 # What else is open
 

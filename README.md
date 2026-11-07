@@ -51,6 +51,13 @@ Then, in this order:
 On first run, open Settings and point it at your Medieval II install folder (the
 one containing `mods`).
 
+Portable builds with an update manifest automatically check official GitHub releases
+and download verified newer versions while the toolkit is running. Updates install
+on the next launch or restart, preserving `config/` (settings, sessions and backups).
+Settings includes an automatic-update switch, status and **Check now**. Modified
+application files and source checkouts are never overwritten automatically. Older
+builds need one manual upgrade to a release containing this updater.
+
 The interface is available in English, German (*Deutsch*), Spanish (*Español*),
 French (*Français*), Simplified Chinese (*简体中文*) and Turkish (*Türkçe*).
 Translations are drafts pending native-speaker review: Settings > Interface language.

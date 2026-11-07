@@ -4692,6 +4692,54 @@ so replacing the file is enough to fix it.
 
 ---
 
+# Phase 117 - Automatic official-release updates, 2026-11-06 (uncut)
+
+Requested after the EDB/sheet planning task: automatically check GitHub for newer
+versions, download them and update the toolkit. Implemented without changing
+Phases 109-116 from scoped to built and without cutting a release.
+
+- `unittransfer/updater.py` checks the fixed official repository's latest stable
+  release on a background thread at startup and every six hours. Settings can
+  disable automatic updates or request Check now. Source checkouts only check;
+  they are never downloaded over or replaced. Test-mode environment flags suppress
+  background checks. Network/offline failures do not prevent ordinary startup.
+- Eligible portable installs require `release-manifest.json` and bundled Python.
+  The release builder writes file hashes and the version after cleaning its
+  staged package; old releases need one manual upgrade to acquire this feature.
+- Downloads have fixed official asset URLs, HTTPS redirect restrictions, declared
+  size bounds and GitHub SHA-256 verification. Extraction rejects traversal,
+  duplicate paths, links, unowned components and undeclared files. Staged files
+  must match the new manifest. Locally modified/extra files in managed app
+  folders stop replacement instead of being silently overwritten.
+- Verified downloads wait for the next launch/restart. `app.py` hands them to a
+  copied stdlib-only embedded interpreter so the old runtime can close. The
+  standalone `update_worker.py` waits for the launcher process, swaps only managed
+  application components, validates the new files, runs the new app's startup
+  check, and restarts it. Exceptions restore the previous components; previous
+  files remain in a rollback folder under config/updates. A killed/power-lost
+  worker is not claimed to have crash-atomic multi-directory replacement.
+- `config/` is never replaced, including settings, sessions, backups and pending
+  work. Other root user files are outside the managed component allowlist.
+  No mod folder is an installation target. There is no git pull, publishing or
+  forced mid-session shutdown. Restart to install uses the existing restart UI.
+- Status/check/settings routes are `/api/updates`, `/api/updates/check`,
+  `/api/updates/settings`. Settings labels and updater diagnostics have English,
+  German and Spanish catalogue entries; other languages fall back normally.
+
+Verification: 22 updater tests passed (checksums, selection, traversal/links,
+local changes, staging, rollback on locks/startup failure, settings preservation,
+source guard, private worker handoff and routes); web modules 130/130; i18n
+45/45; catalogue integrity 18/18; syntax/compilation and diff checks. A complete
+private-worker update/restart used real bundled Python in a disposable install
+and preserved settings. No real installed copy was upgraded. The existing
+`test_startup` suite could not finish: an early MED2 fixture-count assertion
+failed and Windows refused its socket bind with WinError 10013 before updater
+coverage. Full interactive Settings verification is still unclaimed.
+
+No version bump, release build, tag, upload or commit. The integration is present
+in source and will enter portable packages on the next authorized release.
+
+
 # Split out on 2026-09-23
 
 Moved out of `ROADMAP.md` verbatim on the user's word ("shorten our roadmap"), in the
@@ -14046,3 +14094,35 @@ zip is about 22 MB (21.8 MB measured) and has no `vanilla_ui/`, and
 `build_release.py` lists `vanilla_ui` as forbidden. The setting
 `vanilla_ui_root` and `pack_vanilla_ui.py` stay for a game with no packs.
 `tests/test_gamepack.py`, 17 checks.
+
+---
+
+## Phase 109 - Source adapters and persistent unit classifications
+
+- Specify the native records and adapters for Fynn's keyed `edu.json`/`edb.json`,
+  `EDU_Reference.csv`, all three Barracks CSVs and the user's workbook layouts.
+  Treat the screenshot's Load Mod -> Export File (JSON) as the legacy workflow
+  to support, not a required step for users of our app.
+- Refresh units directly from the selected mod; join on the exact EDU type ID,
+  never row number or localized name. Preserve Race, Tier, Main Faction, AOR
+  and additional user columns; category comes from live EDU unless explicitly
+  overridden. The balancing join uses Name, Unit Race, Tier and Category only.
+- Detect additions, deletions, renames, duplicate IDs and stale exports. Show an
+  editable missing-classification queue immediately for new units, so users do
+  not have to run the pipeline once, edit the CSV and run it again. Do not guess
+  race/tier from a model or silently delete annotations for absent units.
+- **Exit:** documented adapters and fixtures, stable joins across sorting and
+  refresh, existing annotations preserved, and unsupported/missing schemas
+  reported without any game-file write.
+
+**Completed 2026-11-06, uncut.** `unit_sheets.py` owns versioned per-mod
+projects in config, exact-ID adapters and classification refresh; the toolkit's
+existing EDU parser remains authoritative. Imported extras and absent-unit
+annotations survive. Unique possible renames require explicit transfer, and new
+units enter the missing-classification queue immediately. CSV/Fynn source and
+schema fixtures pass. Read-only validation against the supplied snapshot found
+846 units, 34 missing classifications, rule tables with 6/80/80 rows and 8,055
+Fynn EDB recruitment rows. XLSX import remains Phase 115. Native game-file edits
+are outside this phase; configuration saves use optimistic revisions and atomic
+writes. Follow-on sheet/filter/balance implementation is in progress; see the
+Codex handoff for its current checks and limits.

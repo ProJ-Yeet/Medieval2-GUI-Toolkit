@@ -3,7 +3,1011 @@
   "lang": "de",
   "status": "draft"
  },
- "_exempt": {"campbrowse.campaigns_read_in_ms": ["ship"], "campbrowse.every_campaign_this_mod_ships_with": ["ship"], "campbrowse.nothing_in_to_read_a_menu": ["ship"], "campbrowse.ships_map_layers": ["ship"], "campcreate.new_region_name_paint_settlement_port": ["port_verb"], "campcreate.port": ["port_verb"], "campcreate.port_marker_add_or_move_on": ["port_verb"], "campcreate.select_a_region_first_then_choose": ["port_verb"], "codeview.every_string_here_is_stored_as": ["character"], "campmark.named_character_general_admiral_port_spy": ["port_verb"], "campmark.port": ["port_verb"], "eng.campaint.is_a_marker_colour_black_is": ["port_verb"], "climates.append_a_name_the_engine_does": ["ship"], "climates.taking_over_one_of_the_twelve": ["ship"], "edusort.line_character": ["character"], "eng.animloose.turns_bones_and_its_skeleton_has": ["turn"], "eng.casanim.turns_bones_and_the_skeleton_has": ["turn"], "campmark.this_mod_ships_its_own_picture": ["ship"], "eng.buildings.is_still_used_province_s_carry": ["gate"], "cards.data_ui_units_data_ui_unit": ["unit"], "eng.buildings.hidden_ceiling_note": ["ship"], "eng.codeview.length_says_but_text_is": ["character"], "eng.codeview.length_says_but_text_is_and_more": ["character"], "eng.campaint.is_not_a_marker_map_regions": ["port_verb"], "eng.campaint.settlement_or_port_pixels_left_alone": ["port_verb"], "eng.campaint.ships_own_so_it_does_not_see": ["ship"], "eng.campevents.an_event_line_needs_a_category": ["event"], "eng.campevents.an_event_line_needs_a_disaster": ["event"], "eng.campevents.an_event_line_needs_a_label": ["event"], "eng.campevents.an_event_line_with_no_type": ["event"], "eng.campevents.is_not_one_of_the_eight": ["ship"], "eng.campevents.line_event_takes_a_category_and": ["event"], "eng.campevents.line_is_before_the_first_event": ["event"], "eng.climatenew.a_climate_name_the_battle_map": ["ship"], "eng.climatenew.all_four_mods_measured_for_this": ["ship"], "eng.dupes.a_renamed_block_is_a_real": ["soldier"], "maplabels.port": ["port_verb"], "maplabels.port_2": ["port_verb"], "eng.heroabilities.not_in_ui_battle_sd_so": ["battle"], "facaudit.world_maps_campaign": ["campaign"], "maplabels.character": ["character"], "eng.mercpools.line_is_not_pool_regions_or": ["unit"], "eng.minorfiles.this_cultures_port_ladder_has_lines": ["port_verb"], "mapcheck.records_what_is_wrong_now_as": ["record"], "eng.namekeys.this_mod_ships_only_strings_bin": ["ship"], "eng.soundscripts.line_end_with_no_open_event": ["event"], "eng.winconds.could_not_be_read_the_stock": ["ship"], "eng.stratedit.a_settlement_block_opens_with_the": ["castle"], "eng.stratedit.stays_on_the_map_with_no": ["ship"], "eng.stratedit.the_header_says_the_engine_reads": ["settlement", "castle"], "eng.stratedit.two_levels_of_stand_in_this": ["ship"], "eng.stringsbin.a_single_string_cannot_exceed_65535": ["character"], "eng.stringsbin.a_string_says_it_is_characters": ["character"], "eng.traits.trigger_affects_which_this_file_does": ["trait"], "core.every_model_a_mod_ships_the": ["ship"], "core.the_tool_did_not_finish_loading": ["turn"], "regiondel.already_has_a_port_and_only": ["port_verb"], "regiondel.has_no_port_of_its_own": ["port_verb"], "regiondel.its_port": ["port_verb"], "settlemech.a_levels_upgrade_is_the_population": ["upgrade"], "settlemech.level": ["level"], "traits.hidden": ["hide"], "traits.hidden_2": ["hide"], "soundbanks.has_no_data_the_game_uses": ["ship"], "buildings.borrowed_from_the_unpacked_vanilla_ui": ["ship"], "v3anim.building_the_glb": ["building"], "v3anim.building_the_obj_zip": ["building"], "v3anim.played_from_vanillas_pack_this_mod": ["ship"], "v3anim.the_weapon_skeletons_move_the_weapon": ["shield"], "v3anim.turn_every_key": ["turn"], "v3anim.turns_to": ["turn"], "buildings.every_gate_at_once_of_regions": ["gate"], "buildings.every_resource_gate_at_once_from": ["gate"], "buildings.no_region_passes_every_gate": ["gate"], "buildings.every_rule_over_the_shape_of": ["upgrade"], "buildings.hidden": ["hide"], "buildings.its_battle_model_has_no_texture": ["turn"], "buildings.level_3": ["level"], "buildings.level_key": ["level"], "guided.a_projectile_is_set_but_the_weapon_type_is_type": ["missile"], "guided.added_to_defence_when_the_attacker": ["mount"], "guided.added_to_the_attack_factor_when": ["mount"], "guided.armour_0_armour_1_armour_2": ["shield", "armour", "missile", "melee", "defence"], "guided.armour_defence_skill_hit_sound": ["armour", "defence"], "guided.armour_defence_skill_shield_hit_sound": ["shield", "armour", "defence"], "guided.armour_upgrade_models_outnumber_levels": ["trigger"], "guided.attack_bonus_vs_mounted_defence_bonus": ["mount", "armour", "attack", "defence"], "guided.attack_charge_projectile_range_ammo_weapon": ["weapon", "projectile", "charge", "attack", "skeleton"], "guided.attack_vs_mounted": ["mount"], "guided.banner_faction": ["faction"], "guided.banner_unit": ["unit"], "guided.can_run_amok_only_does_anything": ["mount"], "guided.close": ["close"], "guided.close_2": ["close"], "guided.defence_vs_mounted": ["mount"], "guided.faction_faction": ["faction"], "guided.faction_faction_culture": ["faction", "culture"], "guided.find_an_entry_by_skeleton_by": ["soldier"], "guided.florins_the_smith_charges_to_upgrade": ["charge"], "guided.florins_the_smith_charges_to_upgrade_2": ["charge"], "sprites.flag_turned_off": ["turn"], "sprites.turn_the_flag_back_off": ["turn"], "sprites.the_bypass_flag_makes_the_next_normal": ["turn"], "sprites.this_mod_ships_m2tweop_so_generation": ["ship"], "buildings.province_s_carry_it_clause_s": ["gate"], "buildings.selected": ["select"], "buildings.take_off_the_line_shows_what": ["gate"], "buildings.the_hidden_resources_line_at_the": ["gate"], "viewer3d.shield": ["shield"], "viewer3d.shield_2": ["shield"], "viewer3d.shield_2_carried": ["shield"], "viewer3d.shield_2_slung": ["shield"], "viewer3d.shield_carried": ["shield"], "viewer3d.shield_slung": ["shield"], "viewer3d.drag_to_turn_wheel_to_zoom": ["turn"], "viewer3d.drawn_at_shipped": ["ship"], "guided.how_much_of_a_mounted_targets": ["mount"], "guided.infantry_cavalry_siege_ship_handler": ["ship", "siege", "cavalry", "infantry"], "guided.level_level_level": ["level"], "guided.light_heavy_missile_spearmen": ["missile"], "guided.man_mount_animal": ["mount", "animal"], "guided.melee_attack_missile_attack_defence": ["missile", "melee", "attack", "defence"], "guided.model_men_extras_mass_radius_height": ["model"], "guided.model_model_model": ["model"], "guided.optional_the_effect_played_when_the_weapon": ["turn"], "guided.optional_the_formation_the_unit_can_toggle": ["wall"], "guided.optional_three_factors_that_apply_only": ["mount"], "guided.parrying_skill_it_is_ignored_when": ["shield"], "guided.prec_a_missile_unit_throws_one": ["charge"], "buildings.then_give_it_to_provinces_in": ["gate"], "buildings.this_mod_ships_no_file_at": ["ship"], "buildings.unconditional_the_rest_need_every_gate": ["gate"], "buildings.units_without_battle_model_texture": ["turn"], "buildings.with_no_ownership_to_gate_to": ["gate"], "viewer3d.32_checker_cells_to_a_sheet": ["sprite_sheet"], "viewer3d.attach_sheet": ["sprite_sheet"], "viewer3d.attachment_sheet": ["sprite_sheet"], "viewer3d.attachment_slot_main_again": ["sprite_sheet"], "viewer3d.attachment_slot_missing": ["sprite_sheet"], "viewer3d.both_sheets": ["sprite_sheet"], "viewer3d.groups_reach_attachment": ["sprite_sheet"], "viewer3d.groups_reach_right_half": ["sprite_sheet"], "viewer3d.main_sheet": ["sprite_sheet"], "viewer3d.no_attachment_whole_space": ["sprite_sheet"], "viewer3d.right_half_of_the_sheet": ["sprite_sheet"], "viewer3d.runs_outside_the_sheet_it_was": ["sprite_sheet"], "viewer3d.sheet": ["sprite_sheet"], "viewer3d.the_same_sheet_again": ["sprite_sheet"], "viewer3d.the_sheet": ["sprite_sheet"], "viewer3d.title_open_the_uv_layout_beside": ["sprite_sheet"], "viewer3d.title_paint_the_uv_coordinate_instead": ["sprite_sheet"], "viewer3d.uv_self_key": ["sprite_sheet"], "viewer3d.uv_single_key": ["sprite_sheet"], "viewer3d.x_a_placeholder_not_a_sheet": ["sprite_sheet"], "viewer3d.draw_the_texture_at_the_size": ["sprite_sheet", "ship"], "guided.shield": ["shield"], "guided.shield_factor_against_melee_attacks_from": ["shield"], "guided.shield_factor_against_missile_fire_this": ["shield"], "guided.shield_factor_only_applies_to_attacks": ["shield"], "guided.shield_melee": ["shield"], "guided.shield_missile": ["shield"], "guided.shield_only_counts_against_attacks_from": ["shield"], "guided.splits_the_shield_into_one_value": ["shield"], "guided.there_is_no_shield_slot_here": ["shield"], "guided.vanilla_ships_it_commented_out": ["ship"], "guided.vanilla_ships_it_commented_out_on": ["ship"], "guided.turns_recruit_upkeep_weapon_ug_armour": ["battle", "recruit", "weapon", "armour", "turn"], "v3anim.vanillas_skeleton_pack_this_mod_ships": ["ship"], "v3anim.walk_charge_die_a_file_name": ["charge"], "campaint.add_a_province_decide_its_record": ["port_verb"], "campaint.place_the_port_pixel_or_skip": ["port_verb"], "campmap.building_the_composite": ["building"], "campmap.click_a_province_to_inspect_it": ["turn"], "campmap.comp_key": ["terrain"], "campmap.draw_the_ground_the_way_the": ["terrain"], "campmap.has_no_campaign_map_this_tool": ["ship"], "campmap.hidden": ["hide"], "changes.turn_off": ["turn"], "changes.turn_on": ["turn"], "changes.turn_off_putting_the_original_records": ["turn"], "campnew.map_layers_note": ["ship"], "campnew.this_mod_ships_only_the_compiled": ["ship"], "campmap.port_marker": ["port_verb"], "campmap.port_pixel": ["port_verb"], "campmap.port_pixels_undecided": ["port_verb"], "campmap.region_id_tiles_settlement_at_game": ["port_verb"], "campmap.settlement_character_and_port_names_beside": ["port_verb"], "campmap.tiles_regions_settlements_ports": ["port_verb"], "campmap.ships_its_own_so_that_layer": ["ship"], "campmap.the_campaign_map_as_a_surface": ["turn"], "campmap.the_heights_as_a_surface_with": ["turn"], "campmap.tab_osm_title": ["turn"], "eng.campfiles.this_mod_ships_only_so_the": ["ship"], "eng.campstrat.faction_relationships_does_not_read_as": ["faction"], "eng.campstrat.faction_standings_does_not_read_as": ["faction"], "eng.campstrat.fort_line_does_not_read_as": ["culture"], "eng.campstrat.settlement_header_says_the_engine_knows": ["castle"], "eng.campstrat.should_be_armour": ["armour"], "eng.campstrat.unit_line_does_not_read_as": ["armour"], "eng.characters.has_strat_model_s_a_named": ["heir", "leader"], "eng.animslot.this_mod_ships_no_animation_packs": ["ship"], "eng.campnew.ships_map_layer_s_of_its": ["ship"], "eng.campnew.is_not_on_disk_and_ships": ["ship"], "eng.mapnewreal.climates_is_one_ground_or_koppen": ["ground", "climate"], "eng.mapnewreal.land_and_sea_from_the_real": ["ground", "level"], "eng.mapnewreal.province_s_grown_from_their_cities": ["port_verb"], "eng.mapnewreal.rivers_is_none_or_one_of": ["river"], "eng.mapnewreal.the_highest_ground_peak_0f_m": ["ground"], "eng.campnew.nothing_names_on_the_new_game_menu_archive": ["ship"], "eng.soundbanks.line_end_with_no_open_event": ["event"], "eng.stratcamp.is_not_a_word_the_engine": ["ship"], "eng.mapcheck.second_port_pixel": ["port_verb"], "eng.mapcheck.second_port_pixel_for_owner": ["port_verb"], "eng.mapcheck.starts_with_a_and_map_regions": ["port_verb"], "eng.mapcheck.the_port_pixel_at_has_no": ["port_verb"], "eng.mapcheck.the_port_pixel_at_touches_no": ["port_verb"], "eng.regiondel.already_has_a_port_of_its": ["port_verb"], "eng.mapcheck.the_river_crossing_at_is_at": ["level", "ground"], "eng.modeldb.characters_left_over_after_the_entry": ["character"], "eng.osmmap.openstreetmap_is_off_turn_it_on": ["turn"], "mapgen.the_real_ground_under_the_maps": ["ground"], "stratview.this_mod_ships_no_data_models": ["ship"], "eng.settlemech.upgrade_is_above_max_which_the": ["upgrade"], "eng.settlemech.upgrade_is_not_s_base_both": ["upgrade"], "eng.sidefiles.line_a_symbol_sheet_before_any": ["faction"], "eng.sidefiles.units_carry_an_undeclared_animal": ["animal"], "eng.sounds.line_end_with_no_open_event": ["event"], "eng.transfer.engine_skeleton_the_mounted_engines_class": ["mount"], "eng.transfer.projectile_model_cas_files_were_copied": ["missile"], "campaint.writes_layers_at_once_in_the": ["port_verb"], "campaint.written_into_a_settlement_the_music": ["ship"], "mapsize.the_map_is_the_real_ground": ["ground"], "mapsize.tiles_to_add_on_each_edge": ["ground"], "mapsize.turn_the_real_world_switch_on": ["turn"], "home.mounted_pack": ["mount"], "map3d.building_the_mesh": ["building"], "map3d.frame_the_whole_map_again": ["frame"], "osmworld.drag_to_pan_wheel_to_zoom": ["turn"], "osmmap.mylaes_layout_the_maps_layers_as": ["port_verb"], "osmmap.open_settings_to_turn_it_on": ["turn"], "osmmap.the_style_above_cut_to_the": ["frame"], "mapquery.building_that_map": ["building"], "mapquery.more_than_a_spreadsheet_holds_in": ["sprite_sheet"], "rebels.of_provinces_name_a_rebel_faction": ["turn"], "stratmap.draw_a_campaign_map_model_beside": ["ship"], "stratmap.file_named_by_no_model_but": ["turn"], "minorfiles.port_ladder_line_s_in_the": ["port_verb"], "minorfiles.this_culture_has_no_port_lines": ["port_verb"], "minorfiles.where_it_starts_every_regions_religions": ["ship"], "eng.animpack.the_source_ships_no_packs_of": ["ship"], "packs.battle_model_entr_travel_with_them": ["mount"], "editor.selected": ["select"], "editor.soldier_replace": ["soldier"], "settings.and_more_characters_in_the_diagnostic": ["character"], "settings.start_the_soldier_row_on_base": ["building"], "settings.use_the_base_units_soldier_line": ["soldier"], "transfer.mounted_engine": ["mount"], "stratcamp.faction_bik": ["faction"], "eng.stratobj.is_pixel_none_of_the_800_port": ["port_verb"], "eng.stratobj.is_pixel_none_of_the_800_settlement": ["port_verb"], "transfer.added": ["add"], "eng.cas.w_text_latin1": ["character"], "eng.cas.w_text_long": ["character"], "buildings.copied_pool_open_another_building": ["header"], "armory.frame_all": ["frame"], "armory.frame_all_title": ["frame"], "armory.mat_bone": ["bone"], "armory.weights_own": ["transfer"], "armory.prefix_add": ["add"], "armory.head_as_one_title": ["turn"], "armory.key_frame_selected": ["frame"], "armory.key_frame_all": ["frame"], "armory.statistics": ["stats"], "armory.key_rotate": ["turn"], "armory.rotate": ["turn"], "armory.stamp_rot": ["turn"], "cards.gen_turn": ["turn"], "cards.gen_view_hint": ["turn"], "cards.gen_place_reset": ["frame"], "cards.gen_rig_hint": ["turn"], "eng.gamelog.howto": ["level"], "eng.gamelog.known_5": ["turn"], "voices.no_name_call": ["general"], "voices.own_note": ["event"], "voices.own_compiled": ["event"], "family.on_map": ["character"], "eng.scriptwords.cond_help_game_d1e6": ["trait", "turn"], "eng.scriptwords.act_help_console_3820": ["battle"], "eng.scriptfiles.grid_in": ["recruit"], "eng.scriptfiles.grid_copy": ["recruit"], "eng.scriptfiles.grid_not_in": ["recruit"], "eng.scriptwords.addon_sack_settlement_7e36": ["settlement"], "eng.scriptwords.addon_help_sack_settlement_8e93": ["settlement"], "eng.scriptwords.addon_raze_settlement_9030": ["settlement"], "eng.scriptwords.addon_help_raze_settlement_52e3": ["settlement"], "eng.scriptwords.addon_recruit_order_9449": ["recruit"], "eng.scriptwords.setting_recruit_order_ro_enabled_6785": ["recruit"], "eng.scriptwords.addon_one_recruit_grid_21e4": ["recruit"], "armory.exp_free_turn_title": ["turn"], "armory.look_closer_title": ["turn"], "armory.uv_hint": ["turn"], "eng.modfiles.mounted_engines": ["mount"], "eng.server.model_file_missing": ["ship"], "campcreate.add_port": ["port_verb"], "campcreate.give_this_region_a_port_click": ["port_verb"], "campcreate.has_a_port_review_save_writes": ["port_verb"], "campcreate.move_port": ["port_verb"], "campcreate.move_this_regions_port_click_the": ["port_verb"], "campcreate.remove_port": ["port_verb"], "campcreate.s_new_port": ["port_verb"], "campcreate.take_this_regions_port_off_the": ["port_verb"], "cards.gen_ground": ["frame"], "cards.gen_game_frame": ["frame"], "guided.attr_fire_by_rank": ["turn"], "guided.attr_bp": ["missile"], "guided.attr_thrown": ["missile"], "eng.gamelog.known_script_error": ["character"], "healthx.at_col": ["character"], "armory.nav_title": ["turn"], "armory.view_hint_simple": ["turn", "frame"], "campaint.overwrite_settlement_and_port_pixels": ["port_verb"], "eng.edusort.the_planned_edu_contains_a_character": ["character"], "eng.scriptaddons.older_moved": ["script"]},
+ "_exempt": {
+  "campbrowse.campaigns_read_in_ms": [
+   "ship"
+  ],
+  "campbrowse.every_campaign_this_mod_ships_with": [
+   "ship"
+  ],
+  "campbrowse.nothing_in_to_read_a_menu": [
+   "ship"
+  ],
+  "campbrowse.ships_map_layers": [
+   "ship"
+  ],
+  "campcreate.new_region_name_paint_settlement_port": [
+   "port_verb"
+  ],
+  "campcreate.port": [
+   "port_verb"
+  ],
+  "campcreate.port_marker_add_or_move_on": [
+   "port_verb"
+  ],
+  "campcreate.select_a_region_first_then_choose": [
+   "port_verb"
+  ],
+  "codeview.every_string_here_is_stored_as": [
+   "character"
+  ],
+  "campmark.named_character_general_admiral_port_spy": [
+   "port_verb"
+  ],
+  "campmark.port": [
+   "port_verb"
+  ],
+  "eng.campaint.is_a_marker_colour_black_is": [
+   "port_verb"
+  ],
+  "climates.append_a_name_the_engine_does": [
+   "ship"
+  ],
+  "climates.taking_over_one_of_the_twelve": [
+   "ship"
+  ],
+  "edusort.line_character": [
+   "character"
+  ],
+  "eng.animloose.turns_bones_and_its_skeleton_has": [
+   "turn"
+  ],
+  "eng.casanim.turns_bones_and_the_skeleton_has": [
+   "turn"
+  ],
+  "campmark.this_mod_ships_its_own_picture": [
+   "ship"
+  ],
+  "eng.buildings.is_still_used_province_s_carry": [
+   "gate"
+  ],
+  "cards.data_ui_units_data_ui_unit": [
+   "unit"
+  ],
+  "eng.buildings.hidden_ceiling_note": [
+   "ship"
+  ],
+  "eng.codeview.length_says_but_text_is": [
+   "character"
+  ],
+  "eng.codeview.length_says_but_text_is_and_more": [
+   "character"
+  ],
+  "eng.campaint.is_not_a_marker_map_regions": [
+   "port_verb"
+  ],
+  "eng.campaint.settlement_or_port_pixels_left_alone": [
+   "port_verb"
+  ],
+  "eng.campaint.ships_own_so_it_does_not_see": [
+   "ship"
+  ],
+  "eng.campevents.an_event_line_needs_a_category": [
+   "event"
+  ],
+  "eng.campevents.an_event_line_needs_a_disaster": [
+   "event"
+  ],
+  "eng.campevents.an_event_line_needs_a_label": [
+   "event"
+  ],
+  "eng.campevents.an_event_line_with_no_type": [
+   "event"
+  ],
+  "eng.campevents.is_not_one_of_the_eight": [
+   "ship"
+  ],
+  "eng.campevents.line_event_takes_a_category_and": [
+   "event"
+  ],
+  "eng.campevents.line_is_before_the_first_event": [
+   "event"
+  ],
+  "eng.climatenew.a_climate_name_the_battle_map": [
+   "ship"
+  ],
+  "eng.climatenew.all_four_mods_measured_for_this": [
+   "ship"
+  ],
+  "eng.dupes.a_renamed_block_is_a_real": [
+   "soldier"
+  ],
+  "maplabels.port": [
+   "port_verb"
+  ],
+  "maplabels.port_2": [
+   "port_verb"
+  ],
+  "eng.heroabilities.not_in_ui_battle_sd_so": [
+   "battle"
+  ],
+  "facaudit.world_maps_campaign": [
+   "campaign"
+  ],
+  "maplabels.character": [
+   "character"
+  ],
+  "eng.mercpools.line_is_not_pool_regions_or": [
+   "unit"
+  ],
+  "eng.minorfiles.this_cultures_port_ladder_has_lines": [
+   "port_verb"
+  ],
+  "mapcheck.records_what_is_wrong_now_as": [
+   "record"
+  ],
+  "eng.namekeys.this_mod_ships_only_strings_bin": [
+   "ship"
+  ],
+  "eng.soundscripts.line_end_with_no_open_event": [
+   "event"
+  ],
+  "eng.winconds.could_not_be_read_the_stock": [
+   "ship"
+  ],
+  "eng.stratedit.a_settlement_block_opens_with_the": [
+   "castle"
+  ],
+  "eng.stratedit.stays_on_the_map_with_no": [
+   "ship"
+  ],
+  "eng.stratedit.the_header_says_the_engine_reads": [
+   "settlement",
+   "castle"
+  ],
+  "eng.stratedit.two_levels_of_stand_in_this": [
+   "ship"
+  ],
+  "eng.stringsbin.a_single_string_cannot_exceed_65535": [
+   "character"
+  ],
+  "eng.stringsbin.a_string_says_it_is_characters": [
+   "character"
+  ],
+  "eng.traits.trigger_affects_which_this_file_does": [
+   "trait"
+  ],
+  "core.every_model_a_mod_ships_the": [
+   "ship"
+  ],
+  "core.the_tool_did_not_finish_loading": [
+   "turn"
+  ],
+  "regiondel.already_has_a_port_and_only": [
+   "port_verb"
+  ],
+  "regiondel.has_no_port_of_its_own": [
+   "port_verb"
+  ],
+  "regiondel.its_port": [
+   "port_verb"
+  ],
+  "settlemech.a_levels_upgrade_is_the_population": [
+   "upgrade"
+  ],
+  "settlemech.level": [
+   "level"
+  ],
+  "traits.hidden": [
+   "hide"
+  ],
+  "traits.hidden_2": [
+   "hide"
+  ],
+  "soundbanks.has_no_data_the_game_uses": [
+   "ship"
+  ],
+  "buildings.borrowed_from_the_unpacked_vanilla_ui": [
+   "ship"
+  ],
+  "v3anim.building_the_glb": [
+   "building"
+  ],
+  "v3anim.building_the_obj_zip": [
+   "building"
+  ],
+  "v3anim.played_from_vanillas_pack_this_mod": [
+   "ship"
+  ],
+  "v3anim.the_weapon_skeletons_move_the_weapon": [
+   "shield"
+  ],
+  "v3anim.turn_every_key": [
+   "turn"
+  ],
+  "v3anim.turns_to": [
+   "turn"
+  ],
+  "buildings.every_gate_at_once_of_regions": [
+   "gate"
+  ],
+  "buildings.every_resource_gate_at_once_from": [
+   "gate"
+  ],
+  "buildings.no_region_passes_every_gate": [
+   "gate"
+  ],
+  "buildings.every_rule_over_the_shape_of": [
+   "upgrade"
+  ],
+  "buildings.hidden": [
+   "hide"
+  ],
+  "buildings.its_battle_model_has_no_texture": [
+   "turn"
+  ],
+  "buildings.level_3": [
+   "level"
+  ],
+  "buildings.level_key": [
+   "level"
+  ],
+  "guided.a_projectile_is_set_but_the_weapon_type_is_type": [
+   "missile"
+  ],
+  "guided.added_to_defence_when_the_attacker": [
+   "mount"
+  ],
+  "guided.added_to_the_attack_factor_when": [
+   "mount"
+  ],
+  "guided.armour_0_armour_1_armour_2": [
+   "shield",
+   "armour",
+   "missile",
+   "melee",
+   "defence"
+  ],
+  "guided.armour_defence_skill_hit_sound": [
+   "armour",
+   "defence"
+  ],
+  "guided.armour_defence_skill_shield_hit_sound": [
+   "shield",
+   "armour",
+   "defence"
+  ],
+  "guided.armour_upgrade_models_outnumber_levels": [
+   "trigger"
+  ],
+  "guided.attack_bonus_vs_mounted_defence_bonus": [
+   "mount",
+   "armour",
+   "attack",
+   "defence"
+  ],
+  "guided.attack_charge_projectile_range_ammo_weapon": [
+   "weapon",
+   "projectile",
+   "charge",
+   "attack",
+   "skeleton"
+  ],
+  "guided.attack_vs_mounted": [
+   "mount"
+  ],
+  "guided.banner_faction": [
+   "faction"
+  ],
+  "guided.banner_unit": [
+   "unit"
+  ],
+  "guided.can_run_amok_only_does_anything": [
+   "mount"
+  ],
+  "guided.close": [
+   "close"
+  ],
+  "guided.close_2": [
+   "close"
+  ],
+  "guided.defence_vs_mounted": [
+   "mount"
+  ],
+  "guided.faction_faction": [
+   "faction"
+  ],
+  "guided.faction_faction_culture": [
+   "faction",
+   "culture"
+  ],
+  "guided.find_an_entry_by_skeleton_by": [
+   "soldier"
+  ],
+  "guided.florins_the_smith_charges_to_upgrade": [
+   "charge"
+  ],
+  "guided.florins_the_smith_charges_to_upgrade_2": [
+   "charge"
+  ],
+  "sprites.flag_turned_off": [
+   "turn"
+  ],
+  "sprites.turn_the_flag_back_off": [
+   "turn"
+  ],
+  "sprites.the_bypass_flag_makes_the_next_normal": [
+   "turn"
+  ],
+  "sprites.this_mod_ships_m2tweop_so_generation": [
+   "ship"
+  ],
+  "buildings.province_s_carry_it_clause_s": [
+   "gate"
+  ],
+  "buildings.selected": [
+   "select"
+  ],
+  "buildings.take_off_the_line_shows_what": [
+   "gate"
+  ],
+  "buildings.the_hidden_resources_line_at_the": [
+   "gate"
+  ],
+  "viewer3d.shield": [
+   "shield"
+  ],
+  "viewer3d.shield_2": [
+   "shield"
+  ],
+  "viewer3d.shield_2_carried": [
+   "shield"
+  ],
+  "viewer3d.shield_2_slung": [
+   "shield"
+  ],
+  "viewer3d.shield_carried": [
+   "shield"
+  ],
+  "viewer3d.shield_slung": [
+   "shield"
+  ],
+  "viewer3d.drag_to_turn_wheel_to_zoom": [
+   "turn"
+  ],
+  "viewer3d.drawn_at_shipped": [
+   "ship"
+  ],
+  "guided.how_much_of_a_mounted_targets": [
+   "mount"
+  ],
+  "guided.infantry_cavalry_siege_ship_handler": [
+   "ship",
+   "siege",
+   "cavalry",
+   "infantry"
+  ],
+  "guided.level_level_level": [
+   "level"
+  ],
+  "guided.light_heavy_missile_spearmen": [
+   "missile"
+  ],
+  "guided.man_mount_animal": [
+   "mount",
+   "animal"
+  ],
+  "guided.melee_attack_missile_attack_defence": [
+   "missile",
+   "melee",
+   "attack",
+   "defence"
+  ],
+  "guided.model_men_extras_mass_radius_height": [
+   "model"
+  ],
+  "guided.model_model_model": [
+   "model"
+  ],
+  "guided.optional_the_effect_played_when_the_weapon": [
+   "turn"
+  ],
+  "guided.optional_the_formation_the_unit_can_toggle": [
+   "wall"
+  ],
+  "guided.optional_three_factors_that_apply_only": [
+   "mount"
+  ],
+  "guided.parrying_skill_it_is_ignored_when": [
+   "shield"
+  ],
+  "guided.prec_a_missile_unit_throws_one": [
+   "charge"
+  ],
+  "buildings.then_give_it_to_provinces_in": [
+   "gate"
+  ],
+  "buildings.this_mod_ships_no_file_at": [
+   "ship"
+  ],
+  "buildings.unconditional_the_rest_need_every_gate": [
+   "gate"
+  ],
+  "buildings.units_without_battle_model_texture": [
+   "turn"
+  ],
+  "buildings.with_no_ownership_to_gate_to": [
+   "gate"
+  ],
+  "viewer3d.32_checker_cells_to_a_sheet": [
+   "sprite_sheet"
+  ],
+  "viewer3d.attach_sheet": [
+   "sprite_sheet"
+  ],
+  "viewer3d.attachment_sheet": [
+   "sprite_sheet"
+  ],
+  "viewer3d.attachment_slot_main_again": [
+   "sprite_sheet"
+  ],
+  "viewer3d.attachment_slot_missing": [
+   "sprite_sheet"
+  ],
+  "viewer3d.both_sheets": [
+   "sprite_sheet"
+  ],
+  "viewer3d.groups_reach_attachment": [
+   "sprite_sheet"
+  ],
+  "viewer3d.groups_reach_right_half": [
+   "sprite_sheet"
+  ],
+  "viewer3d.main_sheet": [
+   "sprite_sheet"
+  ],
+  "viewer3d.no_attachment_whole_space": [
+   "sprite_sheet"
+  ],
+  "viewer3d.right_half_of_the_sheet": [
+   "sprite_sheet"
+  ],
+  "viewer3d.runs_outside_the_sheet_it_was": [
+   "sprite_sheet"
+  ],
+  "viewer3d.sheet": [
+   "sprite_sheet"
+  ],
+  "viewer3d.the_same_sheet_again": [
+   "sprite_sheet"
+  ],
+  "viewer3d.the_sheet": [
+   "sprite_sheet"
+  ],
+  "viewer3d.title_open_the_uv_layout_beside": [
+   "sprite_sheet"
+  ],
+  "viewer3d.title_paint_the_uv_coordinate_instead": [
+   "sprite_sheet"
+  ],
+  "viewer3d.uv_self_key": [
+   "sprite_sheet"
+  ],
+  "viewer3d.uv_single_key": [
+   "sprite_sheet"
+  ],
+  "viewer3d.x_a_placeholder_not_a_sheet": [
+   "sprite_sheet"
+  ],
+  "viewer3d.draw_the_texture_at_the_size": [
+   "sprite_sheet",
+   "ship"
+  ],
+  "guided.shield": [
+   "shield"
+  ],
+  "guided.shield_factor_against_melee_attacks_from": [
+   "shield"
+  ],
+  "guided.shield_factor_against_missile_fire_this": [
+   "shield"
+  ],
+  "guided.shield_factor_only_applies_to_attacks": [
+   "shield"
+  ],
+  "guided.shield_melee": [
+   "shield"
+  ],
+  "guided.shield_missile": [
+   "shield"
+  ],
+  "guided.shield_only_counts_against_attacks_from": [
+   "shield"
+  ],
+  "guided.splits_the_shield_into_one_value": [
+   "shield"
+  ],
+  "guided.there_is_no_shield_slot_here": [
+   "shield"
+  ],
+  "guided.vanilla_ships_it_commented_out": [
+   "ship"
+  ],
+  "guided.vanilla_ships_it_commented_out_on": [
+   "ship"
+  ],
+  "guided.turns_recruit_upkeep_weapon_ug_armour": [
+   "battle",
+   "recruit",
+   "weapon",
+   "armour",
+   "turn"
+  ],
+  "v3anim.vanillas_skeleton_pack_this_mod_ships": [
+   "ship"
+  ],
+  "v3anim.walk_charge_die_a_file_name": [
+   "charge"
+  ],
+  "campaint.add_a_province_decide_its_record": [
+   "port_verb"
+  ],
+  "campaint.place_the_port_pixel_or_skip": [
+   "port_verb"
+  ],
+  "campmap.building_the_composite": [
+   "building"
+  ],
+  "campmap.click_a_province_to_inspect_it": [
+   "turn"
+  ],
+  "campmap.comp_key": [
+   "terrain"
+  ],
+  "campmap.draw_the_ground_the_way_the": [
+   "terrain"
+  ],
+  "campmap.has_no_campaign_map_this_tool": [
+   "ship"
+  ],
+  "campmap.hidden": [
+   "hide"
+  ],
+  "changes.turn_off": [
+   "turn"
+  ],
+  "changes.turn_on": [
+   "turn"
+  ],
+  "changes.turn_off_putting_the_original_records": [
+   "turn"
+  ],
+  "campnew.map_layers_note": [
+   "ship"
+  ],
+  "campnew.this_mod_ships_only_the_compiled": [
+   "ship"
+  ],
+  "campmap.port_marker": [
+   "port_verb"
+  ],
+  "campmap.port_pixel": [
+   "port_verb"
+  ],
+  "campmap.port_pixels_undecided": [
+   "port_verb"
+  ],
+  "campmap.region_id_tiles_settlement_at_game": [
+   "port_verb"
+  ],
+  "campmap.settlement_character_and_port_names_beside": [
+   "port_verb"
+  ],
+  "campmap.tiles_regions_settlements_ports": [
+   "port_verb"
+  ],
+  "campmap.ships_its_own_so_that_layer": [
+   "ship"
+  ],
+  "campmap.the_campaign_map_as_a_surface": [
+   "turn"
+  ],
+  "campmap.the_heights_as_a_surface_with": [
+   "turn"
+  ],
+  "campmap.tab_osm_title": [
+   "turn"
+  ],
+  "eng.campfiles.this_mod_ships_only_so_the": [
+   "ship"
+  ],
+  "eng.campstrat.faction_relationships_does_not_read_as": [
+   "faction"
+  ],
+  "eng.campstrat.faction_standings_does_not_read_as": [
+   "faction"
+  ],
+  "eng.campstrat.fort_line_does_not_read_as": [
+   "culture"
+  ],
+  "eng.campstrat.settlement_header_says_the_engine_knows": [
+   "castle"
+  ],
+  "eng.campstrat.should_be_armour": [
+   "armour"
+  ],
+  "eng.campstrat.unit_line_does_not_read_as": [
+   "armour"
+  ],
+  "eng.characters.has_strat_model_s_a_named": [
+   "heir",
+   "leader"
+  ],
+  "eng.animslot.this_mod_ships_no_animation_packs": [
+   "ship"
+  ],
+  "eng.campnew.ships_map_layer_s_of_its": [
+   "ship"
+  ],
+  "eng.campnew.is_not_on_disk_and_ships": [
+   "ship"
+  ],
+  "eng.mapnewreal.climates_is_one_ground_or_koppen": [
+   "ground",
+   "climate"
+  ],
+  "eng.mapnewreal.land_and_sea_from_the_real": [
+   "ground",
+   "level"
+  ],
+  "eng.mapnewreal.province_s_grown_from_their_cities": [
+   "port_verb"
+  ],
+  "eng.mapnewreal.rivers_is_none_or_one_of": [
+   "river"
+  ],
+  "eng.mapnewreal.the_highest_ground_peak_0f_m": [
+   "ground"
+  ],
+  "eng.campnew.nothing_names_on_the_new_game_menu_archive": [
+   "ship"
+  ],
+  "eng.soundbanks.line_end_with_no_open_event": [
+   "event"
+  ],
+  "eng.stratcamp.is_not_a_word_the_engine": [
+   "ship"
+  ],
+  "eng.mapcheck.second_port_pixel": [
+   "port_verb"
+  ],
+  "eng.mapcheck.second_port_pixel_for_owner": [
+   "port_verb"
+  ],
+  "eng.mapcheck.starts_with_a_and_map_regions": [
+   "port_verb"
+  ],
+  "eng.mapcheck.the_port_pixel_at_has_no": [
+   "port_verb"
+  ],
+  "eng.mapcheck.the_port_pixel_at_touches_no": [
+   "port_verb"
+  ],
+  "eng.regiondel.already_has_a_port_of_its": [
+   "port_verb"
+  ],
+  "eng.mapcheck.the_river_crossing_at_is_at": [
+   "level",
+   "ground"
+  ],
+  "eng.modeldb.characters_left_over_after_the_entry": [
+   "character"
+  ],
+  "eng.osmmap.openstreetmap_is_off_turn_it_on": [
+   "turn"
+  ],
+  "mapgen.the_real_ground_under_the_maps": [
+   "ground"
+  ],
+  "stratview.this_mod_ships_no_data_models": [
+   "ship"
+  ],
+  "eng.settlemech.upgrade_is_above_max_which_the": [
+   "upgrade"
+  ],
+  "eng.settlemech.upgrade_is_not_s_base_both": [
+   "upgrade"
+  ],
+  "eng.sidefiles.line_a_symbol_sheet_before_any": [
+   "faction"
+  ],
+  "eng.sidefiles.units_carry_an_undeclared_animal": [
+   "animal"
+  ],
+  "eng.sounds.line_end_with_no_open_event": [
+   "event"
+  ],
+  "eng.transfer.engine_skeleton_the_mounted_engines_class": [
+   "mount"
+  ],
+  "eng.transfer.projectile_model_cas_files_were_copied": [
+   "missile"
+  ],
+  "campaint.writes_layers_at_once_in_the": [
+   "port_verb"
+  ],
+  "campaint.written_into_a_settlement_the_music": [
+   "ship"
+  ],
+  "mapsize.the_map_is_the_real_ground": [
+   "ground"
+  ],
+  "mapsize.tiles_to_add_on_each_edge": [
+   "ground"
+  ],
+  "mapsize.turn_the_real_world_switch_on": [
+   "turn"
+  ],
+  "home.mounted_pack": [
+   "mount"
+  ],
+  "map3d.building_the_mesh": [
+   "building"
+  ],
+  "map3d.frame_the_whole_map_again": [
+   "frame"
+  ],
+  "osmworld.drag_to_pan_wheel_to_zoom": [
+   "turn"
+  ],
+  "osmmap.mylaes_layout_the_maps_layers_as": [
+   "port_verb"
+  ],
+  "osmmap.open_settings_to_turn_it_on": [
+   "turn"
+  ],
+  "osmmap.the_style_above_cut_to_the": [
+   "frame"
+  ],
+  "mapquery.building_that_map": [
+   "building"
+  ],
+  "mapquery.more_than_a_spreadsheet_holds_in": [
+   "sprite_sheet"
+  ],
+  "rebels.of_provinces_name_a_rebel_faction": [
+   "turn"
+  ],
+  "stratmap.draw_a_campaign_map_model_beside": [
+   "ship"
+  ],
+  "stratmap.file_named_by_no_model_but": [
+   "turn"
+  ],
+  "minorfiles.port_ladder_line_s_in_the": [
+   "port_verb"
+  ],
+  "minorfiles.this_culture_has_no_port_lines": [
+   "port_verb"
+  ],
+  "minorfiles.where_it_starts_every_regions_religions": [
+   "ship"
+  ],
+  "eng.animpack.the_source_ships_no_packs_of": [
+   "ship"
+  ],
+  "packs.battle_model_entr_travel_with_them": [
+   "mount"
+  ],
+  "editor.selected": [
+   "select"
+  ],
+  "editor.soldier_replace": [
+   "soldier"
+  ],
+  "settings.and_more_characters_in_the_diagnostic": [
+   "character"
+  ],
+  "settings.start_the_soldier_row_on_base": [
+   "building"
+  ],
+  "settings.use_the_base_units_soldier_line": [
+   "soldier"
+  ],
+  "transfer.mounted_engine": [
+   "mount"
+  ],
+  "stratcamp.faction_bik": [
+   "faction"
+  ],
+  "eng.stratobj.is_pixel_none_of_the_800_port": [
+   "port_verb"
+  ],
+  "eng.stratobj.is_pixel_none_of_the_800_settlement": [
+   "port_verb"
+  ],
+  "transfer.added": [
+   "add"
+  ],
+  "eng.cas.w_text_latin1": [
+   "character"
+  ],
+  "eng.cas.w_text_long": [
+   "character"
+  ],
+  "buildings.copied_pool_open_another_building": [
+   "header"
+  ],
+  "armory.frame_all": [
+   "frame"
+  ],
+  "armory.frame_all_title": [
+   "frame"
+  ],
+  "armory.mat_bone": [
+   "bone"
+  ],
+  "armory.weights_own": [
+   "transfer"
+  ],
+  "armory.prefix_add": [
+   "add"
+  ],
+  "armory.head_as_one_title": [
+   "turn"
+  ],
+  "armory.key_frame_selected": [
+   "frame"
+  ],
+  "armory.key_frame_all": [
+   "frame"
+  ],
+  "armory.statistics": [
+   "stats"
+  ],
+  "armory.key_rotate": [
+   "turn"
+  ],
+  "armory.rotate": [
+   "turn"
+  ],
+  "armory.stamp_rot": [
+   "turn"
+  ],
+  "cards.gen_turn": [
+   "turn"
+  ],
+  "cards.gen_view_hint": [
+   "turn"
+  ],
+  "cards.gen_place_reset": [
+   "frame"
+  ],
+  "cards.gen_rig_hint": [
+   "turn"
+  ],
+  "eng.gamelog.howto": [
+   "level"
+  ],
+  "eng.gamelog.known_5": [
+   "turn"
+  ],
+  "voices.no_name_call": [
+   "general"
+  ],
+  "voices.own_note": [
+   "event"
+  ],
+  "voices.own_compiled": [
+   "event"
+  ],
+  "family.on_map": [
+   "character"
+  ],
+  "eng.scriptwords.cond_help_game_d1e6": [
+   "trait",
+   "turn"
+  ],
+  "eng.scriptwords.act_help_console_3820": [
+   "battle"
+  ],
+  "eng.scriptfiles.grid_in": [
+   "recruit"
+  ],
+  "eng.scriptfiles.grid_copy": [
+   "recruit"
+  ],
+  "eng.scriptfiles.grid_not_in": [
+   "recruit"
+  ],
+  "eng.scriptwords.addon_sack_settlement_7e36": [
+   "settlement"
+  ],
+  "eng.scriptwords.addon_help_sack_settlement_8e93": [
+   "settlement"
+  ],
+  "eng.scriptwords.addon_raze_settlement_9030": [
+   "settlement"
+  ],
+  "eng.scriptwords.addon_help_raze_settlement_52e3": [
+   "settlement"
+  ],
+  "eng.scriptwords.addon_recruit_order_9449": [
+   "recruit"
+  ],
+  "eng.scriptwords.setting_recruit_order_ro_enabled_6785": [
+   "recruit"
+  ],
+  "eng.scriptwords.addon_one_recruit_grid_21e4": [
+   "recruit"
+  ],
+  "armory.exp_free_turn_title": [
+   "turn"
+  ],
+  "armory.look_closer_title": [
+   "turn"
+  ],
+  "armory.uv_hint": [
+   "turn"
+  ],
+  "eng.modfiles.mounted_engines": [
+   "mount"
+  ],
+  "eng.server.model_file_missing": [
+   "ship"
+  ],
+  "campcreate.add_port": [
+   "port_verb"
+  ],
+  "campcreate.give_this_region_a_port_click": [
+   "port_verb"
+  ],
+  "campcreate.has_a_port_review_save_writes": [
+   "port_verb"
+  ],
+  "campcreate.move_port": [
+   "port_verb"
+  ],
+  "campcreate.move_this_regions_port_click_the": [
+   "port_verb"
+  ],
+  "campcreate.remove_port": [
+   "port_verb"
+  ],
+  "campcreate.s_new_port": [
+   "port_verb"
+  ],
+  "campcreate.take_this_regions_port_off_the": [
+   "port_verb"
+  ],
+  "cards.gen_ground": [
+   "frame"
+  ],
+  "cards.gen_game_frame": [
+   "frame"
+  ],
+  "guided.attr_fire_by_rank": [
+   "turn"
+  ],
+  "guided.attr_bp": [
+   "missile"
+  ],
+  "guided.attr_thrown": [
+   "missile"
+  ],
+  "eng.gamelog.known_script_error": [
+   "character"
+  ],
+  "healthx.at_col": [
+   "character"
+  ],
+  "armory.nav_title": [
+   "turn"
+  ],
+  "armory.view_hint_simple": [
+   "turn",
+   "frame"
+  ],
+  "campaint.overwrite_settlement_and_port_pixels": [
+   "port_verb"
+  ],
+  "eng.edusort.the_planned_edu_contains_a_character": [
+   "character"
+  ],
+  "eng.scriptaddons.older_moved": [
+   "script"
+  ]
+ },
  "ancillaries.a_character_holds_one_ancillary_per": "Ein Charakter hat pro Typ ein Gefolgsmitglied; das ist also das, was ein neues ersetzt",
  "ancillaries.a_new_ancillary_needs_a_name": "Ein neues Gefolgsmitglied braucht einen Namen",
  "ancillaries.a_script_names_it": " (ein Skript nennt es)",
@@ -11554,6 +12558,213 @@
  "armory.recent_folder": "Zuletzt verwendet · {folder}",
  "armory.folder_choices": "Einheitenordner und zuletzt verwendete Pfade",
  "eng.server.pick_data_folder": "Wähle einen Ordner unter data",
+ "eng.updater.expected_a_stable_release_version": "Eine stabile Release-Version wurde erwartet",
+ "eng.updater.update_redirected_outside_github": "Das Update wurde außerhalb von GitHub umgeleitet",
+ "eng.updater.the_release_has_no_verified_portable_download": "Das Release hat keinen geprüften portablen Download",
+ "eng.updater.invalid_update_download_size": "Ungültige Größe des Update-Downloads",
+ "eng.updater.the_latest_release_has_no_portable_zip_asset": "Das neueste Release enthält kein portables ZIP-Asset",
+ "eng.updater.unexpected_update_archive_path": "Unerwarteter Pfad im Update-Archiv",
+ "eng.updater.duplicate_or_linked_update_entry": "Doppelter oder verknüpfter Eintrag im Update",
+ "eng.updater.update_archive_is_too_large": "Das Update-Archiv ist zu groß",
+ "eng.updater.update_archive_escapes_its_staging_folder": "Das Update-Archiv verlässt seinen Staging-Ordner",
+ "eng.updater.update_download_exceeded_its_declared_size": "Der Update-Download überschritt die angegebene Größe",
+ "eng.updater.update_download_is_incomplete_or_its_checksum_does": "Der Update-Download ist unvollständig oder seine Prüfsumme stimmt nicht überein",
+ "eng.updater.update_staging_path_is_outside_this_installation": "Der Staging-Pfad des Updates liegt außerhalb dieser Installation",
+ "eng.updater.unmanaged_path": "Das Paket enthält einen nicht verwalteten Pfad: {path}",
+ "eng.updater.modified_path": "Release-Dateien fehlen oder wurden lokal geändert: {path}",
+ "eng.updater.untracked_path": "Nicht verfolgte Dateien in einem Anwendungsordner: {path}",
+ "eng.updater.invalid_update_path": "Ungültiger Update-Pfad",
+ "eng.updater.invalid_release_manifest": "Ungültiges Release-Manifest",
+ "eng.updater.package_version_does_not_match_the_release": "Die Paketversion passt nicht zum Release",
+ "eng.updater.incomplete_portable_release": "Unvollständiges portables Release",
+ "eng.updater.invalid_release_file_hash": "Ungültiger Hash einer Release-Datei",
+ "eng.updater.updates_cannot_follow_linked_paths": "Updates können verknüpften Pfaden nicht folgen",
+ "eng.updater.update_paths_must_stay_inside_this_installation": "Update-Pfade müssen innerhalb dieser Installation bleiben",
+ "eng.updater.a_source_checkout_is_never_updated_automatically": "Ein Quellcode-Checkout wird nie automatisch aktualisiert",
+ "eng.updater.update_must_be_newer_than_the_installed_version": "Das Update muss neuer sein als die installierte Version",
+ "eng.updater.the_old_toolkit_process_did_not_stop": "Der alte Toolkit-Prozess wurde nicht beendet",
+ "eng.updater.cannot_wait_for_the_toolkit_process": "Auf den Toolkit-Prozess kann nicht gewartet werden",
+ "eng.updater.the_updated_toolkit_failed_its_startup_check_restored": "Das aktualisierte Toolkit hat die Startprüfung nicht bestanden; die vorherige Version wurde wiederhergestellt",
+ "settings.updates": "Toolkit-Updates",
+ "settings.updates_auto": "Nach Updates suchen und sie automatisch herunterladen",
+ "settings.updates_hint": "Offizielle Releases werden alle sechs Stunden geprüft, solange das Toolkit läuft. Geprüfte Updates werden beim nächsten Start oder Neustart installiert. Einstellungen, Sitzungen und Backups bleiben erhalten.",
+ "settings.updates_check": "Jetzt prüfen",
+ "settings.updates_restart": "Neu starten, um das Update zu installieren",
+ "settings.updates_release": "Release-Details",
+ "settings.updates_source_hint": "Dieser Quellcode-Checkout wird von automatischen Updates nicht verändert.",
+ "settings.updates_idle": "Noch keine Update-Prüfung.",
+ "settings.updates_checking": "GitHub wird nach einem neueren Release durchsucht…",
+ "settings.updates_downloading": "{version} wird heruntergeladen: {pct} %",
+ "settings.updates_ready": "{version} ist bereit. Es wird beim nächsten Start oder Neustart installiert.",
+ "settings.updates_installed": "{version} wurde installiert.",
+ "settings.updates_up_to_date": "Du bist auf dem neuesten Stand ({version}).",
+ "settings.updates_available": "{version} ist verfügbar. Aktiviere automatische Updates, um es herunterzuladen.",
+ "settings.updates_source": "{version} ist auf GitHub verfügbar.",
+ "settings.updates_error": "Das Update konnte nicht abgeschlossen werden. Deine aktuelle Installation bleibt erhalten.",
+ "sheets.title": "Einheitentabellen",
+ "sheets.pick_mod": "Wähle zuerst eine Mod aus.",
+ "sheets.loading": "Tabellen werden geladen…",
+ "sheets.classification": "Klassifizierungen",
+ "sheets.base": "Basiswerte",
+ "sheets.attributes": "Attribute",
+ "sheets.soft": "Weiche Werte",
+ "sheets.rules": "Kasernenregeln",
+ "sheets.staged_note": "Projektänderungen werden automatisch gespeichert. Prüfen und Anwenden schreibt vorgemerkte Einheitenänderungen in die Mod; das Protokoll kann sie rückgängig machen.",
+ "sheets.formulas": "Nur lesbare Vergleiche: Gesamtverteidigung = Rüstung + Verteidigung + Schild; Ultra-Größe = Einheitengröße × Größenfaktor; Kosten-/Unterhaltseffizienz = Kosten ÷ (Angriff + Rüstung + Verteidigungsgewicht × Verteidigung + Schild).",
+ "sheets.refresh": "Aktualisieren",
+ "sheets.refresh_summary": "{added} hinzugefügt · {removed} fehlen · {missing} brauchen Klassifizierung",
+ "sheets.renames": "Möglicherweise umbenannte Einheiten",
+ "sheets.transfer_notes": "Anmerkungen übertragen",
+ "sheets.import_export": "Import / Export",
+ "sheets.export_project": "Projekt exportieren",
+ "sheets.export_reference": "Klassifizierungen exportieren",
+ "sheets.column_mapping": "Spaltenzuordnung (kanonischer Name → Quell-Header, JSON)",
+ "sheets.filters": "Filter",
+ "sheets.add_filter": "Bedingung hinzufügen",
+ "sheets.filter_apply": "Filter anwenden",
+ "sheets.missing_only": "Braucht Klassifizierung",
+ "sheets.clear_filters": "Filter zurücksetzen",
+ "sheets.advanced_filter": "Erweiterter verschachtelter UND / ODER / NICHT-Filter (JSON)",
+ "sheets.columns_views": "Spalten und gespeicherte Ansichten",
+ "sheets.view_name": "Name der Ansicht",
+ "sheets.save_view": "Ansicht speichern",
+ "sheets.saved_views": "Gespeicherte Ansichten",
+ "sheets.visible_columns": "Sichtbare Spalten in Reihenfolge, durch Kommas getrennt",
+ "sheets.columns_apply": "Spaltenreihenfolge übernehmen",
+ "sheets.comparison": "Größenfaktor / Verteidigungsgewicht",
+ "sheets.rows_count": "{matches} passende Zeilen · {selected} ausgewählt",
+ "sheets.select_matches": "Alle Treffer auswählen",
+ "sheets.select_none": "Auswahl aufheben",
+ "sheets.sort_hint": "Sortieren; Umschalt-Klick fügt eine weitere Sortierspalte hinzu",
+ "sheets.mass_edit": "Ausgewählte Zeilen gesammelt bearbeiten",
+ "sheets.value": "Wert / Ausdruck / Quellspalte",
+ "sheets.replacement": "Ersatztext",
+ "sheets.stage_selected": "Für ausgewählte Zeilen vormerken",
+ "sheets.fill_down": "Ausgewählte aus der ersten sichtbaren ausgewählten Zeile füllen",
+ "sheets.recipe_name": "Name des Rezepts",
+ "sheets.recipes": "Gespeicherte Rezepte",
+ "sheets.discard_native": "Native Einheitenentwürfe verwerfen",
+ "sheets.select_first": "Wähle zuerst Zeilen aus. Alle Treffer auswählen umfasst alle passenden Seiten.",
+ "sheets.file_large": "Der Import muss kleiner als 20 MB sein.",
+ "sheets.export_table": "Regeltabelle exportieren",
+ "sheets.rules_import_hint": "Importiere eine Barracks-CSV, um diese Tabelle zu füllen. Schlüsselkombinationen müssen eindeutig sein.",
+ "sheets.change_preview": "Zuletzt vorgemerkte Operation: vorher / nachher",
+ "eng.sheets.invalid_input": "Ungültige Tabellendaten: {reason}",
+ "eng.sheets.unsupported_project_schema_or_version": "nicht unterstütztes Projektschema oder nicht unterstützte Version",
+ "eng.sheets.invalid_unit_identity_list": "ungültige Liste von Einheitenkennungen",
+ "eng.sheets.rename_must_map_an_absent_annotated_id_onto_an_unannotated": "Eine Umbenennung muss eine fehlende annotierte ID auf eine nicht annotierte aktuelle ID abbilden",
+ "eng.sheets.map_the_unit_id_column_explicitly": "ordne die Spalte der Einheiten-ID ausdrücklich zu",
+ "eng.sheets.no_unit_records_found": "keine Einheitendatensätze gefunden",
+ "eng.sheets.invalid_rule_table": "ungültige Regeltabelle",
+ "eng.sheets.rule_table_headers_do_not_match_its_type": "die Header der Regeltabelle passen nicht zu ihrem Typ",
+ "eng.sheets.expected_keyed_edb_json": "EDB-JSON mit Schlüsseln erwartet",
+ "eng.sheets.expected_an_object_for_value1": "ein Objekt für {value1} erwartet",
+ "eng.sheets.invalid_unit_identity": "ungültige Einheitenkennung",
+ "eng.sheets.invalid_annotations": "ungültige Anmerkungen",
+ "eng.sheets.the_sheet_project_changed_in_another_window_reload_before_saving": "das Tabellenprojekt wurde in einem anderen Fenster geändert; vor dem Speichern neu laden",
+ "eng.sheets.duplicate_live_unit_id_value1": "doppelte aktuelle Einheiten-ID: {value1}",
+ "eng.sheets.missing_or_duplicate_csv_headers": "fehlende oder doppelte CSV-Header",
+ "eng.sheets.csv_row_has_more_values_than_its_headers": "Die CSV-Zeile hat mehr Werte als Header",
+ "eng.sheets.unsupported_unit_import_format": "nicht unterstütztes Importformat für Einheiten",
+ "eng.sheets.duplicate_imported_unit_id_value1": "doppelte importierte Einheiten-ID: {value1}",
+ "eng.sheets.rule_row_must_be_an_object": "eine Regelzeile muss ein Objekt sein",
+ "eng.sheets.missing_or_duplicate_rule_key_value1": "fehlender oder doppelter Regelschlüssel: {value1}",
+ "eng.sheets.invalid_edb_building_snapshot": "ungültiger EDB-Gebäudeschnappschuss",
+ "eng.sheets.expected_fynn_keyed_edu_objects": "EDU-Objekte mit Fynn-Schlüsseln erwartet",
+ "eng.sheets.invalid_edb_level_snapshot": "ungültiger EDB-Stufenschnappschuss",
+ "eng.sheets.the_sheet_project_changed_reload_before_editing": "das Tabellenprojekt hat sich geändert; vor dem Bearbeiten neu laden",
+ "eng.sheets.game_data_changed_refresh_before_editing": "die Spieldaten haben sich geändert; vor dem Bearbeiten aktualisieren",
+ "eng.sheets.import_is_larger_than_20_mb": "der Import ist größer als 20 MB",
+ "eng.sheets.json_key_and_type_disagree_value1": "JSON-Schlüssel und Typ widersprechen sich: {value1}",
+ "eng.sheets.unknown_sheet_action": "unbekannte Tabellenaktion",
+ "eng.sheets.unknown_filter_operator": "unbekannter Filteroperator",
+ "eng.sheets.this_column_is_read_only_or_unknown_value1": "diese Spalte ist schreibgeschützt oder unbekannt: {value1}",
+ "eng.sheets.invalid_text_value": "ungültiger Textwert",
+ "eng.sheets.unknown_edu_category": "unbekannte EDU-Kategorie",
+ "eng.sheets.use_an_explicit_clear_operation_instead_of_empty_text": "verwende statt leerem Text eine ausdrückliche Löschoperation",
+ "eng.sheets.filter_nesting_is_invalid_or_too_deep": "die Filterverschachtelung ist ungültig oder zu tief",
+ "eng.sheets.unknown_filter_column_value1": "unbekannte Filterspalte: {value1}",
+ "eng.sheets.at_most_eight_sort_columns": "höchstens acht Sortierspalten",
+ "eng.sheets.expression_is_too_long": "der Ausdruck ist zu lang",
+ "eng.sheets.only_numeric_columns_constants_and_are_supported": "nur numerische Spalten, Konstanten und + - * / werden unterstützt",
+ "eng.sheets.select_distinct_unit_ids_first": "wähle zuerst verschiedene Einheiten-IDs aus",
+ "eng.sheets.selected_units_changed_refresh_before_editing": "die ausgewählten Einheiten haben sich geändert; vor dem Bearbeiten aktualisieren",
+ "eng.sheets.this_column_is_read_only": "diese Spalte ist schreibgeschützt",
+ "eng.sheets.paste_must_contain_1_10000_cells": "das Einfügen muss 1 bis 10000 Zellen enthalten",
+ "eng.sheets.expected_a_finite_number": "eine endliche Zahl erwartet",
+ "eng.sheets.expected_a_single_text_value": "ein einzelner Textwert erwartet",
+ "eng.sheets.this_column_requires_a_whole_number": "diese Spalte erfordert eine ganze Zahl",
+ "eng.sheets.negative_value_is_not_allowed_in_value1": "ein negativer Wert ist in {value1} nicht erlaubt",
+ "eng.sheets.invalid_list_item": "ungültiger Listeneintrag",
+ "eng.sheets.unknown_staged_column_value1": "unbekannte vorgemerkte Spalte: {value1}",
+ "eng.sheets.the_original_field_has_no_requested_tuple_member_value1": "das ursprüngliche Feld hat kein angefordertes Tupelelement: {value1}",
+ "eng.sheets.invalid_filter_group": "ungültige Filtergruppe",
+ "eng.sheets.unknown_sort_column": "unbekannte Sortierspalte",
+ "eng.sheets.invalid_arithmetic_expression": "ungültiger arithmetischer Ausdruck",
+ "eng.sheets.unknown_unit_in_pasted_cells": "unbekannte Einheit in den eingefügten Zellen",
+ "eng.sheets.cannot_clear_an_individual_required_tuple_member_value1": "ein einzelnes erforderliches Tupelelement kann nicht gelöscht werden: {value1}",
+ "eng.sheets.division_by_zero": "Division durch null",
+ "eng.sheets.unknown_source_column": "unbekannte Quellspalte",
+ "eng.sheets.list_operation_requires_an_attribute_column": "die Listenoperation erfordert eine Attributspalte",
+ "eng.sheets.unknown_edit_operation": "unbekannte Bearbeitungsoperation",
+ "eng.sheets.rounding_digits_must_be_between_6_and_6": "die Rundungsstellen müssen zwischen -6 und 6 liegen",
+ "eng.sheets.unknown_branch_policy": "unbekannte Zweigrichtlinie",
+ "eng.sheets.this_compatibility_profile_caps_barracks_at_t5": "dieses Kompatibilitätsprofil begrenzt die Kaserne auf T5",
+ "eng.sheets.invalid_balance_stages": "ungültige Balance-Stufen",
+ "eng.sheets.apply_or_discard_native_unit_drafts_before_balancing_the_edb": "Wende native Einheitenentwürfe an oder verwirf sie, bevor du die EDB ausbalancierst; die Regeln nutzen die gespeicherte Spieleinheitenliste",
+ "eng.sheets.preview_changed_refresh_and_review_the_edb_changes_before_applying": "Die Vorschau hat sich geändert; aktualisiere sie und prüfe die EDB-Änderungen vor dem Anwenden",
+ "eng.sheets.there_are_no_edb_changes_to_apply": "Es gibt keine EDB-Änderungen zum Anwenden",
+ "eng.sheets.extract_the_edb_into_the_mod_before_applying_balance_changes": "Extrahiere die EDB in die Mod, bevor du Balance-Änderungen anwendest",
+ "eng.sheets.the_edb_changed_after_preview": "Die EDB hat sich nach der Vorschau geändert",
+ "eng.sheets.multipliers_must_be_positive": "Multiplikatoren müssen positiv sein",
+ "eng.sheets.invalid_balance_override": "Jede Überschreibung benötigt eine Stufe, einen Selektor und einen Wert",
+ "eng.sheets.override_must_select_a_unit_building_or_level": "eine Überschreibung muss eine Einheit, ein Gebäude oder eine Stufe auswählen",
+ "eng.sheets.invalid_multiplier_value1": "ungültiger Multiplikator: {value1}",
+ "sheets.recruitment": "EDB-Rekrutierung",
+ "sheets.balance": "EDB-Balance-Pipeline",
+ "sheets.preview": "Ausgewählte Stufen in der Vorschau zeigen",
+ "sheets.export_balance": "EDB und Protokolle exportieren",
+ "sheets.intermediate": "Zwischen-EDBs einbeziehen",
+ "sheets.profile": "Kompatibilitätsprofil (JSON): kürzeste Wurzeltiefe; jede Wurzel beginnt bei null, gemeinsame Kette maximal. Mit reject_ambiguous werden ungleiche Zusammenführungen abgelehnt.",
+ "sheets.overrides": "Ausdrückliche Überschreibungen (JSON-Array): Stufe, Selektor für Einheit/Gebäude/Stufe, Wert. Spezifischere Selektoren gewinnen; bei gleicher Spezifität gibt es einen Konflikt.",
+ "sheets.balance_count": "{rows} Rekrutierungszeilen · {changes} Feldänderungen",
+ "sheets.balance_details": "Vollständige Ergebnisse und Erklärungen der Stufen",
+ "sheets.structure": "Gebäudegraph und Diagnose",
+ "sheets.apply_balance": "Geprüfte EDB-Änderungen anwenden",
+ "sheets.apply_balance_confirm": "{count} geprüfte Feldänderungen auf die EDB anwenden? Das Toolkit sichert sie zuerst; das Protokoll kann dies rückgängig machen.",
+ "sheets.applied": "EDB-Änderungen angewendet. Das Protokoll kann sie rückgängig machen.",
+ "eng.sheets.draft_source_changed": "Die Quelleinheit {unit} hat sich nach dem Vormerken geändert; verwirf ihren Entwurf und prüfe erneut",
+ "eng.sheets.invalid_balance_profile": "Das Balance-Profil muss ein Objekt sein",
+ "eng.sheets.invalid_balance_overrides": "Die Balance-Überschreibungen müssen eine Liste sein",
+ "eng.sheets.invalid_edb_capability": "Ungültiger Schnappschuss der EDB-Fähigkeiten",
+ "eng.sheets.explicit_list_clear": "Verwende Löschen, um eine Liste zu entfernen; eine leere Bearbeitung ist kein Ersatz",
+ "eng.sheets.explicit_clear_required": "Fehlende Werte können nicht kopiert oder gesetzt werden; verwende ausdrücklich Löschen",
+ "sheets.import_csv": "EDU-Referenz-CSV",
+ "sheets.import_edu_json": "Fynn-EDU-JSON",
+ "sheets.import_edb_json": "Fynn-EDB-JSON",
+ "sheets.import_project": "Projekt-JSON",
+ "sheets.import_replenish": "Auffüll-CSV",
+ "sheets.import_experience": "Erfahrungs-CSV",
+ "sheets.import_pool": "Pool-CSV",
+ "sheets.preview_log_limit": "Die Vorschau zeigt bis zu 100 Ergebnisse und 100 Probleme pro Stufe. Der Export enthält jede Zeile und die vollständigen Protokolle.",
+ "sheets.and": "UND",
+ "sheets.or": "ODER",
+ "sheets.native_preview": "Vorgemerkte Einheitenänderungen prüfen",
+ "sheets.native_review": "Änderungen an {count} Einheiten prüfen",
+ "sheets.native_apply": "Geprüfte Einheitenänderungen anwenden",
+ "sheets.native_confirm": "Die geprüften Änderungen auf {count} Einheiten anwenden? Quelldateien werden zuerst gesichert; das Protokoll kann sie rückgängig machen.",
+ "sheets.native_done": "Einheitenänderungen angewendet. Das Protokoll kann sie rückgängig machen.",
+ "eng.sheets.native_preview_changed": "Die Einheitenvorschau hat sich geändert; prüfe sie vor dem Anwenden erneut",
+ "eng.sheets.native_no_changes": "Es gibt keine Einheitenänderungen zum Anwenden",
+ "eng.sheets.native_files_changed": "Eine Einheitendatei hat sich nach der Vorschau geändert",
+ "eng.sheets.native_unit_absent": "Die vorgemerkte Einheit {unit} fehlt in der Mod",
+ "eng.sheets.native_extract_first": "Extrahiere die Einheitendatei, bevor du Tabellenänderungen anwendest",
+ "eng.sheets.native_unit_ambiguous": "Die Einheit {unit} fehlt in ihrer Quelldatei oder kommt dort doppelt vor",
+ "sheets.show_extras": "Erhaltene importierte Spalten anzeigen",
+ "sheets.stale_drafts": "Quelldateien haben sich geändert. Veraltete Entwürfe werden mit den aktuellen Spielwerten angezeigt; verwirf die Entwürfe, bevor du diese Einheiten bearbeitest oder anwendest:",
+ "eng.sheets.stale_draft_edit": "Verwirf veraltete Einheitenentwürfe, bevor du diese Einheiten erneut bearbeitest",
+ "eng.sheets.applied_project_unsaved": "Die Einheitenänderungen wurden angewendet und protokolliert, aber ihre Projektentwürfe konnten nicht entfernt werden. Lade neu und verwirf die veralteten Entwürfe.",
+ "sheets.mapping_example": "Beispiel: {\"Name\":\"type\",\"Rasse der Einheit\":\"Race\"}",
  "voices.no_orders_no_accent": "Keine Befehle in dieser Klasse; für diese Einheit ist kein Akzent für die Sprachausgabe gewählt.",
  "eng.scriptaddons.duplicate_code": "Der Code von {title} ist bereits in {paths}; er würde zweimal ausgeführt. Entfernen Sie den eingefügten Code vor der Installation dieses Add-ons.",
  "eng.scriptaddons.setting_error": "{label}: {detail}",
@@ -11709,5 +12920,6 @@
  "eng.scriptwords.example_record_the_victories_0637": "Rebellion bestraft",
  "eng.scriptwords.example_a_winter_allowance_d16b": "Ein Winterzuschuss",
  "eng.scriptwords.example_civic_works_24a4": "Städtische Bauvorhaben",
- "eng.scriptaddons.older_moved": "eine ?ltere Kopie von {title} au?erhalb von script/modules - sie w?rde zweimal ausgef?hrt; das Add-on ist jetzt in {path}"
+ "eng.scriptaddons.older_moved": "eine ?ltere Kopie von {title} au?erhalb von script/modules - sie w?rde zweimal ausgef?hrt; das Add-on ist jetzt in {path}",
+ "eng.updater.update_already_in_progress": "Ein Update wird bereits ausgeführt"
 }

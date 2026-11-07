@@ -300,7 +300,7 @@ def compose(mod, units: Sequence["edu_mod.Unit"], *,
 
 
 def write_split(mod, texts: Dict[str, str], removes: Sequence[str],
-                backup_root: Path, manifest: dict) -> List[str]:
+                backup_root: Path, manifest: dict, *, atomic_writer=None) -> List[str]:
     """Write the EOP side of a plan, backing every touched file up first.
 
     EOP files sit *outside* ``data/``, and often outside the mod root altogether
@@ -334,7 +334,8 @@ def write_split(mod, texts: Dict[str, str], removes: Sequence[str],
         else:
             created.append(str(path))
         path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(text, encoding=edu_mod.ENCODING)
+        if atomic_writer:atomic_writer(path,text.encode(edu_mod.ENCODING))
+        else:path.write_text(text, encoding=edu_mod.ENCODING)
         file_op("WRITE", path, f"M2TWEOP unit file, {len(text)} chars")
         written.append(rel_to_root(mod, path))
     for key in removes:

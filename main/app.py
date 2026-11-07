@@ -181,6 +181,13 @@ def main(argv):
         print("\n" + _other_build_message(running, port) + "\n")
         return EXIT_OTHER_BUILD
 
+    # Install only after the prior server is gone and all preflight checks pass.
+    # The helper waits for this process to exit, so even bundled DLLs are free.
+    from unittransfer import updater
+    if updater.apply_on_launch(APP_PATH.parent, port, no_browser):
+        log.info("Installing the downloaded update; the toolkit will reopen automatically.")
+        return 0
+
     keep_console = bool(settings.get("show_console", False))
     if mode == "launch" and not keep_console:
         return _launch_detached(log, port, passthrough)

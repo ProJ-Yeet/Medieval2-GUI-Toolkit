@@ -1713,6 +1713,7 @@ function wire(){
     if(e.key==='Escape'&&navMenu.classList.contains('open'))navOpen(false);});
   newUnitBtn.onclick=openNewUnitPicker;
   tidyEduBtn.onclick=openEduTidy;
+  document.getElementById("unitSheetsBtn").onclick=unitSheetsOpen;
   // Picking the mod that's already on the other side swaps the pair rather than
   // leaving a pointless A -> A: with A -> B, choosing A as the dest gives B -> A.
   srcSel.onchange=async e=>{
@@ -1836,6 +1837,7 @@ function applyMode(persist){
   unusedUnitsBtn.style.display=edit?'inline-block':'none';
   unrecruitableUnitsBtn.style.display=edit?'inline-block':'none';
   tidyEduBtn.style.display=edit?'inline-block':'none';
+  document.getElementById('unitSheetsBtn').style.display=(edit||bld)?'inline-block':'none';
   const stm=state.mode==='stratmap', crd=state.mode==='cards', cas=state.mode==='casmodels'||state.mode==='armory',
         cmp=state.mode==='campmap';
   cleanBtn.style.display=(bm||stm)?'inline-block':'none';

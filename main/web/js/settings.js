@@ -118,6 +118,13 @@ async function openSettings(){
           <b>${tt('settings.beta_opt_in')}</b></label>
         <div class="count" style="margin-top:6px">${tt('settings.beta_hint')}</div>
       </fieldset>
+      <fieldset><legend>${tt('settings.updates')}</legend>
+        <label class="chk"><input type="checkbox" id="autoUpdatesChk" ${s.auto_updates===false?'':'checked'} onchange="updatesSet(this.checked)"> ${tt('settings.updates_auto')}</label>
+        <div class="count">${tt('settings.updates_hint')}</div>
+        <div id="updateStatus" role="status" class="count" style="margin:8px 0"></div>
+        <button id="updateCheck" onclick="updatesCheck()">${tt('settings.updates_check')}</button>
+        <button id="updateRestart" hidden onclick="restartServer()">${tt('settings.updates_restart')}</button>
+      </fieldset>
       <div id="lookSettings">${lookSettingsHtml()}</div>
       <fieldset><legend>${tt('settings.display')}</legend>
         <label>${tt('settings.interface_size')}
@@ -227,6 +234,41 @@ async function openSettings(){
     <div class="foot"><button onclick="closeModal()">${tt('settings.close')}</button><button class="primary" onclick="saveRoot()">${tt('settings.save_scan')}</button></div>`;
   overlay.classList.add('open');
   loadEopDirs();
+  updatesPoll();
+}
+
+let updatesTimer = null;
+async function updatesPoll(){
+  clearTimeout(updatesTimer);
+  if(!document.getElementById('updateStatus')) return;
+  try{ updatesPaint(await api.get('/api/updates')); }
+  catch(err){ const el=document.getElementById('updateStatus'); if(el) el.textContent=errText(err); }
+  if(document.getElementById('updateStatus')) updatesTimer=setTimeout(updatesPoll,2000);
+}
+function updatesPaint(s){
+  const el=document.getElementById('updateStatus'); if(!el) return;
+  const version=s.latest || s.current;
+  const phases={idle:()=>tt('settings.updates_idle'),checking:()=>tt('settings.updates_checking'),
+    downloading:()=>tt('settings.updates_downloading',{version,pct:s.progress||0}),
+    ready:()=>tt('settings.updates_ready',{version}),installed:()=>tt('settings.updates_installed',{version}),
+    up_to_date:()=>tt('settings.updates_up_to_date',{version}),available:()=>tt('settings.updates_available',{version}),
+    source:()=>tt('settings.updates_source',{version}),error:()=>tt('settings.updates_error')};
+  el.textContent = (phases[s.phase] || phases.idle)();
+  if(!s.managed){const hint=document.createElement('div');hint.textContent=tt('settings.updates_source_hint');el.prepend(hint);}
+  if(s.error) el.appendChild(document.createTextNode(' '+s.error));
+  if(s.release_url && /^https:\/\/github\.com\/ProJ-Yeet\/Medieval2-GUI-Toolkit\/releases\/tag\/v[0-9.]+$/.test(s.release_url)){
+    const a=document.createElement('a'); a.href=s.release_url; a.target='_blank'; a.rel='noopener'; a.textContent=tt('settings.updates_release'); el.appendChild(document.createTextNode(' '));el.appendChild(a);
+  }
+  const button=document.getElementById('updateCheck');if(button)button.disabled=!!s.busy;
+  const restart=document.getElementById('updateRestart');if(restart)restart.hidden=s.phase!=='ready'||!s.managed||!s.enabled;
+}
+async function updatesCheck(){
+  try{ updatesPaint(await api.post('/api/updates/check',{})); }
+  catch(err){ toast(errText(err),6000); }
+}
+async function updatesSet(enabled){
+  try{ updatesPaint(await api.post('/api/updates/settings',{enabled}));state.settings.auto_updates=enabled; }
+  catch(err){ const box=document.getElementById('autoUpdatesChk');if(box)box.checked=!enabled;toast(errText(err),6000); }
 }
 
 /* ---------- M2EX (per mod) ----------

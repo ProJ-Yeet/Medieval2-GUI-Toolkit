@@ -2052,6 +2052,9 @@ class Handler(BaseHTTPRequestHandler):
                 from . import __version__ as _ver
                 return self._json({"app": "unit-transfer", "pid": _os.getpid(),
                                    "version": _ver, "root": str(WEB_DIR.parent)})
+            if u.path == "/api/updates":
+                from . import updater
+                return self._json(updater.manager().snapshot())
             if u.path == "/api/settings":
                 s = config.load_settings()
                 # unsaved yet -> offer the registry-detected install as a prefill
@@ -2963,6 +2966,27 @@ class Handler(BaseHTTPRequestHandler):
             body = self._read_body()
             if u.path == "/api/activity":
                 return self._json({"ok": self._activity(body)})
+            if u.path.startswith("/api/unit_sheets/"):
+                from . import unit_sheets
+                try:
+                    mod = self.registry.get(body.get("mod") or "")
+                    result = unit_sheets.service(mod, u.path.rsplit("/",1)[-1], body)
+                    if u.path.endswith(('/native_apply','/balance_apply')):
+                        self.registry.invalidate(body.get('mod') or '')
+                    return self._json(result)
+                except (unit_sheets.SheetError, KeyError, ValueError) as e:
+                    return self._err(400, str(e))
+            if u.path in ("/api/updates/check", "/api/updates/settings"):
+                from . import updater
+                if u.path.endswith("/settings"):
+                    if not isinstance(body.get("enabled"), bool):
+                        return self._err(400, "enabled must be true or false")
+                    config.save_settings(auto_updates=body["enabled"])
+                    if body["enabled"]:
+                        updater.manager().start()
+                    else:
+                        return self._json(updater.manager().snapshot())
+                return self._json(updater.manager().check(force=True))
             if u.path == "/api/settings":
                 s = config.save_settings(**body)
                 return self._json(s)
@@ -7107,6 +7131,8 @@ def serve(cache_dir: Path, host="127.0.0.1", port=8756, on_ready=None, verbose=F
     log.info("  To stop it: Quit in the toolkit's menu, or Ctrl+C here.")
     log.info("MED2 root: %s", config.get_med2_root() or "(not set)", extra=logutil.FILE_ONLY)
     threading.Thread(target=_liveness_watchdog, args=(httpd,), daemon=True).start()
+    from . import updater
+    updater.manager().start()
     if on_ready:                               # e.g. open the browser now that we're up
         try:
             on_ready()

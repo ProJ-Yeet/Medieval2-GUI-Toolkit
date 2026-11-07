@@ -440,6 +440,11 @@ Using it
   **Apply**.
 * Every transfer is undoable from the clock icon - it backs up each file it
   touches first.
+* Portable builds check official GitHub releases and download newer versions in
+  the background. A verified update installs automatically on the next launch
+  or restart. Settings, sessions and backups stay in config/. Settings has an
+  automatic-update switch, status and Check now. Source checkouts are never
+  overwritten; locally changed application files require a manual update.
 
 The other modes
 ---------------
@@ -617,6 +622,19 @@ def make_zip(stage: Path, out: Path) -> Path:
     return out
 
 
+def write_update_manifest(stage: Path) -> None:
+    """Authorize only this build's shipped files for future automatic updates."""
+    import hashlib
+    import json
+    version = re.search(r'__version__ = "([^"]+)"', (stage / "unittransfer/__init__.py").read_text(encoding="utf-8")).group(1)
+    files = {}
+    for p in sorted(stage.rglob("*")):
+        if p.is_file():
+            files[p.relative_to(stage).as_posix()] = hashlib.sha256(p.read_bytes()).hexdigest()
+    (stage / "release-manifest.json").write_text(json.dumps(
+        {"schema": 1, "version": version, "files": files}, indent=2), encoding="utf-8")
+
+
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--no-runtime", action="store_true",
@@ -645,6 +663,8 @@ def main(argv=None) -> int:
     smoke_test(stage, portable)
     clean_stage(stage)        # the smoke test just created config/ and __pycache__
     assert_clean(stage)
+    if portable:
+        write_update_manifest(stage)
 
     out = Path(args.out) if args.out else DIST / f"{name}.zip"
     make_zip(stage, out)

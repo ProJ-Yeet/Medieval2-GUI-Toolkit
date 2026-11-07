@@ -15,6 +15,43 @@ log, then the decisions that had built up in `STATE.md`'s append-only list.
 
 # The session log
 
+## 2026-11-06 - Automatic official-release updates implemented, uncut
+
+After finishing the requested EDB/Excel planning (109-116), implemented the
+separately requested updater as Phase 117. Official GitHub releases are checked
+in the background; portable packages download verified updates and install at
+the next launch/restart through a private worker, preserving config and rolling
+back on installation/startup-check failures. The release builder emits a manifest.
+Settings has status, an automatic-update switch, Check now and Restart to install.
+Source checkouts are not overwritten. Twenty-two updater tests, web modules and
+i18n checks passed; real embedded-Python detached-worker E2E passed on a disposable
+install. The wider startup suite was blocked by an early fixture assertion and
+WinError 10013 socket permissions; full interactive UI is unclaimed. Details in
+CODEX_HANDOFF.md and ROADMAP_ARCHIVE.md. No commit or release.
+
+## 2026-11-06 - EDB pipeline and editable sheets planned
+
+Inspected the user's EDB Reader scripts/references, Unit script Excel/ZIP
+workflow, Fynn tool source and screenshot. Scoped Phases 109-116 in ROADMAP.md;
+source evidence and migration concerns are in upstream/EDB_SHEETS_WORKFLOW.md.
+No application implementation or source/mod edits. A separate subsequent user
+request asks for automatic GitHub release updates after this planning work.
+
+## 2026-11-06 - Guided unit builder integration scoped, no implementation
+
+On the user's request to incorporate lupinemaverick's Stainless Steel: Reforged
+Unit Builder with permission to reuse code, followed by "dont do it all in one
+go make phases in the roadmap", added Phases 102-108 and their independent
+completion gates in ROADMAP.md. Source/schema audit precedes calculator, UI,
+project portability, unit installation, mercenary pools and final verification.
+Inspected commit `d4ed9368d0db3da2000bc895e96f52a83b93cb67`; source mapping and
+profile/runtime compatibility findings are in `upstream/SSR_UNIT_BUILDER.md`.
+STATE.md points at the scoped work without replacing existing priorities.
+Codex's change marker is in CODEX_HANDOFF.md. Documentation checks passed;
+application/upstream suites were not run. No implementation, mod write, commit
+or release. Resume with Phase 102 only, not the whole integration.
+
+
 ## 101, later the same day - Pfad's unit and building ideas, and the screens users found hard (2026-11-03)
 Built 101r-101x (ROADMAP_ARCHIVE): Delete takes the unit out of every file,
 recruit pools carried up the chain, M2EX / REX attributes and every

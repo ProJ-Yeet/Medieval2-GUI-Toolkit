@@ -59,8 +59,10 @@ suffixes instead of ``_descr`` / ``_descr_short``.
 from __future__ import annotations
 
 import json
+import os
 import re
 import shutil
+import tempfile
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -1727,6 +1729,12 @@ class BuildingPlan:
     #: For an edit of the hidden_resources line: what each removal would
     #: darken, and the count against the ceiling - see :func:`plan_hidden`.
     impact: Dict = field(default_factory=dict)
+    # Batch sheet previews preserve original newline bytes and commit a complete
+    # EDB through one rename, so interruption cannot leave a truncated document.
+    atomic_edb: bool = False
+    atomic_text: bool = False
+    log_mode: str = 'buildings'
+    log_action: str = ''
 
     def summary(self) -> str:
         if self.created:
@@ -2799,6 +2807,16 @@ def plan_hidden(mod, body: dict) -> BuildingPlan:
     return plan
 
 
+def _atomic_edb_write(target: Path, blob: bytes) -> None:
+    fd,name=tempfile.mkstemp(prefix=target.name+'.',suffix='.tmp',dir=target.parent)
+    try:
+        with os.fdopen(fd,'wb') as out:
+            out.write(blob);out.flush();os.fsync(out.fileno())
+        os.replace(name,target)
+    finally:
+        if os.path.exists(name):os.unlink(name)
+
+
 def apply_edit(plan: BuildingPlan) -> Dict:
     """Write the plan into the mod, with per-file backups and a log record.
 
@@ -2832,7 +2850,10 @@ def apply_edit(plan: BuildingPlan) -> Dict:
         else:
             manifest["created"].append(rel)
         target.parent.mkdir(parents=True, exist_ok=True)
-        target.write_text(text, encoding=encoding)
+        if plan.atomic_text or rel == EDB_REL and plan.atomic_edb:
+            _atomic_edb_write(target,text.encode(encoding))
+        else:
+            target.write_text(text, encoding=encoding)
         file_op("WRITE", target, f"{encoding}, {len(text)} chars")
 
     if plan.edb_text:
@@ -2842,7 +2863,8 @@ def apply_edit(plan: BuildingPlan) -> Dict:
     if plan.edu_text:
         write_text("export_descr_unit.txt", plan.edu_text, edu_mod.ENCODING)
     if plan.eop_texts:
-        eop.write_split(mod, plan.eop_texts, (), backup_root, manifest)
+        eop.write_split(mod, plan.eop_texts, (), backup_root, manifest,
+                        atomic_writer=_atomic_edb_write if plan.atomic_text else None)
     if plan.modeldb_text:
         write_text("unit_models/battle_models.modeldb", plan.modeldb_text,
                    modeldb_mod.ENCODING)
@@ -2858,8 +2880,8 @@ def apply_edit(plan: BuildingPlan) -> Dict:
     rec = {
         "id": tid,
         "when": time.strftime("%Y-%m-%d %H:%M:%S"),
-        "mode": "buildings",
-        "action": "building-new" if plan.created else "building",
+        "mode": plan.log_mode,
+        "action": plan.log_action or ("building-new" if plan.created else "building"),
         "source": mod.name,
         "source_root": str(mod.root),
         "dest": mod.name,

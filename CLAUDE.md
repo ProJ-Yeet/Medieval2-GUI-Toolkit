@@ -1,3 +1,10 @@
+## Changes made by Codex
+
+Before working on files changed by Codex, read `main/docs/CODEX_HANDOFF.md`.
+It records the changes, affected files, verification, and outstanding work.
+Codex's standing instruction to maintain this marker is in root `AGENTS.md`.
+This change record does not replace the project status or release documents below.
+
 ## graphify
 
 This project has a knowledge graph at graphify-out/ with god nodes, community structure, and cross-file relationships.
