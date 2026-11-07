@@ -6,6 +6,7 @@ The original document, conditions, spacing, comments and bytes otherwise survive
 from __future__ import annotations
 from . import i18n as _i18n
 from collections import Counter, deque
+import copy
 import hashlib
 import json
 import math
@@ -32,6 +33,11 @@ TOKENS=re.compile(r'^\s*recruit_pool\s+(?:"[^"\r\n]*"|[^\s"]+)(?P<nums>(?:[ \t]+
 
 
 class RuleSkip(ValueError):pass
+
+
+def check_cancelled(cancelled):
+    if cancelled and cancelled():
+        sheets.fail(_i18n.msg('sheets.balance_cancelled','Balance run cancelled'))
 
 
 def finite(value):
@@ -239,10 +245,14 @@ def calculate(stage,row,unit,project,structure,profile,index,explain=None):
     return value,explain
 
 
-def run(mod,project,stages=None,edb=None):
+def run(mod,project,stages=None,edb=None,cancelled=None):
     """Pure preview. All stages consume one staged document, in explicit order."""
     stages=STAGES if stages is None else stages
     if not isinstance(stages,(list,tuple)) or not stages or len(set(stages))!=len(stages) or any(s not in STAGES for s in stages):sheets.fail(_i18n.msg('eng.sheets.invalid_balance_stages','invalid balance stages'))
+    stages=[s for s in STAGES if s in stages]
+    check_cancelled(cancelled)
+    project,snapshot=sheets.refresh(mod,copy.deepcopy(project))
+    check_cancelled(cancelled)
     profile=profile_of(project);edb=edb or mod.edb;units=sheets.live_units(mod);indices=lookup_index(project)
     structures=[graph(chain,profile['branch_policy']) for chain in edb.buildings]
     by_name={s['building']:s for s in structures}
@@ -250,14 +260,17 @@ def run(mod,project,stages=None,edb=None):
     for name in duplicates:by_name[name]['errors'].append('duplicate_building')
     lines=list(edb.lines);rows=recruitments(edb);logs={};exports={};total=0
     for stage in stages:
+        check_cancelled(cancelled)
         entries=[]
         for original in rows:
+            check_cancelled(cancelled)
             row=dict(original);line_index=row['line']-1;raw=lines[line_index]
             structure=by_name[row['building']];unit=units.get(row['unit'])
             explanation=explanation_inputs(row,unit,project,structure,profile)
             if stage in ('experience','pool'):lookup_inputs(row,unit,project,profile,indices[stage],explanation)
             explanation['inputs']['raw_line']=raw
-            entry={**row,'stage':stage,'status':'skipped','reason':'','before':None,'after':None,'explanation':explanation}
+            field={'replenish':'per_turn','experience':'experience','pool':'maximum'}[stage]
+            entry={**row,'stage':stage,'field':field,'status':'skipped','reason':'','rule':None,'before':None,'after':None,'explanation':explanation}
             match=TOKENS.match(raw)
             if match is None:
                 entry.update(status='invalid',reason='malformed_recruit_pool');explanation['outcome']='malformed_recruit_pool';entries.append(entry);continue
@@ -281,10 +294,21 @@ def run(mod,project,stages=None,edb=None):
             except RuleSkip as e:
                 reason=str(e);entry.update(reason=reason,after=entry['before'],status='invalid' if reason.startswith(('invalid_','negative_','nonpositive_','experience_','malformed_','conflicting_')) else 'skipped')
             explanation['outcome']=entry['reason'] or entry['status']
+            entry['reason']=explanation['outcome']
+            entry['rule']=explanation.get('override_selector') or explanation.get('rule_key')
             entries.append(entry)
         counts=dict(Counter(e['status'] for e in entries));logs[stage]={'counts':counts,'all':entries,'issues':[e for e in entries if e['status'] in ('invalid','skipped')]}
         exports[stage]=''.join(lines)
+    check_cancelled(cancelled)
+    grouped={}
+    for stage in stages:
+        for entry in logs[stage]['all']:
+            key=tuple(entry[k] for k in ('status','unit','building','level','field'))
+            grouped.setdefault(key,[]).append(entry)
+    groups=[dict(zip(('status','unit','building','level','field'),key),entries=entries) for key,entries in grouped.items()]
     return {'profile':profile,'profile_rules':dict(PROFILE_RULES),'structure':structures,'logs':logs,'exports':exports,'text':''.join(lines),
+            'pipeline_order':['refresh','classification',*stages],
+            'refresh':{k:v for k,v in snapshot.items() if k!='rows'},'groups':groups,
             'source_token':hashlib.sha256(edb.to_text().encode('latin-1')).hexdigest(),
             'changed_fields':total,'recruitment_rows':len(rows),'stages':list(stages)}
 
@@ -297,9 +321,9 @@ def fresh_edb(mod):
     return mod.edb
 
 
-def preview(mod,project,stages=None):
+def preview(mod,project,stages=None,cancelled=None):
     if project.get('draft'):sheets.fail(_i18n.msg('eng.sheets.apply_or_discard_native_unit_drafts_before_balancing_the_edb','Apply or discard native unit drafts before balancing the EDB; rules use the saved game roster'))
-    result=run(mod,project,stages,fresh_edb(mod))
+    result=run(mod,project,stages,fresh_edb(mod),cancelled)
     inputs={'project':sheets.revision(project),'edu':sheets.source_token(mod),
             'edb':result['source_token'],'stages':result['stages'],'text':result['text']}
     result['plan_token']=hashlib.sha256(json.dumps(inputs,sort_keys=True).encode()).hexdigest()
@@ -323,5 +347,8 @@ def apply_preview(mod,project,stages,token):
     except Exception:
         # Existing log/backup machinery still owns the operation. A failed log
         # write must not leave an apparently unapplied EDB edit behind.
-        if path.read_bytes()!=original:buildings._atomic_edb_write(path,original)
+        if path.read_bytes()!=original:
+            buildings._atomic_edb_write(path,original)
+            from . import changesets
+            changesets.refresh(fresh.root,[buildings.EDB_REL])
         raise

@@ -327,13 +327,13 @@ def source_token(mod):
     return hashlib.sha256(''.join(u.type+'\0'+u.raw+'\0'+getattr(u,'eop_file','') for u in mod.edu.units).encode()).hexdigest()
 
 
-def service(mod,action,body=None):
+def service(mod,action,body=None,cancelled=None):
     """Sheet API. Everything here writes project config only, never game data."""
     from . import sheet_ops
     body=body or {}
     with _LOCK:
         dry_run = body.get('dry_run') is True and action in ('operate', 'paste')
-        p=load_project(mod, persist_migration=not dry_run);before=revision(p)
+        p=load_project(mod, persist_migration=not dry_run and action not in ('balance_preview','balance_export','balance_apply'));before=revision(p)
         original_project = copy.deepcopy(p)
         if action not in ('load','query','export'):
             if body.get('revision')!=before:fail(_i18n.msg('eng.sheets.the_sheet_project_changed_reload_before_editing','the sheet project changed; reload before editing'))
@@ -383,10 +383,13 @@ def service(mod,action,body=None):
             return {'record':edb_balance.apply_preview(mod,p,body.get('stages'),body.get('plan_token'))}
         if action in ('balance_preview','balance_export'):
             from . import edb_balance
-            result=edb_balance.preview(mod,p,body.get('stages'))
+            result=edb_balance.preview(mod,p,body.get('stages'),cancelled)
             if action=='balance_preview':
                 # Full audit logs belong in the export, not a multi-megabyte DOM.
                 compact={k:v for k,v in result.items() if k not in ('text','exports','logs')}
+                compact['groups']=[{**group,'entries':[{k:entry[k] for k in
+                    ('stage','line','before','after','reason','rule')} for entry in group['entries']]}
+                    for group in result['groups']]
                 compact['logs']={stage:{'counts':logs['counts'],'all':logs['all'][:100],
                     'issues':logs['issues'][:100],'total':len(logs['all']),
                     'truncated':len(logs['all'])>100 or len(logs['issues'])>100}
@@ -395,6 +398,7 @@ def service(mod,action,body=None):
             import base64,zipfile
             archive=io.BytesIO()
             with zipfile.ZipFile(archive,'w',zipfile.ZIP_DEFLATED) as bundle:
+                edb_balance.check_cancelled(cancelled)
                 bundle.writestr('export_descr_buildings_new.txt',result['text'].encode('latin-1'))
                 if body.get('intermediate'):
                     for stage,suffix in [('replenish','r'),('experience','exp')]:
@@ -402,9 +406,14 @@ def service(mod,action,body=None):
                 bundle.writestr('building_structure_log.json',json.dumps(result['structure'],indent=2))
                 bundle.writestr('profile.json',json.dumps(result['profile'],indent=2))
                 bundle.writestr('profile_rules.json',json.dumps(result['profile_rules'],indent=2))
+                bundle.writestr('pipeline.json',json.dumps({'pipeline_order':result['pipeline_order'],
+                    'refresh':result['refresh'],'changed_fields':result['changed_fields'],
+                    'counts':{stage:logs['counts'] for stage,logs in result['logs'].items()}},indent=2))
                 for stage,logs in result['logs'].items():
                     for kind,entries in [('all',logs['all']),('skip_error',logs['issues'])]:
+                        edb_balance.check_cancelled(cancelled)
                         bundle.writestr('logs/'+stage+'_'+kind+'.json',json.dumps(entries,indent=2,ensure_ascii=False))
+            edb_balance.check_cancelled(cancelled)
             return {'name':'EDB_balance_export.zip','mime':'application/zip','encoding':'base64',
                     'text':base64.b64encode(archive.getvalue()).decode('ascii')}
         if action=='import':

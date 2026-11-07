@@ -653,6 +653,9 @@ function unitSheetsBalanceHtml(){
   controls.usProfileRecipeOp='set';
  }
  return `<details id="usBalanceDetails"${controls.usBalanceDetails?' open':''} ontoggle="unitSheetsRememberControl(this)"><summary>${tt('sheets.balance')}</summary>
+ <div>${tt('sheets.pipeline_order')}</div>
+ ${USHEET.balanceJob?`<button onclick="unitSheetsBalanceCancel()">${tt('common.cancel')}</button>`:''}
+ ${USHEET.lastBalanceApply?`<button onclick="openLog()">${tt('app.log_undo')}</button>`:''}
  <div class="barrow">${['replenish','experience','pool'].map(k=>`<label><input type="checkbox" class="us-stage" value="${k}"${USHEET.balanceStages.includes(k)?' checked':''} onchange="unitSheetsStages()"> ${k}</label>`).join('')}
  <button onclick="unitSheetsBalancePreview()">${tt('sheets.preview')}</button><button onclick="unitSheetsBalanceExport()">${tt('sheets.export_balance')}</button><label><input id="usIntermediate" type="checkbox">${tt('sheets.intermediate')}</label></div>
  <div class="barrow"><select id="usProfileRecipe" onchange="unitSheetsRememberControl(this)"><option value="">${tt('sheets.recipes')}</option>${unitSheetsRecipeOptions(true)}</select><button onclick="unitSheetsRunRecipe(document.getElementById('usProfileRecipe').value)">${tt('sheets.recipe_run')}</button></div>
@@ -663,14 +666,36 @@ function unitSheetsBalanceHtml(){
  <label>${tt('sheets.overrides')}<textarea id="usOverrides" rows="3" style="width:100%">${esc(JSON.stringify(p.balance_overrides||[],null,2))}</textarea></label><button onclick="unitSheetsBalanceProfile()">${tt('common.save')}</button>
  ${b?`<button onclick="unitSheetsBalanceApply()"${b.changed_fields?'':' disabled'}>${tt('sheets.apply_balance')}</button><div>${tt('sheets.balance_count',{rows:b.recruitment_rows,changes:b.changed_fields})}</div><pre style="max-height:160px;overflow:auto">${esc(JSON.stringify(Object.fromEntries(Object.entries(b.logs).map(([k,v])=>[k,v.counts])),null,2))}</pre>
  <details><summary>${tt('sheets.balance_details')}</summary><div>${tt('sheets.preview_log_limit')}</div><pre style="max-height:320px;overflow:auto">${esc(JSON.stringify(b.logs,null,2))}</pre></details>
+ <details><summary>${tt('sheets.balance_groups')}</summary><div>${esc((b.pipeline_order||[]).join(' → '))}</div>${(b.groups||[]).map(g=>`<details><summary>${esc([g.status,g.unit,g.building,g.level,g.field].join(' / '))} (${g.entries.length})</summary><pre style="max-height:320px;overflow:auto">${esc(JSON.stringify(g.entries,null,2))}</pre></details>`).join('')}</details>
  <details><summary>${tt('sheets.structure')}</summary><pre style="max-height:240px;overflow:auto">${esc(JSON.stringify(b.structure,null,2))}</pre></details>`:''}</details>`;
 }
 function unitSheetsStages(){USHEET.balanceStages=[...modal.querySelectorAll('.us-stage:checked')].map(x=>x.value);return USHEET.balanceStages;}
-async function unitSheetsBalancePreview(){const u=USHEET;if(u.busy)return;u.busy=true;try{u.balance=await unitSheetsPost('/api/unit_sheets/balance_preview',unitSheetsBody({stages:unitSheetsStages()}));unitSheetsPaint();}catch(e){toast(errText(e));}finally{u.busy=false;}}
-async function unitSheetsBalanceExport(){try{const r=await unitSheetsPost('/api/unit_sheets/balance_export',unitSheetsBody({stages:unitSheetsStages(),intermediate:document.getElementById('usIntermediate').checked}));const url=URL.createObjectURL(new Blob([Uint8Array.from(atob(r.text),c=>c.charCodeAt(0))],{type:r.mime}));const a=document.createElement('a');a.href=url;a.download=r.name;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}catch(e){toast(errText(e));}}
+async function unitSheetsBalanceCancel(){
+ const u=USHEET,job=u.balanceJob;if(!job)return;
+ job.cancelled=true;
+ try{await unitSheetsPost('/api/progress/cancel',{job:job.id});}catch(e){toast(errText(e));}
+}
+async function unitSheetsBalanceRun(action){
+ const u=USHEET;await unitSheetsFlush();if(USHEET!==u||u.busy)return;
+ const body=unitSheetsBody({stages:unitSheetsStages(),intermediate:!!document.getElementById('usIntermediate')?.checked});
+ const job={id:'sheets-'+Date.now()+'-'+Math.random().toString(36).slice(2),cancelled:false};
+ body.job=job.id;u.busy=true;u.balanceJob=job;unitSheetsPaint();
+ try{
+  const r=await unitSheetsPost('/api/unit_sheets/balance_'+action,body);
+  if(USHEET!==u||job.cancelled)return;
+  if(action==='preview')u.balance=r;
+  else{
+   const url=URL.createObjectURL(new Blob([Uint8Array.from(atob(r.text),c=>c.charCodeAt(0))],{type:r.mime}));
+   const a=document.createElement('a');a.href=url;a.download=r.name;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
+  }
+ }catch(e){if(USHEET===u&&!job.cancelled)toast(errText(e));}
+ finally{u.busy=false;u.balanceJob=null;if(USHEET===u)unitSheetsPaint();}
+}
+function unitSheetsBalancePreview(){return unitSheetsBalanceRun('preview');}
+function unitSheetsBalanceExport(){return unitSheetsBalanceRun('export');}
 function unitSheetsBalanceProfile(){try{const profile=JSON.parse(document.getElementById('usProfile').value||'{}'),overrides=JSON.parse(document.getElementById('usOverrides').value||'[]');USHEET.balance=null;unitSheetsSave(p=>{p.balance_profile=profile;p.balance_overrides=overrides;});}catch(e){toast(errText(e));}}
 
-async function unitSheetsBalanceApply(){const u=USHEET,b=u.balance;if(!b||u.busy||!confirm(tt('sheets.apply_balance_confirm',{count:b.changed_fields})))return;u.busy=true;try{await unitSheetsPost('/api/unit_sheets/balance_apply',unitSheetsBody({stages:b.stages,plan_token:b.plan_token}));u.balance=null;toast(tt('sheets.applied'));}catch(e){toast(errText(e));}finally{u.busy=false;unitSheetsPaint();}}
+async function unitSheetsBalanceApply(){const u=USHEET;await unitSheetsFlush();const b=u.balance;if(USHEET!==u||!b||u.busy||!confirm(tt('sheets.apply_balance_confirm',{count:b.changed_fields})))return;u.busy=true;try{const r=await unitSheetsPost('/api/unit_sheets/balance_apply',unitSheetsBody({stages:b.stages,plan_token:b.plan_token}));u.lastBalanceApply=r.record.id;u.balance=null;toast(tt('sheets.applied'));}catch(e){toast(errText(e));}finally{u.busy=false;if(USHEET===u)unitSheetsPaint();}}
 
 async function unitSheetsFlush(){const u=USHEET;if(u.inputs)for(const key of [...u.inputs.keys()])unitSheetsCommit(key,u);if(u.queue)await u.queue;}
 async function unitSheetsNativePreview(){const u=USHEET;await unitSheetsFlush();if(u.busy)return;u.busy=true;try{u.native=await unitSheetsPost('/api/unit_sheets/native_preview',unitSheetsBody());unitSheetsPaint();}catch(e){toast(errText(e));}finally{u.busy=false;}}

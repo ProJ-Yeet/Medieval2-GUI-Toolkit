@@ -2970,7 +2970,13 @@ class Handler(BaseHTTPRequestHandler):
                 from . import unit_sheets
                 try:
                     mod = self.registry.get(body.get("mod") or "")
-                    result = unit_sheets.service(mod, u.path.rsplit("/",1)[-1], body)
+                    job = body.get('job') or ''
+                    try:
+                        result = unit_sheets.service(mod, u.path.rsplit("/",1)[-1], body,
+                            cancelled=lambda: _progress_cancelled(job))
+                    finally:
+                        with _PROGRESS_LOCK:
+                            _CANCELLED_JOBS.discard(job)
                     if u.path.endswith(('/native_apply','/balance_apply')):
                         self.registry.invalidate(body.get('mod') or '')
                     return self._json(result)

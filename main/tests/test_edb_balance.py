@@ -46,6 +46,58 @@ soldier horse, 30, 0, 1
 '''
 
 class BalanceTests(unittest.TestCase):
+ def test_pipeline_order_refresh_and_shared_document(self):
+  before=copy.deepcopy(self.p)
+  r=balance.run(self.mod,self.p,['pool','replenish','experience'])
+  self.assertEqual(r['pipeline_order'],['refresh','classification','replenish','experience','pool'])
+  self.assertEqual(r['stages'],list(balance.STAGES))
+  self.assertEqual(r['logs']['experience']['all'][0]['explanation']['inputs']['per_turn'],'0.09')
+  self.assertEqual(r['logs']['pool']['all'][0]['explanation']['inputs']['experience'],'3')
+  self.assertEqual(self.p,before)
+  self.assertIn('missing_classifications',r['refresh'])
+ def test_every_outcome_has_field_reason_rule_and_group(self):
+  self.mod.edb=buildings.parse_text(EDB.replace('recruit_pool "Missing" 1 0.1 2 0','recruit_pool "Missing"'))
+  r=balance.run(self.mod,self.p)
+  for stage,logs in r['logs'].items():
+   for e in logs['all']:
+    self.assertTrue(e['reason']);self.assertIn('rule',e)
+    self.assertEqual(e['field'],{'replenish':'per_turn','experience':'experience','pool':'maximum'}[stage])
+    self.assertGreater(e['line'],0)
+   grouped=[e for group in r['groups'] for e in group['entries'] if e['stage']==stage]
+   self.assertCountEqual(grouped,logs['all'])
+  self.assertEqual(set(g['status'] for g in r['groups']),{'changed','skipped','invalid'})
+  again=balance.run(self.mod,self.p,edb=buildings.parse_text(r['text']))
+  self.assertIn('unchanged',{g['status'] for g in again['groups']})
+ def test_cancellation_after_partial_calculation_is_pure(self):
+  before=copy.deepcopy(self.p);calls=[]
+  def cancelled():
+   calls.append(1);return len(calls)>5
+  with self.assertRaisesRegex(sheets.SheetError,'cancel'):
+   balance.run(self.mod,self.p,cancelled=cancelled)
+  self.assertEqual(self.mod.edb.to_text(),EDB);self.assertEqual(self.p,before)
+ def test_full_pipeline_preserves_siblings_sections_and_mixed_newlines(self):
+  sibling='''building untouched
+{
+ levels shrine
+ {
+  shrine
+  {
+   capability
+   {
+    happiness_bonus bonus 2 ; handwritten
+   }
+  }
+ }
+}'''
+  text=EDB.replace('keep this','caf\xe9').replace('\n','\r\n')+sibling
+  text=text.replace('    armour 1\r\n','    armour 1\n')
+  text=text.replace('   upgrades\r\n','   faction_capability\r\n   {\r\n    recruit_pool "Guard" 1 0.1 2 0 requires factions { england, } ; special\r\n   }\r\n   upgrades\r\n',1)
+  r=balance.run(self.mod,self.p,edb=buildings.parse_text(text))
+  def mask(value):
+   return re.sub(r'(recruit_pool "[^"]+"\s+\S+)(\s+)\S+(\s+)\S+(\s+)\S+',r'\1\2RATE\3MAX\4EXP',value)
+  self.assertEqual(mask(r['text']).encode('latin-1'),mask(text).encode('latin-1'))
+  self.assertTrue(r['text'].endswith(sibling))
+  self.assertTrue(any(e['section']=='faction_capability' for e in r['logs']['pool']['all']))
  def setUp(self):
   self.mod=SimpleNamespace(edu=edu.parse_text(EDU),edb=buildings.parse_text(EDB))
   self.p=sheets.empty_project()
@@ -145,7 +197,7 @@ class ReplenishmentGoldenTests(unittest.TestCase):
   # E=10 alone gives .1; city .09; cavalry .072; Beast E=20 gives .045.
   entries=self.entries(golden_chain('single',['a'],{}, {'a':'city'},self.units))
   self.assertEqual([e['after'] for e in entries],['0.09','0.072','0.045','0.03125','0.03125','0.1125','0.03125','0.03125'])
-  self.assertEqual([e['reason'] for e in entries],['','','','malformed_beast','fractional_pool_preserved','','missing_replenish_tier:T3','missing_replenish_endpoints:Human'])
+  self.assertEqual([e['reason'] for e in entries],['changed','changed','changed','malformed_beast','fractional_pool_preserved','changed','missing_replenish_tier:T3','missing_replenish_endpoints:Human'])
   self.assertEqual([e['status'] for e in entries],['changed','changed','changed','invalid','skipped','changed','skipped','skipped'])
  def test_three_level_linear_reference_golden(self):
   # X=10, 7.5, 5; reciprocals .1, .133333, .2, then each own header.
@@ -209,7 +261,7 @@ class ReplenishmentGoldenTests(unittest.TestCase):
    self.assertEqual(ex['depth'],0);self.assertEqual(ex['max_depth'],0)
    self.assertEqual(ex['branch_policy'],'shortest');self.assertEqual(ex['settlement_policy'],'per_level_header')
    self.assertEqual(ex['outcome'],entry['reason'] or entry['status'])
-   if entry['reason']:self.assertEqual(ex['rounding_steps'],[])
+   if entry['status'] in ('skipped','invalid'):self.assertEqual(ex['rounding_steps'],[])
   ex=entries[5]['explanation']
   self.assertEqual(ex['endpoint_inputs'],{'earliest':'N/A','latest':'8'})
   self.assertEqual((ex['earliest'],ex['latest'],ex['interval']),(8,8,8))
@@ -329,7 +381,7 @@ class LookupGoldenTests(unittest.TestCase):
   for stage in ('experience','pool'):
    self.p['rules'][stage] += [{**r,'Category':'ship'} for r in self.p['rules'][stage] if r['Category']=='infantry']
    entry=next(e for e in self.run_text(stage)['logs'][stage]['all'] if e['unit']=='Unsupported')
-   self.assertEqual(entry['after'],'1');self.assertEqual(entry['reason'],'')
+   self.assertEqual(entry['after'],'1');self.assertEqual(entry['reason'],'changed')
  def test_conflicting_override_outcome_keeps_all_matching_selectors_and_values(self):
   for stage in ('experience','pool'):
    self.p['balance_overrides'].append({'stage':stage,'unit':'Override','building':'lookup','level':'a','value':9})

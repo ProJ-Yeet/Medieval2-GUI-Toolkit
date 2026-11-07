@@ -13029,5 +13029,8 @@
  "sheets.review_more": {
   "one": "{count} weitere Änderung",
   "other": "{count} weitere Änderungen"
- }
+ },
+ "sheets.balance_cancelled": "Balancierung abgebrochen",
+ "sheets.pipeline_order": "Reihenfolge: Aktualisierung und Klassifizierung → Auffüllrate → Erfahrung → Pool. Ausgewählte Schritte laufen in dieser Reihenfolge.",
+ "sheets.balance_groups": "Alle Ergebnisse nach Status, Einheit, Gebäude, Stufe und Feld"
 }

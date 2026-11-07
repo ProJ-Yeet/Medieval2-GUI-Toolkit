@@ -4,6 +4,81 @@ Newest entries first. This records Codex's work for Claude; project status and
 release rules remain in STATE.md and RELEASE.md. Do not assume the working tree's
 other changes belong to Codex.
 
+## 2026-11-07 - Phase 114 implemented and fixture-verified; shared i18n check blocked by concurrent Armory work
+
+- Read root ../AGENTS.md, Phases 109-116/114, archived 112/113 and Finished
+  notes, their handoffs and the 2026-11-06 checkpoint, engine/service/UI,
+  buildings planner/atomic writer and existing tests. No roadmap/status edits.
+- Exit items 1-7: DONE in automated fixtures. Canonical numeric stage order
+  follows a read-only reference refresh/classification pass. Existing Refresh
+  and classification controls remain independent; numeric stages can run alone
+  or together, with pipeline_order in preview/UI and pipeline.json in the ZIP.
+  Each later stage consumes the preceding stage's numeric tokens in one staged
+  document. Refresh validates a deep copy and never mutates caller project data.
+- Added cooperative cancellation at calculation/stage/row/export-file boundaries,
+  using the existing HTTP progress cancellation endpoint independently of the
+  sheet service lock. UI shows Cancel during preview/export, suppresses late
+  cancelled results/downloads, waits for pending edits, and preserves previous
+  staged state. Cancelled/failed balance requests do not persist legacy project
+  migrations. HTTP tests cancel actual running preview AND export requests.
+- Default export remains export_descr_buildings_new.txt; optional _r.txt and
+  _exp.txt, building_structure_log.json, profile/rules and both logs per stage
+  remain. Every outcome now has field, nonempty reason and rule (null when no
+  rule could be selected), plus existing source line and before/after. Malformed
+  early branches retain an invalid entry. pipeline.json records order, refresh,
+  changed_fields and per-stage counts. Tests reconcile these with preview,
+  complete/skip-error logs and the exact exported/applied bytes.
+- Preview groups ALL entries by status/unit/building/level/field, including rows
+  beyond the compact audit's 100-entry limit. Group entries carry concise
+  line/before/after/reason/rule details; full explanations stay in the capped
+  audit and complete ZIP logs. Node verifies all four statuses and escaping.
+- Apply flushes pending edits and exposes the existing Log + undo UI. Actual
+  unitsheets.js handlers plus settings.js doUndo run against real fixture HTTP
+  routes for preview/export/one Apply/Undo; EDB bytes are restored exactly.
+  Existing BuildingPlan/apply_edit owns backups, manifests and Log records.
+  My Changes capture and clearing after Undo are verified. A failed log write
+  now refreshes My Changes after rolling back the EDB, avoiding a phantom edit.
+- Tests FIRST: initial new engine/service run had 1 failure and 6 errors across
+  50 tests: empty successful-entry reasons, missing cancellation parameters,
+  pipeline_order and pipeline.json. Both initial new Node checks failed on the
+  absent Cancel control and pending-edit/Log behavior. Later tests FIRST failed
+  for phantom My Changes after failed Apply, persisted legacy migration after
+  cancelled preview, and full audit duplication in large grouped previews.
+  Each now passes. Mid-write interruption, sibling/section/mixed-newline byte
+  preservation, HTTP cancellation and actual frontend Apply/Log Undo passed
+  when first added; existing atomic writing needed no modification.
+- Files changed by THIS run: unittransfer/edb_balance.py,
+  unittransfer/unit_sheets.py, unittransfer/server.py (only unit_sheets dispatch),
+  web/js/unitsheets.js, web/i18n/en.json, tests/test_edb_balance.py,
+  tests/test_sheet_pipeline.py, tests/test_unit_sheets_ui.js, this handoff.
+  Concurrent Armory hunks in server.py and all protected Armory files/tests were
+  left untouched, as were pre-existing TWCenter index deletions/untracked files.
+- New string IDs, English ONLY: sheets.balance_cancelled,
+  sheets.pipeline_order, sheets.balance_groups. New catalogue lines have no
+  indentation. No other web/i18n catalogue or dev/i18n file was edited. Claude
+  translates these strings. No new dependencies or added em dash characters.
+- Required checks with UT_NO_BROWSER=1: python -m tests.test_edb_balance
+  (35 passed), tests.test_sheet_pipeline (23 passed), tests.test_sheet_ops
+  (41 passed), tests.test_unit_sheets (36 passed), tests.test_sheet_native
+  (8 passed), tests.test_web_modules (130/130 passed),
+  node tests/test_unit_sheets_ui.js (all checks passed), git diff --check
+  (exit 0). tests.test_i18n ran twice and FAILED 42/45: missing concurrent
+  armory.* UI IDs and eng.armunit.* IDs/templates, including invalid_slot,
+  choose_character and character_changed. The later run also sees the new
+  armory.anim_scale* family. No Phase 114 ID is missing or drifting. This shared
+  checkout-wide gate still needs rerunning after the other run's catalogue
+  work is reconciled; no passing global i18n result is claimed.
+- Python used the existing ignored .tmp/phase110-step4-runner/sitecustomize.py
+  via PYTHONPATH for the documented sandbox temporary-directory mode issue;
+  no runner changes. Only self-cleaning TemporaryDirectory fixtures and local
+  fixture HTTP servers were used; servers were shut down and joined. No real
+  mod, original reference, browser or installed-game verification was used.
+- Live account checks succeeded at 8%, 16%, 21% and 25% used in the five-hour window,
+  below the authorized 90%-used stop. Weekly usage is not the stop threshold.
+  No credits spent/reset. No commit, tag, build or release. No unresolved legacy
+  policy question arose. Cancellation is cooperative, not process termination;
+  no power-loss or cross-program final-rename locking guarantee is claimed.
+
 ## 2026-11-07 - Phase 113 completed, ready for Claude review
 
 - Finished experience/maximum-pool acceptance with fixture-only golden tests

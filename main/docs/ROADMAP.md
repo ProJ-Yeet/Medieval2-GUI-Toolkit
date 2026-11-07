@@ -1433,8 +1433,8 @@ or bulk copy of generated HTML/assets.
 reference tables and Fynn JSON export, plus the `Unit script` workbook/converters,
 with editable sheets inside our tool, deep filtering and mass editing. This is
 authorized for implementation on 2026-11-06, progressing in numbered increments
-with verification at each checkpoint. Phases 109-113 are complete; 114 is
-active and not yet accepted as complete. Research and exact source locations are in
+with verification at each checkpoint. Phases 109-114 are complete; 115-116 are
+planned. Research and exact source locations are in
 [upstream/EDB_SHEETS_WORKFLOW.md](upstream/EDB_SHEETS_WORKFLOW.md).
 
 Use the toolkit's existing EDU/EDB parsers and edit planners. Read the selected
@@ -1444,34 +1444,12 @@ and rule tables per mod as project data, not invented EDU fields. Share unit
 identity, projects and staging contracts with 102-108, but this track can begin
 independently after its own audit. Existing priorities remain unchanged.
 
-**Implementation checkpoint, 2026-11-07:** 109-113 complete (archived).
+**Implementation checkpoint, 2026-11-07:** 109-114 complete (archived).
 Typed staging/recipes, native review/apply, all three EDB stages, audit ZIP
-exports and backed-up Apply/Undo are implemented and fixture-tested; 114
-remains active until their full acceptance criteria are verified, 115-116
-planned. Cancellation, XLSX/native sheet interchange and non-EUR/builder
-integration remain. See CODEX_HANDOFF.md for exact checks, changed files and
+exports, cancellation and backed-up Apply/Undo are implemented and
+fixture-tested; 115-116 planned. XLSX/native sheet interchange and
+non-EUR/builder integration remain. See CODEX_HANDOFF.md for exact checks, changed files and
 limits.
-
-## Phase 114 - Pipeline preview, staged exports, complete logs and Apply/Undo
-
-- Offer reference refresh/classification -> replenish -> experience -> pool as a
-  pipeline with individual-stage controls and cancellation. Run rules against a
-  shared staged document so calculations are reproducible and order is visible.
-- Default export is `export_descr_buildings_new.txt`. Optional troubleshooting
-  exports retain `_r.txt` and `_exp.txt`; expose the structure report and all-entry
-  plus skip/error-only logs for each stage with reason, source line, rule and
-  before/after values. Cover every matched/skipped/error entry, including early
-  branches the original scripts do not always log.
-- Preview all proposed changes grouped by unit/building/level/field; distinguish
-  changed, unchanged, skipped and invalid. Preserve original comments, conditions,
-  encoding/newlines and unrelated capability/sibling blocks. Check for external
-  file edits between preview and apply instead of applying stale row positions.
-- Apply once through existing EDB planners, backups, My Changes and Log Undo.
-  Export-only remains available; no copy-overwrite workflow or external process
-  is required. Re-running with unchanged inputs must not accumulate edits/comments.
-- **Depends on:** 111 and 113. **Exit:** single-stage/full-pipeline/export/apply/undo
-  work on temporary fixtures; interrupted/invalid runs cannot leave half an EDB
-  written, and counts reconcile with the complete and skip/error logs.
 
 ## Phase 115 - CSV, Excel and Fynn interchange without destructive defaults
 

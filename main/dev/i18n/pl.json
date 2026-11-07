@@ -13757,5 +13757,8 @@
   "other": "Jeszcze {count} zmiany"
  },
  "sheets.profile_rules": "Zasady zgodności",
- "sheets.settlement_exception": "Typ, miasto lub zamek, jest odczytywany osobno dla każdego poziomu budynku. Poziom bez żadnego z tych oznaczeń nie otrzymuje mnożnika miasta. Pierwotne skrypty EDB stosowały typ pierwszego poziomu do całego łańcucha."
+ "sheets.settlement_exception": "Typ, miasto lub zamek, jest odczytywany osobno dla każdego poziomu budynku. Poziom bez żadnego z tych oznaczeń nie otrzymuje mnożnika miasta. Pierwotne skrypty EDB stosowały typ pierwszego poziomu do całego łańcucha.",
+ "sheets.balance_cancelled": "Anulowano równoważenie",
+ "sheets.pipeline_order": "Kolejność: odświeżanie i klasyfikacja → tempo uzupełniania → doświadczenie → pula. Wybrane etapy są wykonywane w tej kolejności.",
+ "sheets.balance_groups": "Wszystkie wyniki pogrupowane według kategorii: status, jednostka, budynek, poziom i pole"
 }

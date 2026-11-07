@@ -14259,3 +14259,26 @@ staging store. `tests/test_sheet_ops.py`, `test_unit_sheets.py`,
 
 **Finished 2026-11-07.** Golden experience and max-pool cases from the legacy scripts: the T5 cap, Beast X as race X and category beast, each unit tier reading its own column, and named outcomes for BG or missing tiers, missing rows, columns and values, unsupported categories and conflicting keys or overrides. Pool below 1 skips max pool but not experience. Each stage changes only its own number, and every outcome records the table key, cell and any override. Categories count as supported when the project's own tables name them.
 
+## Phase 114 - Pipeline preview, staged exports, complete logs and Apply/Undo
+
+- Offer reference refresh/classification -> replenish -> experience -> pool as a
+  pipeline with individual-stage controls and cancellation. Run rules against a
+  shared staged document so calculations are reproducible and order is visible.
+- Default export is `export_descr_buildings_new.txt`. Optional troubleshooting
+  exports retain `_r.txt` and `_exp.txt`; expose the structure report and all-entry
+  plus skip/error-only logs for each stage with reason, source line, rule and
+  before/after values. Cover every matched/skipped/error entry, including early
+  branches the original scripts do not always log.
+- Preview all proposed changes grouped by unit/building/level/field; distinguish
+  changed, unchanged, skipped and invalid. Preserve original comments, conditions,
+  encoding/newlines and unrelated capability/sibling blocks. Check for external
+  file edits between preview and apply instead of applying stale row positions.
+- Apply once through existing EDB planners, backups, My Changes and Log Undo.
+  Export-only remains available; no copy-overwrite workflow or external process
+  is required. Re-running with unchanged inputs must not accumulate edits/comments.
+- **Depends on:** 111 and 113. **Exit:** single-stage/full-pipeline/export/apply/undo
+  work on temporary fixtures; interrupted/invalid runs cannot leave half an EDB
+  written, and counts reconcile with the complete and skip/error logs.
+
+**Finished 2026-11-07.** The pipeline runs refresh and classification, replenish, experience and pool in that order on one staged document, whole or per stage, and shows the order. Preview and export can be cancelled from the window; a cancelled or failed run writes nothing. Every entry is logged with reason, line, rule and before/after, counts reconcile across preview, logs and export, and the preview groups outcomes by status, unit, building, level and field. Apply goes once through backups, My Changes and Log Undo from the window, refuses an EDB edited since the preview, and a failure mid-write leaves the original.
+

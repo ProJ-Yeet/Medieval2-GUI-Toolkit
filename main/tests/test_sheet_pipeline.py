@@ -1,4 +1,7 @@
 import base64,copy,io,json,tempfile,unittest,zipfile
+import subprocess,threading,urllib.request,urllib.error
+from contextlib import contextmanager
+from types import SimpleNamespace
 from pathlib import Path
 from unittest.mock import patch
 from unittransfer import buildings,config,edb_balance as balance,unit_sheets as sheets
@@ -8,9 +11,174 @@ from tests import test_edb_balance as fixture
 EDB,EDU=fixture.EDB,fixture.EDU
 
 class PipelineTests(unittest.TestCase):
+ @contextmanager
+ def http_fixture(self):
+  from unittransfer import server
+  class FixtureHandler(server.Handler):
+   registry=SimpleNamespace(get=lambda name:Mod(self.data.parent),invalidate=lambda name:None)
+  httpd=server._Server(('127.0.0.1',0),FixtureHandler)
+  thread=threading.Thread(target=httpd.serve_forever,daemon=True);thread.start()
+  try:yield 'http://127.0.0.1:'+str(httpd.server_port)
+  finally:httpd.shutdown();httpd.server_close();thread.join(5)
+ def test_normal_ui_preview_export_apply_and_log_undo_over_http(self):
+  # Run the actual UI handlers, including settings.js Log Undo, against the
+  # actual HTTP routes. Only DOM painting primitives are represented by stubs.
+  script=r'''
+const fs=require('fs'),vm=require('vm'),assert=require('assert');
+const base=process.argv[1],calls=[];
+const c={console,Set,Map,Promise,setTimeout,clearTimeout,structuredClone,confirm:()=>true,
+ state:{src:'fixture'},modal:{innerHTML:'',querySelector:()=>null,
+ querySelectorAll:s=>s==='.us-stage:checked'?['pool','experience','replenish'].map(value=>({value})):[]},
+ overlay:{classList:{add(){}}},document:{getElementById:()=>({checked:true}),createElement:()=>({click(){}})},
+ tt:(key,p)=>key,ttA:key=>key,esc:s=>String(s),toast(){},errText:e=>e.message,
+ URL:{createObjectURL:()=>'',revokeObjectURL(){}},Blob,Uint8Array,atob,
+ api:{post:async(url,body)=>{calls.push({url,body});const r=await fetch(base+url,{method:'POST',
+ headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});return r.json();}}};
+vm.createContext(c);
+vm.runInContext(fs.readFileSync('web/js/unitsheets.js','utf8'),c);
+vm.runInContext(fs.readFileSync('web/js/settings.js','utf8'),c);
+(async()=>{
+ await c.unitSheetsOpen();await c.unitSheetsBalancePreview();
+ const p=vm.runInContext('USHEET.balance',c);assert(p.changed_fields>0);
+ assert.deepEqual(Array.from(p.pipeline_order),['refresh','classification','replenish','experience','pool']);
+ await c.unitSheetsBalanceExport();await c.unitSheetsBalanceApply();
+ const id=vm.runInContext('USHEET.lastBalanceApply',c);assert(id);
+ assert(c.unitSheetsBalanceHtml().includes('openLog()'));
+ c.openLog=()=>{};await c.doUndo(id);
+ assert(calls.some(x=>x.url==='/api/undo'&&x.body.id===id));
+ const refused=calls.filter(x=>x.url.endsWith('balance_apply'));assert.equal(refused.length,1);
+})().catch(e=>{console.error(e);process.exitCode=1;});
+'''
+  with self.http_fixture() as base:
+   result=subprocess.run(['node','-e',script,base],capture_output=True,text=True,timeout=30)
+  self.assertEqual(result.returncode,0,result.stdout+result.stderr)
+  self.assertEqual(self.mod.edb_path.read_bytes(),self.original)
+  records=config.load_log();self.assertEqual(len(records),1);self.assertTrue(records[0]['undone'])
+ def test_http_cancellation_is_not_blocked_by_running_sheet_lock(self):
+  from unittransfer import server
+  entered=threading.Event();release=threading.Event();calculate=balance.calculate
+  def gate(*args,**kwargs):
+   entered.set();self.assertTrue(release.wait(5));return calculate(*args,**kwargs)
+  def post(base,path,body):
+   request=urllib.request.Request(base+path,data=json.dumps(body).encode(),headers={'Content-Type':'application/json'})
+   opener=urllib.request.build_opener(urllib.request.ProxyHandler({}))
+   try:
+    with opener.open(request,timeout=10) as response:return json.load(response)
+   except urllib.error.HTTPError as error:return json.load(error)
+  for action in ('balance_preview','balance_export'):
+   body={**self.body(),'mod':'fixture','job':'fixture-'+action};before=sheets.project_path(self.mod).read_bytes();result=[]
+   entered.clear();release.clear()
+   with self.http_fixture() as base,patch.object(balance,'calculate',gate):
+    thread=threading.Thread(target=lambda:result.append(post(base,'/api/unit_sheets/'+action,body)))
+    thread.start()
+    try:
+     self.assertTrue(entered.wait(5))
+     self.assertTrue(post(base,'/api/progress/cancel',{'job':body['job']})['ok'])
+    finally:release.set();thread.join(10)
+   self.assertFalse(thread.is_alive());self.assertIn('cancel',result[0]['error'].lower())
+   self.assertFalse(server._progress_cancelled(body['job']))
+   self.assertEqual(self.mod.edb_path.read_bytes(),self.original)
+   self.assertEqual(sheets.project_path(self.mod).read_bytes(),before)
+ def test_apply_is_captured_by_my_changes_and_undo_clears_it(self):
+  from unittransfer import changesets
+  config.save_settings(med2_root=str(self.root))
+  p=sheets.service(self.mod,'balance_preview',self.body())
+  r=sheets.service(self.mod,'balance_apply',{**self.body(),'plan_token':p['plan_token']})
+  summary=changesets.summary(self.mod)
+  self.assertEqual([f['rel'] for f in summary['files']],['export_descr_buildings.txt'])
+  self.assertEqual(summary['files'][0]['disk'],'same')
+  undo(r['record']['id']);self.assertEqual(changesets.summary(self.mod)['files'],[])
+ def test_failed_apply_rolls_back_my_changes_too(self):
+  from unittransfer import changesets
+  config.save_settings(med2_root=str(self.root))
+  p=sheets.service(self.mod,'balance_preview',self.body())
+  with patch.object(config,'append_log',side_effect=OSError('full disk')):
+   with self.assertRaises(OSError):
+    sheets.service(self.mod,'balance_apply',{**self.body(),'plan_token':p['plan_token']})
+  self.assertEqual(self.mod.edb_path.read_bytes(),self.original)
+  self.assertEqual(changesets.summary(self.mod)['files'],[])
+ def test_large_grouped_preview_covers_rows_beyond_compact_log_limit(self):
+  text=self.original.replace(b'    armour 1',b'    recruit_pool "Guard" 1 0.1 2 0\r\n'*110+b'    armour 1')
+  self.mod.edb_path.write_bytes(text)
+  p=sheets.service(self.mod,'balance_preview',self.body())
+  for stage in balance.STAGES:
+   self.assertTrue(p['logs'][stage]['truncated']);self.assertEqual(len(p['logs'][stage]['all']),100)
+   grouped=[e for g in p['groups'] for e in g['entries'] if e['stage']==stage]
+   self.assertEqual(len(grouped),114)
+   self.assertTrue(all('explanation' not in e for e in grouped))
+   self.assertTrue(all(all(k in e for k in ('line','before','after','reason','rule')) for e in grouped))
+   self.assertEqual(sum(p['logs'][stage]['counts'].values()),len(grouped))
+  self.assertEqual(self.mod.edb_path.read_bytes(),text)
+ def test_failed_or_invalid_runs_do_not_change_saved_state(self):
+  body=self.body();before=sheets.project_path(self.mod).read_bytes()
+  for action in ('balance_preview','balance_export'):
+   with patch.object(balance,'calculate',side_effect=RuntimeError('calculation interrupted')):
+    with self.assertRaisesRegex(RuntimeError,'interrupted'):sheets.service(self.mod,action,body)
+   with self.assertRaises(sheets.SheetError):sheets.service(self.mod,action,{**body,'stages':['unknown']})
+   self.assertEqual(self.mod.edb_path.read_bytes(),self.original)
+   self.assertEqual(sheets.project_path(self.mod).read_bytes(),before)
+ def test_cancelled_preview_does_not_persist_legacy_project_migration(self):
+  legacy=sheets.load_project(self.mod)
+  for rows in legacy['rules'].values():
+   for row in rows:row.pop('id',None)
+  path=sheets.project_path(self.mod);path.write_text(json.dumps(legacy),encoding='utf-8')
+  before=path.read_bytes();p=sheets.load_project(self.mod,persist_migration=False)
+  body={'revision':sheets.revision(p),'source_token':sheets.source_token(self.mod)}
+  with self.assertRaises(sheets.SheetError):sheets.service(self.mod,'balance_preview',body,cancelled=lambda:True)
+  self.assertEqual(path.read_bytes(),before)
+ def test_cancel_preview_and_export_preserve_edb_and_project(self):
+  for action in ('balance_preview','balance_export'):
+   with self.subTest(action=action):
+    body=self.body();before=sheets.project_path(self.mod).read_bytes();calls=[]
+    def cancelled():
+     calls.append(1);return len(calls)>7
+    with self.assertRaisesRegex(sheets.SheetError,'cancel'):
+     sheets.service(self.mod,action,body,cancelled=cancelled)
+    self.assertEqual(self.mod.edb_path.read_bytes(),self.original)
+    self.assertEqual(sheets.project_path(self.mod).read_bytes(),before)
+ def test_cancel_during_zip_generation_discards_bundle(self):
+  cancelled=False;write=zipfile.ZipFile.writestr
+  def interrupt(bundle,*args,**kwargs):
+   nonlocal cancelled
+   result=write(bundle,*args,**kwargs);cancelled=True;return result
+  with patch.object(zipfile.ZipFile,'writestr',interrupt):
+   with self.assertRaisesRegex(sheets.SheetError,'cancel'):
+    sheets.service(self.mod,'balance_export',self.body(),cancelled=lambda:cancelled)
+  self.assertEqual(self.mod.edb_path.read_bytes(),self.original)
+ def test_counts_preview_complete_logs_and_export_agree(self):
+  body=self.body();p=sheets.service(self.mod,'balance_preview',body)
+  exported=sheets.service(self.mod,'balance_export',{**body,'intermediate':True})
+  with zipfile.ZipFile(io.BytesIO(base64.b64decode(exported['text']))) as z:
+   summary=json.loads(z.read('pipeline.json'))
+   self.assertEqual(summary['pipeline_order'],p['pipeline_order'])
+   self.assertEqual(summary['changed_fields'],p['changed_fields'])
+   self.assertEqual(p['changed_fields'],sum(logs['counts'].get('changed',0) for logs in p['logs'].values()))
+   self.assertIn('export_descr_buildings_exp.txt',z.namelist())
+   for stage in balance.STAGES:
+    entries=json.loads(z.read('logs/'+stage+'_all.json'))
+    self.assertEqual(summary['counts'][stage],p['logs'][stage]['counts'])
+    self.assertEqual(sum(p['logs'][stage]['counts'].values()),len(entries))
+    self.assertEqual(json.loads(json.dumps(p['logs'][stage]['all'])),entries)
+   applied=sheets.service(self.mod,'balance_apply',{**body,'plan_token':p['plan_token']})
+   self.assertEqual(self.mod.edb_path.read_bytes(),z.read('export_descr_buildings_new.txt'))
+  self.assertEqual(len(config.load_log()),1)
+  self.assertEqual(sheets.service(self.mod,'balance_preview',self.body())['changed_fields'],0)
+  undo(applied['record']['id']);self.assertEqual(self.mod.edb_path.read_bytes(),self.original)
+ def test_mid_write_failure_keeps_original_bytes(self):
+  preview=balance.preview(self.mod,self.project);fdopen=buildings.os.fdopen
+  class Interrupted:
+   def __init__(self,fd,*args):self.out=fdopen(fd,*args)
+   def __enter__(self):return self
+   def __exit__(self,*args):self.out.close()
+   def write(self,blob):self.out.write(blob[:17]);raise OSError('interrupted mid-write')
+  with patch.object(buildings.os,'fdopen',Interrupted):
+   with self.assertRaisesRegex(OSError,'mid-write'):
+    balance.apply_preview(self.mod,self.project,None,preview['plan_token'])
+  self.assertEqual(self.mod.edb_path.read_bytes(),self.original)
+  self.assertEqual(list(self.data.glob('*.tmp')),[]);self.assertEqual(config.load_log(),[])
  def setUp(self):
   self.tmp=tempfile.TemporaryDirectory();self.addCleanup(self.tmp.cleanup);self.root=Path(self.tmp.name)
-  self.data=self.root/'fixture/data';self.data.mkdir(parents=True)
+  self.data=self.root/'mods/fixture/data';self.data.mkdir(parents=True)
   (self.data/'export_descr_unit.txt').write_bytes(EDU.encode('latin-1'))
   self.original=EDB.replace('keep this','café').replace('\n','\r\n').encode('latin-1')
   (self.data/'export_descr_buildings.txt').write_bytes(self.original)

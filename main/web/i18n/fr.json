@@ -13153,5 +13153,8 @@
   "one": "{count} modification supplémentaire",
   "many": "{count} modifications supplémentaires",
   "other": "{count} modifications supplémentaires"
- }
+ },
+ "sheets.balance_cancelled": "Équilibrage annulé",
+ "sheets.pipeline_order": "Ordre : actualisation et classification → taux de reconstitution → expérience → réserve. Les étapes sélectionnées suivent cet ordre.",
+ "sheets.balance_groups": "Tous les résultats par statut, unité, bâtiment, niveau et champ"
 }

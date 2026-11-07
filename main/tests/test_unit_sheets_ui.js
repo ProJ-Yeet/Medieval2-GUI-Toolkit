@@ -87,6 +87,42 @@ async function safetyRegressions(){
   try{await run();console.log('PASS: '+name);}
   catch(error){failures.push(name+': '+error.message);}
  }
+ await check('Running preview and export cancel without publishing late results',async()=>{
+  for(const action of ['Preview','Export']){
+   const h=harness();await h.c.unitSheetsOpen();
+   h.c.modal.querySelectorAll=selector=>selector==='.us-stage:checked'?[{value:'pool'},{value:'replenish'}]:[];
+   h.elements.usIntermediate={checked:true};let finish,request,cancel;
+   h.c.api.post=(url,body)=>{
+    if(url==='/api/progress/cancel'){cancel=body;return Promise.resolve({ok:true});}
+    request=body;return new Promise(resolve=>{finish=resolve;});
+   };
+   const pending=h.c['unitSheetsBalance'+action]();
+   await new Promise(r=>setTimeout(r,5));
+   assert(h.c.unitSheetsBalanceHtml().includes('unitSheetsBalanceCancel()'));
+   assert(request.job);await h.c.unitSheetsBalanceCancel();
+   assert.equal(cancel.job,request.job);
+   finish({changed_fields:9});await pending;
+   assert(!h.get('USHEET.balance'));assert(!h.get('USHEET.busy'));
+  }
+ });
+ await check('Balance Apply flushes edits and exposes existing Log Undo',async()=>{
+  const h=harness();await h.c.unitSheetsOpen();h.c.confirm=()=>true;
+  h.set("USHEET.balance={changed_fields:2,stages:['pool'],plan_token:'reviewed'}");
+  let flushed=false,body;
+  h.c.unitSheetsFlush=async()=>{flushed=true;};
+  h.c.api.post=async(url,b)=>{assert(flushed);body=b;return {record:{id:'fixture-log'}};};
+  await h.c.unitSheetsBalanceApply();
+  assert.equal(body.plan_token,'reviewed');assert.deepEqual(body.stages,['pool']);
+  assert.equal(h.get('USHEET.lastBalanceApply'),'fixture-log');
+  assert(h.c.unitSheetsBalanceHtml().includes('openLog()'));
+ });
+ await check('Grouped preview exposes all statuses and escapes group keys',async()=>{
+  const h=harness();await h.c.unitSheetsOpen();
+  h.set("USHEET.balance={profile:{},logs:{},structure:[],pipeline_order:['refresh','classification','pool'],groups:['changed','unchanged','skipped','invalid'].map(status=>({status,unit:'<Guard>',building:'barracks',level:'hut',field:'maximum',entries:[{stage:'pool',line:7,before:'2',after:'4',reason:status,rule:['Human','T1']}]}))}");
+  const html=h.c.unitSheetsBalanceHtml();
+  for(const status of ['changed','unchanged','skipped','invalid'])assert(html.includes(status+' / &lt;Guard&gt; / barracks / hut / maximum'));
+  assert(!html.includes('<Guard>'));assert(html.includes('refresh → classification → pool'));
+ });
  await check('Balance shows effective multipliers and compatibility policies before preview',async()=>{
   const h=harness();await h.c.unitSheetsOpen();
   h.set("USHEET.data.balance_effective={city_multiplier:0.9,cavalry_multiplier:0.8,branch_policy:'shortest',fractional_pool_exception:true};USHEET.data.balance_profile_rules={settlement_policy:'per_level_header',unspecified_city_multiplier:1,malformed_beast_policy:'report',missing_endpoint_policy:'use_other_endpoint',beast_cavalry_policy:'native_category'}");
@@ -674,7 +710,7 @@ async function safetyRegressions(){
  const b=harness();await b.c.unitSheetsOpen();b.set("USHEET.view='rules'");
  // Model the DOM replacing its checkboxes whenever the balance panel repaints.
  let stages=['replenish'];
- b.c.modal.querySelectorAll=()=>stages.map(value=>({value}));
+ b.c.modal.querySelectorAll=selector=>selector==='.us-stage:checked'?stages.map(value=>({value})):[];
  Object.defineProperty(b.c.modal,'innerHTML',{set(html){stages=[...html.matchAll(/<input[^>]*class="us-stage"[^>]*>/g)].filter(m=>/\bchecked\b/.test(m[0])).map(m=>m[0].match(/value="([^"]+)"/)[1]);}});
  b.c.api.post=async(url,body)=>{
   b.calls.push(structuredClone(body));

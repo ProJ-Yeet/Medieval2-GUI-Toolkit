@@ -13535,5 +13535,8 @@
   "one": "{count} cambio más",
   "many": "{count} cambios más",
   "other": "{count} cambios más"
- }
+ },
+ "sheets.balance_cancelled": "Proceso de equilibrado cancelado",
+ "sheets.pipeline_order": "Orden: actualización y clasificación → tasa de reposición → experiencia → reserva. Las etapas seleccionadas se ejecutan en este orden.",
+ "sheets.balance_groups": "Todos los resultados por estado, unidad, edificio, nivel y campo"
 }

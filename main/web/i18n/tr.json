@@ -12546,5 +12546,8 @@
  "sheets.review_more": {
   "one": "{count} değişiklik daha",
   "other": "{count} değişiklik daha"
- }
+ },
+ "sheets.balance_cancelled": "Dengeleme işlemi iptal edildi",
+ "sheets.pipeline_order": "Sıra: yenileme ve sınıflandırma → takviye oranı → deneyim → havuz. Seçilen aşamalar bu sırayla çalışır.",
+ "sheets.balance_groups": "Durum, birim, bina, seviye ve alana göre tüm sonuçlar"
 }

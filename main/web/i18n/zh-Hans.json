@@ -12338,5 +12338,8 @@
  "sheets.review_more": {
   "other": "另有 {count} 处更改"
  },
- "sheets.mode_selected": "已选择"
+ "sheets.mode_selected": "已选择",
+ "sheets.balance_cancelled": "平衡调整已取消",
+ "sheets.pipeline_order": "顺序：刷新与分类 → 补充率 → 经验 → 池。所选阶段按此顺序执行。",
+ "sheets.balance_groups": "按状态、部队、建筑、等级和字段分组的所有结果"
 }
