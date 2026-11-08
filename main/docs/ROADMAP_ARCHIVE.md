@@ -14399,3 +14399,19 @@ staging store. `tests/test_sheet_ops.py`, `test_unit_sheets.py`,
 
 **Finished 2026-11-08.** `builder_calculator.py` with its rules data (`builder_rules.json`, `docs/BUILDER_RULES.md`): deterministic, never changes its inputs, filters what the EDU cannot hold, writes nothing. Upgrade bonuses come from the engine, per mod: vanilla +3 attack and +2 armour per level (the game's unit card shows +1), melee only; EOP mods use their luaPluginScript.lua setWeaponBonusModifier / setArmourUpgradeModifier (DaC EUR: +1 and +1); M2EX mods use weapon_upgrade_points / armour_upgrade_points from their descr_caps_ex.txt, else +3 and +2, melee only. On the user's word, the Guards subtype follows the builder's help: +2 Defense Skill and -1 melee Attack (the upstream calculation uses +1). An entered cost is still multiplied by the equipment grade. `sp` stays quarantined.
 
+## Phase 104 - Guided designer and editable presets
+
+- Add the designer entry point to the Unit Editor/New unit workflow. Build the
+  archetype, subtype, weapon, equipment, armor-layer, offhand, mounted and grouped
+  attribute controls using our UI and translations.
+- Offer editable presets with reset-to-profile defaults, manual overrides and
+  eligibility explanations. Keep typed fields focused during live recalculation.
+- Show live calculated stats/costs, contribution explanations and an EDU Code
+  View preview; integrate undo/redo and save/reopen of the draft.
+- **Depends on:** 103. **Exit:** infantry, missile, cavalry and two-handed example
+  designs work interactively; changing a preset/grade preserves intentional
+  overrides, and undo/reopen restore the design. This phase previews and saves
+  drafts; applying changes to a unit waits for 106.
+
+**Finished 2026-11-08.** The Unit Editor's Designer tab opens the guided designer (`builder.js`, `builder_designer.py`): a rules profile (native values or Combat Reforged), archetype, quality, category, class, equipment grade, subtypes, weapons, armour layers, mounted equipment, attributes, terrain and formation, with the unit's EDU block below. Infantry, missile, cavalry and two-handed designs work; preset and grade changes keep intentional overrides; undo, redo, save and reopen restore a draft. Drafts only: applying a design is 106. Checked on DaC EUR (Mirkwood Bodyguard). Left for a person in a browser: layout, focus, IME, keyboard and slow responses. Some labels are still key-like ("Trait guards", "Armour layer1", "Sec heat") and the existing values show as raw JSON.
+

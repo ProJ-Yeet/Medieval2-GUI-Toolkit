@@ -4,6 +4,602 @@ Newest entries first. This records Codex's work for Claude; project status and
 release rules remain in STATE.md and RELEASE.md. Do not assume the working tree's
 other changes belong to Codex.
 
+## 2026-11-08 - Phase 104: guided designer and editable presets
+
+Exit checklist against Phase 104's own exit line:
+
+- DONE in Node VM interactions and fixture-only Python service tests: infantry,
+  missile, cavalry and two-handed designs recalculate and show base stats,
+  costs, contribution explanations, engine upgrade notes and read-only EDU.
+  Real browser interaction and layout have not been verified.
+- DONE: preset and grade changes retain explicit input overrides, false/zero
+  values, final native pins and edited snapshots. Reset affects only the chosen
+  preset. Role eligibility is explained without silently changing the design.
+- DONE: shared Ctrl+Z/Ctrl+Y and visible Undo/Redo restore design packets.
+  Saving/reopening preserves the packet for an exact existing unit or a detached
+  New unit draft. Native values do not acquire a balance profile automatically.
+- DONE: previews and saves do not stage stats or write installed mod files.
+  There is no designer Apply route. Phase 106 remains responsible for Apply.
+
+Changes and why:
+
+- The Unit Editor has a Guided designer tab; New unit offers the same designer.
+  It uses the existing modal, form patterns, translation helpers and undo scopes.
+  Opening shows donor values and requires an explicit native or Combat Reforged
+  profile choice when no design exists. Existing editor edits remain separate.
+- Controls cover archetypes/subtypes, quality/grade, both weapons, armor
+  ensembles/base/layers, offhand/legacy shields, mounts, grouped unit/weapon/
+  terrain attributes, hiding/formation, manual inputs and final stat pins.
+  Editable profile rows retain their original defaults separately from patches.
+  Loadout arrangements select base/layer profiles; edit their numbers through
+  those families. Non-calculated preset properties remain design data.
+- Every text oninput updates only dependent results/status, eligibility or
+  filtered preset choices/fields. It never replaces that text control or the
+  form. A request sequence rejects stale previews. Error replies are checked
+  explicitly because this app's api.post returns server error objects.
+- POST /api/builder/load, /preview and /save reuse the Phase 102 packet, 103
+  calculator, shared sheet field mapper and EDU editor. Saves use the sheet
+  project lock, revision/source checks and atomic config writer. Attachments
+  use units[exact_id].builder_design; builder_new_design holds one detached
+  draft per mod. No fictional sheet row or separate project store is created.
+- EDU is a projection of supported base columns, not a complete new-unit plan.
+  Donor comments and untouched tuple members remain; missing fields and detached
+  designs use preview placeholders. Weapon runtime tuple members, models,
+  localization and prerequisites still require Phase 106's reviewed planner.
+  Upgrade previews remain metadata, with the existing unit-card +1 caveat beside
+  values and configuration sources. Guards and grade rules are unchanged.
+- Malformed/stale saves leave config intact. Failed previews clear old results;
+  failed saves retain the working design. A save response does not replace the
+  current packet, preserving edits made while it was in flight. Unknown snapshot
+  keys remain data and cannot create inline preset-editor handlers.
+- Closing the modal deactivates the designer undo scope and invalidates pending
+  preview replies. Card-coverage warning rendering was not changed.
+
+Affected files:
+
+- `unittransfer/builder_designer.py`
+- `unittransfer/server.py`
+- `web/js/builder.js`
+- `web/js/editor.js`
+- `web/js/settings.js`
+- `web/js/undo.js`
+- `web/js/core.js`
+- `web/index.html`
+- `web/i18n/en.json`
+- `tests/test_builder_designer.py`
+- `tests/test_builder_designer_ui.js`
+- `docs/CODEX_HANDOFF.md`
+
+Tests first and checks actually run:
+
+- Initial Python run, before implementation: all 6 new tests ERROR with missing
+  builder_designer ImportError. Initial Node run failed ENOENT for builder.js.
+- Additional tests before their fixes: the first assertion failure was false
+  hiding after redraw; tightening the grip assertion then exposed the inherited
+  two-handed grip failure. The same pre-fix group also covered automatic
+  formation, blank-category inheritance and editing overridden selections;
+  those assertions were reached and passed after the fixes, not separately
+  recorded as initial failures. Sparse donor preview failed on a missing shared
+  tuple member. The preset-filter test first failed because visible selection
+  and edited row disagreed. All now pass.
+- Harness corrections: used shared field extraction instead of a nonexistent
+  Unit.attack property; tightened the checkbox assertion so this.checked in a
+  handler cannot masquerade as a checked HTML attribute. Sandbox Windows temp
+  folders denied child writes; the untracked .tmp/run_phase104.py runner supplies
+  workspace scratch directories with mode 0777 through tempfile.mkdtemp. It
+  changes no production code or existing test assertions. UT_NO_BROWSER=1.
+- `python .tmp/run_phase104.py unittest tests.test_builder_designer
+  tests.test_builder_calculator tests.test_builder_contract
+  tests.test_card_coverage tests.test_unit_sheets`: 89 tests PASS (8 new service
+  tests, including HTTP route/error checks). Synthetic fixtures only.
+- `python .tmp/run_phase104.py tests.test_web_modules`: 130/130 PASS.
+- `python .tmp/run_phase104.py tests.test_i18n`: 45/45 PASS.
+  Initial catalogue/lint failures were missing Back, technical enum literals,
+  attribute-only markup fragments and one generated unused label; corrected.
+- `node tests/test_builder_designer_ui.js`: PASS. Uses rendered handlers and the
+  real shared undo stack. Tests four roles, defaults, overrides/reset, filter
+  identity, false/zero, save/reopen, exact editor ID, stale previews, rejected
+  replies, escaping and no Apply/stage request.
+- `node tests/test_card_coverage_ui.js`: PASS after generating its existing
+  .tmp/cards_strings.json prerequisite from en.json. First attempt failed
+  ENOENT for that scratch fixture; the test itself was not changed.
+- `node tests/test_unit_sheets_ui.js`: PASS, including request queues/history.
+- `git diff --check`: PASS. No new em dash, dependency, other catalogue edit,
+  STATE/ROADMAP/ROADMAP_ARCHIVE edit, commit, tag, build or release.
+
+Human browser checks still needed:
+
+- Walk all four examples from Unit Editor and New unit; inspect narrow layout,
+  keyboard navigation, details sections, caret/selection/IME and scroll behavior
+  during numeric, attribute, preset and filter typing. VM tests do not model
+  native focus, accessibility, rendering or the editor's WebGL column.
+- Save, close and reopen both draft targets; try Ctrl+Z/Ctrl+Y, explicit zero and
+  hiding false, suppressed offhand/layers, slow/failed requests and a second
+  window changing the project. A stale save keeps local edits but requires
+  resolving the project conflict before saving. No conflict merge UI is added.
+- Verify displayed vanilla, EOP and M2EX upgrade sources against the chosen mod
+  read only. No installed mod or engine execution was tested in this run.
+
+Open questions and limits:
+
+- No new mod-writing decision was made or reopened. sp remains quarantined;
+  no calculator, rule data, engine formula or shared output vocabulary changed.
+- Existing identity/source classification, Apply, portable import/export and
+  donor creation remain Phases 105/106. Draft saves are config-only; undo/redo
+  is the existing in-session snapshot history, not the transfer Log's disk Undo.
+- One detached draft is stored per mod. Unsaved edits survive a return to the
+  same designer in this browser session; switching to a different target can
+  replace that unsaved working copy. Save before switching targets or reloading.
+- Usage checks: first telemetry was 46% five-hour used, then 51% used at
+  2026-11-08 06:28:44 UTC. Repeated direct account requests failed with URLError;
+  later telemetry reads still returned that timestamp. Current live remaining
+  usage is unavailable, so the 90%-used cutoff cannot be claimed continuously.
+  No credits, resets or other runs were started.
+- Work is uncommitted. Existing TWCenter index deletions, Reference.lnk,
+  .tmp, dev/report-relay/.wrangler and docs/CHATGPT_INTRO.md predate this task
+  and were not treated as task changes. Scratch logs/runner were added in .tmp.
+
+New English catalogue IDs (451, en.json only):
+
+<details>
+<summary>Full Phase 104 ID list</summary>
+
+```text
+builder.title
+builder.preview_only
+builder.choose_profile
+builder.native_profile
+builder.reforged_profile
+builder.undo
+builder.redo
+builder.save_draft
+builder.inherited
+builder.inherit
+builder.final_pins
+builder.pin_help
+builder.identity
+builder.weapons
+builder.equipment
+builder.mounted
+builder.attributes
+builder.overrides
+builder.edit_presets
+builder.preset_family
+builder.filter_presets
+builder.reset_preset
+builder.reset_help
+builder.grade_help
+builder.subtype_help
+builder.weapon_help
+builder.layer_help
+builder.mount_help
+builder.attribute_help
+builder.role_ineligible
+builder.mounted_ineligible
+builder.engineer_ineligible
+builder.hybrid_help
+builder.royal_help
+builder.invalid
+builder.save_failed
+builder.saved
+builder.unsaved
+builder.calculated
+builder.contributions
+builder.upgrades
+builder.design_metadata
+builder.edu_view
+builder.edu_help
+builder.pinned_result
+builder.entry
+builder.entry_help
+builder.label_africa
+builder.label_anatolia
+builder.label_average
+builder.label_byzantine
+builder.label_career_soldiers
+builder.label_cuman_mongol
+builder.label_eastern_european
+builder.label_emergency_levies
+builder.label_exceptional
+builder.label_household_soldiers
+builder.label_iberia
+builder.label_inferior
+builder.label_ireland_highlands
+builder.label_italian
+builder.label_martial_nobility
+builder.label_middle_east_persia
+builder.label_outstanding
+builder.label_royal_retinue
+builder.label_rural_militia
+builder.label_scandinavian
+builder.label_superior
+builder.label_urban_militia
+builder.label_wales
+builder.label_warrior_levies
+builder.label_western_european
+builder.label_aggressive
+builder.label_agi
+builder.label_ammo
+builder.label_applicable
+builder.label_arbalest
+builder.label_archetype
+builder.label_archetype_training
+builder.label_archetypes
+builder.label_arm
+builder.label_arm_agi
+builder.label_arm_heat
+builder.label_arming_doublet
+builder.label_arming_sword
+builder.label_armor
+builder.label_armor_upgrade_cost
+builder.label_armour
+builder.label_armourbonus
+builder.label_armour_base
+builder.label_armour_layer1
+builder.label_armour_layer2
+builder.label_armour_layer3
+builder.label_armour_sound
+builder.label_armour_upgrade_armour
+builder.label_armour_upgrade_level
+builder.label_armour_upgrade_points
+builder.label_armour_weight
+builder.label_artisan
+builder.label_atk
+builder.label_atk_tr
+builder.label_attack
+builder.label_attack_delay
+builder.label_attr
+builder.label_attributes
+builder.label_attrs
+builder.label_automatic
+builder.label_axe
+builder.label_back_strapped
+builder.label_barding
+builder.label_base
+builder.label_baseline
+builder.label_bible_formation_auto
+builder.label_bill
+builder.label_bonus
+builder.label_bow
+builder.label_brawler
+builder.label_breast_plate
+builder.label_breed
+builder.label_brigandine
+builder.label_brigandine_late
+builder.label_buckler
+builder.label_camel
+builder.label_can_sap
+builder.label_cataphract
+builder.label_category
+builder.label_cav_style
+builder.label_cavalry
+builder.label_cavalry_style
+builder.label_cdist
+builder.label_chain
+builder.label_charge
+builder.label_charge_mounted
+builder.label_charger
+builder.label_class
+builder.label_climate
+builder.label_close_front
+builder.label_close_side
+builder.label_coat_cloth
+builder.label_coat_of_plates
+builder.label_common
+builder.label_composite_bow
+builder.label_core
+builder.label_core_defense_skill
+builder.label_cost_construct
+builder.label_cost_custom
+builder.label_cost_upkeep
+builder.label_couched_lance
+builder.label_courser
+builder.label_crossbow
+builder.label_culture
+builder.label_custom_cost
+builder.label_custom_limit
+builder.label_custom_stacking
+builder.label_dagger
+builder.label_def
+builder.label_def_tr
+builder.label_default
+builder.label_defense
+builder.label_delay
+builder.label_delay_mounted
+builder.label_destrier
+builder.label_discipline
+builder.label_dmg
+builder.label_double_mail
+builder.label_eastern_europe
+builder.label_elephant
+builder.label_empty
+builder.label_engine_rules
+builder.label_equipment_grade
+builder.label_estoc
+builder.label_extra_attrs
+builder.label_f_cf
+builder.label_f_cs
+builder.label_f_lf
+builder.label_f_ls
+builder.label_f_ranks
+builder.label_f_types
+builder.label_falchion
+builder.label_false
+builder.label_fanatic
+builder.label_fighting_spear
+builder.label_firearm
+builder.label_floor
+builder.label_foot_quality
+builder.label_foot_spear
+builder.label_forest
+builder.label_formation
+builder.label_formation_types
+builder.label_full_plate
+builder.label_gaelic
+builder.label_gambeson
+builder.label_glaive
+builder.label_gothic_plate
+builder.label_grade
+builder.label_grade_multiplier
+builder.label_grades
+builder.label_great_sword
+builder.label_greatsword
+builder.label_guards
+builder.label_halberd
+builder.label_half_mail
+builder.label_half_plate
+builder.label_handling
+builder.label_heat
+builder.label_heat_mounted
+builder.label_heater
+builder.label_heavy
+builder.label_heavy_couched_lance
+builder.label_heavy_lamellar
+builder.label_heavy_scale
+builder.label_height
+builder.label_held
+builder.label_hide_forest_override
+builder.label_high
+builder.label_hobby
+builder.label_horse
+builder.label_horse_barding
+builder.label_horse_origin
+builder.label_horse_type
+builder.label_horseman_axe
+builder.label_horseman_mace
+builder.label_horseman_sword
+builder.label_hybrid
+builder.label_hybrid_divisor
+builder.label_hybrid_rounded
+builder.label_iberian
+builder.label_id
+builder.label_infantry
+builder.label_inherit
+builder.label_input
+builder.label_italian_plate
+builder.label_javelin
+builder.label_kataphract
+builder.label_kite
+builder.label_knife
+builder.label_lamellar
+builder.label_lamellar_light
+builder.label_lamellar_med
+builder.label_lance
+builder.label_lancer
+builder.label_large
+builder.label_late_full_plate
+builder.label_layers
+builder.label_leather
+builder.label_leather_jerkin
+builder.label_legacy
+builder.label_leine_croine
+builder.label_light
+builder.label_light_couched_lance
+builder.label_light_crossbow
+builder.label_loadouts
+builder.label_lock_morale
+builder.label_long_axe
+builder.label_long_bow
+builder.label_long_sword
+builder.label_longaxe
+builder.label_longsword
+builder.label_loose_front
+builder.label_loose_side
+builder.label_mace
+builder.label_mail_haubergon
+builder.label_mail_lamellar
+builder.label_mail_light
+builder.label_mail_med
+builder.label_mail_surcoat
+builder.label_mail_voiders
+builder.label_mass
+builder.label_medium
+builder.label_metal
+builder.label_middle_east
+builder.label_missile
+builder.label_mongol
+builder.label_moor
+builder.label_morale
+builder.label_morale_baseline
+builder.label_mount
+builder.label_mountclass
+builder.label_mount_effect
+builder.label_mountedatkpenalty
+builder.label_mounted_crossbow
+builder.label_mounted_heavy_recurve_bow
+builder.label_mounted_javelin
+builder.label_mounted_quality
+builder.label_mounted_recurve_bow
+builder.label_mounted_short_bow
+builder.label_mounted_spear
+builder.label_movement
+builder.label_munition
+builder.label_name
+builder.label_nomount
+builder.label_none
+builder.label_offhand
+builder.label_offhands
+builder.label_origin
+builder.label_origin_weight
+builder.label_override
+builder.label_padded
+builder.label_params
+builder.label_pavise
+builder.label_pick
+builder.label_pike
+builder.label_plate
+builder.label_plate_lamellar
+builder.label_pole_axe
+builder.label_poleaxe
+builder.label_pony
+builder.label_poor
+builder.label_pre_grade
+builder.label_pri
+builder.label_pri_ammo
+builder.label_pri_attr
+builder.label_pri_attributes
+builder.label_pri_base_atk
+builder.label_pri_base_charge
+builder.label_pri_category
+builder.label_pri_delay
+builder.label_pri_handling
+builder.label_pri_heat
+builder.label_pri_missile
+builder.label_pri_preset
+builder.label_pri_range
+builder.label_pri_twohand
+builder.label_primary
+builder.label_profile
+builder.label_projectile_accuracy
+builder.label_puffed_cloth
+builder.label_quality
+builder.label_radius
+builder.label_range
+builder.label_ranks
+builder.label_reckless
+builder.label_recruit
+builder.label_recruit_cost
+builder.label_recruit_priority
+builder.label_recruit_turns
+builder.label_reinforced
+builder.label_reinforcing
+builder.label_ren_3q_plate
+builder.label_ren_half_plate
+builder.label_result
+builder.label_roles
+builder.label_rouncy
+builder.label_round
+builder.label_sand
+builder.label_scale_light
+builder.label_scale_med
+builder.label_scandinavia
+builder.label_scrub
+builder.label_sec
+builder.label_sec_ammo
+builder.label_sec_attack
+builder.label_sec_attr
+builder.label_sec_attributes
+builder.label_sec_base_atk
+builder.label_sec_base_charge
+builder.label_sec_category
+builder.label_sec_charge
+builder.label_sec_delay
+builder.label_sec_handling
+builder.label_sec_heat
+builder.label_sec_missile
+builder.label_sec_preset
+builder.label_sec_range
+builder.label_sec_twohand
+builder.label_secondary
+builder.label_selection
+builder.label_self_bow
+builder.label_shield
+builder.label_shield_mat
+builder.label_shield_material
+builder.label_shield_type
+builder.label_short_sword
+builder.label_siege
+builder.label_size_cav
+builder.label_size_inf
+builder.label_skirmish
+builder.label_small
+builder.label_snow
+builder.label_soldier_count
+builder.label_soldier_quality
+builder.label_sound
+builder.label_source
+builder.label_spear
+builder.label_spearmen
+builder.label_specialty
+builder.label_speed
+builder.label_staff
+builder.label_stallion
+builder.label_stamina
+builder.label_stat
+builder.label_status
+builder.label_subtype
+builder.label_subtypes
+builder.label_surcoat
+builder.label_sword_cut
+builder.label_sword_thrust
+builder.label_tech
+builder.label_terms
+builder.label_terrain
+builder.label_terrain_choice
+builder.label_terrain_heavy
+builder.label_terrain_light
+builder.label_terrain_med
+builder.label_terrain_specialty
+builder.label_third_layer
+builder.label_thrown
+builder.label_training
+builder.label_trait_aggressive
+builder.label_trait_bloc
+builder.label_trait_command
+builder.label_trait_engineer
+builder.label_trait_fanatic
+builder.label_trait_garrison
+builder.label_trait_guards
+builder.label_trait_hybrid
+builder.label_trait_mercenary
+builder.label_trait_mounted
+builder.label_trait_raider
+builder.label_trait_reckless
+builder.label_transitional
+builder.label_true
+builder.label_twohand
+builder.label_unarmored
+builder.label_unit_category
+builder.label_unit_custom_attrs
+builder.label_unit_size
+builder.label_unit_tag_desert_raider
+builder.label_unit_tag_forest_ambusher
+builder.label_upkeep
+builder.label_value
+builder.label_verified
+builder.label_war_bow
+builder.label_war_knife
+builder.label_weapon
+builder.label_weapon_categories
+builder.label_weapon_category
+builder.label_weapon_handling
+builder.label_weapon_upgrade_attack
+builder.label_weapon_upgrade_cost
+builder.label_weapon_upgrade_level
+builder.label_weapon_upgrade_points
+builder.label_weight
+builder.label_western_europe
+builder.label_wooden
+builder.label_wtype
+builder.back
+builder.label_armour_preset
+builder.load_failed
+builder.loadout_help
+builder.no_presets
+```
+
+</details>
+
 ## 2026-11-08 - Phase 103: deterministic calculator and explicit rules data
 
 Exit checklist against Phase 103's own exit line:

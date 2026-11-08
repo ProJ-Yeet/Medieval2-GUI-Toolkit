@@ -2977,6 +2977,14 @@ class Handler(BaseHTTPRequestHandler):
             body = self._read_body()
             if u.path == "/api/activity":
                 return self._json({"ok": self._activity(body)})
+            if u.path.startswith("/api/builder/"):
+                from . import builder_designer, builder_contract, unit_sheets
+                try:
+                    mod = self.registry.get(body.get("mod") or "")
+                    return self._json(builder_designer.service(mod, u.path.rsplit("/", 1)[-1], body))
+                except (builder_contract.ContractError, unit_sheets.SheetError, KeyError, ValueError) as e:
+                    return self._err(400, i18n.catalogue('en')['builder.invalid'],
+                                     message_id='builder.invalid', reason=str(e))
             if u.path.startswith("/api/unit_sheets/"):
                 from . import unit_sheets
                 try:

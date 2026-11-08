@@ -1320,20 +1320,6 @@ the target's runtime support has been independently established. No iframe of
 the hosted tool, second EDU parser, frontend build step, battle-runtime port,
 or bulk copy of generated HTML/assets.
 
-## Phase 104 - Guided designer and editable presets
-
-- Add the designer entry point to the Unit Editor/New unit workflow. Build the
-  archetype, subtype, weapon, equipment, armor-layer, offhand, mounted and grouped
-  attribute controls using our UI and translations.
-- Offer editable presets with reset-to-profile defaults, manual overrides and
-  eligibility explanations. Keep typed fields focused during live recalculation.
-- Show live calculated stats/costs, contribution explanations and an EDU Code
-  View preview; integrate undo/redo and save/reopen of the draft.
-- **Depends on:** 103. **Exit:** infantry, missile, cavalry and two-handed example
-  designs work interactively; changing a preset/grade preserves intentional
-  overrides, and undo/reopen restore the design. This phase previews and saves
-  drafts; applying changes to a unit waits for 106.
-
 ## Phase 105 - Portable projects and interchange
 
 - Import/export the upstream `combat-reforged-builder` version-1 projects through

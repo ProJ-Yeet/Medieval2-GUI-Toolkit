@@ -2180,6 +2180,7 @@ async function openCredits(){
   overlay.classList.add('open');
 }
 function closeModal(){
+  if(state.builder){state.builder.active=false;++state.builder.seq;}
   state.cm=null;
   // "…and did they save it?" is half of what makes a log readable
   if(overlay.classList.contains('open')&&undo.past.length)

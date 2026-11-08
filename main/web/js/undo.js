@@ -28,6 +28,10 @@
    move its working model in and out of a JSON-safe snapshot; `draw` re-renders.
    ========================================================================= */
 const UNDO_SCOPES=[
+  // Phase 104: only design packets are undoable, never preview responses.
+  {id:()=>(modalOpen()&&state.builder&&state.builder.active)?'builder:'+state.builder.mod+':'+state.builder.unit:'',
+   get:()=>state.builder.design, set:v=>{state.builder.design=v;},
+   draw:()=>{bdRender();if(state.builder.design)bdCalculate();}},
   // the building editor: one working copy of every level in the line
   {id:()=>(modalOpen()&&state.bld&&state.bld.work)?ttCode('undo.bld')+state.bld.mod+':'+state.bld.line:'', // i18n-ok: undo scope key, never shown
    get:()=>state.bld.work, set:v=>{state.bld.work=v;}, draw:()=>renderBuildingEditor()},

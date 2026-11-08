@@ -17,6 +17,7 @@ function openNewUnitPicker(){
       <div class="barrow" style="margin-bottom:6px"><span class="count">${tt('settings.nu_usual')}</span>
         ${NU_KINDS().map(([k, l]) => `<button class="mini" onclick="nuTypical('${k}')">${esc(l)}</button>`).join('')}</div>
       <div id="nuTypical"></div>
+      <button onclick="bdOpen('')">${tt('builder.entry')}</button>
       <input id="nuSearch" placeholder="${ttA('settings.filter_units')}" style="width:100%" oninput="renderNewUnitList()">
       <div class="barrow" style="margin-bottom:6px">
         <select id="nuFac" onchange="renderNewUnitList()">${
