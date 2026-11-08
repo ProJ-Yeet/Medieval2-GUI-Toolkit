@@ -18,8 +18,11 @@ VERSION = 1
 SOURCE_REVISION = 'd4ed9368d0db3da2000bc895e96f52a83b93cb67'
 PROFILES = {'native':'1', 'combat-reforged':SOURCE_REVISION}
 _KEYS = {'schema','version','profile','inputs','presets','overrides','metadata'}
+# The game accepts fire, but refuses sp and spear_bonus_2. Existing-source
+# preservation and the editor's broader suggestions stay outside this boundary.
+_WEAPON_ATTR = [x for x in vocab.WEAPON_ATTR if x not in ('sp','spear_bonus_2')] + ['fire']
 _LIST_VOCAB = {'attributes':(*vocab.UNIT_ATTR, *vocab.AI_ATTR),
-               'pri_attributes':vocab.WEAPON_ATTR, 'sec_attributes':vocab.WEAPON_ATTR}
+               'pri_attributes':_WEAPON_ATTR, 'sec_attributes':_WEAPON_ATTR}
 
 
 class ContractError(ValueError):

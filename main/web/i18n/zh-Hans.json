@@ -12431,5 +12431,7 @@
  "charmodels.role_heir": "派系继承人",
  "eng.charmodels.unreached": "{type}，等级 {level}：此人物类型没有特质赋予此等级",
  "eng.charmodels.missing": "{model} 不是 modeldb 条目",
- "eng.charmodels.horse": "{model} 没有马匹动画；将军和队长在步行及骑乘时使用同一模型"
+ "eng.charmodels.horse": "{model} 没有马匹动画；将军和队长在步行及骑乘时使用同一模型",
+ "builder.upgrade_card_note": "游戏中的部队卡片显示每个升级等级 +1。引擎实际按每个等级应用武器攻击 +{weapon}、盔甲 +{armour}（原版默认值：近战攻击 +3、盔甲 +2）。",
+ "builder.m2ex_missile_unverified": "M2EX 的远程武器升级保持关闭。用于启用远程武器升级的配置键尚未验证。"
 }

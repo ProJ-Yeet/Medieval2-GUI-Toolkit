@@ -1320,21 +1320,6 @@ the target's runtime support has been independently established. No iframe of
 the hosted tool, second EDU parser, frontend build step, battle-runtime port,
 or bulk copy of generated HTML/assets.
 
-## Phase 103 - Deterministic calculation engine and rules data
-
-- Port the selected profile's reusable rule tables and arithmetic into Python:
-  archetype/training, quality versus equipment grade, primary/secondary weapons,
-  defending-slot skill, armor/offhand tradeoffs, barding, heat/terrain, formation,
-  recruit cost and upkeep. Preserve rounding order and manual overrides.
-- Return an explanation of each calculated contribution with the derived fields;
-  evaluate natively supported values separately from design-only annotations.
-- Use upstream regression cases as evidence, including grade changes, two-handed
-  offhand suppression, barding counted once and attribute opt-outs. Clarify
-  differences instead of silently reproducing a demonstrated upstream defect.
-- **Depends on:** 102. **Exit:** calculator/golden tests pass, inputs do not mutate,
-  repeated evaluations agree, unsupported fields cannot leak into EDU, and no
-  game files are written. A UI is not required to finish this phase.
-
 ## Phase 104 - Guided designer and editable presets
 
 - Add the designer entry point to the Unit Editor/New unit workflow. Build the

@@ -1,0 +1,2 @@
+weapon_upgrade_points -5
+armour_upgrade_points -2

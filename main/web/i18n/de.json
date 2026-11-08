@@ -13123,5 +13123,7 @@
  "charmodels.role_heir": "Fraktionserbe",
  "eng.charmodels.unreached": "{type}, Stufe {level}: Keine Eigenschaft dieses Charaktertyps verleiht diese Stufe",
  "eng.charmodels.missing": "{model} ist kein modeldb-Eintrag",
- "eng.charmodels.horse": "{model} hat keine Pferdeanimation; Generäle und Hauptleute verwenden zu Fuß und beritten dasselbe Modell"
+ "eng.charmodels.horse": "{model} hat keine Pferdeanimation; Generäle und Hauptleute verwenden zu Fuß und beritten dasselbe Modell",
+ "builder.upgrade_card_note": "Die Einheitenkarte im Spiel zeigt +1 pro Aufrüstungsstufe. Die Engine gewährt pro Stufe +{weapon} Angriff mit der Waffe und +{armour} Rüstung (Vanilla-Standardwerte: +3 für Nahkampfangriffe und +2 Rüstung).",
+ "builder.m2ex_missile_unverified": "Die Aufrüstung von Fernkampfwaffen in M2EX bleibt deaktiviert. Der Konfigurationsschlüssel zum Aktivieren der Fernkampfaufrüstung ist nicht verifiziert."
 }

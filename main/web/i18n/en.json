@@ -1,4 +1,6 @@
 {
+"builder.upgrade_card_note": "The game's unit card shows +1 per upgrade level. The engine applies weapon Attack +{weapon} and Armour +{armour} per level (vanilla defaults: +3 for melee attacks and +2 Armour).",
+"builder.m2ex_missile_unverified": "M2EX missile weapon upgrades are kept off. The missile-upgrade switch configuration key is unverified.",
 "sheets.profile_rules": "Compatibility rules",
 "sheets.settlement_exception": "City or castle is read from each building level on its own, and a level that names neither gets no city multiplier. The original EDB scripts used the first level's type for the whole chain.",
 "eng.sheets.invalid_groups": "Invalid comparison groups",

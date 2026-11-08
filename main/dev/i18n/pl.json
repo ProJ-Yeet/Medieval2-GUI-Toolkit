@@ -13847,5 +13847,7 @@
  "charmodels.role_heir": "Następca frakcji",
  "eng.charmodels.unreached": "{type}, poziom {level}: żadna cecha tego typu postaci nie nadaje tego poziomu",
  "eng.charmodels.missing": "{model} nie jest wpisem w modeldb",
- "eng.charmodels.horse": "{model} nie ma animacji konia; generałowie i kapitanowie używają tego samego modelu pieszo i konno"
+ "eng.charmodels.horse": "{model} nie ma animacji konia; generałowie i kapitanowie używają tego samego modelu pieszo i konno",
+ "builder.upgrade_card_note": "Karta jednostki w grze pokazuje +1 na poziom ulepszenia. Silnik stosuje +{weapon} do ataku broni i +{armour} do pancerza na poziom (domyślne wartości w oryginalnej grze: +3 do ataków w walce wręcz i +2 do pancerza).",
+ "builder.m2ex_missile_unverified": "Ulepszenia broni dystansowej w M2EX pozostają wyłączone. Klucz konfiguracji włączający ulepszenia broni dystansowej nie został zweryfikowany."
 }

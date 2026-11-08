@@ -14382,3 +14382,20 @@ staging store. `tests/test_sheet_ops.py`, `test_unit_sheets.py`,
 
 **Finished 2026-11-08.** A reviewed feature and module map, a compatibility matrix, six synthetic sample projects and an executable output contract (`builder_contract.py`, `docs/UNIT_BUILDER_CONTRACT.md`) that attaches an unsaved design to a live sheet unit through the shared sheet field map, with output-boundary golden cases. No app behaviour or mod writes changed. `sp` stays quarantined: the game accepts only its known weapon attributes and refuses a unit with any other. Open for the user before 103: the Guards Skill bonus (+1 in the final combat rules, +2 in the help and audit) and whether an entered cost is multiplied by the equipment grade.
 
+## Phase 103 - Deterministic calculation engine and rules data
+
+- Port the selected profile's reusable rule tables and arithmetic into Python:
+  archetype/training, quality versus equipment grade, primary/secondary weapons,
+  defending-slot skill, armor/offhand tradeoffs, barding, heat/terrain, formation,
+  recruit cost and upkeep. Preserve rounding order and manual overrides.
+- Return an explanation of each calculated contribution with the derived fields;
+  evaluate natively supported values separately from design-only annotations.
+- Use upstream regression cases as evidence, including grade changes, two-handed
+  offhand suppression, barding counted once and attribute opt-outs. Clarify
+  differences instead of silently reproducing a demonstrated upstream defect.
+- **Depends on:** 102. **Exit:** calculator/golden tests pass, inputs do not mutate,
+  repeated evaluations agree, unsupported fields cannot leak into EDU, and no
+  game files are written. A UI is not required to finish this phase.
+
+**Finished 2026-11-08.** `builder_calculator.py` with its rules data (`builder_rules.json`, `docs/BUILDER_RULES.md`): deterministic, never changes its inputs, filters what the EDU cannot hold, writes nothing. Upgrade bonuses come from the engine, per mod: vanilla +3 attack and +2 armour per level (the game's unit card shows +1), melee only; EOP mods use their luaPluginScript.lua setWeaponBonusModifier / setArmourUpgradeModifier (DaC EUR: +1 and +1); M2EX mods use weapon_upgrade_points / armour_upgrade_points from their descr_caps_ex.txt, else +3 and +2, melee only. On the user's word, the Guards subtype follows the builder's help: +2 Defense Skill and -1 melee Attack (the upstream calculation uses +1). An entered cost is still multiplied by the equipment grade. `sp` stays quarantined.
+

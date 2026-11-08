@@ -1,0 +1,2307 @@
+{
+  "revision": "d4ed9368d0db3da2000bc895e96f52a83b93cb67",
+  "attribution": {
+    "author": "lupinemaverick",
+    "basis": "MUG Unit Builder v1.5 / MUG Unit Creation Guide",
+    "combat_reforged": "King Siegfried",
+    "permission": "User reported author permission; no new license inferred"
+  },
+  "tables": {
+    "terrain": {
+      "Western European": {
+        "light": [
+          1,
+          -1,
+          2,
+          1
+        ],
+        "medium": [
+          0,
+          -2,
+          0,
+          0
+        ],
+        "heavy": [
+          -1,
+          -3,
+          -1,
+          -1
+        ]
+      },
+      "Scandinavian": {
+        "light": [
+          1,
+          -2,
+          3,
+          4
+        ],
+        "medium": [
+          0,
+          -3,
+          2,
+          3
+        ],
+        "heavy": [
+          -1,
+          -4,
+          1,
+          2
+        ]
+      },
+      "Ireland/Highlands": {
+        "light": [
+          2,
+          -2,
+          3,
+          2
+        ],
+        "medium": [
+          1,
+          -3,
+          2,
+          1
+        ],
+        "heavy": [
+          0,
+          -4,
+          1,
+          0
+        ]
+      },
+      "Wales": {
+        "light": [
+          1,
+          -2,
+          4,
+          1
+        ],
+        "medium": [
+          0,
+          -3,
+          3,
+          0
+        ],
+        "heavy": [
+          -1,
+          -4,
+          2,
+          -1
+        ]
+      },
+      "Italian": {
+        "light": [
+          0,
+          0,
+          1,
+          0
+        ],
+        "medium": [
+          -1,
+          -1,
+          0,
+          -1
+        ],
+        "heavy": [
+          -1,
+          -1,
+          -1,
+          -2
+        ]
+      },
+      "Iberia": {
+        "light": [
+          0,
+          0,
+          2,
+          -1
+        ],
+        "medium": [
+          -1,
+          -1,
+          1,
+          -2
+        ],
+        "heavy": [
+          -2,
+          -2,
+          0,
+          -2
+        ]
+      },
+      "Eastern European": {
+        "light": [
+          1,
+          -1,
+          2,
+          2
+        ],
+        "medium": [
+          0,
+          -2,
+          1,
+          1
+        ],
+        "heavy": [
+          -1,
+          -3,
+          0,
+          0
+        ]
+      },
+      "Africa": {
+        "light": [
+          0,
+          4,
+          -1,
+          -2
+        ],
+        "medium": [
+          -1,
+          3,
+          -2,
+          -3
+        ],
+        "heavy": [
+          -2,
+          2,
+          -3,
+          -4
+        ]
+      },
+      "Byzantine": {
+        "light": [
+          1,
+          0,
+          1,
+          0
+        ],
+        "medium": [
+          0,
+          -1,
+          0,
+          -1
+        ],
+        "heavy": [
+          -1,
+          -2,
+          -1,
+          -2
+        ]
+      },
+      "Anatolia": {
+        "light": [
+          1,
+          1,
+          1,
+          -1
+        ],
+        "medium": [
+          0,
+          0,
+          0,
+          -2
+        ],
+        "heavy": [
+          -1,
+          -1,
+          -1,
+          -3
+        ]
+      },
+      "Middle East/Persia": {
+        "light": [
+          0,
+          3,
+          0,
+          -3
+        ],
+        "medium": [
+          -1,
+          2,
+          -1,
+          -4
+        ],
+        "heavy": [
+          -2,
+          1,
+          0,
+          -5
+        ]
+      },
+      "Cuman/Mongol": {
+        "light": [
+          1,
+          0,
+          2,
+          0
+        ],
+        "medium": [
+          0,
+          -1,
+          1,
+          -1
+        ],
+        "heavy": [
+          -1,
+          -2,
+          0,
+          -2
+        ]
+      }
+    },
+    "armour": {
+      "unarmored": {
+        "weight": "light",
+        "arm": 0,
+        "heat": 0,
+        "agi": 1,
+        "mass": 0,
+        "layers": 0,
+        "sound": "flesh"
+      },
+      "leather_jerkin": {
+        "weight": "light",
+        "arm": 2,
+        "heat": 1,
+        "agi": 1,
+        "mass": 1,
+        "layers": 1,
+        "sound": "leather"
+      },
+      "gambeson": {
+        "weight": "light",
+        "arm": 2,
+        "heat": 1,
+        "agi": 1,
+        "mass": 1,
+        "layers": 1,
+        "sound": "padded"
+      },
+      "leine_croine": {
+        "weight": "light",
+        "arm": 1,
+        "heat": 0,
+        "agi": 1,
+        "mass": 1,
+        "layers": 1,
+        "sound": "flesh"
+      },
+      "scale_light": {
+        "weight": "light",
+        "arm": 3,
+        "heat": 2,
+        "agi": 1,
+        "mass": 2,
+        "layers": 1,
+        "sound": "plate"
+      },
+      "lamellar_light": {
+        "weight": "light",
+        "arm": 3,
+        "heat": 1,
+        "agi": 1,
+        "mass": 2,
+        "layers": 1,
+        "sound": "plate"
+      },
+      "mail_light": {
+        "weight": "light",
+        "arm": 3,
+        "heat": 2,
+        "agi": 1,
+        "mass": 2,
+        "layers": 2,
+        "sound": "chain"
+      },
+      "brigandine_late": {
+        "weight": "light",
+        "arm": 6,
+        "heat": 2,
+        "agi": 1,
+        "mass": 2,
+        "layers": 2,
+        "sound": "plate"
+      },
+      "breast_plate": {
+        "weight": "light",
+        "arm": 7,
+        "heat": 3,
+        "agi": 1,
+        "mass": 2,
+        "layers": 2,
+        "sound": "plate"
+      },
+      "scale_med": {
+        "weight": "medium",
+        "arm": 6,
+        "heat": 3,
+        "agi": 1,
+        "mass": 5,
+        "layers": 2,
+        "sound": "plate"
+      },
+      "lamellar_med": {
+        "weight": "medium",
+        "arm": 6,
+        "heat": 2,
+        "agi": 1,
+        "mass": 2,
+        "layers": 2,
+        "sound": "plate"
+      },
+      "mail_med": {
+        "weight": "medium",
+        "arm": 5,
+        "heat": 3,
+        "agi": 1,
+        "mass": 2,
+        "layers": 2,
+        "sound": "chain"
+      },
+      "coat_of_plates": {
+        "weight": "medium",
+        "arm": 4,
+        "heat": 2,
+        "agi": 1,
+        "mass": 2,
+        "layers": 2,
+        "sound": "plate"
+      },
+      "brigandine": {
+        "weight": "medium",
+        "arm": 5,
+        "heat": 3,
+        "agi": 1,
+        "mass": 2,
+        "layers": 2,
+        "sound": "plate"
+      },
+      "heavy_scale": {
+        "weight": "medium",
+        "arm": 8,
+        "heat": 4,
+        "agi": 0,
+        "mass": 3,
+        "layers": 2,
+        "sound": "plate"
+      },
+      "heavy_lamellar": {
+        "weight": "medium",
+        "arm": 8,
+        "heat": 3,
+        "agi": 0,
+        "mass": 3,
+        "layers": 2,
+        "sound": "plate"
+      },
+      "double_mail": {
+        "weight": "medium",
+        "arm": 7,
+        "heat": 4,
+        "agi": 1,
+        "mass": 3,
+        "layers": 2,
+        "sound": "chain"
+      },
+      "ren_half_plate": {
+        "weight": "medium",
+        "arm": 9,
+        "heat": 3,
+        "agi": 1,
+        "mass": 3,
+        "layers": 2,
+        "sound": "plate"
+      },
+      "ren_3q_plate": {
+        "weight": "medium",
+        "arm": 11,
+        "heat": 4,
+        "agi": 0,
+        "mass": 4,
+        "layers": 2,
+        "sound": "plate"
+      },
+      "kataphract": {
+        "weight": "heavy",
+        "arm": 10,
+        "heat": 5,
+        "agi": 0,
+        "mass": 5,
+        "layers": 3,
+        "sound": "plate"
+      },
+      "transitional": {
+        "weight": "heavy",
+        "arm": 8,
+        "heat": 4,
+        "agi": 0,
+        "mass": 5,
+        "layers": 3,
+        "sound": "plate"
+      },
+      "plate_lamellar": {
+        "weight": "heavy",
+        "arm": 9,
+        "heat": 3,
+        "agi": 0,
+        "mass": 5,
+        "layers": 3,
+        "sound": "plate"
+      },
+      "full_plate": {
+        "weight": "heavy",
+        "arm": 10,
+        "heat": 5,
+        "agi": 0,
+        "mass": 5,
+        "layers": 3,
+        "sound": "plate"
+      },
+      "gothic_plate": {
+        "weight": "heavy",
+        "arm": 11,
+        "heat": 5,
+        "agi": 0,
+        "mass": 5,
+        "layers": 3,
+        "sound": "plate"
+      },
+      "italian_plate": {
+        "weight": "heavy",
+        "arm": 11,
+        "heat": 5,
+        "agi": 0,
+        "mass": 5,
+        "layers": 3,
+        "sound": "plate"
+      },
+      "late_full_plate": {
+        "weight": "heavy",
+        "arm": 12,
+        "heat": 4,
+        "agi": 0,
+        "mass": 5,
+        "layers": 3,
+        "sound": "plate"
+      }
+    },
+    "layers": {
+      "none": {
+        "arm": 0,
+        "heat": 0,
+        "agi": 0
+      },
+      "coat_cloth": {
+        "arm": 0,
+        "heat": 0,
+        "agi": 0
+      },
+      "puffed_cloth": {
+        "arm": 1,
+        "heat": 0,
+        "agi": 0
+      },
+      "leather": {
+        "arm": 2,
+        "heat": 1,
+        "agi": 0
+      },
+      "gambeson": {
+        "arm": 2,
+        "heat": 1,
+        "agi": 0
+      },
+      "mail_haubergon": {
+        "arm": 3,
+        "heat": 2,
+        "agi": 0
+      },
+      "coat_of_plates": {
+        "arm": 4,
+        "heat": 2,
+        "agi": 0
+      },
+      "third_layer": {
+        "arm": 0,
+        "heat": 1,
+        "agi": 0
+      },
+      "reinforcing": {
+        "arm": 1,
+        "heat": 0,
+        "agi": 0
+      },
+      "arming_doublet": {
+        "arm": 1,
+        "heat": 1,
+        "agi": 0
+      },
+      "mail_voiders": {
+        "arm": 1,
+        "heat": 1,
+        "agi": 0
+      }
+    },
+    "horse": {
+      "destrier": {
+        "stamina": "Very Good",
+        "speed": 1.0,
+        "height": 2.65,
+        "mass": 2.5,
+        "radius": 1.8,
+        "heat": 2
+      },
+      "stallion": {
+        "stamina": "Good",
+        "speed": 1.0,
+        "height": 2.6,
+        "mass": 2.25,
+        "radius": 1.8,
+        "heat": 1
+      },
+      "courser": {
+        "stamina": "Good",
+        "speed": 1.05,
+        "height": 2.5,
+        "mass": 2.0,
+        "radius": 1.8,
+        "heat": 1
+      },
+      "rouncy": {
+        "stamina": "Standard",
+        "speed": 1.0,
+        "height": 2.5,
+        "mass": 1.75,
+        "radius": 1.8,
+        "heat": 0
+      },
+      "hobby": {
+        "stamina": "Standard",
+        "speed": 1.05,
+        "height": 2.5,
+        "mass": 1.6,
+        "radius": 1.8,
+        "heat": 0
+      },
+      "pony": {
+        "stamina": "Standard",
+        "speed": 1.0,
+        "height": 2.4,
+        "mass": 1.5,
+        "radius": 1.7,
+        "heat": 0
+      },
+      "camel": {
+        "stamina": "Very Good",
+        "speed": 1.0,
+        "height": 3.4,
+        "mass": 1.6,
+        "radius": 1.8,
+        "heat": -2
+      },
+      "elephant": {
+        "stamina": "Good",
+        "speed": 1.0,
+        "height": 5.6,
+        "mass": 27.1,
+        "radius": 14.5,
+        "heat": -1
+      }
+    },
+    "breed": {
+      "western_europe": {
+        "stamina": 0,
+        "speed": 0,
+        "heat": 0,
+        "terrain_light": [
+          0,
+          -2,
+          -2,
+          0
+        ],
+        "terrain_med": [
+          -1,
+          -3,
+          -3,
+          -1
+        ],
+        "terrain_heavy": [
+          -2,
+          -4,
+          -4,
+          -2
+        ]
+      },
+      "iberian": {
+        "stamina": 1,
+        "speed": 0,
+        "heat": -1,
+        "terrain_light": [
+          1,
+          -1,
+          -2,
+          0
+        ],
+        "terrain_med": [
+          0,
+          -2,
+          -3,
+          -1
+        ],
+        "terrain_heavy": [
+          -1,
+          -3,
+          -4,
+          -2
+        ]
+      },
+      "moor": {
+        "stamina": 2,
+        "speed": 0,
+        "heat": -2,
+        "terrain_light": [
+          0,
+          3,
+          -5,
+          -3
+        ],
+        "terrain_med": [
+          -1,
+          2,
+          -4,
+          -4
+        ],
+        "terrain_heavy": [
+          -2,
+          1,
+          -5,
+          -5
+        ]
+      },
+      "anatolia": {
+        "stamina": 1,
+        "speed": 0.05,
+        "heat": -1,
+        "terrain_light": [
+          0,
+          1,
+          -3,
+          -2
+        ],
+        "terrain_med": [
+          -1,
+          0,
+          -4,
+          -3
+        ],
+        "terrain_heavy": [
+          -2,
+          -1,
+          -5,
+          -4
+        ]
+      },
+      "gaelic": {
+        "stamina": 1,
+        "speed": 0.05,
+        "heat": 0,
+        "terrain_light": [
+          2,
+          -3,
+          -1,
+          0
+        ],
+        "terrain_med": [
+          1,
+          -4,
+          -2,
+          -1
+        ],
+        "terrain_heavy": [
+          0,
+          -5,
+          -3,
+          -2
+        ]
+      },
+      "scandinavia": {
+        "stamina": 0,
+        "speed": 0,
+        "heat": 0,
+        "terrain_light": [
+          0,
+          -3,
+          -1,
+          1
+        ],
+        "terrain_med": [
+          -1,
+          -4,
+          -2,
+          0
+        ],
+        "terrain_heavy": [
+          -2,
+          -5,
+          -3,
+          -1
+        ]
+      },
+      "mongol": {
+        "stamina": 2,
+        "speed": 0,
+        "heat": -1,
+        "terrain_light": [
+          0,
+          -1,
+          -3,
+          0
+        ],
+        "terrain_med": [
+          -1,
+          -2,
+          -4,
+          -1
+        ],
+        "terrain_heavy": [
+          -2,
+          -3,
+          -5,
+          -2
+        ]
+      },
+      "middle_east": {
+        "stamina": 1,
+        "speed": 0,
+        "heat": -2,
+        "terrain_light": [
+          0,
+          1,
+          -5,
+          -3
+        ],
+        "terrain_med": [
+          -1,
+          0,
+          -6,
+          -4
+        ],
+        "terrain_heavy": [
+          -2,
+          -1,
+          -7,
+          -5
+        ]
+      },
+      "eastern_europe": {
+        "stamina": 0,
+        "speed": 0,
+        "heat": 0,
+        "terrain_light": [
+          1,
+          -2,
+          -1,
+          0
+        ],
+        "terrain_med": [
+          0,
+          -3,
+          -2,
+          -1
+        ],
+        "terrain_heavy": [
+          -1,
+          -4,
+          -3,
+          -1
+        ]
+      }
+    },
+    "barding": {
+      "none": {
+        "stamina": 0,
+        "speed": 0,
+        "heat": 0,
+        "mass": 0,
+        "armour": 0,
+        "mountClass": [
+          "any"
+        ]
+      },
+      "surcoat": {
+        "stamina": 0,
+        "speed": 0,
+        "heat": 1,
+        "mass": 0.05,
+        "armour": 1,
+        "mountClass": [
+          "medium",
+          "heavy"
+        ]
+      },
+      "padded": {
+        "stamina": -1,
+        "speed": -0.05,
+        "heat": 2,
+        "mass": 0.35,
+        "armour": 2,
+        "mountClass": [
+          "heavy"
+        ]
+      },
+      "half_mail": {
+        "stamina": -1,
+        "speed": -0.05,
+        "heat": 2,
+        "mass": 0.25,
+        "armour": 2,
+        "mountClass": [
+          "medium"
+        ]
+      },
+      "mail_surcoat": {
+        "stamina": -2,
+        "speed": -0.1,
+        "heat": 3,
+        "mass": 0.5,
+        "armour": 4,
+        "mountClass": [
+          "heavy"
+        ]
+      },
+      "double_mail": {
+        "stamina": -2,
+        "speed": -0.1,
+        "heat": 4,
+        "mass": 0.55,
+        "armour": 5,
+        "mountClass": [
+          "heavy"
+        ]
+      },
+      "lamellar": {
+        "stamina": -1,
+        "speed": -0.075,
+        "heat": 2,
+        "mass": 0.4,
+        "armour": 4,
+        "mountClass": [
+          "heavy"
+        ]
+      },
+      "mail_lamellar": {
+        "stamina": -2,
+        "speed": -0.1,
+        "heat": 3,
+        "mass": 0.5,
+        "armour": 5,
+        "mountClass": [
+          "heavy"
+        ]
+      },
+      "cataphract": {
+        "stamina": -2,
+        "speed": -0.15,
+        "heat": 6,
+        "mass": 0.75,
+        "armour": 6,
+        "mountClass": [
+          "heavy"
+        ]
+      },
+      "half_plate": {
+        "stamina": -1,
+        "speed": -0.05,
+        "heat": 3,
+        "mass": 0.45,
+        "armour": 5,
+        "mountClass": [
+          "medium"
+        ]
+      },
+      "plate": {
+        "stamina": -2,
+        "speed": -0.15,
+        "heat": 5,
+        "mass": 1.0,
+        "armour": 8,
+        "mountClass": [
+          "heavy"
+        ]
+      },
+      "plate_lamellar": {
+        "stamina": -2,
+        "speed": -0.15,
+        "heat": 4,
+        "mass": 0.95,
+        "armour": 7,
+        "mountClass": [
+          "heavy"
+        ]
+      }
+    },
+    "shield_type": {
+      "none": {
+        "base": 0,
+        "def": 0,
+        "heat": 0,
+        "mass": 0
+      },
+      "back_strapped": {
+        "base": 0,
+        "def": 0,
+        "heat": 1,
+        "mass": 0,
+        "armourBonus": 1
+      },
+      "buckler": {
+        "base": 2,
+        "def": 1,
+        "heat": 0,
+        "mass": 0
+      },
+      "round": {
+        "base": 3,
+        "def": 0,
+        "heat": 1,
+        "mass": 0
+      },
+      "kite": {
+        "base": 5,
+        "def": 0,
+        "heat": 2,
+        "mass": 0.1,
+        "mountedAtkPenalty": 1
+      },
+      "heater": {
+        "base": 4,
+        "def": 0,
+        "heat": 0,
+        "mass": 0.05
+      },
+      "pavise": {
+        "base": 7,
+        "def": 0,
+        "heat": 3,
+        "mass": 0.15,
+        "noMount": true
+      }
+    },
+    "shield_mat": {
+      "wooden": {
+        "bonus": 0,
+        "def": 1,
+        "heat": 0
+      },
+      "metal": {
+        "bonus": 2,
+        "def": 0,
+        "heat": 1
+      },
+      "reinforced": {
+        "bonus": 1,
+        "def": 0,
+        "heat": 1
+      }
+    },
+    "pri": {
+      "couched_lance": {
+        "roles": [
+          "cav"
+        ],
+        "atk": -1,
+        "charge": 12,
+        "missile": "no",
+        "range": 0,
+        "ammo": 0,
+        "wtype": "melee",
+        "tech": "melee_blade",
+        "dmg": "piercing",
+        "sound": "spear",
+        "name": "couched_lance",
+        "attr": "",
+        "heat": 2,
+        "cdist": 45,
+        "delay": 110,
+        "weapon_category": "lance",
+        "handling": 0,
+        "twohand": false
+      },
+      "heavy_couched_lance": {
+        "roles": [
+          "cav"
+        ],
+        "atk": -2,
+        "charge": 14,
+        "missile": "no",
+        "range": 0,
+        "ammo": 0,
+        "wtype": "melee",
+        "tech": "melee_blade",
+        "dmg": "piercing",
+        "sound": "spear",
+        "name": "heavy_couched_lance",
+        "attr": "",
+        "heat": 2,
+        "cdist": 45,
+        "delay": 120,
+        "weapon_category": "lance",
+        "handling": 0,
+        "twohand": false
+      },
+      "light_couched_lance": {
+        "roles": [
+          "cav"
+        ],
+        "atk": 0,
+        "charge": 10,
+        "missile": "no",
+        "range": 0,
+        "ammo": 0,
+        "wtype": "melee",
+        "tech": "melee_blade",
+        "dmg": "piercing",
+        "sound": "spear",
+        "name": "light_couched_lance",
+        "attr": "",
+        "heat": 1,
+        "cdist": 45,
+        "delay": 105,
+        "weapon_category": "lance",
+        "handling": 0,
+        "twohand": false
+      },
+      "horseman_sword": {
+        "roles": [
+          "cav"
+        ],
+        "atk": 6,
+        "charge": 4,
+        "missile": "no",
+        "range": 0,
+        "ammo": 0,
+        "wtype": "melee",
+        "tech": "melee_blade",
+        "dmg": "slashing",
+        "sound": "sword",
+        "name": "horsemans_sword",
+        "attr": "",
+        "heat": 0,
+        "cdist": 20,
+        "delay": 45,
+        "weapon_category": "sword_cut",
+        "handling": 1,
+        "twohand": false
+      },
+      "horseman_mace": {
+        "roles": [
+          "cav",
+          "inf"
+        ],
+        "atk": 4,
+        "charge": 4,
+        "missile": "no",
+        "range": 0,
+        "ammo": 0,
+        "wtype": "melee",
+        "tech": "melee_blade",
+        "dmg": "blunt",
+        "sound": "mace",
+        "name": "horseman_mace",
+        "attr": "rend_2, batter_2",
+        "heat": 1,
+        "cdist": 20,
+        "delay": 70,
+        "weapon_category": "mace",
+        "handling": 0,
+        "twohand": false
+      },
+      "horseman_axe": {
+        "roles": [
+          "cav",
+          "inf"
+        ],
+        "atk": 4,
+        "charge": 4,
+        "missile": "no",
+        "range": 0,
+        "ammo": 0,
+        "wtype": "melee",
+        "tech": "melee_blade",
+        "dmg": "slashing",
+        "sound": "axe",
+        "name": "horseman_axe",
+        "attr": "stagger",
+        "heat": 1,
+        "cdist": 20,
+        "delay": 50,
+        "weapon_category": "axe",
+        "handling": 0,
+        "twohand": false
+      },
+      "mounted_spear": {
+        "roles": [
+          "cav"
+        ],
+        "atk": 3,
+        "charge": 8,
+        "missile": "no",
+        "range": 0,
+        "ammo": 0,
+        "wtype": "melee",
+        "tech": "melee_blade",
+        "dmg": "piercing",
+        "sound": "spear",
+        "name": "spear",
+        "attr": "spear_bonus_4",
+        "heat": 1,
+        "cdist": 30,
+        "delay": 90,
+        "weapon_category": "spear",
+        "handling": 0,
+        "twohand": false
+      },
+      "arming_sword": {
+        "roles": [
+          "inf",
+          "cav"
+        ],
+        "atk": 6,
+        "charge": 3,
+        "missile": "no",
+        "range": 0,
+        "ammo": 0,
+        "wtype": "melee",
+        "tech": "melee_blade",
+        "dmg": "slashing",
+        "sound": "sword",
+        "name": "arming_sword",
+        "attr": "",
+        "heat": 0,
+        "cdist": 20,
+        "delay": 40,
+        "weapon_category": "sword_cut",
+        "handling": 1,
+        "twohand": false,
+        "charge_mounted": 4,
+        "delay_mounted": 45,
+        "heat_mounted": 0
+      },
+      "falchion": {
+        "roles": [
+          "inf",
+          "cav"
+        ],
+        "atk": 6,
+        "charge": 4,
+        "missile": "no",
+        "range": 0,
+        "ammo": 0,
+        "wtype": "melee",
+        "tech": "melee_blade",
+        "dmg": "slashing",
+        "sound": "sword",
+        "name": "falchion",
+        "attr": "",
+        "heat": 1,
+        "cdist": 20,
+        "delay": 45,
+        "weapon_category": "sword_cut",
+        "handling": 1,
+        "twohand": false,
+        "charge_mounted": 4,
+        "delay_mounted": 50,
+        "heat_mounted": 0
+      },
+      "war_knife": {
+        "roles": [
+          "inf"
+        ],
+        "atk": 2,
+        "charge": 3,
+        "missile": "no",
+        "range": 0,
+        "ammo": 0,
+        "wtype": "melee",
+        "tech": "melee_blade",
+        "dmg": "slashing",
+        "sound": "knife",
+        "name": "war_knife",
+        "attr": "",
+        "heat": 0,
+        "cdist": 15,
+        "delay": 30,
+        "weapon_category": "knife",
+        "handling": 0,
+        "twohand": false
+      },
+      "mace": {
+        "roles": [
+          "inf"
+        ],
+        "atk": 4,
+        "charge": 2,
+        "missile": "no",
+        "range": 0,
+        "ammo": 0,
+        "wtype": "melee",
+        "tech": "melee_blade",
+        "dmg": "blunt",
+        "sound": "mace",
+        "name": "mace",
+        "attr": "rend_2, batter_2",
+        "heat": 1,
+        "cdist": 20,
+        "delay": 65,
+        "weapon_category": "mace",
+        "handling": 0,
+        "twohand": false
+      },
+      "foot_spear": {
+        "roles": [
+          "inf"
+        ],
+        "atk": 3,
+        "charge": 3,
+        "missile": "no",
+        "range": 0,
+        "ammo": 0,
+        "wtype": "melee",
+        "tech": "melee_blade",
+        "dmg": "piercing",
+        "sound": "spear",
+        "name": "spear",
+        "attr": "spear_bonus_4",
+        "heat": 0,
+        "cdist": 25,
+        "delay": 75,
+        "weapon_category": "spear",
+        "handling": 0,
+        "twohand": false
+      },
+      "long_sword": {
+        "roles": [
+          "inf"
+        ],
+        "atk": 9,
+        "charge": 6,
+        "missile": "no",
+        "range": 0,
+        "ammo": 0,
+        "wtype": "melee",
+        "tech": "melee_blade",
+        "dmg": "slashing",
+        "sound": "sword",
+        "name": "long_sword",
+        "attr": "duelist_2",
+        "heat": 1,
+        "cdist": 25,
+        "delay": 65,
+        "weapon_category": "longsword",
+        "handling": 1,
+        "twohand": true
+      },
+      "great_sword": {
+        "roles": [
+          "inf"
+        ],
+        "atk": 12,
+        "charge": 7,
+        "missile": "no",
+        "range": 0,
+        "ammo": 0,
+        "wtype": "melee",
+        "tech": "melee_blade",
+        "dmg": "slashing",
+        "sound": "sword",
+        "name": "great_sword",
+        "attr": "duelist_2",
+        "heat": 2,
+        "cdist": 25,
+        "delay": 70,
+        "weapon_category": "greatsword",
+        "handling": 0,
+        "twohand": true
+      },
+      "long_axe": {
+        "roles": [
+          "inf"
+        ],
+        "atk": 11,
+        "charge": 6,
+        "missile": "no",
+        "range": 0,
+        "ammo": 0,
+        "wtype": "melee",
+        "tech": "melee_blade",
+        "dmg": "slashing",
+        "sound": "axe",
+        "name": "long_axe",
+        "attr": "stagger, rend_4",
+        "heat": 2,
+        "cdist": 25,
+        "delay": 80,
+        "weapon_category": "longaxe",
+        "handling": 0,
+        "twohand": true
+      },
+      "pike": {
+        "roles": [
+          "inf"
+        ],
+        "atk": 5,
+        "charge": 2,
+        "missile": "no",
+        "range": 0,
+        "ammo": 0,
+        "wtype": "melee",
+        "tech": "melee_blade",
+        "dmg": "piercing",
+        "sound": "spear",
+        "name": "pike",
+        "attr": "long_pike, spear_bonus_8",
+        "heat": 1,
+        "cdist": 30,
+        "delay": 105,
+        "weapon_category": "pike",
+        "handling": 0,
+        "twohand": true
+      },
+      "halberd": {
+        "roles": [
+          "inf"
+        ],
+        "atk": 10,
+        "charge": 6,
+        "missile": "no",
+        "range": 0,
+        "ammo": 0,
+        "wtype": "melee",
+        "tech": "melee_blade",
+        "dmg": "slashing",
+        "sound": "halberd",
+        "name": "halberd",
+        "attr": "rend_3, spear_bonus_6",
+        "heat": 2,
+        "cdist": 25,
+        "delay": 100,
+        "weapon_category": "halberd",
+        "handling": 0,
+        "twohand": true
+      },
+      "glaive": {
+        "roles": [
+          "inf"
+        ],
+        "atk": 10,
+        "charge": 5,
+        "missile": "no",
+        "range": 0,
+        "ammo": 0,
+        "wtype": "melee",
+        "tech": "melee_blade",
+        "dmg": "slashing",
+        "sound": "halberd",
+        "name": "glaive",
+        "attr": "duelist_2",
+        "heat": 1,
+        "cdist": 25,
+        "delay": 85,
+        "weapon_category": "glaive",
+        "handling": 0,
+        "twohand": true
+      },
+      "pole_axe": {
+        "roles": [
+          "inf"
+        ],
+        "atk": 10,
+        "charge": 6,
+        "missile": "no",
+        "range": 0,
+        "ammo": 0,
+        "wtype": "melee",
+        "tech": "melee_blade",
+        "dmg": "slashing",
+        "sound": "axe",
+        "name": "pole_axe",
+        "attr": "rend_4, duelist_3",
+        "heat": 2,
+        "cdist": 25,
+        "delay": 90,
+        "weapon_category": "poleaxe",
+        "handling": 1,
+        "twohand": true
+      },
+      "bill": {
+        "roles": [
+          "inf"
+        ],
+        "atk": 9,
+        "charge": 5,
+        "missile": "no",
+        "range": 0,
+        "ammo": 0,
+        "wtype": "melee",
+        "tech": "melee_blade",
+        "dmg": "slashing",
+        "sound": "halberd",
+        "name": "bill",
+        "attr": "stagger, hook_drag",
+        "heat": 1,
+        "cdist": 25,
+        "delay": 85,
+        "weapon_category": "bill",
+        "handling": 0,
+        "twohand": true
+      },
+      "long_bow": {
+        "roles": [
+          "missile"
+        ],
+        "atk": 5,
+        "charge": 0,
+        "missile": "arrow",
+        "range": 180,
+        "ammo": 35,
+        "wtype": "missile",
+        "tech": "simple",
+        "dmg": "piercing",
+        "sound": "bow",
+        "name": "long_bow",
+        "attr": "",
+        "heat": 0,
+        "cdist": 20,
+        "delay": 0,
+        "weapon_category": ""
+      },
+      "war_bow": {
+        "roles": [
+          "missile"
+        ],
+        "atk": 4,
+        "charge": 0,
+        "missile": "arrow",
+        "range": 150,
+        "ammo": 35,
+        "wtype": "missile",
+        "tech": "simple",
+        "dmg": "piercing",
+        "sound": "bow",
+        "name": "war_bow",
+        "attr": "",
+        "heat": 0,
+        "cdist": 20,
+        "delay": 0,
+        "weapon_category": ""
+      },
+      "self_bow": {
+        "roles": [
+          "missile"
+        ],
+        "atk": 3,
+        "charge": 0,
+        "missile": "arrow",
+        "range": 125,
+        "ammo": 40,
+        "wtype": "missile",
+        "tech": "simple",
+        "dmg": "piercing",
+        "sound": "bow",
+        "name": "self_bow",
+        "attr": "",
+        "heat": 0,
+        "cdist": 20,
+        "delay": 0,
+        "weapon_category": ""
+      },
+      "composite_bow": {
+        "roles": [
+          "missile"
+        ],
+        "atk": 5,
+        "charge": 0,
+        "missile": "arrow",
+        "range": 190,
+        "ammo": 35,
+        "wtype": "missile",
+        "tech": "simple",
+        "dmg": "piercing",
+        "sound": "bow",
+        "name": "composite_bow",
+        "attr": "",
+        "heat": 0,
+        "cdist": 20,
+        "delay": 0,
+        "weapon_category": ""
+      },
+      "crossbow": {
+        "roles": [
+          "missile"
+        ],
+        "atk": 10,
+        "charge": 0,
+        "missile": "bolt",
+        "range": 180,
+        "ammo": 12,
+        "wtype": "missile",
+        "tech": "simple",
+        "dmg": "piercing",
+        "sound": "crossbow",
+        "name": "crossbow",
+        "attr": "",
+        "heat": 0,
+        "cdist": 20,
+        "delay": 0,
+        "weapon_category": ""
+      },
+      "light_crossbow": {
+        "roles": [
+          "missile"
+        ],
+        "atk": 8,
+        "charge": 0,
+        "missile": "bolt",
+        "range": 160,
+        "ammo": 12,
+        "wtype": "missile",
+        "tech": "simple",
+        "dmg": "piercing",
+        "sound": "crossbow",
+        "name": "light_crossbow",
+        "attr": "",
+        "heat": 0,
+        "cdist": 20,
+        "delay": 0,
+        "weapon_category": ""
+      },
+      "arbalest": {
+        "roles": [
+          "missile"
+        ],
+        "atk": 12,
+        "charge": 0,
+        "missile": "bolt",
+        "range": 220,
+        "ammo": 10,
+        "wtype": "missile",
+        "tech": "simple",
+        "dmg": "piercing",
+        "sound": "crossbow",
+        "name": "arbalest",
+        "attr": "",
+        "heat": 1,
+        "cdist": 20,
+        "delay": 0,
+        "weapon_category": ""
+      },
+      "javelin": {
+        "roles": [
+          "missile",
+          "skirmish",
+          "cav"
+        ],
+        "atk": 10,
+        "charge": 0,
+        "missile": "javelin",
+        "range": 55,
+        "ammo": 4,
+        "wtype": "thrown",
+        "tech": "simple",
+        "dmg": "piercing",
+        "sound": "spear",
+        "name": "javelin",
+        "attr": "thrown",
+        "heat": 1,
+        "cdist": 20,
+        "delay": 0,
+        "weapon_category": ""
+      },
+      "mounted_short_bow": {
+        "roles": [
+          "cav"
+        ],
+        "atk": 2,
+        "charge": 0,
+        "missile": "arrow",
+        "range": 90,
+        "ammo": 40,
+        "wtype": "missile",
+        "sound": "bow",
+        "attr": "",
+        "heat": 0,
+        "delay": 0
+      },
+      "mounted_recurve_bow": {
+        "roles": [
+          "cav"
+        ],
+        "atk": 3,
+        "charge": 0,
+        "missile": "arrow",
+        "range": 105,
+        "ammo": 40,
+        "wtype": "missile",
+        "sound": "bow",
+        "attr": "",
+        "heat": 0,
+        "delay": 0
+      },
+      "mounted_heavy_recurve_bow": {
+        "roles": [
+          "cav"
+        ],
+        "atk": 4,
+        "charge": 0,
+        "missile": "arrow",
+        "range": 140,
+        "ammo": 40,
+        "wtype": "missile",
+        "sound": "bow",
+        "attr": "",
+        "heat": 0,
+        "delay": 0
+      },
+      "mounted_crossbow": {
+        "roles": [
+          "cav"
+        ],
+        "atk": 6,
+        "charge": 0,
+        "missile": "bolt",
+        "range": 95,
+        "ammo": 10,
+        "wtype": "missile",
+        "sound": "crossbow",
+        "attr": "",
+        "heat": 0,
+        "delay": 0
+      },
+      "mounted_javelin": {
+        "roles": [
+          "cav"
+        ],
+        "atk": 10,
+        "charge": 0,
+        "missile": "javelin",
+        "range": 50,
+        "ammo": 6,
+        "wtype": "thrown",
+        "sound": "spear",
+        "attr": "thrown",
+        "heat": 1,
+        "delay": 0
+      }
+    },
+    "sec": {
+      "none": {
+        "roles": [
+          "any"
+        ],
+        "atk": null,
+        "weapon_category": ""
+      },
+      "arming_sword": {
+        "roles": [
+          "inf",
+          "cav"
+        ],
+        "atk": 6,
+        "charge": 3,
+        "wtype": "melee",
+        "tech": "melee_blade",
+        "dmg": "slashing",
+        "sound": "sword",
+        "name": "horsemans_sword",
+        "attr": "",
+        "delay": 40,
+        "weapon_category": "sword_cut",
+        "handling": 1,
+        "twohand": false,
+        "heat": 0,
+        "charge_mounted": 4,
+        "delay_mounted": 45,
+        "heat_mounted": 0
+      },
+      "horseman_mace": {
+        "roles": [
+          "cav",
+          "inf"
+        ],
+        "atk": 4,
+        "charge": 4,
+        "wtype": "melee",
+        "tech": "melee_blade",
+        "dmg": "blunt",
+        "sound": "mace",
+        "name": "horseman_mace",
+        "attr": "rend_2, batter_2",
+        "delay": 70,
+        "weapon_category": "mace",
+        "handling": 0,
+        "twohand": false,
+        "heat": 1
+      },
+      "horseman_axe": {
+        "roles": [
+          "cav",
+          "inf"
+        ],
+        "atk": 4,
+        "charge": 4,
+        "wtype": "melee",
+        "tech": "melee_blade",
+        "dmg": "slashing",
+        "sound": "axe",
+        "name": "horseman_axe",
+        "attr": "stagger",
+        "delay": 50,
+        "weapon_category": "axe",
+        "handling": 0,
+        "twohand": false,
+        "heat": 1
+      },
+      "falchion": {
+        "roles": [
+          "inf",
+          "cav"
+        ],
+        "atk": 6,
+        "charge": 4,
+        "wtype": "melee",
+        "tech": "melee_blade",
+        "dmg": "slashing",
+        "sound": "sword",
+        "name": "falchion",
+        "attr": "",
+        "delay": 45,
+        "weapon_category": "sword_cut",
+        "handling": 1,
+        "twohand": false,
+        "heat": 1,
+        "charge_mounted": 4,
+        "delay_mounted": 50,
+        "heat_mounted": 0
+      },
+      "short_sword": {
+        "roles": [
+          "any"
+        ],
+        "atk": 2,
+        "charge": 2,
+        "wtype": "melee",
+        "tech": "melee_blade",
+        "dmg": "slashing",
+        "sound": "sword",
+        "name": "short_sword",
+        "attr": "",
+        "delay": 30,
+        "weapon_category": "knife",
+        "handling": 0,
+        "twohand": false,
+        "heat": 0
+      },
+      "mace": {
+        "roles": [
+          "inf"
+        ],
+        "atk": 4,
+        "charge": 2,
+        "wtype": "melee",
+        "tech": "melee_blade",
+        "dmg": "blunt",
+        "sound": "mace",
+        "name": "mace",
+        "attr": "rend_2, batter_2",
+        "delay": 65,
+        "weapon_category": "mace",
+        "handling": 0,
+        "twohand": false,
+        "heat": 1
+      }
+    },
+    "weapon_categories": {
+      "knife": {
+        "atk": 2,
+        "attr": "",
+        "twohand": false,
+        "handling": 0
+      },
+      "sword_cut": {
+        "atk": 6,
+        "attr": "",
+        "twohand": false,
+        "handling": 1
+      },
+      "sword_thrust": {
+        "atk": 5,
+        "attr": "rend_2",
+        "twohand": false,
+        "handling": 1
+      },
+      "axe": {
+        "atk": 4,
+        "attr": "stagger",
+        "twohand": false,
+        "handling": 0
+      },
+      "mace": {
+        "atk": 4,
+        "attr": "rend_2, batter_2",
+        "twohand": false,
+        "handling": 0
+      },
+      "pick": {
+        "atk": 4,
+        "attr": "rend_5",
+        "twohand": false,
+        "handling": 0
+      },
+      "spear": {
+        "atk": 3,
+        "attr": "spear_bonus_4",
+        "twohand": false,
+        "handling": 0
+      },
+      "fighting_spear": {
+        "atk": 7,
+        "attr": "rend_2, spear_bonus_4",
+        "twohand": true,
+        "handling": 1
+      },
+      "pike": {
+        "atk": 5,
+        "attr": "long_pike, spear_bonus_8",
+        "twohand": true,
+        "handling": 0
+      },
+      "longaxe": {
+        "atk": 11,
+        "attr": "stagger, rend_4",
+        "twohand": true,
+        "handling": 0
+      },
+      "glaive": {
+        "atk": 10,
+        "attr": "duelist_2",
+        "twohand": true,
+        "handling": 0
+      },
+      "bill": {
+        "atk": 9,
+        "attr": "stagger, hook_drag",
+        "twohand": true,
+        "handling": 0
+      },
+      "halberd": {
+        "atk": 10,
+        "attr": "rend_3, spear_bonus_6",
+        "twohand": true,
+        "handling": 0
+      },
+      "poleaxe": {
+        "atk": 10,
+        "attr": "rend_4, duelist_3",
+        "twohand": true,
+        "handling": 1
+      },
+      "longsword": {
+        "atk": 9,
+        "attr": "duelist_2",
+        "twohand": true,
+        "handling": 1
+      },
+      "greatsword": {
+        "atk": 12,
+        "attr": "duelist_2",
+        "twohand": true,
+        "handling": 0
+      },
+      "estoc": {
+        "atk": 7,
+        "attr": "rend_6",
+        "twohand": true,
+        "handling": 0
+      },
+      "staff": {
+        "atk": 4,
+        "attr": "",
+        "twohand": true,
+        "handling": 1
+      },
+      "lance": {
+        "atk": -1,
+        "attr": "",
+        "twohand": false,
+        "handling": 0
+      }
+    },
+    "offhands": {
+      "empty": {
+        "shield": 0,
+        "def": 0
+      },
+      "buckler": {
+        "shield": 1,
+        "def": 2
+      },
+      "small": {
+        "shield": 3,
+        "def": 1
+      },
+      "medium": {
+        "shield": 5,
+        "def": 0
+      },
+      "large": {
+        "shield": 7,
+        "def": -1
+      },
+      "dagger": {
+        "shield": 0,
+        "def": 2
+      }
+    },
+    "grades": {
+      "artisan": {
+        "stat": 2,
+        "recruit": 0.15,
+        "upkeep": 0.1
+      },
+      "high": {
+        "stat": 1,
+        "recruit": 0.075,
+        "upkeep": 0.05
+      },
+      "common": {
+        "stat": 0,
+        "recruit": 0,
+        "upkeep": 0
+      },
+      "munition": {
+        "stat": -1,
+        "recruit": -0.2,
+        "upkeep": -0.15
+      },
+      "poor": {
+        "stat": -1,
+        "recruit": 0,
+        "upkeep": 0.1
+      }
+    },
+    "loadouts": {
+      "unarmored": [
+        "unarmored",
+        "none"
+      ],
+      "leather_jerkin": [
+        "leather_jerkin",
+        "coat_cloth"
+      ],
+      "gambeson": [
+        "gambeson",
+        "coat_cloth"
+      ],
+      "leine_croine": [
+        "leine_croine",
+        "none"
+      ],
+      "scale_light": [
+        "scale_light",
+        "arming_doublet"
+      ],
+      "lamellar_light": [
+        "lamellar_light",
+        "arming_doublet"
+      ],
+      "mail_light": [
+        "mail_light",
+        "gambeson"
+      ],
+      "brigandine_late": [
+        "brigandine_late",
+        "arming_doublet"
+      ],
+      "breast_plate": [
+        "breast_plate",
+        "arming_doublet"
+      ],
+      "scale_med": [
+        "scale_med",
+        "gambeson"
+      ],
+      "lamellar_med": [
+        "lamellar_med",
+        "gambeson"
+      ],
+      "mail_med": [
+        "mail_med",
+        "gambeson"
+      ],
+      "coat_of_plates": [
+        "coat_of_plates",
+        "gambeson",
+        "mail_haubergon"
+      ],
+      "brigandine": [
+        "brigandine",
+        "arming_doublet",
+        "mail_voiders"
+      ],
+      "heavy_scale": [
+        "heavy_scale",
+        "gambeson"
+      ],
+      "heavy_lamellar": [
+        "heavy_lamellar",
+        "gambeson"
+      ],
+      "double_mail": [
+        "double_mail",
+        "gambeson"
+      ],
+      "ren_half_plate": [
+        "ren_half_plate",
+        "arming_doublet",
+        "mail_voiders"
+      ],
+      "ren_3q_plate": [
+        "ren_3q_plate",
+        "arming_doublet",
+        "mail_voiders"
+      ],
+      "kataphract": [
+        "heavy_lamellar",
+        "gambeson",
+        "mail_haubergon"
+      ],
+      "transitional": [
+        "transitional",
+        "gambeson",
+        "mail_haubergon"
+      ],
+      "plate_lamellar": [
+        "plate_lamellar",
+        "arming_doublet",
+        "mail_haubergon"
+      ],
+      "full_plate": [
+        "full_plate",
+        "arming_doublet",
+        "mail_voiders"
+      ],
+      "gothic_plate": [
+        "gothic_plate",
+        "arming_doublet",
+        "mail_voiders"
+      ],
+      "italian_plate": [
+        "italian_plate",
+        "arming_doublet",
+        "mail_voiders"
+      ],
+      "late_full_plate": [
+        "late_full_plate",
+        "arming_doublet",
+        "mail_voiders"
+      ]
+    },
+    "foot_quality": {
+      "Exceptional": {
+        "atk": 3,
+        "def": 2,
+        "delay": -30,
+        "heat": -3
+      },
+      "Outstanding": {
+        "atk": 2,
+        "def": 1,
+        "delay": -20,
+        "heat": -2
+      },
+      "Superior": {
+        "atk": 1,
+        "def": 1,
+        "delay": -10,
+        "heat": -1
+      },
+      "Average": {
+        "atk": 0,
+        "def": 0,
+        "delay": 0,
+        "heat": 0
+      },
+      "Inferior": {
+        "atk": -2,
+        "def": 0,
+        "delay": 20,
+        "heat": 1
+      }
+    },
+    "mounted_quality": {
+      "Exceptional": {
+        "atk": 7,
+        "def": 2,
+        "delay": -30,
+        "heat": -3
+      },
+      "Outstanding": {
+        "atk": 5,
+        "def": 1,
+        "delay": -20,
+        "heat": -2
+      },
+      "Superior": {
+        "atk": 3,
+        "def": 1,
+        "delay": -10,
+        "heat": -1
+      },
+      "Average": {
+        "atk": 1,
+        "def": 0,
+        "delay": 0,
+        "heat": 0
+      },
+      "Inferior": {
+        "atk": -3,
+        "def": 0,
+        "delay": 20,
+        "heat": 1
+      }
+    },
+    "archetypes": {
+      "Royal Retinue": {
+        "morale": 16,
+        "discipline": "disciplined",
+        "atk_tr": 2,
+        "def_tr": 3,
+        "heat": -2,
+        "attrs": [
+          "general_unit",
+          "free_upkeep_unit"
+        ],
+        "size_inf": 30,
+        "size_cav": 15
+      },
+      "Martial Nobility": {
+        "morale": 13,
+        "discipline": "normal",
+        "atk_tr": 2,
+        "def_tr": 2,
+        "heat": -1,
+        "attrs": [],
+        "size_inf": 60,
+        "size_cav": 30
+      },
+      "Household Soldiers": {
+        "morale": 12,
+        "discipline": "disciplined",
+        "atk_tr": 1,
+        "def_tr": 1,
+        "heat": 0,
+        "attrs": [],
+        "size_inf": 60,
+        "size_cav": 30
+      },
+      "Career Soldiers": {
+        "morale": 10,
+        "discipline": "normal",
+        "atk_tr": 1,
+        "def_tr": 1,
+        "heat": 0,
+        "attrs": [],
+        "size_inf": 60,
+        "size_cav": 30
+      },
+      "Urban Militia": {
+        "morale": 9,
+        "discipline": "normal",
+        "atk_tr": 0,
+        "def_tr": 0,
+        "heat": 0,
+        "attrs": [
+          "free_upkeep_unit"
+        ],
+        "size_inf": 60,
+        "size_cav": 30
+      },
+      "Rural Militia": {
+        "morale": 7,
+        "discipline": "low",
+        "atk_tr": 0,
+        "def_tr": 0,
+        "heat": 0,
+        "attrs": [
+          "free_upkeep_unit"
+        ],
+        "size_inf": 60,
+        "size_cav": 30
+      },
+      "Warrior Levies": {
+        "morale": 8,
+        "discipline": "normal",
+        "atk_tr": 0,
+        "def_tr": 0,
+        "heat": 0,
+        "attrs": [],
+        "size_inf": 60,
+        "size_cav": 30
+      },
+      "Emergency Levies": {
+        "morale": 5,
+        "discipline": "low",
+        "atk_tr": -1,
+        "def_tr": 0,
+        "heat": 1,
+        "attrs": [],
+        "size_inf": 60,
+        "size_cav": 30
+      }
+    }
+  },
+  "engine_profiles": {
+    "vanilla": {
+      "weapon_upgrade_attack": {
+        "value": 3,
+        "source": "engine_default",
+        "verified": true,
+        "status": "default"
+      },
+      "armour_upgrade_armour": {
+        "value": 2,
+        "source": "engine_default",
+        "verified": true,
+        "status": "default"
+      }
+    },
+    "eop": {
+      "weapon_upgrade_attack": {
+        "value": 3,
+        "source": "engine_default",
+        "verified": true,
+        "status": "default"
+      },
+      "armour_upgrade_armour": {
+        "value": 2,
+        "source": "engine_default",
+        "verified": true,
+        "status": "default"
+      }
+    },
+    "M2EX": {
+      "weapon_upgrade_attack": {
+        "value": 3,
+        "source": "engine_default",
+        "verified": true,
+        "status": "default"
+      },
+      "armour_upgrade_armour": {
+        "value": 2,
+        "source": "engine_default",
+        "verified": true,
+        "status": "default"
+      }
+    }
+  }
+}

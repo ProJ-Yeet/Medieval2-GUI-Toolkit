@@ -4,6 +4,229 @@ Newest entries first. This records Codex's work for Claude; project status and
 release rules remain in STATE.md and RELEASE.md. Do not assume the working tree's
 other changes belong to Codex.
 
+## 2026-11-08 - Phase 103: deterministic calculator and explicit rules data
+
+Exit checklist against Phase 103's own exit line:
+
+- DONE: calculator/golden tests pass for implemented rules, including the
+  pinned source grade matrix, foot/mounted quality matrix, ranged/Hybrid/culture
+  goldens, defending slot, signed offhand, layers and horse-only barding.
+- DONE: inputs and selected preset snapshots do not mutate; final pins remain
+  separate from calculation. Input and engine-rule copies are returned safely.
+- DONE: repeated evaluations, including JSON reopen, agree.
+- DONE: unsupported fields cannot leak into EDU. Calculated output and final
+  pins use the 102 output boundary and existing shared sheet types/field map.
+  Game-invalid sp and spear_bonus_2 stay quarantined; fire is accepted.
+- DONE: no game files written. Calculator execution is tested with builtins,
+  Path and OS file access forbidden. EOP reading uses a synthetic Lua fixture.
+  No installed mod was read or modified. No upstream script was executed.
+- DONE: Guards subtype arithmetic resolved by the user's 2026-11-08 decision:
+  +2 Defense Skill from builder help, -1 melee Attack and disciplined-only +1
+  morale. Final upstream +1 Skill is a documented deliberate difference.
+  UI is not required for Phase 103 and was not added.
+
+Changes and files:
+
+- unittransfer/builder_calculator.py: isolated pure calculation, semantic checks,
+  selected editable snapshots, effective input overrides, deterministic JS
+  rounding, contribution traces, typed native projection and separate metadata.
+  Read-only load_engine_rules handles literal EOP settings and mod-local M2EX
+  descr_caps_ex.txt integers with source lines; a mod entry selects M2EX via m2ex.
+- unittransfer/builder_rules.json: pinned effective literal rule tables and
+  attribution, plus vanilla/EOP/M2EX per-engine default records. No dependencies.
+- unittransfer/builder_contract.py: existing output quarantine now also excludes
+  spear_bonus_2 and accepts fire. sp always remains excluded. Existing native
+  editor suggestions/source preservation were not changed.
+- tests/test_builder_calculator.py: 22 tests using synthetic designs and manually
+  transcribed source regression expectations. Uses real shared field_changes
+  and EDU parser for output verification, with no alternate stat pipeline.
+- tests/fixtures/builder_eop/eopData/eopScripts/luaPluginScript.lua: synthetic
+  1/1 configuration plus inert comment/string lookalikes, read only in tests.
+- tests/fixtures/builder_m2ex/{both,one,none,negative}/data/descr_caps_ex.txt:
+  synthetic plain-text settings for independent defaults and negative clamps.
+- tests/test_i18n.py: recognizes builder reply message descriptors across all
+  engine slots, verifies their English catalogue IDs and parameter sets. This
+  permits English-only catalogue text without duplicate Python fallback prose.
+- web/i18n/en.json: two notes only. No other catalogue or dev/i18n file edited.
+- docs/BUILDER_RULES.md: API, input precedence, table/formula provenance, rounding,
+  deliberate source differences, upgrade semantics and Guards decision. Historical
+  docs/UNIT_BUILDER_CONTRACT.md has a short superseding-decision pointer.
+- docs/CODEX_HANDOFF.md: this entry. STATE.md, ROADMAP.md and ROADMAP_ARCHIVE.md
+  were not edited. Existing TWCenter index deletions and untracked files predate
+  the task and remain untouched.
+
+Rules and sources:
+
+- Source d4ed9368d0db3da2000bc895e96f52a83b93cb67, lupinemaverick, based on MUG
+  Unit Builder v1.5 / MUG Unit Creation Guide, Combat Reforged work for King
+  Siegfried. User reported author permission; no new license inferred. Verified
+  every cached source hash against SSR_BUILDER_AUDIT.json before extracting
+  literal tables as data. Never imported/executed upstream scripts or tests.
+- Archetypes: generated build.py identities, then audit/r2 fixes. Quality:
+  audit_rules.js then combat_rules.js. Independent grade: equipment_grade.js.
+  Weapons: base and reforged category tables, audit mounted/sword corrections,
+  r2 Attack/handling, preset_filters knife normalization, armor_loadouts lance
+  cleanup, weapon_phase_a final bill/greatsword proposal changes. Armor/layers,
+  shields, horse data: base plus those effective wrappers. Terrain/formation:
+  audit_rules.js; hiding and +2 terrain choices: unit_attribute_controls.js.
+  Exact source/value mapping is in BUILDER_RULES.md and literal values in JSON.
+- Entered recruit/upkeep inputs are pre-grade, including overrides.inputs.
+  Hybrid recruit rounding precedes grade rounding. Native pins remain final.
+- weapon_upgrade_attack default 3, armour_upgrade_armour default 2: per-engine
+  rules data, source engine_default, matching documented EOP API defaults.
+  A single literal setting call in eopData/eopScripts/luaPluginScript.lua
+  replaces each value independently and records its relative path and line.
+  No Lua execution or expression interpretation. Comments/strings ignored;
+  duplicates, nonliteral/invalid arguments retain defaults with status.
+  Observed configuration is not proof a conditional branch ran in game.
+- M2EX defaults are verified 3/2 using the source findings supplied by the user.
+  Its mod-local data/descr_caps_ex.txt keys weapon_upgrade_points and
+  armour_upgrade_points override independently; negative integers clamp to 0.
+  Each value reports engine_default or the relative file and line, verified true,
+  and default/literal_config/clamped_config status. No EOP or parent fallback.
+  Vanilla uses fixed 3/2. Vanilla/M2EX missile, thrown and siege-missile attacks
+  receive no weapon bonus. EOP behavior is unchanged. Only the M2EX missile
+  switch's configuration key remains unverified, so that switch stays off.
+  Upgrade levels affect metadata preview only, preserving base EDU. Notes carry
+  modifier parameters and the unit card's +1 display caveat. No UI was added.
+
+Tests first and checks actually run:
+
+- Wrote the initial 11 tests before the calculator/data implementation. First
+  run: all 11 ERROR with missing builder_calculator ImportError. Additional
+  tests were added before their fixes: ranged category/none secondary failed
+  with preset_id; eligibility did not reject; compound formations failed typed
+  output validation; fire was omitted; descriptor notes were missing; malformed
+  selected snapshot data raised AttributeError/TypeError/IndexError instead of
+  ContractError; shared wedge vocabulary was rejected. All now pass.
+- Corrected test setup/expectations during the first implementation run: default
+  unarmored agility and wooden shield Skill contributions were not neutral,
+  self_bow is the source ID, preset role needs missile class, mounted Attack
+  sum is 7, Iberian medium sand is -2, and parsed EDU fields use fields_of.
+  These corrections are not claimed as upstream calculator defects.
+- Initial test temporary-directory use hit this sandbox's Windows mode-0700
+  ACL issue. Replaced the new test's runtime temporary Lua folder with the
+  checked-in synthetic fixture. The first inaccessible empty tmpemasnmt0 under
+  the system temp directory was not removed or permission-modified.
+- Final Python group: 103/103 pass: calculator 19, builder_contract 6,
+  unit_sheets 36, sheet_ops 42. UT_NO_BROWSER=1. Existing fixture-heavy tests
+  ran with a process-only os.mkdir 0700-to-0777 workaround and a workspace temp
+  root, as in 102, without changing their production code.
+- tests.test_web_modules: 130/130 pass, including Node parsing of 110 modules
+  and combined load order. tests.test_i18n: 45/45 pass, including Node runtime
+  and fixture HTTP checks. Initial i18n run was 44/45 because its scanner did
+  not recognize the two message descriptors; coverage now checks the actual
+  helper output/parameters. Direct loopback opener avoids the refused proxy.
+  No new Node tests were added, and no upstream Node test was run.
+- git diff --check passed. Added/changed text checked for trailing whitespace
+  and U+2014. Existing en.json contains earlier em dashes; those were left
+  untouched and no new text adds one. Test logs/helper scripts are in .tmp;
+  they are scratch, not proposed repository files.
+
+New string IDs (English catalogue only):
+
+- builder.upgrade_card_note
+- builder.m2ex_missile_unverified (replaces builder.m2ex_unverified)
+
+Resolved Guards question and remaining limitations:
+
+- Guards is a trait_guards subtype Defense Skill contribution in build.py,
+  audit_rules.js and the final r2 skill breakdown, not an armor-upgrade value.
+  The user resolved the earlier +1/+2 stop on 2026-11-08: use +2 from builder
+  help, deliberately differing from final r2 +1. Neutral core4 becomes Skill6.
+  Guards subtracts 1 from melee Attack only and adds 1 morale only with final
+  disciplined discipline. It does not change discipline or use armor upgrade
+  modifiers. The selection stop has been removed; see follow-up below.
+- The M2EX missile-switch file key remains unverified; upgrades stay off for
+  missile attacks. Installed DaC EUR literal 1/1 was not independently read; only
+  fixture 1/1 is verified. Battle behavior, EOP branch execution and
+  upstream browser parity are not verified. Heat, armor sound, morale lock and
+  compound formation types stay engine-shaped metadata where shared sheets
+  lack the appropriate field shape. UI, migration and Apply/Undo remain later
+  phases. Unknown proposals and conditional effects have no runtime claim.
+
+Commit/release status: HEAD remains b934e831; no commit, tag, build or release.
+Live account-event usage checks: five-hour 13%, 17%, 20%, 22%, 25%, 28%, 29%, 30%, 32%, 34% used,
+below this builder track's authorized 90%-used stop. Weekly usage is not the
+guard. Final check: 66% remaining. No credits spent or limits reset.
+
+Final checkout observation: changes to unittransfer/edit.py and web/js/editor.js
+and untracked tests/test_card_coverage.py / tests/test_card_coverage_ui.js appeared
+after the initial status check. This run did not edit those files and leaves
+them untouched. Repeated web checks pass 130/130 against the current checkout. The
+builder tests also reject malformed armor identity/sound types with ContractError
+after first recording their TypeError failures. Final Python group remains
+103/103 passing after those fixes.
+
+Final i18n rerun on the externally changed checkout: 43/45, after two earlier
+45/45 passing runs. Failures are missing editor.missing_card_fallback,
+editor.missing_card_generic, editor.missing_info_card, editor.missing_info_generic
+and editor.missing_unit_card, plus the related faction parameter check at
+web/js/editor.js:748. Those references came from the editor/card work this run
+did not make. Both Phase 103 builder descriptors are present and their parameters
+pass. No attempt was made to rewrite or complete another contributor's work.
+Thus the final current-checkout i18n result is FAILED, not a claim of 45/45 at
+finish. Re-run it when the separate card strings are supplied. All five Phase
+103 exit items above remain verified; this unrelated i18n regression is a
+remaining checkout limitation.
+
+Follow-up on 2026-11-08: M2EX verification completed within this Phase 103 entry.
+
+- Used the user's supplied M2EX source findings, not an installed mod or game.
+  Added fixture tests first. Initial run: 22 tests, 13 assertion failures and
+  1 error demonstrating missing M2EX parsing/flag support and missile filtering.
+  During implementation, corrected Path.root being mistaken for a mod root;
+  fixture paths now stay intact. No source repository citation added to comments.
+- Changed this follow-up: unittransfer/builder_calculator.py,
+  unittransfer/builder_rules.json, docs/BUILDER_RULES.md,
+  tests/test_builder_calculator.py, four tests/fixtures/builder_m2ex files,
+  web/i18n/en.json and this existing handoff entry. Other catalogue files,
+  Guards behavior, edit.py, editor.js, test_card_coverage* and .tmp/cards_* untouched.
+- Final requested checks with UT_NO_BROWSER=1: tests.test_builder_calculator
+  22/22 and tests.test_builder_contract 6/6 pass; tests.test_web_modules
+  130/130 pass; tests.test_i18n 43/45. The two failed i18n checks concern five
+  missing editor IDs (missing_card_fallback, missing_card_generic,
+  missing_info_card, missing_info_generic, missing_unit_card) and the related
+  faction parameter check at editor.js:738, all in the other run's work.
+  Builder note descriptors and parameters pass. Web/i18n used the existing
+  process-only temp ACL workaround and direct loopback opener helper. Scratch
+  logs: .tmp/phase103-m2ex-web.log and .tmp/phase103-m2ex-i18n.log.
+- git diff --check passed. Fixture arithmetic and sources verified; battle
+  execution and the missile-switch file key remain unverified. Guards remains
+  stopped pending the existing +1/+2 decision, exactly as before.
+- Live usage endpoint checks: five-hour 37% then 38% used, 62% remaining at
+  the latest checkpoint, below this builder track's authorized 90%-used stop.
+  Weekly usage is not the stop threshold. No credits spent or limits reset.
+- No commit, tag, build or release performed. Changes remain uncommitted.
+
+Follow-up on 2026-11-08: Guards resolved within this existing Phase 103 entry.
+
+- User decision: "just use what the wiki says". Implemented builder index.html
+  help's +2 Defense Skill, deliberately differing from final combat_rules.js +1.
+  Added -1 Attack for each melee slot and +1 morale only when final discipline
+  is disciplined. Guards leaves discipline unchanged; Reckless still makes it
+  impetuous. Removed guards_skill_unresolved. Neighbouring subtype structure
+  and contribution traces are retained; armor upgrades remain separate.
+- Changed this follow-up only: unittransfer/builder_calculator.py,
+  tests/test_builder_calculator.py, docs/BUILDER_RULES.md and this entry.
+  No catalogue edits, dependencies, commits, tags, builds or releases. Left
+  unittransfer/edit.py, web/js/editor.js and tests/test_card_coverage* untouched.
+- Tests first: replaced the unresolved-stop expectation with two golden tests.
+  Initial run: both tests failed with seven subcase errors, all the existing
+  guards_skill_unresolved ContractError. After implementation, corrected golden
+  Attack expectations for Emergency Levies' existing -1 training and ranged
+  Average's melee-quality reduction; these were test setup corrections.
+- Verified synthetic goldens: neutral core4 becomes Skill6; primary/secondary
+  melee Attack drops by 1, missile Attack stays unchanged. Morale matches
+  disciplined, normal, low, impetuous and Reckless cases. No game verification
+  or upstream browser parity is claimed; existing limitations above remain.
+- UT_NO_BROWSER=1: tests.test_builder_calculator 24/24 and
+  tests.test_builder_contract 6/6 pass; tests.test_web_modules 130/130 pass.
+  git diff --check passed. Changes remain uncommitted.
+- Usage: current account events reported five-hour 40% then 41% used at start
+  and checkpoint, below the authorized 90%-used stop. Weekly usage is not the
+  stop threshold. No credits spent or limits reset.
+
 ## 2026-11-08 - Phase 102: source audit, profiles and data contract
 
 - Exit items DONE: reviewed feature/module map, compatibility matrix, six

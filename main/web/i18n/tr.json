@@ -12636,5 +12636,7 @@
  "charmodels.role_heir": "Fraksiyon varisi",
  "eng.charmodels.unreached": "{type}, seviye {level}: bu karakter türünün hiçbir özelliği bu seviyeyi vermez",
  "eng.charmodels.missing": "{model}, modeldb içinde bir girdi değil",
- "eng.charmodels.horse": "{model} için at animasyonu yok; generaller ve yüzbaşılar yaya ve atlıyken aynı modeli kullanır"
+ "eng.charmodels.horse": "{model} için at animasyonu yok; generaller ve yüzbaşılar yaya ve atlıyken aynı modeli kullanır",
+ "builder.upgrade_card_note": "Oyundaki birim kartı, yükseltme seviyesi başına +1 gösterir. Oyun motoru, seviye başına silah saldırısına +{weapon} ve zırha +{armour} uygular (vanilla varsayılanları: yakın dövüş saldırılarına +3 ve zırha +2).",
+ "builder.m2ex_missile_unverified": "M2EX atış silahı yükseltmeleri kapalı tutulur. Atış silahı yükseltmelerini etkinleştiren yapılandırma anahtarı doğrulanmamıştır."
 }

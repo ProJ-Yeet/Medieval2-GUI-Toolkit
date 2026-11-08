@@ -13623,5 +13623,7 @@
  "charmodels.role_heir": "Heredero de facción",
  "eng.charmodels.unreached": "{type}, nivel {level}: ningún rasgo de este tipo de personaje otorga este nivel",
  "eng.charmodels.missing": "{model} no es una entrada de modeldb",
- "eng.charmodels.horse": "{model} no tiene animación de caballo; los generales y capitanes usan el mismo modelo a pie y montados"
+ "eng.charmodels.horse": "{model} no tiene animación de caballo; los generales y capitanes usan el mismo modelo a pie y montados",
+ "builder.upgrade_card_note": "La tarjeta de unidad del juego muestra +1 por nivel de mejora. El motor aplica +{weapon} al ataque del arma y +{armour} a la armadura por nivel (valores predeterminados de vanilla: +3 a los ataques cuerpo a cuerpo y +2 a la armadura).",
+ "builder.m2ex_missile_unverified": "Las mejoras de armas a distancia de M2EX se mantienen desactivadas. No se ha verificado la clave de configuración que activa las mejoras de armas a distancia."
 }

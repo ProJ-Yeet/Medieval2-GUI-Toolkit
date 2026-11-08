@@ -73,6 +73,18 @@ for f in sorted((WEB / "js").glob("*.js")):
 html = (WEB / "index.html").read_text(encoding="utf-8")
 for m in re.finditer(r'data-i18n(?:-[\w-]+)?="([^"]+)"', html):
     used.setdefault(m.group(1), "index.html")
+# Builder calculation replies carry message descriptors rather than English
+# fallback literals. Exercise every engine slot, including unverified M2EX.
+from unittransfer import builder_calculator
+for profile in ('vanilla', 'eop', 'M2EX'):
+    for descriptor in builder_calculator.load_engine_rules(profile=profile)['notes']:
+        mid = descriptor['id']
+        used.setdefault(mid, 'builder_calculator')
+        template = cat.get(mid, '')
+        names = set(re.findall(r'\{([a-z_]+)\}', template))
+        if names != set(descriptor['params']):
+            raise AssertionError('builder note parameters differ: '+mid)
+        template.format(**descriptor['params'])
 missing = sorted(k for k in used if k not in cat)
 check(f"every ID the page asks for is in en.json ({len(used)} asked for)", not missing)
 if missing:

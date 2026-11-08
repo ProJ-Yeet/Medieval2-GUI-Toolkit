@@ -1,5 +1,11 @@
 # Guided unit builder contract (Phase 102)
 
+Phase 103 implementation and the 2026-11-08 decisions are documented in
+[BUILDER_RULES.md](BUILDER_RULES.md). Entered costs are pre-grade, sp remains
+quarantined, and Guards is a separate subtype Skill bonus with its formula
+still blocked. This addendum supersedes those three decision questions below;
+the Phase 102 text remains the historical contract/audit record.
+
 Reviewed 2026-11-08. This phase adds an offline contract and synthetic examples.
 It registers no app route, changes no existing app behavior, runs no upstream
 program and writes no mod. Phase 103 owns calculation; 104 owns controls; 105
