@@ -2018,7 +2018,8 @@ class Handler(BaseHTTPRequestHandler):
         note_request(u.path)
         try:
             if u.path in ("/", "/index.html"):
-                return self._file(WEB_DIR / "index.html", "text/html; charset=utf-8")
+                return self._file(WEB_DIR / "index.html", "text/html; charset=utf-8",
+                                  {"Cache-Control": "no-store"})
             if u.path.startswith("/js/"):
                 return self._web_asset(u.path)
             if u.path.startswith("/i18n/") and u.path.endswith(".json"):
@@ -6202,10 +6203,10 @@ class Handler(BaseHTTPRequestHandler):
         return {"path": rel, "parent": parent, "dirs": dirs,
                 "can_up": rel.lower() != "unit_models" and bool(rel)}
 
-    def _file(self, p: Path, ctype: str):
+    def _file(self, p: Path, ctype: str, headers: Optional[dict] = None):
         if not p.exists():
             return self._err(404, f"missing {p.name}")
-        self._send(200, p.read_bytes(), ctype)
+        self._send(200, p.read_bytes(), ctype, headers)
 
     #: What a URL path under web/ is allowed to be. The UI is the only thing
     #: served from disk, so this stays deliberately short.
@@ -6230,7 +6231,9 @@ class Handler(BaseHTTPRequestHandler):
         ctype = self.WEB_TYPES.get(p.suffix.lower())
         if not ctype or not p.is_file():
             return self._err(404, f"no such asset: {rel}")
-        self._send(200, p.read_bytes(), ctype)
+        # no-store: a browser that kept yesterday's scripts runs them against
+        # today's index.html after an update and stops partway through start-up.
+        self._send(200, p.read_bytes(), ctype, {"Cache-Control": "no-store"})
 
     #: what the browse dialog is allowed to preview - the formats a card can be
     #: imported from, and nothing that would turn this into a file reader
