@@ -1,0 +1,292 @@
+{
+  "source_revision": "d4ed9368d0db3da2000bc895e96f52a83b93cb67",
+  "purpose": "Synthetic output-boundary golden packets, not upstream numerical snapshots or calculator verification.",
+  "cases": [
+    {
+      "case": "infantry",
+      "design": {
+        "schema": "m2-unit-design",
+        "version": 1,
+        "profile": {
+          "id": "combat-reforged",
+          "revision": "d4ed9368d0db3da2000bc895e96f52a83b93cb67"
+        },
+        "inputs": {
+          "category": "infantry",
+          "pri_base_atk": 13,
+          "quality": "fixture_quality"
+        },
+        "presets": {
+          "fixture_only": {
+            "notes": "Synthetic custom preset shape"
+          }
+        },
+        "overrides": {
+          "inputs": {},
+          "native": {}
+        },
+        "metadata": {
+          "fixture": true
+        }
+      },
+      "calculated": {
+        "attack": 17,
+        "charge": 7,
+        "morale": 11,
+        "pri_attributes": [
+          "ap",
+          "rend_9"
+        ]
+      },
+      "expected": {
+        "native": {
+          "attack": 17,
+          "charge": 7,
+          "morale": 11,
+          "pri_attributes": [
+            "ap"
+          ]
+        },
+        "metadata": {
+          "omitted": {
+            "pri_attributes": [
+              "rend_9"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "case": "missile_defending_secondary",
+      "design": {
+        "schema": "m2-unit-design",
+        "version": 1,
+        "profile": {
+          "id": "combat-reforged",
+          "revision": "d4ed9368d0db3da2000bc895e96f52a83b93cb67"
+        },
+        "inputs": {
+          "category": "infantry",
+          "pri_weapon_type": "missile",
+          "sec_handling": 3
+        },
+        "presets": {
+          "fixture_only": {
+            "notes": "Synthetic custom preset shape"
+          }
+        },
+        "overrides": {
+          "inputs": {},
+          "native": {}
+        },
+        "metadata": {
+          "fixture": true
+        }
+      },
+      "calculated": {
+        "attack": 13,
+        "sec_attack": 9,
+        "defense": 11,
+        "shield": 3
+      },
+      "expected": {
+        "native": {
+          "attack": 13,
+          "sec_attack": 9,
+          "defense": 11,
+          "shield": 3
+        },
+        "metadata": {
+          "omitted": {}
+        }
+      }
+    },
+    {
+      "case": "cavalry_barding",
+      "design": {
+        "schema": "m2-unit-design",
+        "version": 1,
+        "profile": {
+          "id": "combat-reforged",
+          "revision": "d4ed9368d0db3da2000bc895e96f52a83b93cb67"
+        },
+        "inputs": {
+          "category": "cavalry",
+          "armour": 6,
+          "horse_barding": "fixture_barding",
+          "fixture_barding_armor": 3
+        },
+        "presets": {
+          "fixture_only": {
+            "notes": "Synthetic custom preset shape"
+          }
+        },
+        "overrides": {
+          "inputs": {},
+          "native": {}
+        },
+        "metadata": {
+          "fixture": true
+        }
+      },
+      "calculated": {
+        "armor": 10,
+        "defense": 11,
+        "shield": 0
+      },
+      "expected": {
+        "native": {
+          "armor": 10,
+          "defense": 11,
+          "shield": 0
+        },
+        "metadata": {
+          "omitted": {}
+        }
+      }
+    },
+    {
+      "case": "twohand_offhand",
+      "design": {
+        "schema": "m2-unit-design",
+        "version": 1,
+        "profile": {
+          "id": "combat-reforged",
+          "revision": "d4ed9368d0db3da2000bc895e96f52a83b93cb67"
+        },
+        "inputs": {
+          "category": "infantry",
+          "pri_twohand": true,
+          "offhand": "fixture_offhand",
+          "offhand_shield": 9
+        },
+        "presets": {
+          "fixture_only": {
+            "notes": "Synthetic custom preset shape"
+          }
+        },
+        "overrides": {
+          "inputs": {},
+          "native": {}
+        },
+        "metadata": {
+          "fixture": true
+        }
+      },
+      "calculated": {
+        "shield": 0,
+        "defense": 11,
+        "pri_attributes": [
+          "hook_drag",
+          "hook",
+          "long_pike"
+        ]
+      },
+      "expected": {
+        "native": {
+          "shield": 0,
+          "defense": 11,
+          "pri_attributes": [
+            "long_pike"
+          ]
+        },
+        "metadata": {
+          "omitted": {
+            "pri_attributes": [
+              "hook_drag",
+              "hook"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "case": "grade_override",
+      "design": {
+        "schema": "m2-unit-design",
+        "version": 1,
+        "profile": {
+          "id": "combat-reforged",
+          "revision": "d4ed9368d0db3da2000bc895e96f52a83b93cb67"
+        },
+        "inputs": {
+          "category": "infantry",
+          "equipment_grade": "fixture_grade"
+        },
+        "presets": {
+          "fixture_only": {
+            "notes": "Synthetic custom preset shape"
+          }
+        },
+        "overrides": {
+          "inputs": {
+            "pri_base_atk": 13
+          },
+          "native": {
+            "attack": 0
+          }
+        },
+        "metadata": {
+          "fixture": true
+        }
+      },
+      "calculated": {
+        "attack": 19,
+        "recruit_cost": 731,
+        "upkeep": 127
+      },
+      "expected": {
+        "native": {
+          "attack": 0,
+          "recruit_cost": 731,
+          "upkeep": 127
+        },
+        "metadata": {
+          "omitted": {}
+        }
+      }
+    },
+    {
+      "case": "hiding_opt_out",
+      "design": {
+        "schema": "m2-unit-design",
+        "version": 1,
+        "profile": {
+          "id": "combat-reforged",
+          "revision": "d4ed9368d0db3da2000bc895e96f52a83b93cb67"
+        },
+        "inputs": {
+          "category": "infantry",
+          "hide_forest_override": false
+        },
+        "presets": {
+          "fixture_only": {
+            "notes": "Synthetic custom preset shape"
+          }
+        },
+        "overrides": {
+          "inputs": {},
+          "native": {}
+        },
+        "metadata": {
+          "fixture": true
+        }
+      },
+      "calculated": {
+        "attributes": [],
+        "sand": 3,
+        "forest": -2
+      },
+      "expected": {
+        "native": {
+          "attributes": [],
+          "sand": 3,
+          "forest": -2
+        },
+        "metadata": {
+          "omitted": {}
+        }
+      }
+    }
+  ]
+}

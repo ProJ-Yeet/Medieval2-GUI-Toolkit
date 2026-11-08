@@ -14362,3 +14362,23 @@ staging store. `tests/test_sheet_ops.py`, `test_unit_sheets.py`,
   descr_strat.txt, campaign scripts, EOP Lua) before anything is removed.
 
 **Finished 2026-11-08.** The measurement showed the cleaner already existed (`stratmap.py`, Phase 15) and had two safety gaps, so on the user's word it was hardened rather than rebuilt. It read only `data/`: Divide and Conquer keeps `Activate/NORMAL/data` and `Activate/SPEED/data`, which its switcher copies over `data/`, and five of the 16 models called unused (bree_general, bree_leader, amroth_prince, bree_captain, amroth_captain) are named only there. Every `descr_character.txt`, `descr_*.txt` and campaign script outside `data/` now counts, read from the one walk of the mod root the Lua net already makes. A mod that keeps its files in packs had `descr_character.txt` read loose only, so the base game showed 67 of 78 models unused; the reference files are now read through `Mod.game_or` (16 left, all `sm_*` and `pontus_*` Rome leftovers), and a cleanup refuses when `descr_model_strat.txt` is not the mod's own loose file. DaC now: 11 unused, 350 files nothing names (57.1 MB), unchanged. Checked in the app on DaC with a find run only; nothing was moved.
+## Phase 102 - Source audit, rule profiles and data contract
+
+- Map the upstream archetypes/subtypes, weapons, armor layers, offhands, mounts,
+  grades, attributes, formulas, project schema and exporters to our existing
+  modules; distinguish reusable behavior from SSR-specific balance.
+- Confirm the authoritative source revision and preserve author/MUG attribution
+  on reused code or data. Record the user's reuse permission and provenance.
+- Specify a versioned design/project schema, rules-profile selection, native EDU
+  output mapping and metadata-only fields. Decide how manual overrides survive
+  recalculation and how designer data is stored without claiming an EDU block
+  contains enough information to reconstruct its original design inputs.
+- Resolve the inspected revision's custom-attribute inconsistency: its README
+  and notices describe metadata-only effects, but `exportableAttrs` currently
+  allows custom weapon tags and converts `hook_drag` to `hook`.
+- **Exit:** reviewed feature/module map, compatibility matrix, sample projects,
+  output contract, and representative golden cases. No app behavior changes or
+  mod writes. Upstream disagreements and unverified formulas are explicit.
+
+**Finished 2026-11-08.** A reviewed feature and module map, a compatibility matrix, six synthetic sample projects and an executable output contract (`builder_contract.py`, `docs/UNIT_BUILDER_CONTRACT.md`) that attaches an unsaved design to a live sheet unit through the shared sheet field map, with output-boundary golden cases. No app behaviour or mod writes changed. `sp` stays quarantined: the game accepts only its known weapon attributes and refuses a unit with any other. Open for the user before 103: the Guards Skill bonus (+1 in the final combat rules, +2 in the help and audit) and whether an entered cost is multiplied by the equipment grade.
+

@@ -1,0 +1,167 @@
+{
+  "source_revision": "d4ed9368d0db3da2000bc895e96f52a83b93cb67",
+  "repository": "https://github.com/lupinemaverick/stainless-steel-reforged-unit-builder",
+  "commit_date": "2026-10-15T18:36:06Z",
+  "features": {
+    "archetypes": {
+      "sources": [
+        "build.py",
+        "src/base_v1.5.html",
+        "src/audit_rules.js",
+        "src/equipment_grade.js"
+      ],
+      "destination": "builder calculator/profile tables (103); unit_sheets classifications unchanged",
+      "compatibility": "profile_only"
+    },
+    "subtypes": {
+      "sources": [
+        "build.py",
+        "src/reforged.js",
+        "src/combat_rules.js"
+      ],
+      "destination": "calculator (103), designer (104); native values through sheet_ops; automation metadata",
+      "compatibility": "mixed"
+    },
+    "weapons": {
+      "sources": [
+        "src/reforged.js",
+        "src/weapon_controls.js",
+        "src/combat_rules.js",
+        "src/preset_filters.js",
+        "src/weapon_phase_a.js"
+      ],
+      "destination": "calculator (103), vocab.py, sheet_ops.FIELDS; unsupported effects metadata",
+      "compatibility": "mixed"
+    },
+    "armor": {
+      "sources": [
+        "src/base_v1.5.html",
+        "src/armor_loadouts.js",
+        "src/combat_rules.js"
+      ],
+      "destination": "profile loadouts (103/104); sheet_ops armor/defense/shield; other tuple members via edit.py (106)",
+      "compatibility": "profile_only"
+    },
+    "offhands": {
+      "sources": [
+        "src/reforged.js",
+        "src/combat_rules.js",
+        "src/offhand_revision.js"
+      ],
+      "destination": "profile calculator (103); offhand input retained even when suppressed",
+      "compatibility": "profile_only"
+    },
+    "mounts": {
+      "sources": [
+        "src/base_v1.5.html",
+        "src/audit_rules.js",
+        "src/combat_rules.js"
+      ],
+      "destination": "mount selection via vocab/edit/transfer (106); geometry/speed/stamina metadata",
+      "compatibility": "mixed"
+    },
+    "grades": {
+      "sources": [
+        "src/equipment_grade.js"
+      ],
+      "destination": "explicit profile calculator (103); no mapping to sheet Tier or EDU sorter tier",
+      "compatibility": "profile_only"
+    },
+    "attributes": {
+      "sources": [
+        "src/weapon_controls.js",
+        "src/attribute_reference.js",
+        "src/unit_attribute_controls.js",
+        "src/reforged.js"
+      ],
+      "destination": "vocab.py fixed lists for new builder output; unsupported proposals metadata; EDU patcher preserves unrelated source tags",
+      "compatibility": "mixed"
+    },
+    "formulas": {
+      "sources": [
+        "build.py",
+        "src/base_v1.5.html",
+        "src/audit_rules.js",
+        "src/combat_rules.js",
+        "src/equipment_grade.js"
+      ],
+      "destination": "deterministic Python calculator (103), not sheet expression evaluator or EDB balance engine",
+      "compatibility": "profile_only"
+    },
+    "projects": {
+      "sources": [
+        "src/reforged.js",
+        "src/weapon_phase_a.js",
+        "src/offhand_revision.js"
+      ],
+      "destination": "builder_contract v1 packet in unit_sheets units[exact_id].builder_design; adapter in 105",
+      "compatibility": "shared"
+    },
+    "exporters": {
+      "sources": [
+        "build.py",
+        "src/base_v1.5.html",
+        "src/reforged.js"
+      ],
+      "destination": "edu/edit/transfer (105/106); sheet_interchange CSV; mercpools (107); never upstream exporter text into a mod",
+      "compatibility": "mixed"
+    }
+  },
+  "source_sha256": {
+    "build.py": "0a1283d19aee79e83f69fc793896c75e621e9df3e40ad8b3213d75e7bfa99691",
+    "README.md": "47286103694ae735b880df1faef674223948541cc358b821b4f5300f7fddce4f",
+    "src/armor_loadouts.js": "5e804356c42f595d028cdae140a3743cf5da2beffe2bf9c559f8f257bf17a65c",
+    "src/attribute_reference.js": "a07629b1ac95f2754da0573c0cc0731985a81cfd827456101d86de7671aa625e",
+    "src/audit_rules.js": "f1ca2373da39cc17b228913ba77ebf82a09e96108f09020cb5ec18a90d7840a6",
+    "src/base_v1.5.html": "be63c43002663b40e53663bad18be57f4b7384b205e0c7792cf245e5b47a532e",
+    "src/combat_rules.js": "fc63f8a9ff5b938d261509cd951448048a29f4f818566e583b51ca390e1c2bdb",
+    "src/equipment_grade.js": "c1ff0b86aaca3ad07e4ac7485fde0bd8b79922d366a674595d952b67c6789808",
+    "src/offhand_revision.js": "a8ebd2132bde44401d61f3ead2594faabd21017ae070f0df02c3a01185c16544",
+    "src/preset_filters.js": "139ea09b4c8b53bbe31a976e43d79f84dba115448768807d68b281dac553ddd1",
+    "src/reforged.js": "872042303117ae4e60f9c61f19fd530060606a52663a151e91aab624312edff1",
+    "src/unit_attribute_controls.js": "84b34219fd1287851518bfaeff3f58550e2971faf11cd985cfa8eab77b880fbb",
+    "src/weapon_controls.js": "99e2d77a047303c39d44fc77c46de9edc29315fcd3efde230556d889f0dedf38",
+    "src/weapon_phase_a.js": "46d251fd8fd3120151e462b8ecd90c2a45711473526c7577172e4eef50a778b4",
+    "tests/run.cjs": "1fdc13cbaf53bbe167e2e91f1c8501003c6ad9d55c3278fd07b83bcae8224278",
+    "tests/test_bible_audit.cjs": "d5f42e3d70ef37a9b124c8df33010646ca0abaab8395148cde878157c006c38c",
+    "tests/test_builder.cjs": "89b6243d34bb3834b084b2c5fa7d4179abe5f75f80e1c8c3d90edb8acf1378c2",
+    "tests/test_combat_rules.cjs": "43264ad796dc671f6bd086fdfaf6fac9cc55b62aa6e744cf2e59ed8aa3bb8d5f",
+    "tests/test_defaults_armor.cjs": "5259d1a43b251b5e9a09c4753d4067b6a5f8386ec9286e7be571081ae081fbec",
+    "tests/test_equipment_grade.cjs": "e5d3948b2c89e2f12743e3313270f49e79739a560ccba6708147682e524275fd",
+    "tests/test_phase_a.cjs": "6e2a7f250313ec614ff5caabdd47825cc8f0c8f535f166fc689ad1778058c98c",
+    "tests/test_preset_filters.cjs": "8f1612d019931ce8a7bc4066be04d00c70cad9c04fa1313db315941446fa1c2d",
+    "tests/test_unit_attributes.cjs": "2c0f7a249fa68d1307c1e6968e1513e19079bd95d45b88b01cfb6c0a28372dee"
+  },
+  "open_questions": [
+    {
+      "id": "sp_support",
+      "status": "blocked_for_export",
+      "evidence": "reforged.js NATIVE_WEAPON_TAGS and test_builder.cjs include sp; toolkit vocab.WEAPON_ATTR omits sp. Neither is target runtime verification.",
+      "question": "Should sp remain metadata until target verification, or become a supported native weapon tag after that evidence is supplied?",
+      "outcomes": [
+        "Keep sp in design metadata and emit no new sp token.",
+        "After approval and evidence, extend shared vocabulary and emit sp only through the common field path."
+      ]
+    },
+    {
+      "id": "guards_skill",
+      "status": "blocked_for_formula_port",
+      "evidence": "build.py help and audit_rules.js use Guards +2 Skill; combat_rules.js final wrapper uses +1.",
+      "question": "For the Combat Reforged profile, should Guards use the final r2 +1 Skill or the earlier documented +2?",
+      "outcomes": [
+        "Port final wrapper +1.",
+        "Use +2, a deliberate change from pinned final compute."
+      ]
+    },
+    {
+      "id": "cost_overrides",
+      "status": "blocked_for_formula_port",
+      "evidence": "equipment_grade.js multiplies explicit cost_construct/cost_upkeep inputs after base compute; final override semantics in our contract pin final native output.",
+      "question": "When adapting an upstream manually entered cost, retain its pre-grade meaning or pin the entered number as final cost?",
+      "outcomes": [
+        "Keep upstream entry in overrides.inputs and apply grade afterward.",
+        "Convert to overrides.native and preserve entered number after grade."
+      ]
+    }
+  ]
+}

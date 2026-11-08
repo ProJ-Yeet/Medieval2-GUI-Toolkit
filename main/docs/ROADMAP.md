@@ -1320,24 +1320,6 @@ the target's runtime support has been independently established. No iframe of
 the hosted tool, second EDU parser, frontend build step, battle-runtime port,
 or bulk copy of generated HTML/assets.
 
-## Phase 102 - Source audit, rule profiles and data contract
-
-- Map the upstream archetypes/subtypes, weapons, armor layers, offhands, mounts,
-  grades, attributes, formulas, project schema and exporters to our existing
-  modules; distinguish reusable behavior from SSR-specific balance.
-- Confirm the authoritative source revision and preserve author/MUG attribution
-  on reused code or data. Record the user's reuse permission and provenance.
-- Specify a versioned design/project schema, rules-profile selection, native EDU
-  output mapping and metadata-only fields. Decide how manual overrides survive
-  recalculation and how designer data is stored without claiming an EDU block
-  contains enough information to reconstruct its original design inputs.
-- Resolve the inspected revision's custom-attribute inconsistency: its README
-  and notices describe metadata-only effects, but `exportableAttrs` currently
-  allows custom weapon tags and converts `hook_drag` to `hook`.
-- **Exit:** reviewed feature/module map, compatibility matrix, sample projects,
-  output contract, and representative golden cases. No app behavior changes or
-  mod writes. Upstream disagreements and unverified formulas are explicit.
-
 ## Phase 103 - Deterministic calculation engine and rules data
 
 - Port the selected profile's reusable rule tables and arithmetic into Python:

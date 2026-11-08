@@ -4,6 +4,136 @@ Newest entries first. This records Codex's work for Claude; project status and
 release rules remain in STATE.md and RELEASE.md. Do not assume the working tree's
 other changes belong to Codex.
 
+## 2026-11-08 - Phase 102: source audit, profiles and data contract
+
+- Exit items DONE: reviewed feature/module map, compatibility matrix, six
+  synthetic sample projects, executable output contract and representative
+  output-boundary golden cases. No app routes, controls, calculation engine or
+  mod writes were added. Calculator parity is NOT verified and is Phase 103.
+- Read ../AGENTS.md, the 102-108 roadmap block, archived 109-115 write-ups and
+  the Phase 116 handoff (the archive has no separately headed 116 write-up),
+  SHEET_INTERCHANGE.md and SSR_UNIT_BUILDER.md. Read the pinned upstream sources,
+  tests and build.py as text only. GitHub commit metadata confirms revision
+  d4ed9368d0db3da2000bc895e96f52a83b93cb67, 2026-10-15T18:36:06Z. The build
+  script's replacements and module order matter; also audited its active
+  weapon_controls.js and offhand_revision.js, absent from the earlier notes.
+  No upstream script, build, test, macro or generated HTML was executed.
+- Provenance: lupinemaverick; MUG Unit Builder v1.5 and MUG Unit Creation Guide;
+  Combat Reforged work for King Siegfried. User reported author permission to
+  reuse. No new license inferred. No upstream implementation/balance tables or
+  actual unit/project rows copied. Source hashes are in the audit JSON.
+
+Files and reasons:
+
+- docs/UNIT_BUILDER_CONTRACT.md: effective source layering, complete feature map,
+  compatibility matrix, profile/packet/project storage, output/staging ownership,
+  override semantics, disagreements and unverified arithmetic for follow-on work.
+- docs/upstream/SSR_BUILDER_AUDIT.json: pinned provenance and source hashes,
+  machine-checked feature/module coverage and concrete item-level questions.
+- unittransfer/builder_contract.py: isolated, pure schema/profile validation,
+  input pins, typed output projection, shared field-map reflection and unsaved
+  design attachment to an exact live sheet unit. No app imports this module yet.
+- tests/test_builder_contract.py and tests/fixtures/builder_contract.json:
+  synthetic infantry, missile/secondary-defense, cavalry/barding, two-handed,
+  grade/final-zero-pin and hiding-opt-out project/output packets. They verify the
+  contract with the real EDU parser, unit_sheets and sheet_ops, not copied
+  arithmetic. Fixture EDU is in memory; calculated golden values are supplied
+  inputs to this boundary, not a claim that a calculator produced them.
+- docs/CODEX_HANDOFF.md: this entry. No other catalogues, STATE, roadmap or
+  release files changed. Existing deleted TWCenter indices and untracked files
+  predate this task and were left untouched.
+
+Tests first and verification:
+
+- Wrote all six new tests before implementation. First run:
+  `UT_NO_BROWSER=1 python -m unittest tests.test_builder_contract`, six errors,
+  all ImportError for the missing builder_contract module. Then implemented the
+  module and artifacts; all six passed. No earlier passing implementation is
+  claimed.
+- Final Python run: 116/116 pass: builder_contract 6, unit_sheets 36, sheet_ops
+  42, sheet_interchange 32. The first regression attempt had 184 setup/cleanup
+  errors from 110 unreadable mode-0700 Windows temp directories. Retried using
+  a workspace temp root and a process-only os.mkdir wrapper mapping 0700 to
+  0777. No test or application implementation was modified for that workaround.
+- tests.test_web_modules: 130/130 pass, including Node parsing of all 110 JS
+  modules and their combined load order. It exits at import, so it was verified
+  independently; the combined unittest invocation that imported it did not
+  run the Python suite and is not counted as Python coverage.
+- tests.test_i18n: 45/45 pass, including actual Node runtime and fixture HTTP
+  checks. Initial attempts stopped on mode-0700 temp access, then the configured
+  proxy's socket refusal. Final run used the same process-only temp workaround
+  and urllib ProxyHandler({}) for direct loopback. No new Node test added.
+- UT_NO_BROWSER=1 in verification. git diff --check has no whitespace errors;
+  untracked new files also checked with git diff --no-index --check against
+  /dev/null (ordinary new-file diff exit 1, no whitespace errors). New files
+  checked for trailing whitespace and U+2014; none found. No dependency added.
+- Successful fixture contents cleaned up; .tmp/phase102-tests is empty.
+  Downloaded read-only upstream sources remain in .tmp/phase102-sources, and
+  the four phase102 test logs plus empty phase102-source-sqi69245 remain in
+  .tmp. Automatic command approval rejected both computed-path and explicit
+  literal-path PowerShell cleanup with "blocked by policy"; no more specific
+  reason was supplied. No alternate deletion route was attempted afterward.
+  Cleanup of 110 empty temp directories from the first
+  failed regression run plus two failed i18n directories was refused by Windows
+  ACLs. Nonrecursive cleanup only was attempted, confined to their recorded
+  creation interval/names under C:/Users/projy/AppData/Local/Temp. No original
+  files or real mod folder touched. No ACL changes or approval bypass attempted.
+
+Contract Phase 103 should build on:
+
+- m2-unit-design v1 with explicit profile {id, revision}; native/1 has no
+  automatic balance rules; combat-reforged requires the pinned commit. Never
+  detect profile from folder name. Profiles do not imply runtime support.
+- Original inputs and preset snapshots stay separate from derived values.
+  overrides.inputs apply before calculation; overrides.native pin final typed
+  sheet-column values afterward, including zero and explicit [] list clearing.
+  Remove a pin to resume inheritance. Input semantic validation/calculation is
+  still 103 work; unknown input keys remain dormant, never EDU field names.
+- Shared m2-unit-sheets v1 project owns units[exact_EDU_type].builder_design,
+  annotations, extras, rules, drafts, revision/source checks and history.
+  attach_design returns a copy, never saves/stages stats. Future readers must
+  validate the inner design explicitly; the existing sheet validator preserves
+  the extension. Detached new designs await donor creation in 106. EDU cannot
+  reconstruct the original design uniquely.
+- output_values accepts only shared sheet_ops.FIELDS and types, then separates
+  unverified attribute proposals into metadata.omitted. No hook_drag -> hook
+  conversion. The ordinary patcher still owns existing unknown source tags.
+  The helper has no target-runtime opt-in. Do not silently discard omission
+  reports or overwrite the stored design with calculated output.
+- For selected native fields, 106 must use existing preview/revision/source
+  checks, sheet_ops.stage_cells/field_changes and EDU planners. Additional
+  engine fields without sheet columns need a shared extension or existing
+  native editor plan, not a parallel patcher. Classification/Tier and EDB
+  balancing remain owned by sheets; 107 uses mercpools for existing pools/gates.
+
+Concrete item-level stops, with both outcomes:
+
+- Custom export inconsistency is resolved at this boundary by the roadmap's
+  explicit metadata-only requirement. README/UI claim omission, while pinned
+  exportableAttrs allows CUSTOM_TAG/hook and rewrites hook_drag. Older strict
+  exporter tests contradict that filter. No upstream pass/runtime claim made.
+- sp support: upstream calls it native, toolkit WEAPON_ATTR omits it. Question:
+  keep sp metadata until target evidence, or approve shared vocabulary support
+  after supplying that evidence? Outcomes: no new sp token, or verified shared
+  native emission. Stopped on enabling support; current boundary quarantines it.
+- Guards Skill: build.py help/audit_rules use +2, final combat_rules uses +1.
+  Question: port final r2 +1, or intentionally use +2? Outcomes change calculated
+  Defense Skill by one. Stopped on implementing that formula.
+- Upstream entered costs: equipment_grade multiplies explicitly entered costs.
+  Question: retain pre-grade meaning in overrides.inputs, or treat the entered
+  value as final via overrides.native? Outcomes are grade-adjusted versus fixed
+  exported costs. Stopped on adapter interpretation; both forms are representable.
+
+New user-visible string IDs: NONE. ContractError values are internal codes;
+future UI exposure must add English strings in web/i18n/en.json only.
+
+Not verified: battle/runtime semantics, formula parity and rounding, 103 engine,
+104 browser interactions, 105 upstream migration, 106 Apply/Undo or 107 pools.
+No commit, tag, build or release performed. Live five-hour usage at start and
+checkpoints: 1%, 5%, 8%, 11%, 12% used; latest 88% remaining, below the user's
+Phases-102-108-only 90%-used stop. Weekly usage is not the guard. No credits
+spent or limits reset.
+
 ## 2026-11-08 - Phase 116 real-data verification and shared builder integration
 
 - Item 1(a): DONE on disposable copies for balance preview/export/reconciliation,
