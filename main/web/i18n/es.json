@@ -13625,5 +13625,12 @@
  "eng.charmodels.missing": "{model} no es una entrada de modeldb",
  "eng.charmodels.horse": "{model} no tiene animación de caballo; los generales y capitanes usan el mismo modelo a pie y montados",
  "builder.upgrade_card_note": "La tarjeta de unidad del juego muestra +1 por nivel de mejora. El motor aplica +{weapon} al ataque del arma y +{armour} a la armadura por nivel (valores predeterminados de vanilla: +3 a los ataques cuerpo a cuerpo y +2 a la armadura).",
- "builder.m2ex_missile_unverified": "Las mejoras de armas a distancia de M2EX se mantienen desactivadas. No se ha verificado la clave de configuración que activa las mejoras de armas a distancia."
+ "builder.m2ex_missile_unverified": "Las mejoras de armas a distancia de M2EX se mantienen desactivadas. No se ha verificado la clave de configuración que activa las mejoras de armas a distancia.",
+ "editor.missing_unit_card": "Aviso: {faction} no tiene tarjeta de unidad para esta unidad.",
+ "editor.missing_info_card": "Aviso: {faction} no tiene tarjeta de información para esta unidad.",
+ "editor.missing_card_generic": "El juego mostrará la tarjeta de unidad genérica en su lugar.",
+ "editor.missing_info_generic": "El juego mostrará la imagen de información de unidad genérica en su lugar.",
+ "editor.missing_mercenary_unit_card": "Advertencia: esta unidad de mercenarios no tiene tarjeta de unidad en ui/units/mercs.",
+ "editor.missing_mercenary_info_image": "Advertencia: esta unidad de mercenarios no tiene imagen informativa en ui/unit_info/merc.",
+ "editor.shared_mercenary_picture_note": "{factions} usan la imagen compartida de mercenarios: {picture}."
 }

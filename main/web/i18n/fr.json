@@ -13245,5 +13245,12 @@
  "eng.charmodels.missing": "{model} n'est pas une entrée de modeldb",
  "eng.charmodels.horse": "{model} n'a aucune animation de cheval ; les généraux et les capitaines utilisent le même modèle à pied et à cheval",
  "builder.upgrade_card_note": "La carte d'unité du jeu affiche +1 par niveau gagné pour améliorer l'équipement. Le moteur applique +{weapon} à l'attaque de l'arme et +{armour} à l'armure par niveau (valeurs par défaut de vanilla : +3 aux attaques de mêlée et +2 à l'armure).",
- "builder.m2ex_missile_unverified": "L'option permettant d'améliorer les armes de tir dans M2EX reste désactivée. La clé de configuration permettant d'activer cette option n'est pas vérifiée."
+ "builder.m2ex_missile_unverified": "L'option permettant d'améliorer les armes de tir dans M2EX reste désactivée. La clé de configuration permettant d'activer cette option n'est pas vérifiée.",
+ "editor.missing_unit_card": "Attention : {faction} n'a pas de carte d'unité pour cette unité.",
+ "editor.missing_info_card": "Attention : {faction} n'a pas de carte d'information pour cette unité.",
+ "editor.missing_card_generic": "Le jeu affichera la carte d'unité générique à la place.",
+ "editor.missing_info_generic": "Le jeu affichera l'image d'information d'unité générique à la place.",
+ "editor.missing_mercenary_unit_card": "Attention : cette unité mercenaire n’a pas de carte d’unité dans ui/units/mercs.",
+ "editor.missing_mercenary_info_image": "Attention : cette unité mercenaire n’a pas d’image d’information dans ui/unit_info/merc.",
+ "editor.shared_mercenary_picture_note": "{factions} utilisent l’image commune des mercenaires : {picture}."
 }

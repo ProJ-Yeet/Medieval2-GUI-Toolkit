@@ -478,6 +478,49 @@ class Mod:
         return buildings_mod.parse_file(self.packed_or(self.edb_path))
 
     @cached_property
+    def recruiting_factions(self) -> Dict[str, set]:
+        """Unit type -> explicit EDB recruiting factions, scanned once per mod.
+
+        Cleared by drop_caches after writes, like the parsed EDB itself.
+        Other requirements are not evaluated here.
+        """
+        out: Dict[str, set] = {}
+        for building in self.edb.buildings:
+            for level in building.blocks:
+                for pool in level.recruits:
+                    names = buildings_mod.clause_factions(pool.requires)
+                    out.setdefault(pool.unit.lower(), set()).update(
+                        buildings_mod._expand_factions(self, names))
+        return out
+
+    @cached_property
+    def faction_unit_cards(self) -> bool:
+        """EOP prefers faction mercenary pictures unless explicitly disabled.
+
+        Inspect the entry script as text only. Reuse EOP folder detection;
+        no script execution or recursive Lua scan is needed.
+        """
+        import re
+        script_dirs = {self.root / 'eopData' / 'eopScripts'}
+        script_dirs.update(p / 'eopScripts' for p in self.eop_dirs)
+        present = [p for p in script_dirs if p.is_dir()]
+        if not present:
+            return False
+        for folder in present:
+            try:
+                text = (folder / 'luaPluginScript.lua').read_text(
+                    encoding='utf-8-sig', errors='replace')
+            except OSError:
+                continue
+            live = luascan.strip_comments(text)
+            # Ignore quoted examples as well as comments.
+            live = re.sub(r"\[(=*)\[.*?\]\1\]|\"(?:\\.|[^\"\\])*\"|'(?:\\.|[^'\\])*'",
+                          ' ', live, flags=re.S)
+            if re.search(r'\bhandleUnitCards\s*\(\s*false\s*\)', live):
+                return False
+        return True
+
+    @cached_property
     def building_loc(self) -> localization.Localization:
         """Building names/descriptions - same format as export_units.txt, but
         keyed with ``_desc`` / ``_desc_short`` instead of ``_descr``."""

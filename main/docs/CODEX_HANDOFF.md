@@ -1955,3 +1955,70 @@ The remaining stage-specific numeric differences are all enumerated here.
 - Other translations rely on English fallback for newly added labels.
 - No commit or release made by Codex. Unrelated pre-existing deleted reference
   indexes, ZIP, shortcut, relay cache, and CHATGPT_INTRO.md were left alone.
+
+
+## 2026-11-08 - Corrected missing-card rules and recruitment cache
+
+This entry supersedes the fallback and catalogue-status claims in the earlier
+missing-card entry. The five original IDs have already been merged and translated.
+
+Changed behavior and files:
+
+- `unittransfer/edit.py`: game behavior is mercs/merc only for mercenary units
+  outside EOP; an existing pinned card_pic_dir/info_pic_dir covers all factions
+  for ordinary units; otherwise check each faction and use generic if absent.
+  There is no base-game all-folder fallback. EOP mercenary units prefer faction
+  pictures when enabled and then use mercs/merc. Only generic results are warnings.
+  A non-EOP mercenary report has at most one warning per picture kind, independent
+  of ownership/recruitment. Folder indexes and picture presence are request cached.
+- `unittransfer/mod.py`: recruiting_factions is a cached_property mapping every
+  unit type to explicit EDB recruiting factions. Existing drop_caches invalidation
+  clears it after writes. faction_unit_cards reuses EOP directory detection and
+  reads luaPluginScript.lua as text only, defaults on with eopScripts present,
+  and recognizes handleUnitCards(false). Comments and quoted examples are ignored.
+  Its cached_property uses the same invalidation. No Lua execution is performed.
+- `web/js/editor.js`: generic results retain warning styling; real shared-picture
+  fallback notes are quiet and grouped into one line listing factions per picture.
+  Imports suppress only rows covered by their destination folders, including the
+  shared mercs/merc destination. HTML text and paths remain escaped.
+- `tests/test_card_coverage.py`, `tests/test_card_coverage_ui.js`: synthetic fixtures
+  only, extended for base/EOP mercenaries, disabling/default scripts, pinned and
+  missing pinned paths, no all fallback, generic severity, cached folder indexes,
+  one EDB scan across different units and cache invalidation, and grouped UI notes.
+- `.tmp/cards_strings.json`: full current feature set of seven strings. Four
+  original texts/IDs are unchanged. New IDs: editor.missing_mercenary_unit_card,
+  editor.missing_mercenary_info_image, editor.shared_mercenary_picture_note.
+  Old ID now unused: editor.missing_card_fallback. No catalogue edits made.
+- `.tmp/cards_handoff.md` and `docs/CODEX_HANDOFF.md`: change records updated.
+
+Tests first and actual verification:
+
+- Before implementation: tests.test_card_coverage had 5 failures and 2 errors
+  across 12 tests. It exposed all fallback, per-faction non-EOP mercenary rows,
+  pinned-picture warnings, absent severity, ignored EOP false, and 3 EDB scans
+  instead of 1. Node failed because the real fallback retained warning styling.
+- An intermediate implementation run failed on a Python regex quoting mistake;
+  corrected it. A Node assertion was corrected to retain the note for an import
+  destination outside the selected factions (spain). These failures were resolved.
+- UT_NO_BROWSER=1 python -m unittest tests.test_card_coverage: 15/15 pass.
+- UT_NO_BROWSER=1 node tests/test_card_coverage_ui.js: all assertions pass.
+- UT_NO_BROWSER=1 python -m unittest tests.test_web_modules: 130/130 pass.
+- git diff --check: pass.
+- Synthetic 30,000-pool in-memory fixture benchmark, 12 warm calls: first report
+  167.90 ms, warm median 5.69 ms and max 20.49 ms. The previous per-open EDB scan
+  alone measured median 177.73 ms. This verifies repeated opens avoid that scan;
+  it is not a measurement of total unit-open latency on DaC EUR. Initial map
+  construction still costs one EDB walk per mod cache lifetime.
+
+Limits and status:
+
+- No real mod, game, or browser was opened or changed. Total app latency and
+  visual layout remain unverified; no claim of an observed DaC EUR 100 ms target.
+- Explicit faction clauses are expanded; other recruitment requirements are not
+  evaluated. Lua is inspected statically, so runtime control flow is not evaluated.
+- Builder files, builder fixtures/tests, test_i18n.py, and existing translation
+  changes were left alone. Previous handoff entries are preserved.
+- Latest usage checkpoint: five-hour window 55% remaining. Checks are periodic
+  and account-wide; the normal 50%-remaining pause applies to this task.
+- No commit, tag, build, release, dependency change, or catalogue edit performed.
+  Claude still needs to merge and translate the three new staged IDs.

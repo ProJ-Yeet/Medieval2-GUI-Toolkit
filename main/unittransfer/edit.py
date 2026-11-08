@@ -618,6 +618,69 @@ def icon_variants(mod: Mod, dictionary: str) -> Dict[str, List[dict]]:
     return out
 
 
+def icon_coverage(mod: Mod, unit) -> Dict[str, List[dict]]:
+    """Missing faction pictures, their fielding reasons and effective fallback.
+
+    This is a read-only report. Recruitment includes explicit faction clauses;
+    it does not claim that every other recruitment requirement can be met.
+    """
+    from . import buildings, gamepack
+
+    owners = set(buildings._expand_factions(mod, unit.ownership))
+    recruiters = mod.recruiting_factions.get(unit.type.lower(), set())
+    factions = sorted(owners | recruiters)
+    out: Dict[str, List[dict]] = {"card": [], "info": []}
+    packs = mod._icon_packs()
+    # A folder is listed at most once in this request, including a fresh folder
+    # whose mtime Mod._dir_index deliberately treats as racy across requests.
+    folders = {}
+    for kind, base, stem, pinned, merc in (
+            ("card", mod.ui_units_dir, f"#{unit.dictionary}", unit.card_pic_dir, "mercs"),
+            ("info", mod.ui_unit_info_dir, f"{unit.dictionary}_info", unit.info_pic_dir, "merc")):
+        found = {}
+
+        def picture(folder):
+            if folder not in found:
+                found[folder] = ""
+                for ext in (".tga", ".dds"):
+                    rel = f"{base.relative_to(mod.data).as_posix()}/{folder}/{stem}{ext}"
+                    directory = base / folder
+                    if directory not in folders:
+                        folders[directory] = mod._dir_index(directory)
+                    packed = any(prefix + rel.lower() in pack.entries
+                                 for pack, prefix in packs)
+                    if (stem.lower() + ext in folders[directory] or packed
+                            or gamepack.exists(rel, mod)):
+                        found[folder] = rel
+                        break
+            return found[folder]
+
+        if unit.mercenary_unit:
+            fallback = picture(merc)
+            if not mod.faction_unit_cards:
+                if not fallback:
+                    out[kind].append({"faction": merc, "reasons": [],
+                                      "fallback": "", "severity": "warning",
+                                      "shared": True})
+                continue
+        else:
+            # An existing pinned picture covers everyone, before faction lookup.
+            if pinned and picture(pinned):
+                continue
+            fallback = ""
+        for faction in factions:
+            if picture(faction):
+                continue
+            out[kind].append({
+                "faction": faction,
+                "reasons": (["ownership"] if faction in owners else [])
+                           + (["recruitment"] if faction in recruiters else []),
+                "fallback": fallback,
+                "severity": "note" if fallback else "warning",
+            })
+    return out
+
+
 def _raw_block(plan: "EditPlan", unit, req: EditRequest) -> str:
     """The block a plan starts from: the file's, or the one typed in Code View.
 
@@ -1959,6 +2022,7 @@ def unit_detail(mod: Mod, unit_type: str) -> dict:
         # the same files grouped by content: one row per DISTINCT picture, with
         # every faction folder that holds it
         "icon_variants": icon_variants(mod, unit.dictionary),
+        "icon_coverage": icon_coverage(mod, unit),
         "known_fields": edu_mod.CANONICAL_ORDER,
         "unit_count": len(mod.edu.units),
         # 39: what this unit is past, and the file's own ceiling unless M2EX

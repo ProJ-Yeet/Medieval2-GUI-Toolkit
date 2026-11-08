@@ -12638,5 +12638,12 @@
  "eng.charmodels.missing": "{model}, modeldb içinde bir girdi değil",
  "eng.charmodels.horse": "{model} için at animasyonu yok; generaller ve yüzbaşılar yaya ve atlıyken aynı modeli kullanır",
  "builder.upgrade_card_note": "Oyundaki birim kartı, yükseltme seviyesi başına +1 gösterir. Oyun motoru, seviye başına silah saldırısına +{weapon} ve zırha +{armour} uygular (vanilla varsayılanları: yakın dövüş saldırılarına +3 ve zırha +2).",
- "builder.m2ex_missile_unverified": "M2EX atış silahı yükseltmeleri kapalı tutulur. Atış silahı yükseltmelerini etkinleştiren yapılandırma anahtarı doğrulanmamıştır."
+ "builder.m2ex_missile_unverified": "M2EX atış silahı yükseltmeleri kapalı tutulur. Atış silahı yükseltmelerini etkinleştiren yapılandırma anahtarı doğrulanmamıştır.",
+ "editor.missing_unit_card": "Uyarı: {faction} için bu birime ait bir birim kartı yok.",
+ "editor.missing_info_card": "Uyarı: {faction} için bu birime ait bir bilgi kartı yok.",
+ "editor.missing_card_generic": "Oyun bunun yerine genel birim kartını gösterecek.",
+ "editor.missing_info_generic": "Oyun bunun yerine genel birim bilgi görselini gösterecek.",
+ "editor.missing_mercenary_unit_card": "Uyarı: Bu paralı asker biriminin ui/units/mercs klasöründe birim kartı yok.",
+ "editor.missing_mercenary_info_image": "Uyarı: Bu paralı asker biriminin ui/unit_info/merc klasöründe bilgi görseli yok.",
+ "editor.shared_mercenary_picture_note": "{factions} ortak paralı asker görselini kullanıyor: {picture}."
 }

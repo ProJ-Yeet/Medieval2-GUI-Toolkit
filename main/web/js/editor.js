@@ -677,6 +677,7 @@ function edIdentity(){
           :tt('editor.this_unit_has_no_ownership_so'),
         tt('editor.card_png_converted_engine_reads_nothing_else')])}</div>
       <div class="icoprev">${edIconSlot('card')}${edIconSlot('info')}</div>
+      ${edCardWarnings('card')}${edCardWarnings('info')}
       ${edCardVariants('card',tt('editor.unit_cards_on_disk'))}
       ${edCardVariants('info',tt('editor.info_cards_on_disk'))}
       ${(e.cardSrc||e.infoSrc)?`<div class="count w-good" style="margin-top:8px">
@@ -727,6 +728,28 @@ function edIconSlot(kind){
       ${src?`<button class="danger" onclick="edClearIcon('${key}')">✕</button>`:''}
     </div>
   </div>`;
+}
+function edCardWarnings(kind){
+  const e=state.ed,key=kind==='card'?'cardSrc':'infoSrc';
+  const chosen=e[key]?edIcoPayloadFolders(key):[];
+  const targets=e[key]?(chosen.length?chosen:edOwnFolders()):[];
+  const rows=((e.d.icon_coverage||{})[kind]||[]).filter(r=>!targets.includes(r.faction));
+  const notes=new Map(),warnings=[];
+  for(const r of rows){
+    if(r.fallback){
+      if(!notes.has(r.fallback))notes.set(r.fallback,[]);
+      notes.get(r.fallback).push(r.faction);
+      continue;
+    }
+    const warning=r.shared
+      ?tt(kind==='card'?'editor.missing_mercenary_unit_card':'editor.missing_mercenary_info_image')
+      :tt(kind==='card'?'editor.missing_unit_card':'editor.missing_info_card',{faction:r.faction});
+    const consequence=tt(kind==='card'?'editor.missing_card_generic':'editor.missing_info_generic');
+    warnings.push(`<div class="count w-warn">${esc(warning)} ${esc(consequence)}</div>`);
+  }
+  return warnings.join('')+Array.from(notes,([picture,factions])=>
+    `<div class="count">${esc(tt('editor.shared_mercenary_picture_note',
+      {factions:factions.join(', '),picture}))}</div>`).join('');
 }
 /* Every DISTINCT card on disk, and which factions share it. The game looks a
    card up under the PLAYER's faction folder, so a mod may ship one picture for

@@ -12433,5 +12433,12 @@
  "eng.charmodels.missing": "{model} 不是 modeldb 条目",
  "eng.charmodels.horse": "{model} 没有马匹动画；将军和队长在步行及骑乘时使用同一模型",
  "builder.upgrade_card_note": "游戏中的部队卡片显示每个升级等级 +1。引擎实际按每个等级应用武器攻击 +{weapon}、盔甲 +{armour}（原版默认值：近战攻击 +3、盔甲 +2）。",
- "builder.m2ex_missile_unverified": "M2EX 的远程武器升级保持关闭。用于启用远程武器升级的配置键尚未验证。"
+ "builder.m2ex_missile_unverified": "M2EX 的远程武器升级保持关闭。用于启用远程武器升级的配置键尚未验证。",
+ "editor.missing_unit_card": "警告：{faction} 缺少此部队的部队卡片。",
+ "editor.missing_info_card": "警告：{faction} 缺少此部队的信息卡片。",
+ "editor.missing_card_generic": "游戏将改为显示通用部队卡片。",
+ "editor.missing_info_generic": "游戏将改为显示通用部队信息图片。",
+ "editor.missing_mercenary_unit_card": "警告：此雇佣兵部队在 ui/units/mercs 中没有部队卡片。",
+ "editor.missing_mercenary_info_image": "警告：此雇佣兵部队在 ui/unit_info/merc 中没有信息图片。",
+ "editor.shared_mercenary_picture_note": "{factions} 使用共用的雇佣兵图片：{picture}。"
 }
