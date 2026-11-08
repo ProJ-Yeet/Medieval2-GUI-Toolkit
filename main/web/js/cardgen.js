@@ -22,7 +22,7 @@ function cg(){
   }
   return c;
 }
-function cgHere(){ return state.mode === 'cards' && state.cardsSub === 'generate'; }
+function cgHere(){ return state.mode === 'cards' && cardsSubNow() === 'generate'; }
 function cgObjects(){
   const seen = new Set();
   return armProj().objects.filter(o => {

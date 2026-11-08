@@ -59,6 +59,7 @@ async function main(){
   run(c,'cgFinish(pixel,2,1,{saturation:0})'); check(run(c,'pixel[0]===pixel[1]&&pixel[1]===pixel[2]&&pixel[7]===0'),'grayscale preserves transparency');
   c.armAnim=()=>({skel:'Man',key:'',list:{skeletons:{}},geos:new Map()}); c.armAnimEntries=()=>[]; c.armAnimFrac=()=>0;
   c.bmdbTabsHtml=()=>'';c.cardsSubTabsHtml=()=>''; c.cgWire=()=>{};c.cgDraw=()=>{};
+  c.cardsSubNow=()=>c.state.cardsSub||'generate';
   c.state.mode='cards';c.state.cardsSub='generate';
   run(c,"CG_WORK.library={rigs:{},poses:[{n:'Pose',c:'Category',b:{}}]}");
   for(const pose of ['tpose','guard','brace','draw','riding','march','anim','rig']){
