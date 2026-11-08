@@ -6,7 +6,7 @@ _Updated: 2026-11-06 - **v2.4.11 cut**: master since v2.4.10 plus Codex's Armory
 
 **In progress 2026-11-07:** editable sheets and EDB balancing (109-116): Phases 109-115 complete/uncut (110-112 and 115 checked in the real app on DaC EUR); 116 real-data checks done, builder bridge waits on 106, browser checks listed in CODEX_HANDOFF.md. Source review: `upstream/EDB_SHEETS_WORKFLOW.md`; implementation checkpoints: `CODEX_HANDOFF.md`.
 
-**In progress 2026-11-08:** guided unit builder integration (102-108, in order, each depending on the one before): 102-104 complete/uncut (the data contract `docs/UNIT_BUILDER_CONTRACT.md`, the calculator and `docs/BUILDER_RULES.md`, the Designer tab in the Unit Editor); 105-108 planned. Source notes in `upstream/SSR_UNIT_BUILDER.md`; checkpoints in `CODEX_HANDOFF.md`.
+**In progress 2026-11-08:** guided unit builder integration (102-108, in order, each depending on the one before): 102-105 complete/uncut (the data contract `docs/UNIT_BUILDER_CONTRACT.md`, the calculator and `docs/BUILDER_RULES.md`, the Designer tab in the Unit Editor, portable projects); 106-108 planned. Source notes in `upstream/SSR_UNIT_BUILDER.md`; checkpoints in `CODEX_HANDOFF.md`.
 
 **Cut v2.4.11, 2026-11-06**, on the user's word ("subrelease our latest changes"): all of master since v2.4.10, with Codex's uncommitted Armory export work (island scale to 1000%, S to scale, undo on the UV step, bake progress, an existing export found, the install-folder picker, zero-alpha normals kept) reviewed and committed first. Before it, v2.4.10 on 2026-11-04. **Next: major V**, the translations. Releasing stays on request only.
 

@@ -1,5 +1,10 @@
 # Sheet interchange
 
+The Guided designer's [portable exports](BUILDER_PROJECTS.md) share the CSV
+value writer below. CSV formula-like text is protected with a leading
+apostrophe; that apostrophe remains literal on reimport. Finite numeric strings
+are preserved. Designer CSV/XLSX import continues through this sheet workflow.
+
 Open Unit sheets, then Import/export. CSV, XLSX and keyed Fynn EDU JSON imports
 use the same explicit mapping and preview flow. Choose a view and header row for
 each worksheet to use, map the columns, click Preview mapped IDs and fields,

@@ -26,6 +26,19 @@ def service(mod, action, body=None):
     Revision and source checks use the same lock and config writer as sheets.
     """
     body = body or {}
+    if action in ('import', 'export'):
+        from . import builder_projects
+        if action == 'import':
+            return {'design':builder_projects.read(body.get('text'), body.get('design'))}
+        fmt = body.get('format')
+        if fmt in ('project', 'presets', 'upstream'):
+            return builder_projects.json_export(body.get('design'), fmt)
+        if fmt not in ('edu', 'csv'):
+            raise contract.ContractError('project_format')
+        result = service(mod, 'preview', body)
+        if fmt == 'csv':
+            return builder_projects.csv_export(result, body.get('unit', ''))
+        return {'name':'builder.edu.txt','mime':'text/plain','text':result['edu']}
     if action not in ('load', 'preview', 'save'):
         raise contract.ContractError('designer_action')
     uid = body.get('unit', '')

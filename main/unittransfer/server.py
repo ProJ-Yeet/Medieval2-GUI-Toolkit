@@ -2983,8 +2983,10 @@ class Handler(BaseHTTPRequestHandler):
                     mod = self.registry.get(body.get("mod") or "")
                     return self._json(builder_designer.service(mod, u.path.rsplit("/", 1)[-1], body))
                 except (builder_contract.ContractError, unit_sheets.SheetError, KeyError, ValueError) as e:
-                    return self._err(400, i18n.catalogue('en')['builder.invalid'],
-                                     message_id='builder.invalid', reason=str(e))
+                    mid = ('builder.project_version' if str(e) == 'project_version' else
+                           'builder.project_schema' if str(e) == 'project_schema' else 'builder.invalid')
+                    return self._err(400, i18n.catalogue('en')[mid],
+                                     message_id=mid, reason=str(e))
             if u.path.startswith("/api/unit_sheets/"):
                 from . import unit_sheets
                 try:

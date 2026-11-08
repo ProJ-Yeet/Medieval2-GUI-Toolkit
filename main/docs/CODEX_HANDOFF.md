@@ -4,6 +4,122 @@ Newest entries first. This records Codex's work for Claude; project status and
 release rules remain in STATE.md and RELEASE.md. Do not assume the working tree's
 other changes belong to Codex.
 
+## 2026-11-08 - Phase 105: portable projects and interchange
+
+Exit checklist against Phase 105's own exit line:
+
+- DONE in fixture service/HTTP and Node VM tests: representative upstream v1
+  infantry, missile, cavalry and two-handed projects open. Custom active preset
+  data, explicit inputs/false/zero, weapon categories and unknown source metadata
+  survive adaptation. The cached upstream unit is never authoritative.
+- DONE: versioned native project export/import round-trips the complete design
+  without value drift, including native pins and metadata. Existing Save draft
+  and reopen still use the sheet store and revision/source-token checks.
+- DONE: project/preset/upstream JSON, EDU preview and CSV exports validate and
+  have download/copy actions. EDU reuses the designer mapper/editor; CSV uses
+  the extracted shared sheet value writer. Custom ability proposals and sp do
+  not become engine syntax; upgrade notes/card +1 caveat remain unchanged.
+- DONE: malformed/unsupported imports preserve working and saved drafts and do
+  not write config. Pending import/export replies cannot replace a newer design;
+  pending imports also preserve a filter being typed in. Consecutive imports
+  have separate shared Undo steps, including restoration of an empty draft.
+- DONE: all write verification used fixtures. Import/export never writes an
+  installed mod or stages native stats. No real mod was opened for writes.
+
+Changes and why:
+
+- Added m2-builder-project v1 and m2-builder-presets v1 envelopes around the
+  Phase 102 packet, strict schema/version/finite JSON/duplicate-key/size/depth
+  checks and calculator validation before replacing the working draft. Preset
+  imports merge rows only into the exact same profile/revision.
+- Adapted combat-reforged-builder v1 from the pinned cached source, read as
+  text only. Retains the raw source in metadata, including unknown keys and
+  custom abilities. Explicit fields stay explicit; blank secondary Attack
+  disables the secondary slot; legacy Standard quality becomes Average.
+  Historical upstream migration scripts are not run. Toolkit native pins and
+  metadata travel in a documented m2_toolkit extension on upstream export;
+  upstream itself ignores that extension. Stale cached unit output is omitted.
+- Designer imports work before profile selection and remain unsaved until Save
+  draft. Imported custom preset IDs are offered in selectors and the preset
+  editor, with only known properties exposed as controls. Unknown JSON is data,
+  never inline handlers. Error/status changes do not repaint typed inputs.
+- Extracted sheet_interchange.write_csv for both existing sheets and designer
+  output. It quotes CSV cells and prefixes formula-like text with an apostrophe,
+  preserving finite numbers. The protective apostrophe remains literal on sheet
+  reimport; this deliberate export difference is documented. Existing-unit CSV
+  keeps its exact identity; detached CSV uses builder_preview and needs mapping
+  through the existing sheet importer. No second CSV/XLSX import pipeline.
+- No change to Guards, cost multipliers, engine upgrade loading, calculator
+  formulas, card-coverage rendering, native Apply or new-unit creation.
+
+Files changed:
+
+- unittransfer/builder_projects.py (new adapter and export envelopes)
+- unittransfer/builder_designer.py (data-only import/export service actions)
+- unittransfer/server.py (localized schema/version error replies)
+- unittransfer/sheet_interchange.py (shared, escaped CSV value writer)
+- web/js/builder.js (portable actions, request guards, custom preset controls)
+- web/i18n/en.json (18 English-only IDs, unindented style)
+- tests/test_builder_projects.py (6 fixture service/HTTP regressions)
+- tests/test_builder_projects_ui.js (Node VM, including real shared Undo)
+- docs/BUILDER_PROJECTS.md (new format, adapter and deliberate differences)
+- docs/SHEET_INTERCHANGE.md (shared writer/interchange note)
+- docs/CODEX_HANDOFF.md (this entry)
+
+Tests FIRST and actual results:
+
+- Initial Python tests failed on missing builder_projects, missing write_csv,
+  designer_action rejections and HTTP 400 for the absent portable actions.
+  Initial Node test failed because the rendered import control did not exist.
+- Further tests failed first for the detached ID leaking into existing-unit
+  CSV, lost blank secondary Attack, unavailable custom preset editing/selection,
+  pending import repainting a changed filter and consecutive imports coalescing
+  in shared Undo. Each now passes. Corrected one test assumption: the existing
+  calculator omits an absent secondary Attack instead of emitting numeric zero.
+- Final fixture Python group: 127/127 PASS with UT_NO_BROWSER=1:
+  tests.test_builder_projects, tests.test_builder_designer,
+  tests.test_builder_calculator, tests.test_builder_contract,
+  tests.test_card_coverage, tests.test_unit_sheets, tests.test_sheet_interchange.
+- tests.test_web_modules: 130/130 PASS. tests.test_i18n: 45/45 PASS.
+  These import-time scripts were run separately. The initial combined unittest
+  command exited during web-module import and is not counted as Python coverage.
+- Node: test_builder_projects_ui.js, test_builder_designer_ui.js,
+  test_card_coverage_ui.js and test_unit_sheets_ui.js all PASS. The project UI
+  tests include failure preservation, file import, download/copy, clipboard
+  refusal, pending edit/filter guards, custom presets and real Undo/Redo.
+- git diff --check PASS. New-code/new-doc em dash scan: zero (final review).
+- Broader tests initially hit the documented Windows tempfile mode-0700 ACL
+  issue. Reused unchanged .tmp/phase110-step4-runner/sitecustomize.py via
+  process-only PYTHONPATH and workspace TEMP/TMP. No production/test helper was
+  altered for permissions. i18n then hit WinError 10013 binding a random local
+  HTTP port; a retry with loopback NO_PROXY passed all 45 checks. Initial failed
+  system-temp directories were not removed or permission-modified.
+
+New English IDs (no other catalogue edited):
+
+builder.portable, builder.portable_help, builder.import_project,
+builder.download_project, builder.copy_project, builder.download_presets,
+builder.copy_presets, builder.download_upstream, builder.copy_upstream,
+builder.download_edu, builder.copy_edu, builder.download_csv, builder.copy_csv,
+builder.project_version, builder.project_schema, builder.import_failed,
+builder.import_changed, builder.export_failed.
+
+Human browser checks still needed: actual file picker/download names/content,
+clipboard permission success/refusal, import Undo/Redo in the live modal,
+narrow/keyboard layout and typing during delayed requests. No upstream browser,
+installed-game or historical revision parity is claimed. Open questions: none
+requiring a mod-write decision; Phase 106 remains responsible for reviewed Apply
+and donor/model/localization prerequisites.
+
+Usage: live five-hour checks progressed from 74% used through 76%, 77%, 78%,
+80% and 81% used during implementation, below the authorized 90%-used stop.
+Final live checkpoint: 83% used, 17% remaining in the five-hour window;
+weekly usage 84% used. Weekly usage is not
+the stop threshold. No credits spent or limits reset. No commit, tag, build or
+release performed. STATE.md and ROADMAP files were not edited. Pre-existing
+Reference deletions, Reference.lnk, .tmp, report-relay cache and CHATGPT_INTRO.md
+were left alone.
+
 ## 2026-11-08 - Phase 104: guided designer and editable presets
 
 Exit checklist against Phase 104's own exit line:

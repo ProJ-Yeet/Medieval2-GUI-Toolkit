@@ -14415,3 +14415,19 @@ staging store. `tests/test_sheet_ops.py`, `test_unit_sheets.py`,
 
 **Finished 2026-11-08.** The Unit Editor's Designer tab opens the guided designer (`builder.js`, `builder_designer.py`): a rules profile (native values or Combat Reforged), archetype, quality, category, class, equipment grade, subtypes, weapons, armour layers, mounted equipment, attributes, terrain and formation, with the unit's EDU block below. Infantry, missile, cavalry and two-handed designs work; preset and grade changes keep intentional overrides; undo, redo, save and reopen restore a draft. Drafts only: applying a design is 106. Checked on DaC EUR (Mirkwood Bodyguard). Left for a person in a browser: layout, focus, IME, keyboard and slow responses. Some labels are still key-like ("Trait guards", "Armour layer1", "Sec heat") and the existing values show as raw JSON.
 
+## Phase 105 - Portable projects and interchange
+
+- Import/export the upstream `combat-reforged-builder` version-1 projects through
+  a documented adapter, retaining custom presets, explicit overrides and unknown
+  metadata where safe. Use a versioned native project format for our additions.
+- Add project/preset JSON, EDU and CSV downloads/copy actions with schema checks,
+  output escaping and clear messages for unsupported/newer versions. Use the
+  existing EDU implementation; document any deliberate export differences.
+- Import transactionally: a malformed project leaves the current draft intact.
+  Unknown custom abilities stay in metadata rather than becoming engine syntax.
+- **Depends on:** 104. **Exit:** representative upstream projects open, native
+  save/load round-trips without drift, exports validate, and failed imports do
+  not destroy drafts. No writes into an installed mod.
+
+**Finished 2026-11-08.** Portable projects (`builder_projects.py`, `docs/BUILDER_PROJECTS.md`): the designer imports a project file and downloads or copies the project, its presets, an upstream-format project, the EDU block or a CSV. Representative upstream v1 projects open; a native save and load round-trips without drift; a failed import leaves the draft as it was; an unknown version or schema is refused by name. CSV goes through the sheets' interchange, not a second pipeline. Checked on fixtures only; the file picker, clipboard and downloads still need a person in a browser.
+

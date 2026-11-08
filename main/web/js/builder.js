@@ -4,6 +4,8 @@
 const BD_FAMILIES={archetypes:'unit_category',foot_quality:'quality',mounted_quality:'quality',grades:'equipment_grade',pri:'pri_preset',sec:'sec_preset',
   weapon_categories:'pri_category',armour:'armour_base',loadouts:'armour_preset',layers:'armour_layer1',offhands:'offhand',horse:'horse_type',breed:'horse_origin',barding:'horse_barding',shield_type:'shield_type',shield_mat:'shield_material',terrain:'origin'};
 const BD_SUBTYPES=['guards','hybrid','aggressive','reckless','fanatic','bloc','raider','mounted','engineer','mercenary','garrison','command'];
+const BD_EXPORTS={project:['builder.download_project','builder.copy_project'],presets:['builder.download_presets','builder.copy_presets'],
+  upstream:['builder.download_upstream','builder.copy_upstream'],edu:['builder.download_edu','builder.copy_edu'],csv:['builder.download_csv','builder.copy_csv']};
 function bdCurrent(){return state.builder;}
 function bdValue(key,fallback){
   const d=bdCurrent().design;
@@ -44,6 +46,10 @@ function bdRender(){
   const b=bdCurrent(),d=b.design;
   document.getElementById('modal').innerHTML=`<h2>${tt('builder.title')}</h2><div class="mbody">
     <p class="count">${tt('builder.preview_only')}</p>
+    <details><summary>${tt('builder.portable')}</summary><p class="count">${tt('builder.portable_help')}</p>
+      <label>${tt('builder.import_project')}<input type="file" accept=".json,application/json" onchange="bdImportFile(this)"></label>
+      ${d?`<div>${['project','presets','upstream','edu','csv'].filter(f=>f!=='upstream'||d.profile.id==='combat-reforged').map(f=>
+        `<button onclick="bdExport('${f}',false)">${tt(BD_EXPORTS[f][0])}</button><button onclick="bdExport('${f}',true)">${tt(BD_EXPORTS[f][1])}</button>`).join('')}</div>`:''}</details>
     ${!d?`<p>${tt('builder.choose_profile')}</p><pre>${esc(JSON.stringify(b.native,null,2))}</pre>
       <button onclick="bdStart('native')">${tt('builder.native_profile')}</button>
       <button onclick="bdStart('combat-reforged')">${tt('builder.reforged_profile')}</button>`:
@@ -75,7 +81,8 @@ function bdCheck(key){
   return `<label class="chk"><input id="bd_${key}" type="checkbox"${bdValue(key,fallback)?' checked':''} onchange="bdInput('${key}',this.checked,true)"> ${esc(bdLabel(key))}</label>
     <button type="button" onclick="bdInherit('${key}')">${tt('builder.inherit')}</button>`;
 }
-function bdTableSelect(family,key,fallback){return bdSelectControl(key,Object.keys(bdCurrent().tables[family]),fallback);}
+function bdTableIds(family){const b=bdCurrent();return [...new Set([...Object.keys(b.tables[family]),...Object.keys(b.design.presets[family]||{})])];}
+function bdTableSelect(family,key,fallback){return bdSelectControl(key,bdTableIds(family),fallback);}
 function bdWeaponSelect(slot){return `<label class="gfrow">${esc(bdLabel(slot+'_preset'))}<select id="bd_${slot}_preset" onchange="bdSelect('${slot}_preset',this.value)">${bdPresetOptions(slot)}</select></label>`;}
 function bdForm(){
   const b=bdCurrent(),d=b.design;
@@ -89,13 +96,13 @@ function bdForm(){
     <p class="count">${tt('builder.grade_help')}</p>${BD_SUBTYPES.map(k=>bdCheck('trait_'+k)).join('')}
     <p class="count">${tt('builder.subtype_help')}</p></fieldset>
     <fieldset><legend>${tt('builder.weapons')}</legend>
-    ${['pri','sec'].map(s=>`${bdWeaponSelect(s)}${bdSelectControl(s+'_category',['',...Object.keys(b.tables.weapon_categories),'bow','crossbow','firearm','thrown','none'],'')}
+    ${['pri','sec'].map(s=>`${bdWeaponSelect(s)}${bdSelectControl(s+'_category',['',...bdTableIds('weapon_categories'),'bow','crossbow','firearm','thrown','none'],'')}
       ${bdCheck(s+'_twohand')}<details><summary>${esc(bdLabel(s))}</summary>
       ${['base_atk','base_charge','handling','range','ammo','delay','heat'].map(k=>bdNumber(s+'_'+k)).join('')}
       ${bdText(s+'_attr')}${bdText(s+'_missile')}</details>`).join('')}
     <p class="count">${tt('builder.weapon_help')}</p></fieldset>
     <fieldset><legend>${tt('builder.equipment')}</legend>
-      ${bdTableSelect('loadouts','armour_preset','unarmored')}${bdSelectControl('armour_base',['',...Object.keys(b.tables.armour)],'')}${bdSelectControl('armour_weight',['light','medium','heavy'],'medium')}
+      ${bdTableSelect('loadouts','armour_preset','unarmored')}${bdSelectControl('armour_base',['',...bdTableIds('armour')],'')}${bdSelectControl('armour_weight',['light','medium','heavy'],'medium')}
       ${[1,2,3].map(i=>bdTableSelect('layers','armour_layer'+i,'none')).join('')}
       ${bdSelectControl('offhand',[...Object.keys(b.tables.offhands),'legacy'],'empty')}
       ${bdTableSelect('shield_type','shield_type','none')}${bdTableSelect('shield_mat','shield_material','wooden')}
@@ -166,7 +173,7 @@ function bdEditKey(){
   const b=bdCurrent(),ids=bdEditIds();
   return [b.editId,bdValue(BD_FAMILIES[b.family]),ids[0]].find(id=>ids.includes(id))||'';
 }
-function bdEditIds(){const b=bdCurrent();return Object.keys(b.tables[b.family]).filter(id=>bdLabel(id).toLowerCase().includes(b.filter.toLowerCase()));}
+function bdEditIds(){const b=bdCurrent();return bdTableIds(b.family).filter(id=>bdLabel(id).toLowerCase().includes(b.filter.toLowerCase()));}
 function bdEditOptions(){
   return bdEditIds()
     .map(id=>`<option value="${esc(id)}"${id===bdEditKey()?' selected':''}>${esc(bdLabel(id))}</option>`).join('');
@@ -178,7 +185,8 @@ function bdFilter(value){
 }
 function bdEditId(id){bdCurrent().editId=id;const el=document.getElementById('bdPresetFields');if(el)el.innerHTML=bdPresetFields();}
 function bdPresetFields(){
-  const b=bdCurrent(),f=b.family,id=bdEditKey(),baseline=b.tables[f][id]||{};
+  const b=bdCurrent(),f=b.family,id=bdEditKey(),custom=b.design.presets[f]?.[id]||{};
+  const baseline=b.tables[f][id]||Object.fromEntries(Object.keys(Object.values(b.tables[f])[0]||{}).filter(k=>Object.hasOwn(custom,k)).map(k=>[k,custom[k]]));
   // Edit only the profile's known properties. Dormant snapshot keys stay data.
   if(!id)return `<p>${tt('builder.no_presets')}</p>`;
   if(Array.isArray(baseline))return `<p>${esc(bdLabel(id))}</p><p>${tt('builder.loadout_help')}</p>`;
@@ -238,6 +246,49 @@ async function bdSave(){
     b.revision=r.revision;b.source_token=r.source_token;b.saved=JSON.stringify(design);b.error='';
   }catch(e){if(b===bdCurrent())b.error=tt('builder.save_failed');}
   finally{b.saving=false;if(b===bdCurrent())bdStatus();}
+}
+
+function bdPortableError(error,fallback){
+  return tt(['builder.project_version','builder.project_schema'].includes(error?.message_id)?error.message_id:fallback);
+}
+function bdImportSnapshot(b){return JSON.stringify([b.design,b.filter,b.family,b.editId]);}
+async function bdImportFile(input){
+  const file=input.files?.[0];if(!file)return;
+  const b=bdCurrent(),before=bdImportSnapshot(b),seq=b.fileSeq=(b.fileSeq||0)+1;
+  try{
+    if(file.size>1000000)throw Error('size');
+    const text=await file.text();
+    if(b!==bdCurrent()||!b.active||seq!==b.fileSeq)return;
+    if(bdImportSnapshot(b)!==before){b.error=tt('builder.import_changed');bdStatus();return;}
+    await bdImportText(text);
+  }catch(e){if(b===bdCurrent()){b.error=tt('builder.import_failed');bdStatus();}}
+  finally{input.value='';}
+}
+async function bdImportText(text){
+  const b=bdCurrent(),before=bdImportSnapshot(b),seq=b.importSeq=(b.importSeq||0)+1;
+  try{
+    const r=await api.post('/api/builder/import',{mod:b.mod,unit:b.unit,text,design:b.design});
+    if(b!==bdCurrent()||!b.active||seq!==b.importSeq)return;
+    if(bdImportSnapshot(b)!==before){b.error=tt('builder.import_changed');bdStatus();return;}
+    if(r.error)throw r;
+    b.design=r.design;b.result=null;b.error='';++b.seq;
+    bdRender();undoCapture('');bdCalculate();
+  }catch(e){if(b===bdCurrent()&&b.active&&seq===b.importSeq){b.error=bdPortableError(e,'builder.import_failed');bdStatus();}}
+}
+async function bdExport(format,copy){
+  const b=bdCurrent(),before=JSON.stringify(b.design);
+  try{
+    const r=await api.post('/api/builder/export',{mod:b.mod,unit:b.unit,design:JSON.parse(before),format});
+    if(b!==bdCurrent()||!b.active)return;
+    if(JSON.stringify(b.design)!==before){b.error=tt('builder.import_changed');bdStatus();return;}
+    if(r.error)throw r;
+    if(copy)await navigator.clipboard.writeText(r.text);
+    else{
+      const url=URL.createObjectURL(new Blob([r.text],{type:r.mime})),a=document.createElement('a');
+      a.href=url;a.download=r.name;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
+    }
+    b.error='';bdStatus();
+  }catch(e){if(b===bdCurrent()&&b.active){b.error=bdPortableError(e,'builder.export_failed');bdStatus();}}
 }
 
 function bdLabels(){

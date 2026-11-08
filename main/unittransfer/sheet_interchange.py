@@ -571,12 +571,29 @@ def export(mod,project,body):
         return {'name':name,'text':write_xlsx(table,mode),'encoding':'base64',
                 'mime':'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet','formula_issues':issues}
     if mode!='values':refuse('csv_values_only')
+    return {'name':name,'text':write_csv(table),'mime':'text/csv','formula_issues':issues}
+
+
+def write_csv(table):
+    """Shared value-only CSV writer, quoting cells and neutralizing formulas."""
     out=io.StringIO(newline='');writer=csv.writer(out)
     rows = row_values(table)
     width = max((max(v)+1 for v in rows.values()),default=0)
     previous = 0
     for r,values in sorted(rows.items()):
         for _ in range(r-previous-1):writer.writerow([])
-        writer.writerow([display(values.get(c,{}).get('value')) for c in range(width)])
+        row = []
+        for c in range(width):
+            value = display(values.get(c,{}).get('value'))
+            if isinstance(value, str) and value.lstrip().startswith(('=', '+', '-', '@')):
+                # Negative numeric values remain usable sheet numbers.
+                try:
+                    numeric = math.isfinite(float(value))
+                except ValueError:
+                    numeric = False
+                if not numeric:
+                    value = "'"+value
+            row.append(value)
+        writer.writerow(row)
         previous = r
-    return {'name':name,'text':out.getvalue(),'mime':'text/csv','formula_issues':issues}
+    return out.getvalue()

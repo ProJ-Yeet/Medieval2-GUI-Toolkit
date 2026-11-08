@@ -1320,20 +1320,6 @@ the target's runtime support has been independently established. No iframe of
 the hosted tool, second EDU parser, frontend build step, battle-runtime port,
 or bulk copy of generated HTML/assets.
 
-## Phase 105 - Portable projects and interchange
-
-- Import/export the upstream `combat-reforged-builder` version-1 projects through
-  a documented adapter, retaining custom presets, explicit overrides and unknown
-  metadata where safe. Use a versioned native project format for our additions.
-- Add project/preset JSON, EDU and CSV downloads/copy actions with schema checks,
-  output escaping and clear messages for unsupported/newer versions. Use the
-  existing EDU implementation; document any deliberate export differences.
-- Import transactionally: a malformed project leaves the current draft intact.
-  Unknown custom abilities stay in metadata rather than becoming engine syntax.
-- **Depends on:** 104. **Exit:** representative upstream projects open, native
-  save/load round-trips without drift, exports validate, and failed imports do
-  not destroy drafts. No writes into an installed mod.
-
 ## Phase 106 - Apply designs to existing and new units
 
 - Let a design stage selected fields on an existing unit or create a new unit
