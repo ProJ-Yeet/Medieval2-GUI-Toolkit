@@ -756,6 +756,7 @@ import io
 from base64 import b64decode as _b64decode
 import json
 import os
+import hashlib
 import re
 import shutil
 import threading
@@ -790,6 +791,20 @@ from .transfer import (TransferOptions, plan_transfer, apply_transfer, undo, rev
 from . import i18n as _i18n
 
 WEB_DIR = Path(__file__).resolve().parent.parent / "web"
+
+
+def web_stamp() -> str:
+    """One short hash of the UI's own files (name, size, time), for ?v= on scripts.
+
+    index.html is never stored and names every script with this stamp, so a
+    stamped script may be kept for good: a new build, or a file edited in
+    place, gives a new stamp and the browser fetches that one fresh.
+    """
+    h = hashlib.sha1()
+    for f in sorted((WEB_DIR / "js").glob("*.js")):
+        st = f.stat()
+        h.update(f"{f.name}:{st.st_size}:{st.st_mtime_ns};".encode())
+    return h.hexdigest()[:12]
 
 # Liveness: the page sends /api/heartbeat every few seconds and /api/bye when its
 # tab closes, so the (often windowless) server shuts down instead of lingering and
@@ -1874,7 +1889,8 @@ class Handler(BaseHTTPRequestHandler):
         self.send_response(code)
         self.send_header("Content-Type", ctype)
         self.send_header("Content-Length", str(len(body)))
-        self.send_header("Cache-Control", "no-cache")
+        if not any(k.lower() == "cache-control" for k in (headers or {})):
+            self.send_header("Cache-Control", "no-cache")
         # Say the connection is closing, because it is (HTTP/1.0, above). Left
         # unsaid, the browser is free to decide otherwise and write its NEXT
         # request into a socket this handler is about to close - and a socket
@@ -2018,10 +2034,16 @@ class Handler(BaseHTTPRequestHandler):
         note_request(u.path)
         try:
             if u.path in ("/", "/index.html"):
-                return self._file(WEB_DIR / "index.html", "text/html; charset=utf-8",
+                page = WEB_DIR / "index.html"
+                if not page.exists():
+                    return self._err(404, "missing index.html")
+                stamp = web_stamp()
+                html = re.sub(r'(<script src="js/[^"?#]+\.js)"', r'\g<1>?v=' + stamp + '"',
+                              page.read_text(encoding="utf-8"))
+                return self._send(200, html.encode("utf-8"), "text/html; charset=utf-8",
                                   {"Cache-Control": "no-store"})
             if u.path.startswith("/js/"):
-                return self._web_asset(u.path)
+                return self._web_asset(u.path, stamped="v" in q)
             if u.path.startswith("/i18n/") and u.path.endswith(".json"):
                 return self._web_asset(u.path)
             if u.path == "/api/i18n/words":
@@ -6215,7 +6237,7 @@ class Handler(BaseHTTPRequestHandler):
                  ".svg": "image/svg+xml", ".png": "image/png",
                  ".json": "application/json; charset=utf-8"}
 
-    def _web_asset(self, url_path: str):
+    def _web_asset(self, url_path: str, stamped: bool = False):
         """Serve a file from web/ - the UI's own scripts, nothing else.
 
         The path is resolved and then checked to be *inside* web/, so `..` or an
@@ -6231,9 +6253,11 @@ class Handler(BaseHTTPRequestHandler):
         ctype = self.WEB_TYPES.get(p.suffix.lower())
         if not ctype or not p.is_file():
             return self._err(404, f"no such asset: {rel}")
-        # no-store: a browser that kept yesterday's scripts runs them against
-        # today's index.html after an update and stops partway through start-up.
-        self._send(200, p.read_bytes(), ctype, {"Cache-Control": "no-store"})
+        # A stamped script (index.html adds ?v=web_stamp()) may be kept for
+        # good; anything else is never stored, so a script kept from an older
+        # build can never run against a newer index.html.
+        self._send(200, p.read_bytes(), ctype,
+                   {"Cache-Control": "max-age=31536000, immutable" if stamped else "no-store"})
 
     #: what the browse dialog is allowed to preview - the formats a card can be
     #: imported from, and nothing that would turn this into a file reader
