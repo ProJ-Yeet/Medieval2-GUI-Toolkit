@@ -1312,6 +1312,47 @@ def set_texture_factions(raw: str, factions, prefer: Optional[str] = None,
     return out
 
 
+def map_texture_factions(raw: str, mapping: Dict[str, str], pad: bool = False) -> str:
+    """Each texture record's faction renamed through ``mapping``.
+
+    ``mapping`` is ``{source faction: destination faction}``; a faction mapped
+    to ``""`` loses its record, and a faction not in it keeps its name. Where
+    two records land on one faction the first is kept. Only the faction string
+    of a kept record changes (with its ``<len>`` prefix); its paths and the
+    file's whitespace are spliced back verbatim. Refuses to empty a group, as
+    :func:`set_texture_factions` does.
+    """
+    mp = {k.lower(): (v or "").strip().lower() for k, v in (mapping or {}).items()}
+    if not mp:
+        return raw
+    groups = _texture_group_spans(raw, pad=pad)
+    edits: List[Tuple[int, int, str]] = []
+    for g in groups:
+        recs = g["records"]
+        if not recs:
+            continue
+        seen, parts = set(), []
+        for r in recs:
+            to = mp.get(r["fac"].lower(), r["fac"])
+            if not to or to in seen:
+                continue
+            seen.add(to)
+            parts.append(f"{len(to)} {to}{raw[r['fac_end']:r['end']]}"
+                         if to != r["fac"] else raw[r["start"]:r["end"]])
+        if not parts:
+            continue                                # never empty a group
+        if parts == [raw[r["start"]:r["end"]] for r in recs]:
+            continue
+        lead = raw[g["records_start"]:recs[0]["start"]] or "\n"
+        body = "".join((lead if i == 0 else "\n") + p for i, p in enumerate(parts))
+        edits.append((g["records_start"], g["group_end"], body))
+        edits.append((g["cnt_start"], g["cnt_end"], str(len(parts))))
+    out = raw
+    for start, end, text in sorted(edits, key=lambda e: e[0], reverse=True):
+        out = out[:start] + text + out[end:]
+    return out
+
+
 # ---------------------------------------------------------------------------
 # Code View support: which line each field of an entry sits on, and putting
 # right the one thing a person cannot maintain by hand

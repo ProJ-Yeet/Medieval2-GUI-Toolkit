@@ -662,16 +662,23 @@ class Mod:
         return [f for f in unit.ownership
                 if self._icon_in(self.ui_units_dir, f, stem, (".tga", ".dds"), packs, path=False)]
 
-    def find_unit_info(self, unit: "edu.Unit") -> Optional[Path]:
+    def find_unit_info(self, unit: "edu.Unit", faction: str = "") -> Optional[Path]:
         """Locate the info card: data/ui/unit_info/<faction>/<dict>_info.tga.
+
+        With ``faction``, that faction's own info card where it has one (as
+        :meth:`find_unit_card`), else the one the unit falls back to.
 
         Uses ``info_pic_dir`` (falling back to ownership / mercenary status), NOT
         ``card_pic_dir`` - a unit can pin its card to ``mercs`` while its info
         card stays looked up under its ownership faction, and conflating the two
         made the info card silently unfindable for exactly that (common) case.
         """
-        return self._find_icon(self.ui_unit_info_dir, unit.info_dirs(),
-                               f"{unit.dictionary}_info", (".tga", ".dds"))
+        stem = f"{unit.dictionary}_info"
+        if faction and not unit.info_pic_dir and faction in unit.ownership:
+            hit = self._find_icon(self.ui_unit_info_dir, [faction], stem, (".tga", ".dds"))
+            if hit is not None:
+                return hit
+        return self._find_icon(self.ui_unit_info_dir, unit.info_dirs(), stem, (".tga", ".dds"))
 
     def _dir_index(self, fdir: Path) -> Dict[str, Path]:
         """``lower-case filename -> path`` for one icon folder, listed once.
