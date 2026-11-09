@@ -1335,6 +1335,8 @@ or bulk copy of generated HTML/assets.
   restores every changed file. Applying SSR balance to another mod requires an
   explicit profile choice, not automatic detection by a loose folder name.
 
+**Finished 2026-11-10, uncut.** The Designer's "Apply to a unit" panel: tick the calculated fields to take, and `builder_designer` action `stage` turns only those into EDU field edits against the unit being edited or a donor unit, writing nothing. Every other field, tuple member and comment stays the unit's own. A missing battle model, projectile or mount, a cavalry unit with no mount, and a field removal a new unit cannot take are listed before anything can be handed on. An existing unit's edits go into the Unit Editor's own pending edits, so its Save previews, backs up and logs them (Undo is the editor's). A new unit opens New unit's transfer composer on the donor with the fields on top, where its name, dictionary, models, factions and cards are chosen as usual. The design's profile is its own explicit choice, never inferred. Tests: `tests/test_builder_apply.py` (staging, prerequisites, and both planners on a throwaway copy of an installed mod with byte-exact Undo) and `tests/test_builder_apply_ui.js`, which the Python suite now runs with the two earlier builder UI scripts. Checked in the browser on DaC EUR (Mirkwood Bodyguard), staged only, nothing saved.
+
 ## Phase 107 - Mercenary-pool integration
 
 - Turn the builder's optional mercenary settings into a plan for selected existing

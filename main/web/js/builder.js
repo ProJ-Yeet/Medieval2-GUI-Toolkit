@@ -55,7 +55,7 @@ function bdRender(){
       <button onclick="bdStart('combat-reforged')">${tt('builder.reforged_profile')}</button>`:
     `<p>${esc(d.profile.id==='native'?tt('builder.native_profile'):tt('builder.reforged_profile'))}</p>
      <div id="bdForm">${bdForm()}</div><div id="bdEligibility" class="w-warn"></div>
-     <div id="bdResults" aria-live="polite"></div>`}
+     <div id="bdResults" aria-live="polite"></div><div id="bdApply"></div>`}
     <div id="bdStatus" role="status"></div></div><div class="foot">
       <button onclick="bdClose()">${tt('builder.back')}</button>
       ${d?`<button onclick="undoStep(false)">${tt('builder.undo')}</button><button onclick="undoStep(true)">${tt('builder.redo')}</button>
@@ -209,7 +209,7 @@ function bdPresetEdit(family,key,value){
 function bdPresetReset(family){const b=bdCurrent();if(b.design.presets[family])delete b.design.presets[family][bdEditKey()];bdRender();bdCalculate();}
 async function bdCalculate(){
   const b=bdCurrent(),seq=++b.seq;
-  b.result=null;b.error='';bdResultsPaint();bdStatus();
+  b.result=null;b.error='';b.staged=null;bdResultsPaint();bdStatus();
   try{
     const r=await api.post('/api/builder/preview',{mod:b.mod,unit:b.unit,design:b.design});
     if(b!==bdCurrent()||seq!==b.seq||!b.active)return;
@@ -231,6 +231,55 @@ function bdResultsPaint(){
       ${['weapon_upgrade_attack','armour_upgrade_armour'].map(k=>`<p>${esc(bdLabel(k))}: ${esc(rules[k].value)} (${esc(rules[k].source)})</p>`).join('')}</details>
     <details><summary>${tt('builder.design_metadata')}</summary><p>${tt('builder.attribute_help')}</p><pre>${esc(JSON.stringify(r.metadata,null,2))}</pre></details>
     <details open><summary>${tt('builder.edu_view')}</summary><p class="count">${tt('builder.edu_help')}</p><pre>${esc(r.edu)}</pre></details>`;
+  bdApplyPaint();
+}
+/* Phase 106: the ticked fields of a design, staged by the server against the
+   unit being edited or a donor unit, then handed to the Unit Editor's own edits
+   or to New unit's transfer composer. Nothing is written here: the editor's Save
+   and the composer's Apply preview, back up and log it, so Undo is theirs. */
+function bdApplyPaint(){
+  const b=bdCurrent(),el=document.getElementById('bdApply'),r=b.result;if(!el)return;
+  if(!r){el.innerHTML='';return;}
+  const pick=b.pick||(b.pick=new Set());
+  const units=b.unit?[]:[...((state.data||{}).units||[])].sort((x,y)=>(x.name||x.type).localeCompare(y.name||y.type));
+  const s=b.staged;
+  el.innerHTML=`<h3>${tt('builder.apply_title')}</h3><p class="count">${tt(b.unit?'builder.apply_help_unit':'builder.apply_help_new')}</p>
+    <div>${Object.keys(r.native).map(k=>`<label class="chk"><input type="checkbox" ${pick.has(k)?'checked':''} onchange="bdPick('${q1(esc(k))}',this.checked)"> ${esc(bdLabel(k))}</label>`).join(' ')}</div>
+    ${b.unit?'':`<label>${tt('builder.donor')} <select onchange="bdDonor(this.value)"><option value="">${tt('builder.donor_pick')}</option>${units.map(u=>
+      `<option value="${esc(u.type)}"${u.type===b.donor?' selected':''}>${esc((u.name||u.type)+' ('+u.type+')')}</option>`).join('')}</select></label>`}
+    <button onclick="bdStage()" ${pick.size&&(b.unit||b.donor)?'':'disabled'}>${tt('builder.stage')}</button>
+    ${s?`<table><tr><th></th><th>${tt('builder.before')}</th><th>${tt('builder.after')}</th></tr>${s.changes.map(c=>
+      `<tr><th>${esc(bdLabel(c.column))}</th><td>${esc(c.before??'')}</td><td>${esc(Array.isArray(c.after)?c.after.join(', '):c.after)}</td></tr>`).join('')}</table>
+      ${s.missing.length?`<div class="w-bad">${tt('builder.missing')}<ul>${s.missing.map(m=>`<li>${esc(tt(BD_MISSING[m.kind+(m.name?'':'_none')],{name:m.name}))}</li>`).join('')}</ul></div>`
+      :`<button class="primary" onclick="bdHandOver()">${tt(s.mode==='edit'?'builder.to_editor':'builder.to_new_unit')}</button>`}`:''}`;
+}
+const BD_MISSING={model:'builder.missing_model',projectile:'builder.missing_projectile',mount:'builder.missing_mount',
+  mount_none:'builder.missing_mount_none',removal:'builder.missing_removal'};
+function bdPick(k,on){const b=bdCurrent();on?b.pick.add(k):b.pick.delete(k);b.staged=null;bdApplyPaint();}
+function bdDonor(type){const b=bdCurrent();b.donor=type;b.staged=null;bdApplyPaint();}
+async function bdStage(){
+  const b=bdCurrent(),seq=b.seq;
+  const body={mod:b.mod,design:b.design,fields:[...b.pick]};
+  if(b.unit)body.unit=b.unit;else body.donor=b.donor;
+  let r;
+  try{r=await api.post('/api/builder/stage',body);if(r.error)throw r;}
+  catch(e){if(b===bdCurrent()&&seq===b.seq){b.error=tt('builder.stage_failed');bdStatus();}return;}
+  if(b!==bdCurrent()||seq!==b.seq||!b.active)return;
+  b.staged=r;bdApplyPaint();
+}
+function bdHandOver(){
+  const b=bdCurrent(),s=b.staged;if(!s||s.missing.length)return;
+  if(s.mode==='edit'){
+    // Into the editor's pending edits: its Save previews, backs up and logs them.
+    const e=state.ed;Object.assign(e.ov,s.field_overrides);
+    for(const k of s.remove_fields)e.rm.add(k);
+    for(const k of Object.keys(s.field_overrides))e.rm.delete(k);
+    bdClose();toast(tt('builder.staged_in_editor'));return;
+  }
+  b.active=false;++b.seq;
+  // New unit's composer: the donor copied, with these fields on top.
+  cfgFor(s.target).field_overrides={...s.field_overrides};
+  startNewUnit(s.target);
 }
 function bdStatus(){
   const b=bdCurrent(),el=document.getElementById('bdStatus');if(!el)return;

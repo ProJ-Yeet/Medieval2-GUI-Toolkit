@@ -1,4 +1,4 @@
-"""Phase 104 draft service. Config writes only; no staging or Apply action."""
+"""Phase 104 draft service and the Phase 106 stage. Config writes only; the stage feeds the edit and transfer planners."""
 from __future__ import annotations
 import copy
 from . import builder_calculator as calculator, builder_contract as contract
@@ -16,6 +16,52 @@ stat_cost 1, 0, 0, 0, 0, 0, 1, 1
 formation 1, 1, 2, 2, 4, square
 stat_ground 0, 0, 0, 0
 """
+
+
+def _stage(mod, body):
+    """Phase 106: the chosen fields of a design as edits to one live unit.
+
+    Writes nothing. ``unit`` stages onto that unit for the Unit Editor's edit
+    planner; ``donor`` stages onto the unit a New unit transfer copies. Only the
+    ticked sheet columns change; every other field, tuple member and comment
+    of the target stays its own. What the result would need and the mod lacks
+    is listed in ``missing`` for the UI to show before anything is written.
+    """
+    uid, donor, fields = body.get('unit') or '', body.get('donor') or '', body.get('fields')
+    target = uid or donor
+    units = sheets.live_units(mod)
+    if not isinstance(target, str) or bool(uid) == bool(donor) or target not in units:
+        raise contract.ContractError('unit_identity')
+    result = service(mod, 'preview', {'design': body.get('design'), 'unit': target})
+    native = result['native']
+    if (not isinstance(fields, list) or not fields
+            or any(not isinstance(f, str) or f not in native for f in fields)):
+        raise contract.ContractError('designer_field')
+    unit = units[target]
+    chosen = {f: native[f] for f in fields}
+    overrides, removals = sheet_ops.field_changes(unit, chosen)
+    before = sheets.fields_of(unit)
+    changes = [{'column': f, 'before': sheet_ops.value_of(before, sheet_ops.FIELDS[f]), 'after': chosen[f]}
+               for f in fields]
+    missing = []
+    model = (unit.soldier_model or '').lower()
+    if model and mod.modeldb.get(model) is None:
+        missing.append({'kind': 'model', 'name': model})
+    missile = str(chosen.get('missile', 'no')).strip()
+    if missile not in ('', 'no') and mod.projectile_def(missile) is None:
+        missing.append({'kind': 'projectile', 'name': missile})
+    category = str(chosen.get('category', unit.category or '')).lower()
+    if category == 'cavalry' and not unit.mount:
+        missing.append({'kind': 'mount', 'name': ''})
+    elif unit.mount and mod.mount_def(unit.mount) is None:
+        missing.append({'kind': 'mount', 'name': unit.mount})
+    if donor:
+        # A transfer has no field removal; the user removes it in the editor after.
+        missing += [{'kind': 'removal', 'name': key} for key in removals]
+    return {'mode': 'edit' if uid else 'new', 'target': target,
+            'profile': result['design']['profile']['id'],
+            'field_overrides': overrides, 'remove_fields': removals,
+            'changes': changes, 'missing': missing}
 
 
 def service(mod, action, body=None):
@@ -39,6 +85,8 @@ def service(mod, action, body=None):
         if fmt == 'csv':
             return builder_projects.csv_export(result, body.get('unit', ''))
         return {'name':'builder.edu.txt','mime':'text/plain','text':result['edu']}
+    if action == 'stage':
+        return _stage(mod, body)
     if action not in ('load', 'preview', 'save'):
         raise contract.ContractError('designer_action')
     uid = body.get('unit', '')
