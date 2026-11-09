@@ -27,7 +27,8 @@ function cgObjects(){
   const seen = new Set();
   return armProj().objects.filter(o => {
     if(o.hidden || armCollHidden(o)) return false;
-    const key = String(o.name || '').toLowerCase();
+    // one of each part per model: a horse's Body is not the rider's
+    const key = (((o.src || [])[0] || {}).asset || '') + '|' + String(o.name || '').toLowerCase();
     if(cg().oneEach && seen.has(key)) return false;
     seen.add(key); return true;
   });
@@ -175,6 +176,8 @@ function cgScrub(value){ const a = armAnim(); a.playing = false; a.t = armAnimLe
 async function cgPreparePose(){
   const c = cg(), a = armAnim(); c.poseNote = ''; c.poseNote2 = '';
   if(c.pose === 'tpose'){ armAnimRest(); a.playing = false; return; }
+  // a rider and his horse both loaded: Riding is the rider's action, on the horse
+  if(c.pose === 'riding'){ const rider = await armAnimRider(); if(rider && (armProj().anim || {}).asset !== armAssetKey(rider)) await armAnimFrom(armAssetKey(rider)); }
   if(!a.list){ const entry = armAnimEntries()[0]; if(entry) await armAnimFrom(armAssetKey(entry)); }
   if(!a.list){ c.poseNote = tt('cards.gen_no_entry'); return; }
   const skels = a.list.skeletons || {};
@@ -198,7 +201,7 @@ async function cgPreparePose(){
   a.playing = false; a.tpose = false;
   if(presets[c.pose]) a.t = armAnimLength()*presets[c.pose][1];
   c.poseNote = tt('cards.gen_pose_from',{action:selected.action,skeleton});
-  if(c.pose === 'riding' && !/mount|cavalry|horse/i.test(skeleton)) c.poseNote2 = tt('cards.gen_pose_no_mount');
+  if(c.pose === 'riding' && !a.carried && !/mount|cavalry|horse/i.test(skeleton)) c.poseNote2 = tt('cards.gen_pose_no_mount');
 }
 function cgTwoHands(on){
   const basis = cg().rig.basis; basis.Switch = {...basis.Switch,l:[0,on ? 0.05 : 0,0]}; cgFitChanged(); cgDraw();
