@@ -144,7 +144,7 @@ async function armAnimFrom(key){
   if(key === '@mod') return armAnimSetMod(state.src || '');
   p.anim = key ? {asset: key} : null;
   armSave();
-  Object.assign(a, {list: null, skel: '', key: '', data: null, err: '', mount: null});
+  Object.assign(a, {list: null, skel: '', key: '', data: null, err: '', mount: null, rider: null});
   armAnimRest();
   if(!key) return armAnimPaint();
   const asset = p.assets.find(x => armAssetKey(x) === key);
@@ -188,8 +188,10 @@ async function armAnimPick(key){
   if(a.key !== key || a.pickSerial !== pick) return;
   // a rider's action, with his horse loaded too: the horse plays its own
   const mount = asset && v3aCarried(data) ? await armAnimMountLoad(armAssetKey(asset), row.slot) : null;
+  // a horse's action, with its rider loaded too: he plays his own on it
+  const rider = asset && !mount && !v3aCarried(data) ? await armAnimRiderLoad(armAssetKey(asset), row.slot) : null;
   if(a.key !== key || a.pickSerial !== pick) return;
-  a.mount = mount;
+  a.mount = mount; a.rider = rider;
   data.name = row.action;
   a.data = data;
   a.orig = data;
@@ -291,7 +293,7 @@ function armAnimScrub(v){ const a = armAnim(); a.playing = false; a.t = armAnimL
 /* Back to the bind pose: the model as it stands still. */
 function armAnimRest(){
   const a = armAnim();
-  a.data = null; a.key = ''; a.source=null; a.mount = null; a.pickSerial=(a.pickSerial || 0)+1;
+  a.data = null; a.key = ''; a.source=null; a.mount = null; a.rider = null; a.pickSerial=(a.pickSerial || 0)+1;
   armFrame();
 }
 
@@ -342,7 +344,33 @@ async function armAnimMountLoad(key, slot){
   return {key: armAssetKey(asset), data, bind: v3aBind(data), travel: v3aTravel(data),
           hub: data.bones.findIndex(b => b.parent === 0), offset: row.offset || [0, 0, 0]};
 }
-const armAnimAssetOf = o => ((o && o.src) || [])[0] ? o.src[0].asset : '';
+/* The other way round: the horse's action picked, and a loaded entry that
+   rides it plays his first skeleton's action for the same slot (or his idle),
+   with the weapons his set hangs off the hand. */
+async function armAnimRiderLoad(key, slot){
+  let found = null, rider = null;
+  for(const e of armAnimEntries()){
+    const k = armAssetKey(e);
+    if(k === key) continue;
+    const f = await armAnimMountOf(k);
+    if(f && armAssetKey(f.asset) === key){ found = f; rider = e; break; }
+  }
+  if(!found) return null;
+  let list, data;
+  try{ list = await api.get(`/api/model/anims?mod=${enc(rider.mod)}&entry=${enc(rider.entry)}`); }catch(e){ return null; }
+  const set = ((list && list.sets) || [])[0] || {}, skel = set.primary || '';
+  const sk = ((list && list.skeletons) || {})[skel.toLowerCase()];
+  const r = sk && v3aMountRow(sk.actions, slot).row;
+  if(!r) return null;
+  const q = r.rel ? `rel=${enc(r.rel)}` : `pack=${enc(r.path)}`, w = set.primary_weapons || [];
+  try{ data = await api.get(`/api/model/anim?mod=${enc(rider.mod)}&${q}&skel=${enc(skel)}`
+    + (r.slot != null ? `&slot=${r.slot}` : '') + (w.length ? `&weapons=${enc(w.join(','))}` : '')); }
+  catch(e){ return null; }
+  if(!data || data.error || !data.bones) return null;
+  return {key: armAssetKey(rider), data, bind: v3aBind(data),
+          hub: data.bones.findIndex(b => b.parent === 0), offset: found.row.offset || [0, 0, 0]};
+}
+const armAnimAssetOf =o => ((o && o.src) || [])[0] ? o.src[0].asset : '';
 function armAnimNote(){
   const a = armAnim();
   const bits = [];
@@ -461,30 +489,41 @@ function armAnimPose(objs){
   let pose = rig ? cgRigPose(a.data) : v3aPose(a.data, a.t);
   let shift = rig ? [0, 0, 0] : [-tr[0] * f, a.carried ? 0 : (isFinite(low) ? low : 0), -tr[1] * f];
   a.ground = shift[1];      // armBonesDraw lowers the skeleton with the model
-  // on his horse: the horse stands as a man on foot does, and carries him
+  // a man on his horse: whichever of the two was picked, the horse stands as
+  // a man on foot does and carries the man at its root plus rider_offset
+  const own = {key: '', data: a.data, bind: a.bind, pose, shift};
+  let horse = null, man = null;
   const m = !rig && a.mount && a.mount.hub >= 0 ? a.mount : null;
-  let mPose = null, mShift = null;
+  const r = !rig && !m && a.rider && a.rider.hub >= 0 ? a.rider : null;
   if(m){
     const mt = m.data.times || [], ml = mt.length ? mt[mt.length - 1] : 0;
     const mf = ml > 0 ? ((a.t % ml) + ml) % ml / ml : 0, mtr = m.travel || [0, 0];
-    mPose = v3aPose(m.data, a.t);
-    mShift = [-mtr[0] * mf, isFinite(low) ? low : 0, -mtr[1] * mf];
-    pose = v3aCarry(pose, mPose[m.hub], m.offset, mShift);
-    shift = [0, 0, 0];
+    horse = {key: m.key, data: m.data, bind: m.bind, pose: v3aPose(m.data, a.t),
+             shift: [-mtr[0] * mf, isFinite(low) ? low : 0, -mtr[1] * mf]};
+    man = own;
+    man.pose = v3aCarry(pose, horse.pose[m.hub], m.offset, horse.shift);
+    man.shift = [0, 0, 0];
+  }else if(r){
+    const hub = a.data.bones.findIndex(b => b.parent === 0);
+    horse = own;
+    man = {key: r.key, data: r.data, bind: r.bind, shift: [0, 0, 0],
+           pose: v3aCarry(v3aPose(r.data, a.t), pose[Math.max(0, hub)], r.offset, shift)};
   }
   const gl = armGl();
   for(const g of geos){
-    const onHorse = m && armAnimAssetOf(g.obj) === m.key;
+    const k = armAnimAssetOf(g.obj);
+    // the picked action's own model is everything not the other one
+    const by = horse && horse.key && k === horse.key ? horse : man && man.key && k === man.key ? man : own;
     if(g.unweighted){
       // with no weights a part stands still; on a horse it rides with the man
-      if(!m || onHorse){ g.posed = false; continue; }
-      const hub = a.data.bones.findIndex(b => b.parent === 0);
+      if(!man || by !== man){ g.posed = false; continue; }
+      const hub = by.data.bones.findIndex(b => b.parent === 0);
       const W = new Float32Array(g.vertices * 2);
       for(let v = 0; v < g.vertices; v++) W[v*2] = 1;
-      v3aSkin(Object.assign({}, g, {weights: W, joints: new Uint8Array(g.vertices * 2)}), pose, a.bind,
-              [Math.max(0, hub)], g.outPos, g.outNrm, shift);
+      v3aSkin(Object.assign({}, g, {weights: W, joints: new Uint8Array(g.vertices * 2)}), by.pose, by.bind,
+              [Math.max(0, hub)], g.outPos, g.outNrm, by.shift);
     }else{
-      const d = onHorse ? m.data : a.data;
+      const d = by.data;
       if(!g.map || g.mapOf !== d){
         const bm = v3aBoneMap(g.bones, d);
         const used = new Set();
@@ -492,8 +531,7 @@ function armAnimPose(objs){
         g.map = bm.map; g.mapOf = d;
         g.missing = bm.missing.filter(n => n && used.has(g.bones.indexOf(n)));
       }
-      if(onHorse) v3aSkin(g, mPose, m.bind, g.map, g.outPos, g.outNrm, mShift);
-      else v3aSkin(g, pose, a.bind, g.map, g.outPos, g.outNrm, shift);
+      v3aSkin(g, by.pose, by.bind, g.map, g.outPos, g.outNrm, by.shift);
     }
     gl.bindBuffer(gl.ARRAY_BUFFER, g.glPos); gl.bufferSubData(gl.ARRAY_BUFFER, 0, g.outPos);
     gl.bindBuffer(gl.ARRAY_BUFFER, g.glNrm); gl.bufferSubData(gl.ARRAY_BUFFER, 0, g.outNrm);

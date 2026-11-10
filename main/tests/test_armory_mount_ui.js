@@ -92,6 +92,20 @@ const near = (got, want, what) => want.forEach((v, k) =>
   c.armAnimRest();
   assert.equal(a.mount, null, 'Rest forgets the mount');
 
+  // the horse's own action picked: the rider plays his action for the same
+  // slot and rides it, rather than standing stiff on the saddle bone
+  await c.armAnimFrom('M|mount_h');
+  await c.armAnimPick('0');
+  assert(a.rider && a.rider.key === 'M|rider', 'a horse action finds the rider loaded on it');
+  c.armAnimPose(project.objects);
+  near(a.geos.get('h').outPos.slice(0, 3), [0, 1.6 - 1.9, 0], 'the horse plays its own action');
+  near(a.geos.get('r').outPos.slice(0, 3), [0, 1.6 - 1.9 + 0.38, 0.7], 'the rider rides the horse action');
+  near(a.geos.get('r').outPos.slice(3, 6), [0, 1.6 - 1.9 + 0.38 - 1, 0.7], 'posed by his own skeleton, not the horse hub');
+  near(a.geos.get('m').outPos.slice(0, 3), [0, 1.6 - 1.9 + 0.38 + 0.6, 0.7], 'his helmet rides with him');
+  assert(!(a.geos.get('r').missing || []).length, 'no rider bone is reported missing from the horse skeleton');
+  c.armAnimRest();
+  assert.equal(a.rider, null, 'Rest forgets the rider');
+
   // the card maker: Riding picks the rider, not the horse listed first
   const cg = js('cardgen.js');
   const card = {pose: 'riding', oneEach: true, poseNote: '', poseNote2: ''};
