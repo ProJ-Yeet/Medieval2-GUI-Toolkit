@@ -13114,5 +13114,16 @@
  "builder.project_schema": "Desteklenmeyen proje biçimi. Yerel bir proje, yerel ön ayarlar veya Combat Reforged builder v1 JSON'u seçin.",
  "builder.import_failed": "Bu proje veya ön ayar dosyası içe aktarılamadı. Geçerli taslak değişmedi.",
  "builder.import_changed": "İstek işlenirken taslak değişti. Geçerli taslakla yeniden deneyin.",
- "builder.export_failed": "Bu taslak dışa aktarılamadı veya kopyalanamadı. Değerlerini kontrol edin ya da kopyalamak yerine indirin."
+ "builder.export_failed": "Bu taslak dışa aktarılamadı veya kopyalanamadı. Değerlerini kontrol edin ya da kopyalamak yerine indirin.",
+ "eng.transfer.factions_check_map": "FRAKSİYONLAR: {factions} hedefte nereye düşüyor, kontrol et; aynı kod orada başka bir fraksiyon olabilir ve hedefte bulunmayan fraksiyon dışarıda bırakılır.",
+ "transfer.fac_legend": "Fraksiyonlar: {src} -> {dst}",
+ "transfer.fac_lead": "Birimde kaplama veya kart bulunan her fraksiyon ve bunların hedefte hangi fraksiyon altında yazıldığı. Sahiplik, dönem satırları, kaplamalar ve kartlar bunları takip eder. Oyun içindeki adları kontrol et: aynı kod orada başka bir fraksiyon olabilir.",
+ "transfer.fac_left_out": "Dışarıda bırak",
+ "transfer.fac_pick_title": "Bu kaplama ve kartın altında yazıldığı {dst} fraksiyonu",
+ "transfer.fac_view_title": "Bu fraksiyonun kaplamasını 3D önizlemede göster",
+ "transfer.fac_flag_missing": "Hedefte {src} için fraksiyon yok, bu yüzden dışarıda bırakılıyor.",
+ "transfer.fac_flag_dropped": "Dışarıda bırakıldı.",
+ "transfer.fac_flag_name_differs": "Kod aynı, ancak hedefte {dest} başka bir fraksiyon.",
+ "transfer.fac_flag_shared": "Başka bir kaynak fraksiyon da {dest} fraksiyonuna düşüyor; yalnızca ilk fraksiyonun kaplaması tutuluyor.",
+ "transfer.fac_confirm": "{unit}: şu fraksiyonlar sen seçim yapmadan eşleştirildi, göz at:\n\n{list}\n\nYine de uygula?"
 }

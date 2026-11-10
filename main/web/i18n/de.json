@@ -13664,5 +13664,16 @@
  "builder.project_schema": "Nicht unterstütztes Projektformat. Wähle ein natives Projekt, native Vorlagen oder JSON im Format Combat Reforged builder v1.",
  "builder.import_failed": "Diese Projekt- oder Vorlagendatei konnte nicht importiert werden. Der aktuelle Entwurf bleibt unverändert.",
  "builder.import_changed": "Der Entwurf wurde während der Verarbeitung der Anfrage geändert. Versuche es mit dem aktuellen Entwurf erneut.",
- "builder.export_failed": "Dieser Entwurf konnte nicht exportiert oder kopiert werden. Prüfe seine Werte oder lade ihn herunter, statt ihn zu kopieren."
+ "builder.export_failed": "Dieser Entwurf konnte nicht exportiert oder kopiert werden. Prüfe seine Werte oder lade ihn herunter, statt ihn zu kopieren.",
+ "eng.transfer.factions_check_map": "FRAKTIONEN: Prüfe, wo {factions} im Ziel landen. Derselbe Code kann dort eine andere Fraktion bezeichnen, und eine Fraktion, die es dort nicht gibt, wird ausgelassen.",
+ "transfer.fac_legend": "Fraktionen: {src} zu {dst}",
+ "transfer.fac_lead": "Jede Fraktion, für die die Einheit einen Skin oder eine Karte hat, und die Fraktion des Ziels, unter der sie eingetragen wird. Besitz, Epochenzeilen, Skins und Karten richten sich danach. Prüfe die Namen im Spiel: Derselbe Code kann dort eine andere Fraktion bezeichnen.",
+ "transfer.fac_left_out": "Auslassen",
+ "transfer.fac_pick_title": "Die Fraktion von {dst}, unter der dieser Skin und diese Karte eingetragen werden",
+ "transfer.fac_view_title": "Skin dieser Fraktion in der 3D-Vorschau anzeigen",
+ "transfer.fac_flag_missing": "Im Ziel gibt es keine Fraktion für {src}, daher wird sie ausgelassen.",
+ "transfer.fac_flag_dropped": "Ausgelassen.",
+ "transfer.fac_flag_name_differs": "Gleicher Code, aber {dest} bezeichnet im Ziel eine andere Fraktion.",
+ "transfer.fac_flag_shared": "Eine weitere Quellfraktion landet ebenfalls auf {dest}; nur der Skin der ersten Fraktion bleibt erhalten.",
+ "transfer.fac_confirm": "{unit}: Diese Fraktionen wurden ohne deine Auswahl zugeordnet und müssen geprüft werden:\n\n{list}\n\nTrotzdem anwenden?"
 }

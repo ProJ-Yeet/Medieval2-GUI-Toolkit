@@ -12972,5 +12972,16 @@
  "builder.project_schema": "不支持此项目格式。请选择原生项目、原生预设或 Combat Reforged builder v1 JSON。",
  "builder.import_failed": "无法导入此项目或预设文件。当前草稿未更改。",
  "builder.import_changed": "请求处理期间草稿已更改。请使用当前草稿重试。",
- "builder.export_failed": "无法导出或复制此草稿。请检查其中的值，或改为下载。"
+ "builder.export_failed": "无法导出或复制此草稿。请检查其中的值，或改为下载。",
+ "eng.transfer.factions_check_map": "派系：检查 {factions} 在目标模组对应哪些派系；相同代码在目标模组可能代表另一个派系，目标模组没有的派系会被排除。",
+ "transfer.fac_legend": "派系：{src} -> {dst}",
+ "transfer.fac_left_out": "排除",
+ "transfer.fac_pick_title": "{dst} 中写入这套贴图和兵牌的派系",
+ "transfer.fac_view_title": "在 3D 预览中显示这个派系的贴图",
+ "transfer.fac_flag_missing": "目标模组没有与 {src} 对应的派系，因此会将其排除。",
+ "transfer.fac_flag_dropped": "已排除。",
+ "transfer.fac_flag_name_differs": "代码相同，但 {dest} 在目标模组代表另一个派系。",
+ "transfer.fac_flag_shared": "另一个来源派系也对应到 {dest}；只会保留第一个派系的贴图。",
+ "transfer.fac_confirm": "{unit}：这些派系是在没有你选择的情况下匹配的，需要检查一下：\\n\\n{list}\\n\\n仍要应用吗？",
+ "transfer.fac_lead": "这支部队有贴图或兵牌的每个派系，以及它在目标模组中写入的派系。所有权、时代行、贴图和兵牌都按此对应。请检查游戏内名称：相同代码在目标模组中可能代表另一个派系。"
 }

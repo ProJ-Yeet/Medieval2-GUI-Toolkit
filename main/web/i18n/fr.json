@@ -13760,5 +13760,16 @@
  "builder.project_schema": "Format de projet non pris en charge. Choisissez un projet natif, des préréglages natifs ou un JSON Combat Reforged builder v1.",
  "builder.import_failed": "Impossible d’importer ce fichier de projet ou de préréglages. Le brouillon actuel reste inchangé.",
  "builder.import_changed": "Le brouillon a changé pendant le traitement de la demande. Réessayez avec le brouillon actuel.",
- "builder.export_failed": "Impossible d’exporter ou de copier ce brouillon. Vérifiez ses valeurs ou téléchargez-le au lieu de le copier."
+ "builder.export_failed": "Impossible d’exporter ou de copier ce brouillon. Vérifiez ses valeurs ou téléchargez-le au lieu de le copier.",
+ "eng.transfer.factions_check_map": "FACTIONS : vérifie où les factions {factions} arrivent dans la destination ; le même code peut désigner une autre faction là-bas, et toute faction absente de cette destination est ignorée.",
+ "transfer.fac_legend": "Factions : {src} vers {dst}",
+ "transfer.fac_lead": "Chaque faction pour laquelle l'unité a une texture ou une carte, et la faction de destination sous laquelle cette texture ou cette carte est associée. La propriété, les lignes d'époque, les textures et les cartes suivent toutes cette correspondance. Vérifie les noms en jeu : le même code peut désigner une autre faction là-bas.",
+ "transfer.fac_left_out": "Ignorer",
+ "transfer.fac_pick_title": "La faction de {dst} à laquelle cette texture et cette carte sont associées",
+ "transfer.fac_view_title": "Afficher la texture de cette faction dans l'aperçu 3D",
+ "transfer.fac_flag_missing": "La destination n'a pas de faction correspondant à {src}, cette faction est donc ignorée.",
+ "transfer.fac_flag_dropped": "Ignorée.",
+ "transfer.fac_flag_name_differs": "Même code, mais {dest} désigne une autre faction dans la destination.",
+ "transfer.fac_flag_shared": "Une autre faction source arrive aussi sur {dest} ; seule la texture de la première est conservée.",
+ "transfer.fac_confirm": "{unit} : ces factions ont été associées sans ton choix et doivent être vérifiées :\n\n{list}\n\nAppliquer quand même ?"
 }

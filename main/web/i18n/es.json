@@ -14122,5 +14122,16 @@
  "builder.project_schema": "Formato de proyecto no compatible. Elige un proyecto nativo, ajustes predefinidos nativos o un JSON de Combat Reforged builder v1.",
  "builder.import_failed": "No se pudo importar este archivo de proyecto o ajustes predefinidos. El borrador actual no ha cambiado.",
  "builder.import_changed": "El borrador cambió mientras se procesaba la solicitud. Inténtalo de nuevo con el borrador actual.",
- "builder.export_failed": "No se pudo exportar ni copiar este borrador. Comprueba sus valores o descárgalo en lugar de copiarlo."
+ "builder.export_failed": "No se pudo exportar ni copiar este borrador. Comprueba sus valores o descárgalo en lugar de copiarlo.",
+ "eng.transfer.factions_check_map": "FACCIONES: comprueba dónde acaban {factions} en el destino; allí el mismo código puede corresponder a otra facción, y se omite cualquier facción que no tenga.",
+ "transfer.fac_legend": "Facciones: {src} a {dst}",
+ "transfer.fac_lead": "Cada facción para la que la unidad tiene un aspecto o una tarjeta, y la facción del destino bajo la que está escrito. La propiedad, las líneas de época, los aspectos y las tarjetas siguen esta correspondencia. Comprueba los nombres en el juego: allí el mismo código puede corresponder a otra facción.",
+ "transfer.fac_left_out": "Omitir",
+ "transfer.fac_pick_title": "La facción de {dst} bajo la que están escritos este aspecto y esta tarjeta",
+ "transfer.fac_view_title": "Mostrar el aspecto de esta facción en la vista previa 3D",
+ "transfer.fac_flag_missing": "El destino no tiene ninguna facción para {src}, así que se omite.",
+ "transfer.fac_flag_dropped": "Omitida.",
+ "transfer.fac_flag_name_differs": "Mismo código, pero {dest} es otra facción en el destino.",
+ "transfer.fac_flag_shared": "Otra facción de origen también acaba en {dest}; solo se conserva el aspecto de la primera.",
+ "transfer.fac_confirm": "{unit}: estas facciones se emparejaron sin que eligieras y debes revisarlas:\n\n{list}\n\n¿Quieres aplicarlo de todos modos?"
 }

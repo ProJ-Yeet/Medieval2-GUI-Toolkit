@@ -14370,5 +14370,16 @@
  "builder.project_schema": "Nieobsługiwany format projektu. Wybierz projekt natywny, natywne ustawienia wstępne lub JSON Combat Reforged builder v1.",
  "builder.import_failed": "Nie udało się zaimportować tego pliku projektu lub ustawień wstępnych. Bieżący szkic pozostaje bez zmian.",
  "builder.import_changed": "Szkic zmienił się podczas przetwarzania żądania. Spróbuj ponownie z bieżącym szkicem.",
- "builder.export_failed": "Nie udało się wyeksportować ani skopiować tego szkicu. Sprawdź jego wartości lub pobierz go zamiast kopiować."
+ "builder.export_failed": "Nie udało się wyeksportować ani skopiować tego szkicu. Sprawdź jego wartości lub pobierz go zamiast kopiować.",
+ "eng.transfer.factions_check_map": "FRAKCJE: sprawdź, gdzie {factions} trafią w miejscu docelowym. Ten sam kod może tam oznaczać inną frakcję, a frakcje, których tam nie ma, zostaną pominięte.",
+ "transfer.fac_legend": "Frakcje: {src} do {dst}",
+ "transfer.fac_lead": "Każda frakcja, dla której jednostka ma skórkę lub kartę, oraz frakcja miejsca docelowego, pod którą są przypisane. Od tego zależą własność, wpisy epok, skórki i karty. Sprawdź nazwy w grze: ten sam kod może tam oznaczać inną frakcję.",
+ "transfer.fac_left_out": "Pomiń",
+ "transfer.fac_pick_title": "Frakcja w {dst}, pod którą przypisane są ta skórka i karta",
+ "transfer.fac_view_title": "Pokaż skórkę tej frakcji w podglądzie 3D",
+ "transfer.fac_flag_missing": "W miejscu docelowym nie ma frakcji {src}, więc zostanie pominięta.",
+ "transfer.fac_flag_dropped": "Pominięto.",
+ "transfer.fac_flag_name_differs": "Ten sam kod, ale {dest} oznacza inną frakcję w miejscu docelowym.",
+ "transfer.fac_flag_shared": "Inna frakcja źródłowa też trafia do {dest}. Zachowana zostanie tylko skórka pierwszej.",
+ "transfer.fac_confirm": "{unit}: te frakcje dopasowano bez twojego wyboru, sprawdź je:\n\n{list}\n\nZastosować mimo to?"
 }
