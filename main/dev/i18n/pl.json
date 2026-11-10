@@ -14392,5 +14392,16 @@
  "builder.to_new_unit": "Otwórz w Nowej jednostce",
  "builder.stage_failed": "Nie udało się ustalić zmian. Sprawdź projekt i spróbuj ponownie.",
  "builder.staged_in_editor": "Pola z projektu zostały dodane do zmian tej jednostki. Zapisz, aby je sprawdzić i zastosować.",
- "core.ssr_unit_builder_by_lupinemaverick": "<a href=\"https://github.com/lupinemaverick/stainless-steel-reforged-unit-builder\" target=\"_blank\" style=\"color:var(--accent2)\">Stainless Steel: Reforged Unit Builder</a> autorstwa <b>Lupinemaverick</b>, oparte na MUG Unit Builder v1.5 i MUG Unit Creation Guide"
+ "core.ssr_unit_builder_by_lupinemaverick": "<a href=\"https://github.com/lupinemaverick/stainless-steel-reforged-unit-builder\" target=\"_blank\" style=\"color:var(--accent2)\">Stainless Steel: Reforged Unit Builder</a> autorstwa <b>Lupinemaverick</b>, oparte na MUG Unit Builder v1.5 i MUG Unit Creation Guide",
+ "eng.transfer.factions_check_map": "FRAKCJE: sprawdź, gdzie {factions} trafią w miejscu docelowym. Ten sam kod może tam oznaczać inną frakcję, a frakcje, których tam nie ma, zostaną pominięte.",
+ "transfer.fac_legend": "Frakcje: {src} do {dst}",
+ "transfer.fac_lead": "Każda frakcja, dla której jednostka ma skórkę lub kartę, oraz frakcja miejsca docelowego, pod którą są przypisane. Od tego zależą własność, wpisy epok, skórki i karty. Sprawdź nazwy w grze: ten sam kod może tam oznaczać inną frakcję.",
+ "transfer.fac_left_out": "Pomiń",
+ "transfer.fac_pick_title": "Frakcja w {dst}, pod którą przypisane są ta skórka i karta",
+ "transfer.fac_view_title": "Pokaż skórkę tej frakcji w podglądzie 3D",
+ "transfer.fac_flag_missing": "W miejscu docelowym nie ma frakcji {src}, więc zostanie pominięta.",
+ "transfer.fac_flag_dropped": "Pominięto.",
+ "transfer.fac_flag_name_differs": "Ten sam kod, ale {dest} oznacza inną frakcję w miejscu docelowym.",
+ "transfer.fac_flag_shared": "Inna frakcja źródłowa też trafia do {dest}. Zachowana zostanie tylko skórka pierwszej.",
+ "transfer.fac_confirm": "{unit}: te frakcje dopasowano bez twojego wyboru, sprawdź je:\n\n{list}\n\nZastosować mimo to?"
 }

@@ -13136,5 +13136,16 @@
  "builder.to_new_unit": "Yeni birim'de aç",
  "builder.stage_failed": "Değişiklikler belirlenemedi. Tasarımı kontrol edip tekrar deneyin.",
  "builder.staged_in_editor": "Tasarımın alanları bu birimin düzenlemelerine eklendi. İncelemek ve uygulamak için Kaydet'e basın.",
- "core.ssr_unit_builder_by_lupinemaverick": "<a href=\"https://github.com/lupinemaverick/stainless-steel-reforged-unit-builder\" target=\"_blank\" style=\"color:var(--accent2)\">Stainless Steel: Reforged Unit Builder</a> · <b>Lupinemaverick</b>, MUG Unit Builder v1.5 ve MUG Unit Creation Guide üzerine kurulu"
+ "core.ssr_unit_builder_by_lupinemaverick": "<a href=\"https://github.com/lupinemaverick/stainless-steel-reforged-unit-builder\" target=\"_blank\" style=\"color:var(--accent2)\">Stainless Steel: Reforged Unit Builder</a> · <b>Lupinemaverick</b>, MUG Unit Builder v1.5 ve MUG Unit Creation Guide üzerine kurulu",
+ "eng.transfer.factions_check_map": "FRAKSİYONLAR: {factions} hedefte nereye düşüyor, kontrol et; aynı kod orada başka bir fraksiyon olabilir ve hedefte bulunmayan fraksiyon dışarıda bırakılır.",
+ "transfer.fac_legend": "Fraksiyonlar: {src} -> {dst}",
+ "transfer.fac_lead": "Birimde kaplama veya kart bulunan her fraksiyon ve bunların hedefte hangi fraksiyon altında yazıldığı. Sahiplik, dönem satırları, kaplamalar ve kartlar bunları takip eder. Oyun içindeki adları kontrol et: aynı kod orada başka bir fraksiyon olabilir.",
+ "transfer.fac_left_out": "Dışarıda bırak",
+ "transfer.fac_pick_title": "Bu kaplama ve kartın altında yazıldığı {dst} fraksiyonu",
+ "transfer.fac_view_title": "Bu fraksiyonun kaplamasını 3D önizlemede göster",
+ "transfer.fac_flag_missing": "Hedefte {src} için fraksiyon yok, bu yüzden dışarıda bırakılıyor.",
+ "transfer.fac_flag_dropped": "Dışarıda bırakıldı.",
+ "transfer.fac_flag_name_differs": "Kod aynı, ancak hedefte {dest} başka bir fraksiyon.",
+ "transfer.fac_flag_shared": "Başka bir kaynak fraksiyon da {dest} fraksiyonuna düşüyor; yalnızca ilk fraksiyonun kaplaması tutuluyor.",
+ "transfer.fac_confirm": "{unit}: şu fraksiyonlar sen seçim yapmadan eşleştirildi, göz at:\n\n{list}\n\nYine de uygula?"
 }

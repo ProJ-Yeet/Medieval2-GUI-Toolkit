@@ -13686,5 +13686,16 @@
  "builder.to_new_unit": "In Neue Einheit öffnen",
  "builder.stage_failed": "Die Änderungen konnten nicht ermittelt werden. Überprüfe den Entwurf und versuche es erneut.",
  "builder.staged_in_editor": "Die Felder des Entwurfs wurden in die Änderungen dieser Einheit übernommen. Speichere, um sie zu prüfen und anzuwenden.",
- "core.ssr_unit_builder_by_lupinemaverick": "<a href=\"https://github.com/lupinemaverick/stainless-steel-reforged-unit-builder\" target=\"_blank\" style=\"color:var(--accent2)\">Stainless Steel: Reforged Unit Builder</a> von <b>Lupinemaverick</b>, aufgebaut auf dem MUG Unit Builder v1.5 und dem MUG Unit Creation Guide"
+ "core.ssr_unit_builder_by_lupinemaverick": "<a href=\"https://github.com/lupinemaverick/stainless-steel-reforged-unit-builder\" target=\"_blank\" style=\"color:var(--accent2)\">Stainless Steel: Reforged Unit Builder</a> von <b>Lupinemaverick</b>, aufgebaut auf dem MUG Unit Builder v1.5 und dem MUG Unit Creation Guide",
+ "eng.transfer.factions_check_map": "FRAKTIONEN: Prüfe, wo {factions} im Ziel landen. Derselbe Code kann dort eine andere Fraktion bezeichnen, und eine Fraktion, die es dort nicht gibt, wird ausgelassen.",
+ "transfer.fac_legend": "Fraktionen: {src} zu {dst}",
+ "transfer.fac_lead": "Jede Fraktion, für die die Einheit einen Skin oder eine Karte hat, und die Fraktion des Ziels, unter der sie eingetragen wird. Besitz, Epochenzeilen, Skins und Karten richten sich danach. Prüfe die Namen im Spiel: Derselbe Code kann dort eine andere Fraktion bezeichnen.",
+ "transfer.fac_left_out": "Auslassen",
+ "transfer.fac_pick_title": "Die Fraktion von {dst}, unter der dieser Skin und diese Karte eingetragen werden",
+ "transfer.fac_view_title": "Skin dieser Fraktion in der 3D-Vorschau anzeigen",
+ "transfer.fac_flag_missing": "Im Ziel gibt es keine Fraktion für {src}, daher wird sie ausgelassen.",
+ "transfer.fac_flag_dropped": "Ausgelassen.",
+ "transfer.fac_flag_name_differs": "Gleicher Code, aber {dest} bezeichnet im Ziel eine andere Fraktion.",
+ "transfer.fac_flag_shared": "Eine weitere Quellfraktion landet ebenfalls auf {dest}; nur der Skin der ersten Fraktion bleibt erhalten.",
+ "transfer.fac_confirm": "{unit}: Diese Fraktionen wurden ohne deine Auswahl zugeordnet und müssen geprüft werden:\n\n{list}\n\nTrotzdem anwenden?"
 }

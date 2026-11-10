@@ -14144,5 +14144,16 @@
  "builder.to_new_unit": "Abrir en Nueva unidad",
  "builder.stage_failed": "No se pudieron calcular los cambios. Revisa el diseño y vuelve a intentarlo.",
  "builder.staged_in_editor": "Los campos del diseño se han añadido a los cambios de esta unidad. Guarda para revisarlos y aplicarlos.",
- "core.ssr_unit_builder_by_lupinemaverick": "<a href=\"https://github.com/lupinemaverick/stainless-steel-reforged-unit-builder\" target=\"_blank\" style=\"color:var(--accent2)\">Stainless Steel: Reforged Unit Builder</a> de <b>Lupinemaverick</b>, desarrollado sobre el MUG Unit Builder v1.5 y el MUG Unit Creation Guide"
+ "core.ssr_unit_builder_by_lupinemaverick": "<a href=\"https://github.com/lupinemaverick/stainless-steel-reforged-unit-builder\" target=\"_blank\" style=\"color:var(--accent2)\">Stainless Steel: Reforged Unit Builder</a> de <b>Lupinemaverick</b>, desarrollado sobre el MUG Unit Builder v1.5 y el MUG Unit Creation Guide",
+ "eng.transfer.factions_check_map": "FACCIONES: comprueba dónde acaban {factions} en el destino; allí el mismo código puede corresponder a otra facción, y se omite cualquier facción que no tenga.",
+ "transfer.fac_legend": "Facciones: {src} a {dst}",
+ "transfer.fac_lead": "Cada facción para la que la unidad tiene un aspecto o una tarjeta, y la facción del destino bajo la que está escrito. La propiedad, las líneas de época, los aspectos y las tarjetas siguen esta correspondencia. Comprueba los nombres en el juego: allí el mismo código puede corresponder a otra facción.",
+ "transfer.fac_left_out": "Omitir",
+ "transfer.fac_pick_title": "La facción de {dst} bajo la que están escritos este aspecto y esta tarjeta",
+ "transfer.fac_view_title": "Mostrar el aspecto de esta facción en la vista previa 3D",
+ "transfer.fac_flag_missing": "El destino no tiene ninguna facción para {src}, así que se omite.",
+ "transfer.fac_flag_dropped": "Omitida.",
+ "transfer.fac_flag_name_differs": "Mismo código, pero {dest} es otra facción en el destino.",
+ "transfer.fac_flag_shared": "Otra facción de origen también acaba en {dest}; solo se conserva el aspecto de la primera.",
+ "transfer.fac_confirm": "{unit}: estas facciones se emparejaron sin que eligieras y debes revisarlas:\n\n{list}\n\n¿Quieres aplicarlo de todos modos?"
 }

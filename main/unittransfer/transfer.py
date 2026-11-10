@@ -85,6 +85,11 @@ class TransferOptions:
     # default: a DaC unit with a dozen faction skins brings a dozen sets of
     # .texture files for a faction that wears one
     own_skins_only: bool = False
+    # Which destination faction each source faction is written under, in the
+    # EDU's ownership/era lines, the modeldb's skin records and the card
+    # folders: {source code: destination code}, "" leaving it out. A faction
+    # not named takes the plan's proposal (see `_plan_faction_map`).
+    faction_map: Dict[str, str] = field(default_factory=dict)
     # Bring the projectiles' effect sets on a destination NOT marked M2EX too,
     # the user having been told the plain engine's effect table may drop them.
     # An M2EX destination brings them whatever this says.
@@ -384,7 +389,12 @@ class TransferPlan:
     # unit or an override changes ownership); empty means "leave textures alone"
     texture_factions: List[str] = field(default_factory=list)
     texture_donor: str = ""          # faction whose skin the new records clone
-    mercenary: bool = False          # unit is being turned into a mercenary
+    # source faction -> destination faction it is written under ("" = left
+    # out), one row each for the faction prompt, and the reverse for the cards
+    faction_map: Dict[str, str] = field(default_factory=dict)
+    faction_rows: List[Dict] = field(default_factory=list)
+    faction_source: Dict[str, str] = field(default_factory=dict)
+    mercenary: bool = False         # unit is being turned into a mercenary
     merc_icons: bool = False         # card/info card pinned to the mercs/merc folders
     # voice bank (export_descr_sounds_units_voice.txt). See `_resolve_sound`.
     sound_action: str = ""           # "" | "copy" | "none" | "missing" | "no_base"
@@ -2480,6 +2490,9 @@ def plan_transfer(source: Mod, unit_type: str, dest: Mod,
                 donor=plan.texture_donor or _i18n.msg("eng.transfer.the_models_existing_skin",
                                                       "the model's existing skin")))
 
+    # ---- which destination faction each source faction lands as ----
+    _plan_faction_map(plan, source, dest, unit)
+
     # ---- unit-name conflict ----
     # Replacing settles this by definition: the block written IS the replaced
     # unit's, under its own type and dictionary, so there is nothing to rename,
@@ -2884,7 +2897,10 @@ def plan_transfer(source: Mod, unit_type: str, dest: Mod,
     # model often wants a new unit card while the info card still reads correctly.
     # A card belongs to a UNIT - the game finds it by the unit's dictionary name -
     # so `models` mode has nowhere to put one and copies none.
+    src_own = [f for f in dict.fromkeys(plan.faction_map.get(o.lower(), o)
+                                        for o in unit.ownership) if f]
     final_ownership = ([f for f in final_own if f != "slave"] or final_own
+                       or [f for f in src_own if f != "slave"] or src_own
                        or [f for f in unit.ownership if f != "slave"] or list(unit.ownership))
     want_card = (not models) and (opts.import_card if plan.replace_type else True)
     want_info = (not models) and (opts.import_info_card if plan.replace_type else True)
@@ -2908,9 +2924,16 @@ def plan_transfer(source: Mod, unit_type: str, dest: Mod,
             plan.icon_files.append((icon, f"{base_dir}/{merc_folder}/{fname}"))
         else:
             # one copy per owning faction, plus the mercs/merc fallback - no
-            # *_pic_dir pin needed since every faction finds its own copy
+            # *_pic_dir pin needed since every faction finds its own copy.
+            # Each faction's copy is ITS OWN card where the source has one: a
+            # unit drawn per faction (musketeers for England and France) has a
+            # card per folder, and copying the first one found everywhere gave
+            # every faction England's.
+            find = source.find_unit_card if kind == "card" else source.find_unit_info
             for folder in dict.fromkeys(final_ownership + [merc_folder]):
-                plan.icon_files.append((icon, f"{base_dir}/{folder}/{fname}"))
+                src_fac = plan.faction_source.get(folder, folder)
+                own = find(unit, src_fac) if src_fac != merc_folder else None
+                plan.icon_files.append((own or icon, f"{base_dir}/{folder}/{fname}"))
     if card is None and want_card:
         plan.warnings.append(_i18n.msg("eng.transfer.no_unit_card_icon_found_in", "no unit card icon found in source"))
     if info is None and want_info:
@@ -3004,6 +3027,7 @@ def plan_transfer(source: Mod, unit_type: str, dest: Mod,
 
     # the block the unit will be written as, composed once now so the plan can
     # say which factions it leaves out (the apply composes it again)
+    _map_skins(plan)
     if not models and not plan.base_error and not plan.skipped:
         try:
             block = _build_unit_block(plan, unit)
@@ -3337,7 +3361,9 @@ def _build_unit_block(plan: TransferPlan, unit) -> str:
         block = edu_mod.set_field(block, k, v)
     # 4b) the factions the destination has not got, out of `ownership` and the
     #     `era` lines, whichever of the source, the base or an override put them
-    #     there. After the overrides, so a hand-typed faction is held to it too
+    #     there. After the overrides, so a hand-typed faction is held to it too.
+    #     The source's own lines are first put through the faction map
+    block = _map_block_factions(plan, block)
     block = _drop_unknown_factions(plan, block)
     # 4c) the engine's ceilings: the soldier count held to what the destination
     #     can take, and anything else past one said
@@ -3393,6 +3419,131 @@ def _hold_ceilings(plan: "TransferPlan", block: str) -> str:
     plan.ceilings = [f["message"] for f in educeil.unit_findings(block)
                      if f.get("field") != "soldier" or not plan.soldiers_held[0]]
     return block
+
+
+#: skin record names that are not factions: kept as they are
+_SKIN_TOKENS = {"merc", "default"}
+
+
+def _plan_faction_map(plan: "TransferPlan", source: Mod, dest: Mod, unit) -> None:
+    """Which destination faction each of the unit's source factions lands as.
+
+    The source's factions are its ``ownership`` and every faction its models
+    carry a skin for. Each is proposed as: the user's pick
+    (``options.faction_map``), else the destination faction with the same code,
+    else the one with the same in-game name (``jerusalem`` and ``orderjeru``),
+    else none, left out. A code match whose two in-game names differ (base
+    ``england`` is England, DaC's is Mordor) is flagged, as are two factions
+    landing on one and a faction left out, so nothing is matched by code alone
+    without the prompt saying so. A destination whose factions cannot be read
+    is not mapped.
+    """
+    try:
+        dest_facs = [f.lower() for f in dest.faction_cultures]
+        cultures = {c.lower() for c in source.faction_cultures.values() if c}
+    except Exception:
+        return
+    if not dest_facs:
+        return
+    sn, dn = source.faction_names, dest.faction_names
+    norm = lambda s: re.sub(r"\s+", " ", (s or "").strip().lower())  # noqa: E731
+    by_name: Dict[str, str] = {}
+    for f in dest_facs:
+        if norm(dn.get(f)):
+            by_name.setdefault(norm(dn.get(f)), f)
+    facs = [f.lower() for f in unit.ownership]
+    for m in unit.model_names():
+        e = source.modeldb.get(m)
+        if e:
+            facs += [t.faction.lower() for t in e.main_textures]
+    facs = [f for f in dict.fromkeys(facs)
+            if f and f != "all" and f not in _SKIN_TOKENS and f not in cultures]
+    asked = {k.lower(): (v or "").strip().lower() for k, v in plan.options.faction_map.items()}
+    rows = []
+    for f in facs:
+        s_name = sn.get(f, "")
+        if f in asked and (not asked[f] or asked[f] in dest_facs):
+            to, how = asked[f], "picked"
+        elif f in dest_facs:
+            to, how = f, "code"
+        elif norm(s_name) in by_name:
+            to, how = by_name[norm(s_name)], "name"
+        else:
+            to, how = "", "none"
+        d_name = dn.get(to, "") if to else ""
+        flags = []
+        if not to:
+            flags.append("dropped" if how == "picked" else "missing")
+        elif how == "code" and s_name and d_name and norm(s_name) != norm(d_name):
+            flags.append("name_differs")
+        rows.append({"src": f, "src_name": s_name, "dest": to, "dest_name": d_name,
+                     "how": how, "flags": flags})
+    landed: Dict[str, int] = {}
+    for r in rows:
+        if r["dest"]:
+            landed[r["dest"]] = landed.get(r["dest"], 0) + 1
+    for r in rows:
+        if r["dest"] and landed[r["dest"]] > 1:
+            r["flags"].append("shared")
+    plan.faction_rows = rows
+    plan.faction_map = {r["src"]: r["dest"] for r in rows}
+    plan.faction_source = {}
+    for r in rows:
+        if r["dest"]:
+            plan.faction_source.setdefault(r["dest"], r["src"])
+    unsure = [r["src"] for r in rows if r["flags"] and r["how"] != "picked"]
+    if unsure:
+        plan.warnings.append(_i18n.msg(
+            "eng.transfer.factions_check_map",
+            "FACTIONS: check where {factions} land in the destination; the same code can be another faction there, and a faction it has not got is left out.",
+            factions=", ".join(unsure)))
+
+
+def _map_block_factions(plan: "TransferPlan", block: str) -> str:
+    """``block``'s ``ownership`` and ``era N`` lines put through the faction
+    map, when they are the source's own: a base unit's or a typed override's
+    already name the destination's factions."""
+    if not plan.faction_map or plan.base_unit is not None:
+        return block
+    typed = {re.sub(r"\s+", " ", k.lower()) for k in plan.options.field_overrides}
+    out = []
+    for line in block.splitlines(keepends=True):
+        m = _FACTION_LINE.match(line)
+        key = re.sub(r"\s+", " ", m.group(2).lower()) if m else ""
+        if not m or key in typed:
+            out.append(line)
+            continue
+        vals = [v.strip() for v in m.group(4).split(",") if v.strip()]
+        keep = list(dict.fromkeys(plan.faction_map.get(v.lower(), v) for v in vals))
+        keep = [v for v in keep if v]
+        if keep == vals:
+            out.append(line)
+            continue
+        if not keep:
+            if key != "ownership":
+                continue
+            keep = ["slave"]
+        out.append(f"{m.group(1)}{m.group(2)}{m.group(3)}{', '.join(keep)}{m.group(5)}{m.group(6)}")
+    return "".join(out)
+
+
+def _map_skins(plan: "TransferPlan") -> None:
+    """The copied entries' skin records renamed to the destination factions
+    they land as, and the ones left out dropped (:func:`_plan_faction_map`)."""
+    if not plan.faction_map:
+        return
+    out = []
+    for final_name, entry in plan.add_entries:
+        raw = modeldb.map_texture_factions(entry.raw, plan.faction_map, pad=entry.first_entry_pad)
+        if raw != entry.raw:
+            new = modeldb.parse_entry_text(raw, pad=entry.first_entry_pad)
+            new.raw = raw
+            new.first_entry_pad = entry.first_entry_pad
+            entry = new
+        out.append((final_name, entry))
+    plan.add_entries = out
+    if plan.texture_donor:
+        plan.texture_donor = plan.faction_map.get(plan.texture_donor, plan.texture_donor)
 
 
 def _drop_unknown_factions(plan: "TransferPlan", block: str) -> str:

@@ -1706,6 +1706,7 @@ def _options_from(d: dict) -> TransferOptions:
         eop_target=d.get("eop_target", "auto"),
         banner_mode=("swap" if d.get("banner_mode") == "swap" else "port"),
         own_skins_only=bool(d.get("own_skins_only")),
+        faction_map={str(k): str(v or "") for k, v in (d.get("faction_map") or {}).items()},
         import_effects=bool(d.get("import_effects")),
         set_recruitment=bool(d.get("set_recruitment")),
         on_conflict=d.get("on_conflict", "rename"),
@@ -1803,6 +1804,11 @@ def _plan_payload(plan) -> dict:
         # 92d: the banners the unit carries that the destination has not got
         "banner_actions": [{"kind": k, "name": n, "action": a, "detail": d}
                            for k, n, a, d in plan.banner_actions],
+        # which destination faction each source faction lands as, and the
+        # destination's factions to pick from, both with their in-game names
+        "faction_rows": plan.faction_rows,
+        "dest_factions": [{"code": f, "name": plan.dest.faction_names.get(f.lower(), "")}
+                          for f in (plan.dest.faction_cultures if plan.faction_rows else [])],
         # 92c
         "skins_kept": plan.skins_kept, "skins_dropped": plan.skins_dropped,
         "skins_saved_files": plan.skins_saved_files,

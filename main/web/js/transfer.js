@@ -1150,6 +1150,7 @@ function optsPayload(type){const c=cfgFor(type);
     eop_target:c.eop_target||'auto',
     banner_mode:c.banner_mode==='swap'?'swap':'port',
     own_skins_only:!!c.own_skins_only,
+    faction_map:c.faction_map||{},
     import_effects:!!c.import_effects,
     set_recruitment:!!c.set_recruitment,
     asset_conflict:c.asset_conflict||'mod_folder',
@@ -1542,10 +1543,11 @@ async function doPreview(){
   if(r.unit_conflict) html+=conflictUI(type);
   html+=eopUI(type,r);
   html+=bannerUI(type,r);
+  html+=factionsUI(type,r);
   html+=skinsUI(type,r);
   html+=recruitUI(type,r);
   html+=assetConflictUI(type,r);
-  box.innerHTML=html; wireConflict(type); wireEop(type); wireBanner(type); wireSkins(type); wireRecruit(type); wireAssetConflict(type);
+  box.innerHTML=html; wireConflict(type); wireEop(type); wireBanner(type); wireSkins(type); wireFactions(type); wireRecruit(type); wireAssetConflict(type);
   return r;
 }
 /* Missing animations, shown against the row that can fix them.
@@ -1696,6 +1698,50 @@ function bannerUI(type,r){
       <label><input type="radio" name="banm" value="port" ${c.banner_mode!=='swap'?'checked':''}> ${tt('transfer.banner_port')}</label>
       <label><input type="radio" name="banm" value="swap" ${c.banner_mode==='swap'?'checked':''}> ${tt('transfer.banner_swap')}</label>
     </div></fieldset>`;
+}
+/* Which destination faction each source faction is written under: the EDU's
+   ownership and era lines, the modeldb's skin records and the card folders all
+   follow it. Both names on both sides, since one code can be two different
+   factions (the game's england is England, DaC's is Mordor) and one faction two
+   codes (jerusalem, orderjeru); a row the plan is unsure of is flagged. */
+function factionsUI(type,r){
+  const rows=r.faction_rows||[]; if(!rows.length) return '';
+  const dests=r.dest_factions||[];
+  const say={missing:'transfer.fac_flag_missing',dropped:'transfer.fac_flag_dropped',
+    name_differs:'transfer.fac_flag_name_differs',shared:'transfer.fac_flag_shared'};
+  const body=rows.map(x=>`<tr${x.flags.length?' class="w-warn"':''}>
+    <td><img class="trfaccard" src="${iconUrl(state.src,type,'card',x.src)}" alt="" loading="lazy"
+      onerror="this.style.visibility='hidden'"></td>
+    <td>${esc(facTwoNames(x.src,x.src_name))}</td><td>&rarr;</td>
+    <td><select class="trFacPick" data-fac="${esc(x.src)}" title="${ttA('transfer.fac_pick_title',{dst:state.dst})}">
+      <option value=""${x.dest?'':' selected'}>${tt('transfer.fac_left_out')}</option>${dests.map(d=>
+      `<option value="${esc(d.code)}"${d.code===x.dest?' selected':''}>${esc(facTwoNames(d.code,d.name))}</option>`).join('')}</select></td>
+    <td><button class="trFacView" data-fac="${esc(x.src)}" title="${ttA('transfer.fac_view_title')}">3D</button></td>
+    <td class="count">${x.flags.map(f=>tt(say[f],{src:esc(facTwoNames(x.src,x.src_name)),
+      dest:esc(x.dest?facTwoNames(x.dest,x.dest_name):'')})).join(' ')}</td></tr>`).join('');
+  return `<fieldset class="assetconf" style="margin-top:10px">
+    <legend>${tt('transfer.fac_legend',{src:esc(state.src),dst:esc(state.dst)})}</legend>
+    <div class="count">${tt('transfer.fac_lead')}</div>
+    <table class="trfactable">${body}</table></fieldset>`;
+}
+function wireFactions(type){const c=cfgFor(type);
+  document.querySelectorAll('.trFacPick').forEach(s=>s.onchange=()=>{
+    c.faction_map=Object.assign({},c.faction_map,{[s.dataset.fac]:s.value});doPreview();});
+  document.querySelectorAll('.trFacView').forEach(b=>b.onclick=()=>trFacView(b.dataset.fac));
+}
+/* The docked 3D column, opened on the source unit's model wearing that
+   faction's skin. */
+async function trFacView(fac){
+  if(!cmpPrevOn()) cmpPrevShow();
+  else if(cmpPrevFolded) cmpPrevFold();
+  const e=cmpPrevEntries().find(x=>x.mod===state.src);
+  if(!e) return;
+  cmpPrevWant[state.editing]=e.key; cmpPrevBar(); await cmpPrevMount();
+  for(let i=0;i<40&&!(typeof v3!=='undefined'&&v3&&v3.info&&v3.info.skins);i++)
+    await new Promise(ok=>setTimeout(ok,100));
+  if(typeof v3==='undefined'||!v3||!v3.info) return;
+  const k=(v3.info.skins||[]).findIndex(s=>(s.factions||[]).includes(fac));
+  if(k>=0&&v3.skin!==k) v3SetSkin(k);
 }
 /* 92c: only the skins the new owners wear. Off by default; the plan states
    what it saved. */
@@ -1892,6 +1938,13 @@ async function doApply(){
     // with its pre-filled names, unless another choice was made), and the
     // toast at the end names what was written.
     if(r.unit_conflict) cfgFor(t)._resolved=true;
+    // a faction matched by code alone whose names differ, two landing on one,
+    // or one left out: said once more before anything is written
+    const unsure=(r.faction_rows||[]).filter(x=>x.flags.length&&x.how!=='picked');
+    if(unsure.length&&!confirm(tt('transfer.fac_confirm',{unit:t,list:unsure.map(x=>
+        `${facTwoNames(x.src,x.src_name)} -> ${x.dest?facTwoNames(x.dest,x.dest_name):tt('transfer.fac_left_out')}`).join('\n')}))){
+      state.editing=t;renderComposer();return;
+    }
   }
   let ok=0,skip=0,last=null;
   const made=[];                 // the unit types this run wrote, in order

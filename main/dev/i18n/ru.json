@@ -14492,5 +14492,16 @@
  "builder.missing_mount": "Верховое животное {name} отсутствует в descr_mount.txt.",
  "builder.missing_mount_none": "Отряду кавалерии нужно верховое животное, но у этого отряда его нет. Выберите отряд кавалерии или сначала назначьте ему верховое животное в редакторе отрядов.",
  "builder.missing_model": "Модели битв {name} нет в battle_models.modeldb.",
- "core.ssr_unit_builder_by_lupinemaverick": "<a href=\"https://github.com/lupinemaverick/stainless-steel-reforged-unit-builder\" target=\"_blank\" style=\"color:var(--accent2)\">Stainless Steel: Reforged Unit Builder</a>, автор: <b>Lupinemaverick</b>, создан на основе MUG Unit Builder v1.5 и MUG Unit Creation Guide"
+ "core.ssr_unit_builder_by_lupinemaverick": "<a href=\"https://github.com/lupinemaverick/stainless-steel-reforged-unit-builder\" target=\"_blank\" style=\"color:var(--accent2)\">Stainless Steel: Reforged Unit Builder</a>, автор: <b>Lupinemaverick</b>, создан на основе MUG Unit Builder v1.5 и MUG Unit Creation Guide",
+ "eng.transfer.factions_check_map": "ФРАКЦИИ: проверь, куда попадут {factions} в моде назначения; там тот же код может обозначать другую фракцию, а фракции, которой там нет, будут пропущены.",
+ "transfer.fac_legend": "Фракции: {src} -> {dst}",
+ "transfer.fac_left_out": "Пропустить",
+ "transfer.fac_pick_title": "Фракция в {dst}, под которой записываются этот облик и карточка",
+ "transfer.fac_view_title": "Показать облик этой фракции в 3D-предпросмотре",
+ "transfer.fac_flag_missing": "В моде назначения нет фракции для {src}, поэтому она будет пропущена.",
+ "transfer.fac_flag_dropped": "Пропущена.",
+ "transfer.fac_flag_name_differs": "Код тот же, но {dest} в моде назначения обозначает другую фракцию.",
+ "transfer.fac_flag_shared": "Ещё одна исходная фракция тоже попадает в {dest}; останется только облик первой.",
+ "transfer.fac_confirm": "{unit}: эти фракции сопоставлены без твоего выбора, их нужно проверить:\n\n{list}\n\nВсё равно применить?",
+ "transfer.fac_lead": "Каждая фракция, для которой у отряда есть облик или карточка, и фракция мода назначения, под которой они записываются. Владение, эпохи, облики и карточки следуют этому. Проверь названия в игре: там тот же код может обозначать другую фракцию."
 }
