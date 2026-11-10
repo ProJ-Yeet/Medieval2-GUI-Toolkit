@@ -186,10 +186,14 @@ function v3aCarried(anim){
 }
 
 /* The model's bones -> the animation's tracks, by name. A bone the skeleton
-   does not have (a weapon or shield bone, which soldiers carry and never
-   weight a vertex to) goes with the pelvis, so anything that did hang off one
-   would at least travel with the man. Returns the map and the names it could
-   not place. */
+   does not have goes to the limb that holds what hangs off it: a shield to
+   the left elbow, a bow and its string to the left hand (one hand, so the
+   bow keeps its shape), a weapon to the right hand. Left on the pelvis, a
+   shield or a bow floated beside a man whose arms moved. Any other goes with
+   the pelvis, so it at least travels with the man. Returns the map and the
+   names it put on the pelvis. */
+const V3A_HOLDERS = [[/shield/, ['bone_lelbow', 'bone_lhand']],
+  [/bow|string/, ['bone_lhand', 'bone_lelbow']], [/weapon|sling/, ['bone_rhand', 'bone_relbow']]];
 function v3aBoneMap(meshBones, anim){
   const byName = new Map(anim.bones.map((b, i) => [b.name.toLowerCase(), i]));
   // the pelvis is the root's first child: the Scene Root itself never moves
@@ -197,9 +201,12 @@ function v3aBoneMap(meshBones, anim){
   if(hub < 0) hub = 0;
   const missing = [];
   const map = (meshBones || []).map(n => {
-    const i = byName.get((n || '').toLowerCase());
-    if(i === undefined){ missing.push(n); return hub; }
-    return i;
+    const low = (n || '').toLowerCase(), i = byName.get(low);
+    if(i !== undefined) return i;
+    const held = V3A_HOLDERS.find(([re]) => re.test(low));
+    const by = held && held[1].map(h => byName.get(h)).find(x => x !== undefined);
+    if(by !== undefined) return by;
+    missing.push(n); return hub;
   });
   return {map, missing};
 }
@@ -225,8 +232,11 @@ function v3aSkin(geo, pose, bind, map, outPos, outNrm, shift){
   for(let v = 0; v < n; v++){
     const x = P[v*3], y = P[v*3+1], z = P[v*3+2];
     let ox = 0, oy = 0, oz = 0, nx = 0, ny = 0, nz = 0;
+    // weight 0 on both: a rigid part (a shield, a helmet), held wholly by
+    // its first bone, as the game holds it
+    const rigid = W[v*2] <= 0 && W[v*2+1] <= 0;
     for(let s = 0; s < 2; s++){
-      const w = W[v*2+s];
+      const w = rigid ? (s ? 0 : 1) : W[v*2+s];
       if(w <= 0) continue;
       let b = J[v*2+s];
       if(b >= nb) b = 0;

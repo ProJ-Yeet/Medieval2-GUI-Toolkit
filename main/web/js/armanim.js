@@ -441,7 +441,9 @@ function armAnimGeo(o){
       J[v*2+1] = boneOf(o.weights.bones[ids[v*4+1]] || '');
     }
   }
-  const unweighted = !W.some(w => w > 0);
+  // weight 0 on a named bone is a rigid part held by that bone (v3aSkin);
+  // unweighted is a part that names no bone at all
+  const unweighted = !W.some(w => w > 0) && !bones.some(Boolean);
   const gl = armGl();
   const buf = (data, type, usage) => { const b = gl.createBuffer(); gl.bindBuffer(type, b); gl.bufferData(type, data, usage); return b; };
   g = {sig, obj: o, vertices: n, positions: new Float32Array(pos), normals: new Float32Array(nrm),

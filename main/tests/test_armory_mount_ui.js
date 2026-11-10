@@ -84,7 +84,8 @@ const near = (got, want, what) => want.forEach((v, k) =>
   // the rider's pelvis rides rider_offset above and ahead of the saddle bone
   near(gR.outPos.slice(0, 3), [0, 1.6 - 1.9 + 0.38, 0.7], 'the rider sits on the saddle at rider_offset');
   const gM = a.geos.get('m');
-  assert(gM.posed, 'an unweighted part of the rider is carried with him');
+  assert(gM.posed, 'a weight-0 part of the rider is carried with him');
+  assert(!gM.unweighted, 'weight 0 on a named bone is a rigid part, not an unweighted one');
   near(gM.outPos.slice(0, 3), [0, 1.6 - 1.9 + 0.38 + 0.6, 0.7], 'the helmet stays on the rider');
   assert(!(gH.missing || []).length, 'no horse bone is reported missing from the rider skeleton');
 
