@@ -643,6 +643,7 @@ their code**
 * [Bare Geomod](https://www.moddb.com/mods/bare-geomod-and-tools) by Sinople and Gigantus
 * [TWMapReader](https://www.twcenter.net/threads/tw-map-reader-v2-24-1-jul-2015-update.438278/) by Withwnar
 * [Armory Studio 3D](https://github.com/muhamadridhomm/armorystudio3d) by Mreedmm
+* [Stainless Steel: Reforged Unit Builder](https://github.com/lupinemaverick/stainless-steel-reforged-unit-builder) by Lupinemaverick, itself built on the MUG Unit Builder v1.5 and the MUG Unit Creation Guide: the guided unit designer's rules and project format come from it, used with the author's permission
 * [Rome and Medieval Campaign Editor](https://github.com/Pfadfinder-Adam/RTW-M2TW-Campaign-Editor) by Pfadfinder-Adam (Master Oogway): the design of several features
   (the script builder, the family tree, the game log, the report relay among them) follows it;
   versions up to v2.4.11 used parts of its code under the GPLv3, see [NOTICE](NOTICE)

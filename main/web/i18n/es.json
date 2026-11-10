@@ -1177,6 +1177,9 @@
   ],
   "builder.label_mounted_spear": [
    "mount"
+  ],
+  "core.ssr_unit_builder_by_lupinemaverick": [
+   "unit"
   ]
  },
  "ancillaries.a_character_holds_one_ancillary_per": "Un personaje solo puede tener un séquito de cada tipo, así que este es el que sustituiría uno nuevo",
@@ -14140,5 +14143,6 @@
  "builder.to_editor": "Añadir a los cambios de esta unidad",
  "builder.to_new_unit": "Abrir en Nueva unidad",
  "builder.stage_failed": "No se pudieron calcular los cambios. Revisa el diseño y vuelve a intentarlo.",
- "builder.staged_in_editor": "Los campos del diseño se han añadido a los cambios de esta unidad. Guarda para revisarlos y aplicarlos."
+ "builder.staged_in_editor": "Los campos del diseño se han añadido a los cambios de esta unidad. Guarda para revisarlos y aplicarlos.",
+ "core.ssr_unit_builder_by_lupinemaverick": "<a href=\"https://github.com/lupinemaverick/stainless-steel-reforged-unit-builder\" target=\"_blank\" style=\"color:var(--accent2)\">Stainless Steel: Reforged Unit Builder</a> de <b>Lupinemaverick</b>, desarrollado sobre el MUG Unit Builder v1.5 y el MUG Unit Creation Guide"
 }

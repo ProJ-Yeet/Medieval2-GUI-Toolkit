@@ -960,6 +960,9 @@
   ],
   "builder.label_trait_mounted": [
    "mount"
+  ],
+  "core.ssr_unit_builder_by_lupinemaverick": [
+   "unit"
   ]
  },
  "ancillaries.a_character_holds_one_ancillary_per": "Postać może mieć po jednym akcesorium każdego typu. Nowe akcesorium zastąpi więc właśnie to.",
@@ -14388,5 +14391,6 @@
  "builder.to_editor": "Dodaj do zmian tej jednostki",
  "builder.to_new_unit": "Otwórz w Nowej jednostce",
  "builder.stage_failed": "Nie udało się ustalić zmian. Sprawdź projekt i spróbuj ponownie.",
- "builder.staged_in_editor": "Pola z projektu zostały dodane do zmian tej jednostki. Zapisz, aby je sprawdzić i zastosować."
+ "builder.staged_in_editor": "Pola z projektu zostały dodane do zmian tej jednostki. Zapisz, aby je sprawdzić i zastosować.",
+ "core.ssr_unit_builder_by_lupinemaverick": "<a href=\"https://github.com/lupinemaverick/stainless-steel-reforged-unit-builder\" target=\"_blank\" style=\"color:var(--accent2)\">Stainless Steel: Reforged Unit Builder</a> autorstwa <b>Lupinemaverick</b>, oparte na MUG Unit Builder v1.5 i MUG Unit Creation Guide"
 }

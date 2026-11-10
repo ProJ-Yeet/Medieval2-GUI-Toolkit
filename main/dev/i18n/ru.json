@@ -1221,6 +1221,9 @@
   ],
   "builder.label_trait_mounted": [
    "mount"
+  ],
+  "core.ssr_unit_builder_by_lupinemaverick": [
+   "unit"
   ]
  },
  "home.all_present": " · все на месте",
@@ -14488,5 +14491,6 @@
  "builder.apply_help_new": "Отметьте поля, которые нужно взять из проекта, и выберите отряд, с которого будет скопирован новый. Его модели, фракции, верховое животное и снаряд будут взяты из этого отряда. В окне создания нового отряда их можно изменить до записи файлов.",
  "builder.missing_mount": "Верховое животное {name} отсутствует в descr_mount.txt.",
  "builder.missing_mount_none": "Отряду кавалерии нужно верховое животное, но у этого отряда его нет. Выберите отряд кавалерии или сначала назначьте ему верховое животное в редакторе отрядов.",
- "builder.missing_model": "Модели битв {name} нет в battle_models.modeldb."
+ "builder.missing_model": "Модели битв {name} нет в battle_models.modeldb.",
+ "core.ssr_unit_builder_by_lupinemaverick": "<a href=\"https://github.com/lupinemaverick/stainless-steel-reforged-unit-builder\" target=\"_blank\" style=\"color:var(--accent2)\">Stainless Steel: Reforged Unit Builder</a>, автор: <b>Lupinemaverick</b>, создан на основе MUG Unit Builder v1.5 и MUG Unit Creation Guide"
 }

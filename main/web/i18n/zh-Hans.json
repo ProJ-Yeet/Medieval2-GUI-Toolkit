@@ -810,6 +810,9 @@
   ],
   "builder.label_trait_mounted": [
    "mount"
+  ],
+  "core.ssr_unit_builder_by_lupinemaverick": [
+   "unit"
   ]
  },
  "ancillaries.a_character_holds_one_ancillary_per": "人物每种类型只能持有一个随从，因此此项决定新随从会替换哪个随从",
@@ -12990,5 +12993,6 @@
  "builder.to_editor": "加入此部队的编辑内容",
  "builder.to_new_unit": "在新建部队中打开",
  "builder.staged_in_editor": "设计中的字段已加入此部队的编辑内容。点击“保存”即可查看并应用。",
- "builder.missing": "请先将以下内容添加到模组中："
+ "builder.missing": "请先将以下内容添加到模组中：",
+ "core.ssr_unit_builder_by_lupinemaverick": "<a href=\"https://github.com/lupinemaverick/stainless-steel-reforged-unit-builder\" target=\"_blank\" style=\"color:var(--accent2)\">Stainless Steel: Reforged Unit Builder</a>，作者：<b>Lupinemaverick</b>，基于 MUG Unit Builder v1.5 和 MUG Unit Creation Guide"
 }

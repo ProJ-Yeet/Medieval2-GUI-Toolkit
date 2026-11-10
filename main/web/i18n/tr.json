@@ -536,6 +536,9 @@
   ],
   "eng.charmodels.horse": [
    "mount"
+  ],
+  "core.ssr_unit_builder_by_lupinemaverick": [
+   "unit"
   ]
  },
  "ancillaries.a_character_holds_one_ancillary_per": "Bir karakter'de tür başına bir ancillary bulunur; dolayısıyla yenisi bunun yerini alır",
@@ -13132,5 +13135,6 @@
  "builder.to_editor": "Bu birimin düzenlemelerine ekle",
  "builder.to_new_unit": "Yeni birim'de aç",
  "builder.stage_failed": "Değişiklikler belirlenemedi. Tasarımı kontrol edip tekrar deneyin.",
- "builder.staged_in_editor": "Tasarımın alanları bu birimin düzenlemelerine eklendi. İncelemek ve uygulamak için Kaydet'e basın."
+ "builder.staged_in_editor": "Tasarımın alanları bu birimin düzenlemelerine eklendi. İncelemek ve uygulamak için Kaydet'e basın.",
+ "core.ssr_unit_builder_by_lupinemaverick": "<a href=\"https://github.com/lupinemaverick/stainless-steel-reforged-unit-builder\" target=\"_blank\" style=\"color:var(--accent2)\">Stainless Steel: Reforged Unit Builder</a> · <b>Lupinemaverick</b>, MUG Unit Builder v1.5 ve MUG Unit Creation Guide üzerine kurulu"
 }
