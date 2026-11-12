@@ -48,7 +48,8 @@ varying vec3 vNormal; varying vec2 vUv; varying vec3 vPos;
 uniform sampler2D uTex, uNTex;
 uniform float uHasTex, uUScale, uHi, uSel, uFlip, uXray, uHasN;
 uniform float uCard, uMask, uLAmt, uAmb, uLevel, uPoint;
-uniform vec3 uLDir, uLPos;
+uniform float uLit, uLitAmb, uLitStr, uLitSoft;
+uniform vec3 uLDir, uLPos, uLitDir;
 uniform vec4 uCrop;
 ${V3_ENV}
 void main(){
@@ -77,6 +78,14 @@ void main(){
   vec3 light = v3Env(n) * 0.62 + vec3(1.0, 0.96, 0.9) * 0.5 * max(dot(n, normalize(vec3(0.4, 0.8, 0.5))), 0.0)
              + vec3(0.62, 0.7, 0.85) * 0.2 * max(dot(n, normalize(vec3(-0.6, 0.2, -0.7))), 0.0);
   vec3 col = pow(clamp(base.rgb * light, 0.0, 1.0), vec3(0.78));
+  if(uLit > 1.5) col = base.rgb;       // armlit.js: a baked texture, shown as it is
+  else if(uLit > 0.5){
+    // the pre-rendered bake's ambient and key light, live: armlit.bake_image's
+    // own numbers, without its shadows and maps
+    float wrap = uLitSoft * 0.5;
+    float lit = uLitAmb * (0.85 + 0.15 * n.y) + uLitStr * clamp((dot(n, uLitDir) + wrap) / (1.0 + wrap), 0.0, 1.0);
+    col = pow(clamp(pow(base.rgb, vec3(2.2)) * lit, 0.0, 1.0), vec3(1.0 / 2.2));
+  }
   if(uCard > 0.5){
     // 95m: the card maker's one lamp, a sun or a point, and an ambient
     vec3 L = uPoint > 0.5 ? uLPos - vPos : uLDir;
@@ -773,7 +782,8 @@ function armGl(){
   ARM.loc = {};
   for(const n of ['aPos', 'aNormal', 'aUv']) ARM.loc[n] = gl.getAttribLocation(p, n);
   for(const n of ['uProj', 'uView', 'uModel', 'uTex', 'uHasTex', 'uUScale', 'uHi', 'uSel', 'uFlip', 'uXray', 'uCrop', 'uNTex', 'uHasN',
-                  'uCard', 'uMask', 'uLAmt', 'uAmb', 'uLevel', 'uPoint', 'uLDir', 'uLPos'])
+                  'uCard', 'uMask', 'uLAmt', 'uAmb', 'uLevel', 'uPoint', 'uLDir', 'uLPos',
+                  'uLit', 'uLitAmb', 'uLitStr', 'uLitSoft', 'uLitDir'])
     ARM.loc[n] = gl.getUniformLocation(p, n);
   gl.enable(gl.DEPTH_TEST);
   return gl;
@@ -962,12 +972,18 @@ function armRender(objs, w, h, cam, opts){
     gl.uniform1f(L.uPoint, lt.point ? 1 : 0);
     gl.uniform3fv(L.uLDir, lt.dir); gl.uniform3fv(L.uLPos, lt.pos || [0, 0, 0]);
   }
+  // the pre-render panel's light on the objects it is about to bake (armlit.js)
+  const litOf = !o.plain && typeof armLitMode === 'function' ? armLitMode : () => 0;
+  if(typeof armLitUniforms === 'function') armLitUniforms(gl, L);
   if(!o.plain && ARM.xray){ gl.enable(gl.BLEND); gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA); gl.depthMask(false); }
   const bindTex = (live, pc, ob) => {
     // a dyed object draws from its own crop of the sheet (armobj.js)
     const dyed = typeof armDyedTexture === 'function' ? armDyedTexture(ob, pc) : null;
     // 100l: an object wearing a sheet of its own (armtex.js)
-    const own = !dyed && ob.sheet && typeof armSheetTex === 'function' ? armSheetTex(ob.sheet) : null;
+    // under the pre-render panel's live light, the sheet it wore before its bake
+    const sheet = !o.plain && typeof armLitSheetOf === 'function' ? armLitSheetOf(ob) : ob.sheet;
+    const own = !dyed && sheet && typeof armSheetTex === 'function' ? armSheetTex(sheet) : null;
+    gl.uniform1f(L.uLit, litOf(ob));
     const tex = dyed ? dyed.tex : own ? own : live.objTex ? live.objTex[pc.group] : live.tex;
     gl.uniform1f(L.uHasTex, tex ? 1 : 0);
     // a dyed crop of a worn sheet is laid out as that sheet, one copy wide

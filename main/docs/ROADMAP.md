@@ -154,6 +154,7 @@ finishes; the schedule holds only what is left.
 | 100 | Armory Studio's second round, and faction cards in the Unit Editor, 100a-100n | uncut |
 | 109 | Native sheet projects, parser-owned refresh, classifications and CSV/Fynn adapters | Built, uncut 2026-11-06 |
 | 117 | Verified automatic GitHub release checks, downloads and deferred portable updates | uncut |
+| 118 | Armory Studio: pre-render lighting, a lit colour texture per PBR colour texture | uncut |
 
 Nothing below Phase 16 gates anything still to be built - the dependency rules
 that mattered while V2 was being built are recorded in the archive. What *does*
@@ -1416,6 +1417,20 @@ Every rated item is built: the five- and four-star rows, and the three-star
 rows, which became Phases 56-73 and 25-27. Their write-ups are in
 `ROADMAP_ARCHIVE.md`, with how the ratings were reconciled with the 2026-09-05
 triage board.
+
+## Phase 118 - pre-render lighting, what is left
+
+Built 2026-11-12 (`ROADMAP_ARCHIVE.md`). Still to do:
+
+* Try it on a real PBR asset with `_s` and `_n` maps, at 2048 and 4096, and
+  look at the result in the game. If bumps read pressed in, the default of
+  *Flip normal map green* in `armlit.RANGES` / `ARM_LIT_DEFAULT` is the wrong
+  way round for those assets.
+* The live view shows ambient and key light only. Shadows, the spec map and
+  the normal map could be drawn live too (a shadow pass in `armory.js`).
+* An object drawing on the main and the attachment sheet at once is skipped.
+* Objects left unselected that wear the same texture keep the unlit one: each
+  bake writes its own file for the objects it was run on.
 
 ## Phase 101 - the user's list of 2026-11-03, what a local session finishes
 

@@ -3359,6 +3359,15 @@ class Handler(BaseHTTPRequestHandler):
                         body.get("opts") or {}, self.registry.get))
                 except (armory.ArmoryError, mesh.MeshError, KeyError, ValueError) as e:
                     return self._err(400, str(e))
+            if u.path == "/api/armory/lit":
+                # the pre-rendered bake: a lit colour texture per source texture
+                from . import armlit
+                try:
+                    return self._json(armlit.bake_objects(
+                        body.get("project") or {}, body.get("ids") or [],
+                        self.registry.get, body.get("settings") or {}))
+                except (armory.ArmoryError, mesh.MeshError, KeyError, ValueError, OSError) as e:
+                    return self._err(400, str(e))
             if u.path == "/api/armory/rig_bones":
                 # 100b: every vertex of the chosen objects on one or two bones
                 try:

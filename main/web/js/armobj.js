@@ -87,7 +87,9 @@ function armPaintObjects(){
     <div class="armtools">
       <button class="mini" onclick="armMerge()"${sel.length > 1 ? '' : ' disabled'} title="${esc(tt('armory.merge_title'))}">${tt('armory.merge')}</button>
       <button class="mini" onclick="armOptOpen()"${p.objects.length ? '' : ' disabled'} title="${esc(tt('armory.optimize_title'))}">${tt('armory.optimize')}</button>
+      <button class="mini${typeof armLit === 'function' && armLit().open ? ' on' : ''}" onclick="armLitToggle()"${p.objects.length ? '' : ' disabled'} title="${esc(tt('armory.lit_title'))}">${tt('armory.lit')}</button>
     </div>
+    ${p.objects.length && typeof armLit === 'function' && armLit().open ? armLitHtml() : ''}
     ${p.objects.length ? '' : `<div class="empty armempty">${tt('armory.no_objects_yet')}</div>`}
     ${[...groups].map(([name, objs]) => armFoldHtml('g:' + name, name, objs, null)).join('')}
     ${p.collections.map(c => armFoldHtml('c:' + c.id, c.name, p.objects.filter(o => o.coll === c.id), c)).join('')}
@@ -504,6 +506,8 @@ function armPropsHtml(o){
     ${armRigRowsHtml(o.id)}
     ${typeof armOptimized === 'function' && armOptimized(o) ? `<div class="armpropsrow"><span class="count">${tt('armory.opt_is_on')}</span>
       <button class="mini" onclick="armOptRestore(${o.id})" title="${esc(tt('armory.opt_restore_title'))}">${tt('armory.opt_restore')}</button></div>` : ''}
+    ${o.lit ? `<div class="armpropsrow"><span class="count">${tt('armory.lit_is_on')}</span>
+      <button class="mini" onclick="armLitRemove([${o.id}])" title="${esc(tt('armory.lit_remove_title'))}">${tt('armory.lit_remove')}</button></div>` : ''}
     <div class="count armnote">${tt('armory.object_facts', {tris: armObjTris(o).toLocaleString(), pieces: (o.src || []).length})}</div>
   </div>`;
 }

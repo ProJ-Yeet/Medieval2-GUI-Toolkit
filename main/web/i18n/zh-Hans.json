@@ -13005,5 +13005,32 @@
  "transfer.fac_flag_name_differs": "代码相同，但 {dest} 在目标模组代表另一个派系。",
  "transfer.fac_flag_shared": "另一个来源派系也对应到 {dest}；只会保留第一个派系的贴图。",
  "transfer.fac_confirm": "{unit}：这些派系是在没有你选择的情况下匹配的，需要检查一下：\\n\\n{list}\\n\\n仍要应用吗？",
- "transfer.fac_lead": "这支部队有贴图或兵牌的每个派系，以及它在目标模组中写入的派系。所有权、时代行、贴图和兵牌都按此对应。请检查游戏内名称：相同代码在目标模组中可能代表另一个派系。"
+ "transfer.fac_lead": "这支部队有贴图或兵牌的每个派系，以及它在目标模组中写入的派系。所有权、时代行、贴图和兵牌都按此对应。请检查游戏内名称：相同代码在目标模组中可能代表另一个派系。",
+ "armory.lit": "预渲染光照",
+ "armory.lit_title": "将光照烘焙到所选对象（未选择时为全部可见对象）的颜色纹理中：颜色、高光贴图、法线贴图和光照合为一张纹理，使用对象自身的 UV",
+ "armory.lit_intro": "为对象所用的每张颜色纹理写出一份带光照的副本，并让对象使用它。会使用颜色纹理旁名为 <code>_s</code>（红为金属度，绿为光泽，蓝为 AO）和 <code>_n</code> 的贴图。源纹理绝不会被修改。",
+ "armory.lit_ambient": "环境光",
+ "armory.lit_key": "主光",
+ "armory.lit_key_title": "在环境光之上的一盏方向光",
+ "armory.lit_direction": "方向",
+ "armory.lit_direction_title": "主光在模型周围的位置，以度为单位",
+ "armory.lit_height": "高度",
+ "armory.lit_height_title": "主光高出地平线的角度，以度为单位",
+ "armory.lit_softness": "柔和度",
+ "armory.lit_softness_title": "让主光包裹形体，并柔化阴影边缘",
+ "armory.lit_shadows": "阴影",
+ "armory.lit_shadows_title": "0 为无阴影，1 为主光的完整阴影。对象只受自身遮挡",
+ "armory.lit_flip_green": "翻转法线贴图绿色通道",
+ "armory.lit_flip_green_title": "如果凸起看起来像凹陷，请勾选：法线贴图的绿色通道方向相反",
+ "armory.lit_live_note": "调整时视图会显示环境光和主光。阴影、高光贴图和法线贴图在烘焙后显示。",
+ "armory.lit_bake": "烘焙",
+ "armory.lit_remove": "移除烘焙光照",
+ "armory.lit_done": {
+  "other": "已为 {count} 个对象烘焙光照"
+ },
+ "armory.lit_skip_two_sheets": "已跳过 {name}：它同时使用两张贴图表。",
+ "armory.lit_ambient_title": "来自四周的均匀光。阴影不会低于它，因此不会出现纯黑",
+ "armory.lit_remove_title": "恢复烘焙前使用的贴图。烘焙出的文件仍保留在磁盘上",
+ "armory.lit_is_on": "使用预渲染（带光照）的贴图",
+ "armory.lit_skip_no_texture": "已跳过 {name}：它没有颜色贴图。"
 }

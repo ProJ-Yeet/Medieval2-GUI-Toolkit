@@ -4740,6 +4740,46 @@ No version bump, release build, tag, upload or commit. The integration is presen
 in source and will enter portable packages on the next authorized release.
 
 
+# Phase 118 - Armory Studio: pre-render lighting, 2026-11-12 (uncut)
+
+Asked for by the user, who makes Medieval II units out of PBR assets: take any
+object that wears PBR maps and bake it into one pre-rendered colour texture.
+"Bake" here is not the export's bake (`armbake.py` packs islands onto the
+game's sheets and copies texels); it is a lit copy of each colour texture, on
+the object's own UVs. The user chose the toolkit's own code over driving
+Blender, and a per-object action over a switch in the export dialog.
+
+* `unittransfer/armlit.py`. `bake_image` is the arithmetic on arrays:
+  the colour texture, the spec map beside it (`x_s`: red metal, green gloss,
+  blue ambient occlusion) and the normal map (`x_n`), under an ambient light
+  and a key light with a direction, height, softness and strength. Shadows
+  runs from 0 to 1 and only ever takes the key light away, so nothing falls
+  below its ambient light. An object is shadowed by itself only (a 512 depth
+  map from the key light, per object). Each texel is baked from one UV island,
+  the biggest covering it: a smaller island lying on those texels reuses them,
+  one overlapping in part bakes only its own, so a stack is never a checker.
+  Alpha and every texel no triangle covers are the source's.
+  `bake_objects` reads the project's objects and writes one PNG per colour
+  texture under `config/armory/sheets/lit/`, with the source's normal map
+  copied beside it for the export. Route: `POST /api/armory/lit`.
+* `web/js/armlit.js`, the **Pre-render lighting** button beside Optimize in
+  the objects panel. The panel's sliders are drawn live: `armory.js`'s shader
+  lights the chosen objects with the bake's own ambient and key light
+  (`uLit*`). Shadows, the spec map and the normal map are only in the baked
+  texture; after a bake the objects are drawn with it and no light over it.
+  On an object, `o.sheet` is the lit texture and `o.lit = {src, settings}`
+  what it wore before, so a second bake starts from the source and *Remove
+  baked lighting* puts it back. Source textures are never written.
+* Not Cycles: no bounced light and no reflections of a surrounding. An object
+  drawing on the main and the attachment sheet at once is skipped and named.
+
+Verified: `tests/test_armlit.py` 31/31, `tests/test_armory_lit_ui.js`; in the
+running toolkit on Divide and Conquer EUR, the saved model's 20 objects baked
+onto three 1024 sheets in 6 seconds and the sliders moved the light in the
+viewport. Not verified: a real PBR asset with `_s` and `_n` maps (so the green
+channel's direction and how metal reads are untried), 2048 and 4096 sheets,
+and the result in the game. What is left is in `ROADMAP.md`.
+
 # Split out on 2026-09-23
 
 Moved out of `ROADMAP.md` verbatim on the user's word ("shorten our roadmap"), in the
