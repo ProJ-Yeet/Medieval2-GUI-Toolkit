@@ -31,7 +31,8 @@ it in at the next start, with your settings, sessions and backups kept.
     one ordered run you can cancel, every entry logged with its reason and
     the rule it came from, then Apply and Undo through My Changes.
   * Comparison groups with the min, max and average per mod.
-* **The guided unit designer**, a Designer tab in the Unit Editor. Pick a
+* **The guided unit designer (beta)**, a Designer tab in the Unit Editor and
+  a button in New unit, offered with *Opt into beta features*. Pick a
   rules profile (the mod's own values or Combat Reforged), then archetype,
   quality, class, equipment, weapons, armour, attributes and formation, with
   the EDU block beside it.

@@ -218,7 +218,7 @@ function renderEditor(){
       </div>
       <div class="tabs">${tab('identity',tt('editor.identity_text'))}${tab('fields',tt('editor.edu_fields'))}
         ${tab('models',tt('editor.battle_models_bmdb'))}${tab('recruit',edRecTabLabel())}${
-        tab('compare',tt('editor.compare'))}${tab('designer',tt('builder.entry'))}</div>
+        tab('compare',tt('editor.compare'))}${betaOn()?tab('designer',tt('builder.entry')):''}</div>
       <div class="mbody" id="edBody"></div>
      </div>
     </div>
@@ -503,7 +503,7 @@ function edRenderTab(){
   const gbody=document.getElementById('gfBody');
   const wasG=gbody?gbody.scrollTop:0;
   b.innerHTML=(e.tab==='identity'?edIdentity():e.tab==='fields'?edFields()
-              :e.tab==='designer'?`<p>${tt('builder.entry_help')}</p><button onclick="bdOpen(state.ed.unit)">${tt('builder.entry')}</button>`
+              :e.tab==='designer'&&betaOn()?`<p>${tt('builder.entry_help')}</p><button onclick="bdOpen(state.ed.unit)">${tt('builder.entry')}</button>`
               :e.tab==='recruit'?edRecTab()
               :e.tab==='compare'?edCompare():edModels())
     // bmdb mode edits an entry with no unit around it, so "who uses this?" has
