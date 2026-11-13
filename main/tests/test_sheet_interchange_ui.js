@@ -7,7 +7,7 @@ const data={project:{units:{},draft:{},rules:{replenish:[],experience:[],pool:[]
 const c={console,Set,Map,Promise,structuredClone,setTimeout,clearTimeout,Uint8Array,Blob,atob,btoa,
  state:{src:'fixture'},modal:{innerHTML:'',querySelectorAll:()=>[],querySelector:()=>null},overlay:{classList:{add(){}}},
  document:{getElementById:id=>elements[id],createElement:()=>({click(){downloads.push(this.download);}})},
- URL:{createObjectURL:()=>'',revokeObjectURL(){}},tt:k=>k,ttA:k=>k,toast(){},errText:e=>e.message,
+ URL:{createObjectURL:()=>'',revokeObjectURL(){}},betaOn:()=>false,tt:k=>k,ttA:k=>k,toast(){},errText:e=>e.message,
  esc:v=>String(v).replace(/</g,'&lt;').replace(/"/g,'&quot;'),
  api:{post:async(url,body)=>{calls.push({url,body:structuredClone(body)});
   if(url.endsWith('interchange_inspect'))return {sheets:[{name:'Base stats',rows:[{number:1,values:['A','Attack','Attack']},{number:2,values:['Guard','0','8']}]}]};

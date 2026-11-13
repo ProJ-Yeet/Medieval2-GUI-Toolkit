@@ -411,7 +411,7 @@ const elements={},calls=[],errors=[],downloads=[];
 const c={console,Set,Map,Promise,structuredClone,setTimeout,clearTimeout,Uint8Array,Blob,atob,btoa,
  confirm:()=>true,state:{src:'fixture'},modal:{innerHTML:'',querySelectorAll:()=>[],querySelector:()=>null},overlay:{classList:{add(){}}},
  document:{getElementById:id=>elements[id],createElement:()=>({click(){downloads.push(this.download);}})},
- URL:{createObjectURL:()=>'',revokeObjectURL(){}},tt:k=>k,ttA:k=>k,toast:m=>errors.push(m),errText:e=>e.message,
+ URL:{createObjectURL:()=>'',revokeObjectURL(){}},betaOn:()=>false,tt:k=>k,ttA:k=>k,toast:m=>errors.push(m),errText:e=>e.message,
  esc:v=>String(v).replace(/[<>&"]/g,'_'),api:{post:async(url,body)=>{calls.push(url);const r=await fetch(base+url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});return r.json();}}};
 vm.createContext(c);vm.runInContext(fs.readFileSync('web/js/unitsheets.js','utf8'),c);
 (async()=>{

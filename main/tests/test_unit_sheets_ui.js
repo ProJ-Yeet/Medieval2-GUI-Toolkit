@@ -5,10 +5,11 @@ const initial={project:{units:{},draft:{},rules:{replenish:[],experience:[],pool
  revision:'r0',source_token:'source',field_info:fields,columns:Object.keys(fields),extra_columns:["extra:a');bad();//"],
  refresh:{added:[],removed:[],missing_classifications:[],rename_candidates:[]},
  table:{rows:[{id:'second',attack:5,'Unit Race':'Human'},{id:'first',attack:9,'Unit Race':'Elf'}],total:2,matched_ids:['second','first']}};
+let beta=true,opened=null;
 function harness(){
  let response=structuredClone(initial),calls=[],elements={};
  const c={structuredClone,console,Set,Map,Promise,setTimeout,clearTimeout,
-  state:{src:'Fixture'},modal:{innerHTML:'',querySelectorAll:()=>[],querySelector:()=>null},overlay:{classList:{add(){}}},
+  state:{src:'Fixture'},betaOn:()=>beta,bdOpen:(...a)=>{opened=a;},modal:{innerHTML:'',querySelectorAll:()=>[],querySelector:()=>null},overlay:{classList:{add(){}}},
   document:{getElementById:id=>elements[id]},
   tt:(key,p)=>key+Object.values(p||{}).join(' '),ttA:key=>key,toast(){},errText:e=>e.message,
   esc:v=>String(v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])),
@@ -803,4 +804,21 @@ async function safetyRegressions(){
  await refused.c.unitSheetsNativeApply();
  assert.equal(toasted,'refused by server');
  console.log('PASS: refused requests show the server reason instead of passing as success');
+ // Phase 116: the designer (beta) opens on exactly one selected unit, and its
+ // fields come back as a paste through this window's own review.
+ const ds=harness();await ds.c.unitSheetsOpen();
+ assert(ds.c.modal.innerHTML.includes('unitSheetsDesign()'));
+ beta=false;ds.c.unitSheetsPaint();assert(!ds.c.modal.innerHTML.includes('unitSheetsDesign()'),'beta off: no Design button');beta=true;
+ let said='';ds.c.toast=m=>{said=m;};
+ ds.c.unitSheetsDesign();assert.equal(said,'sheets.design_pick_one');assert.equal(opened,null);
+ ds.set('USHEET.selected=new Set(["first"])');ds.c.unitSheetsDesign();
+ assert.deepEqual(JSON.parse(JSON.stringify(opened)),['first',{mod:'Fixture',from:'sheets'}]);
+ const n=ds.calls.length;
+ await ds.c.unitSheetsReturn([{id:'first',column:'attack',value:12}]);
+ assert.equal(ds.calls.length,n+2,'a reload, then the paste preview');
+ const paste=ds.calls.at(-1);
+ assert.equal(paste.dry_run,true);assert.deepEqual(paste.cells,[{id:'first',column:'attack',value:12}]);
+ assert.equal(ds.get('USHEET.review.action'),'paste');
+ assert.equal(ds.response.project.draft.first,undefined,'nothing staged before Confirm');
+ console.log('PASS: the designer opens on one selected unit and returns through the review');
 })().catch(e=>{console.error(e);process.exitCode=1;});

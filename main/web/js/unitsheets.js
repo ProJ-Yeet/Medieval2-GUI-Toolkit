@@ -2,6 +2,24 @@
 let USHEET=null;
 const USHEET_CATEGORY=Object.keys({'Category':0})[0];
 const USHEET_META=Object.keys({'Unit Race':0,'Tier':0,'Main Faction':0,'AOR':0,'Category override':0});
+/* Phase 116: the guided designer (beta) on the one selected unit. Its design is
+   kept in this same project, and its ticked fields come back here as a paste,
+   through this window's own review, so they stage as ordinary unit drafts. */
+function unitSheetsDesign(){
+ const ids=[...USHEET.selected];
+ if(ids.length!==1){toast(tt('sheets.design_pick_one'));return;}
+ bdOpen(ids[0],{mod:USHEET.mod,from:'sheets'});
+}
+async function unitSheetsReturn(cells){
+ const u=USHEET;if(!u){unitSheetsOpen();return;}
+ modal.className='modal wide';overlay.classList.add('open');u.review=null;
+ await unitSheetsRequest('load');
+ if(!cells||!cells.length||USHEET!==u)return;
+ // The review lives in the Mass edit section: open it and bring the review on screen.
+ u.controls.usMassDetails=true;
+ await unitSheetsPreview('paste',{cells,mode:'selected'});
+ document.getElementById('usReview')?.scrollIntoView({block:'center'});
+}
 async function unitSheetsOpen(){
  const mod=state.src || state.dst;
  if(!mod){toast(tt('sheets.pick_mod'));return;}
@@ -126,7 +144,7 @@ function unitSheetsPaint(){
  <details><summary>${tt('sheets.columns_views')}</summary><div class="barrow"><input id="usViewName" placeholder="${ttA('sheets.view_name')}"><button onclick="unitSheetsSaveView()">${tt('sheets.save_view')}</button><select onchange="unitSheetsLoadView(this.value)"><option value="">${tt('sheets.saved_views')}</option>${Object.keys(d.project.views).map(option).join('')}</select></div>
  <label><input type="checkbox"${u.showExtras?' checked':''} onchange="unitSheetsExtras(this.checked)">${tt('sheets.show_extras')}</label><label>${tt('sheets.visible_columns')}<textarea id="usColumns" rows="2" style="width:100%">${esc(cols.join(', '))}</textarea></label><button onclick="unitSheetsSetColumns()">${tt('sheets.columns_apply')}</button>
  <label>${tt('sheets.comparison')}<input id="usUltra" type="number" step="any" value="${d.project.comparison.ultra_size}"><input id="usDefenseWeight" type="number" step="any" value="${d.project.comparison.defense_weight}"><button onclick="unitSheetsComparison()">${tt('common.save')}</button></label></details>
- <div class="barrow"><span>${tt('sheets.rows_count',{matches:table.total,selected:u.selected.size})}</span><button onclick="unitSheetsSelectMatches()">${tt('sheets.select_matches')}</button><button onclick="USHEET.selected.clear();unitSheetsPaint()">${tt('sheets.select_none')}</button>
+ <div class="barrow"><span>${tt('sheets.rows_count',{matches:table.total,selected:u.selected.size})}</span><button onclick="unitSheetsSelectMatches()">${tt('sheets.select_matches')}</button><button onclick="USHEET.selected.clear();unitSheetsPaint()">${tt('sheets.select_none')}</button>${betaOn()&&u.view!=='recruitment'&&!unitSheetsRuleKind()?`<button onclick="unitSheetsDesign()">${tt('sheets.design_unit')}</button>`:''}
  <button onclick="unitSheetsPage(-1)"${u.offset?'':' disabled'}>◀</button><span>${u.offset+1}–${Math.min(u.offset+75,table.total)}</span><button onclick="unitSheetsPage(1)"${u.offset+75<table.total?'':' disabled'}>▶</button></div>
  <div class="us-grid" style="max-height:55vh;overflow:auto">${unitSheetsGridOpen(cols)}<thead><tr><th>✓</th>${cols.map((k,c)=>`<th class="us-kind-${unitSheetsColumnKind(k)}" ${unitSheetsFrozenStyle(k,true)} data-sort="${esc(k)}" onclick="unitSheetsSort(this.dataset.sort,event.shiftKey)" title="${ttA('sheets.sort_hint')}">${esc(unitSheetsColumnLabel(k))}</th>`).join('')}</tr></thead><tbody>
  ${table.rows.map((row,r)=>`<tr class="${row.changed?'us-changed':''}"><td><input type="checkbox"${u.selected.has(row.id)?' checked':''} onchange="unitSheetsSelect(${r},this.checked)"></td>${cols.map((col,c)=>`<td class="us-kind-${unitSheetsColumnKind(col)}" ${unitSheetsFrozenStyle(col)} data-r="${r}" data-c="${c}" onmousedown="unitSheetsRect(event,${r},${c})">${unitSheetsEditable(col)?`<input data-r="${r}" data-c="${c}" data-col="${esc(col)}" value="${esc(unitSheetsValue(row[col]))}" oninput="unitSheetsInput(${r},${c},this.value)" onchange="unitSheetsCell(${r},${c},this.value)" onkeydown="unitSheetsCellKey(event)" onpaste="unitSheetsPaste(event)">`:`<span>${esc(unitSheetsValue(row[col]))}</span>`}</td>`).join('')}</tr>`).join('')}
@@ -433,7 +451,7 @@ function unitSheetsReviewHtml(){
  const review=USHEET.review;
  if(!review)return '';
  const changes=review.result.changes||[],shown=changes.slice(0,100);
- return `<details open><summary>${tt('sheets.review_count',{count:review.result.target_count})}</summary>
+ return `<details id="usReview" open><summary>${tt('sheets.review_count',{count:review.result.target_count})}</summary>
  <div style="max-height:260px;overflow:auto"><table><thead><tr><th>${tt('sheets.review_target')}</th><th>${tt('sheets.review_field')}</th><th>${tt('sheets.review_before')}</th><th>${tt('sheets.review_after')}</th></tr></thead><tbody>
  ${shown.map(change=>`<tr><td>${esc(change.id)}</td><td>${esc(change.column)}</td><td>${esc(unitSheetsValue(change.before))}</td><td>${esc(unitSheetsValue(change.after))}</td></tr>`).join('')}
  </tbody></table></div>${changes.length>shown.length?`<div>${tt('sheets.review_more',{count:changes.length-shown.length})}</div>`:''}

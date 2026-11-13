@@ -4,13 +4,15 @@ const fs=require('fs'),vm=require('vm'),assert=require('assert');
 const strings=JSON.parse(fs.readFileSync('web/i18n/en.json','utf8'));
 const esc=x=>String(x).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 async function main(){
- const els={bdApply:{innerHTML:''},bdStatus:{textContent:''}},calls=[],toasts=[];let reply=null,started=null,closed=0;
+ const els={bdApply:{innerHTML:''},bdStatus:{textContent:''},bdMerc:{innerHTML:''},bdMercPlan:{innerHTML:''}},calls=[],toasts=[];let reply=null,started=null,closed=0,returned=null;
  const cfgs={};
  const c={console,Set,Map,Promise,JSON,Object,Array,
   state:{src:'Fixture',data:{units:[{type:'Rider',name:'Riders'},{type:'Guard',name:'Guards'}]},ed:null},
   esc,q1:v=>v.replace(/\\/g,'\\\\').replace(/'/g,"\\'"),
   tt:(k,p={})=>{assert(k in strings,'missing string '+k);return strings[k].replace(/\{(\w+)\}/g,(_,n)=>p[n]??n);},
-  document:{getElementById:id=>els[id]||null},toast:t=>toasts.push(t),
+  document:{getElementById:id=>els[id]||null},
+  ttN:(k,n)=>{assert(k in strings,'missing string '+k);return strings[k][n===1?'one':'other'].replace('{count}',n);},
+  unitSheetsReturn:cells=>{returned=cells;},toast:t=>toasts.push(t),
   cfgFor:t=>cfgs[t]||(cfgs[t]={field_overrides:{old:'x'}}),startNewUnit:t=>{started=t;},
   renderEditor(){},undoReset(){},openNewUnitPicker(){},
   api:{post:async(url,body)=>{calls.push({url,body});return reply;}}};
@@ -63,6 +65,60 @@ async function main(){
  assert.equal(started,'Rider');
  assert.deepEqual(cfgs.Rider.field_overrides,{stat_pri_armour:'4, 2, 3, metal'});
  assert.equal(c.state.builder.active,false);
+
+ // Phase 116: opened from Unit sheets, the ticked fields go back there as a
+ // paste for its own review, never into the Unit Editor's edits.
+ c.state.ed=null;returned=null;
+ c.state.builder={mod:'Fixture',unit:'Guard',from:'sheets',design:{profile:{id:'native'}},result,seq:1,active:true,labels:{},pick:new Set(['attack'])};
+ reply={mode:'edit',target:'Guard',profile:'native',field_overrides:{stat_pri:'9, 2'},remove_fields:[],
+  changes:[{column:'attack',before:5,after:9}],missing:[]};
+ await c.bdStage();
+ assert(els.bdApply.innerHTML.includes(strings['builder.to_sheets']));
+ assert(els.bdApply.innerHTML.includes(esc(strings['builder.apply_help_sheets']))||els.bdApply.innerHTML.includes(strings['builder.apply_help_sheets']));
+ c.bdHandOver();
+ assert.deepEqual(returned,[{id:'Guard',column:'attack',value:9}]);
+ assert.equal(c.state.ed,null);assert.equal(c.state.builder.active,false);
+ // A missing prerequisite still blocks it.
+ reply={...reply,missing:[{kind:'model',name:'guard'}]};returned=null;
+ c.state.builder.active=true;await c.bdStage();c.bdHandOver();assert.equal(returned,null);
+
+ // Phase 107: the pool section shows only for a mercenary design, and only an
+ // existing unit can go in a pool.
+ const mercDesign=()=>({profile:{id:'combat-reforged'},inputs:{trait_mercenary:true},overrides:{inputs:{},native:{}}});
+ c.state.builder={mod:'Fixture',unit:'',design:{profile:{id:'native'},inputs:{},overrides:{inputs:{},native:{}}},defaults:{},seq:1,active:true,labels:{}};
+ c.bdMercPaint();assert.equal(els.bdMerc.innerHTML,'','not a mercenary: no pools');
+ c.state.builder.design=mercDesign();const before=calls.length;
+ c.bdMercPaint();
+ assert(els.bdMerc.innerHTML.includes(strings['builder.merc_needs_unit'].split(':')[0]));
+ assert.equal(calls.length,before,'no unit, nothing read');
+ c.state.builder={mod:'Fixture',unit:'Guard',design:mercDesign(),defaults:{},seq:1,active:true,labels:{},saved:''};
+ reply={campaigns:['imperial_campaign','custom/other'],campaign:'imperial_campaign',pools:[{name:'pool_a',regions:2,has_unit:1},{name:'pool_b',regions:1,has_unit:0}]};
+ c.bdMercPaint();await new Promise(r=>setTimeout(r,0));
+ assert.deepEqual(calls.at(-1),{url:'/api/builder/merc_load',body:{mod:'Fixture',unit:'Guard',campaign:''}});
+ assert(els.bdMerc.innerHTML.includes('pool_a')&&els.bdMerc.innerHTML.includes('2 provinces'));
+ assert(els.bdMerc.innerHTML.includes(strings['builder.merc_has_unit']));
+ assert(els.bdMerc.innerHTML.includes('value="500"'),'the upstream default cost is shown');
+ c.bdMercPick('pool_b',true);
+ assert.deepEqual([...c.state.builder.design.overrides.inputs.merc_pools],['pool_b']);
+ reply={ok:true,changes:['pool_b: + Guard (exp 0, cost 500, replenish 0.1 - 0.2, max 2, initial 1)'],warnings:[],errors:[]};
+ await c.bdMercPlan(false);
+ assert.equal(calls.at(-1).url,'/api/builder/merc_plan');
+ assert.equal(calls.at(-1).body.campaign,'imperial_campaign');
+ assert(els.bdMercPlan.innerHTML.includes('bdMercPlan(true)'));
+ // Typing a number drops the plan and never repaints the box being typed in.
+ const section=els.bdMerc.innerHTML;
+ c.bdMercInput('merc_cost','800');
+ assert.equal(els.bdMerc.innerHTML,section);assert.equal(els.bdMercPlan.innerHTML,'');
+ assert.equal(c.state.builder.design.overrides.inputs.merc_cost,'800');
+ reply={ok:false,changes:[],warnings:[],errors:['Pick at least one pool']};
+ await c.bdMercPlan(false);
+ assert(els.bdMercPlan.innerHTML.includes('Pick at least one pool'));
+ assert(!els.bdMercPlan.innerHTML.includes('bdMercPlan(true)'),'no Apply while refused');
+ reply={ok:true,changes:['x'],warnings:[],errors:[],applied:true,id:'t1'};const toastsBefore=toasts.length;
+ await c.bdMercPlan(true);
+ assert.equal(calls.at(-2).url,'/api/builder/merc_apply');
+ assert.equal(calls.at(-1).url,'/api/builder/merc_load','the pools are read again after a save');
+ assert.equal(toasts.length,toastsBefore+1);
  console.log('test_builder_apply_ui: PASS');
 }
 main().catch(e=>{console.error(e);process.exit(1);});

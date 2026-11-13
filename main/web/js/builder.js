@@ -15,8 +15,8 @@ function bdValue(key,fallback){
   return fallback??bdCurrent().defaults[key]??'';
 }
 function bdLabel(key){const b=bdCurrent();return (b.labels||(b.labels=bdLabels()))[key]||key;}
-async function bdOpen(unit){
-  const mod=state.ed&&unit?state.ed.mod:state.src;
+async function bdOpen(unit,opts={}){
+  const mod=opts.mod||(state.ed&&unit?state.ed.mod:state.src);
   let b=bdCurrent();
   if(!b||b.mod!==mod||b.unit!==unit){
     let r;
@@ -25,14 +25,15 @@ async function bdOpen(unit){
     b={mod,unit,...r,saved:JSON.stringify(r.design),result:null,seq:0,filter:'',family:'pri',editId:'',error:'',active:true};
     state.builder=b;
   }
-  b.active=true;
+  b.active=true;b.from=opts.from||'';
   document.getElementById('modal').className='modal wide';
   overlay.classList.add('open');bdRender();undoReset();
   if(b.design)bdCalculate();
 }
 function bdClose(){
   const b=bdCurrent();b.active=false;++b.seq;
-  if(b.unit&&state.ed){renderEditor();undoReset();}
+  if(b.from==='sheets'){undoReset();unitSheetsReturn();}
+  else if(b.unit&&state.ed){renderEditor();undoReset();}
   else{openNewUnitPicker();undoReset();}
 }
 function bdStart(profile){
@@ -54,13 +55,13 @@ function bdRender(){
       <button onclick="bdStart('native')">${tt('builder.native_profile')}</button>
       <button onclick="bdStart('combat-reforged')">${tt('builder.reforged_profile')}</button>`:
     `<p>${esc(d.profile.id==='native'?tt('builder.native_profile'):tt('builder.reforged_profile'))}</p>
-     <div id="bdForm">${bdForm()}</div><div id="bdEligibility" class="w-warn"></div>
+     <div id="bdForm">${bdForm()}</div><div id="bdMerc"></div><div id="bdEligibility" class="w-warn"></div>
      <div id="bdResults" aria-live="polite"></div><div id="bdApply"></div>`}
     <div id="bdStatus" role="status"></div></div><div class="foot">
       <button onclick="bdClose()">${tt('builder.back')}</button>
       ${d?`<button onclick="undoStep(false)">${tt('builder.undo')}</button><button onclick="undoStep(true)">${tt('builder.redo')}</button>
       <button class="primary" onclick="bdSave()">${tt('builder.save_draft')}</button>`:''}</div>`;
-  bdEligibilityPaint();bdResultsPaint();bdStatus();
+  bdEligibilityPaint();bdResultsPaint();bdMercPaint();bdStatus();
 }
 function bdSelectControl(key,values,fallback){
   return `<label class="gfrow">${esc(bdLabel(key))}<select id="bd_${key}" onchange="bdSelect('${key}',this.value)">${values.map(v=>`<option value="${esc(v)}"${String(bdValue(key,fallback))===v?' selected':''}>${esc(v===''?tt('builder.inherited'):bdLabel(v))}</option>`).join('')}</select></label>`;
@@ -160,6 +161,7 @@ function bdSelect(key,value){
 }
 function bdInput(key,value,boolean=false){
   bdCurrent().design.overrides.inputs[key]=boolean?!!value:value;
+  if(key==='trait_mercenary')bdMercPaint();
   bdEligibilityPaint();bdCalculate();
 }
 function bdInherit(key){delete bdCurrent().design.overrides.inputs[key];bdRender();bdCalculate();}
@@ -243,7 +245,7 @@ function bdApplyPaint(){
   const pick=b.pick||(b.pick=new Set());
   const units=b.unit?[]:[...((state.data||{}).units||[])].sort((x,y)=>(x.name||x.type).localeCompare(y.name||y.type));
   const s=b.staged;
-  el.innerHTML=`<h3>${tt('builder.apply_title')}</h3><p class="count">${tt(b.unit?'builder.apply_help_unit':'builder.apply_help_new')}</p>
+  el.innerHTML=`<h3>${tt('builder.apply_title')}</h3><p class="count">${tt(b.from==='sheets'?'builder.apply_help_sheets':b.unit?'builder.apply_help_unit':'builder.apply_help_new')}</p>
     <div>${Object.keys(r.native).map(k=>`<label class="chk"><input type="checkbox" ${pick.has(k)?'checked':''} onchange="bdPick('${q1(esc(k))}',this.checked)"> ${esc(bdLabel(k))}</label>`).join(' ')}</div>
     ${b.unit?'':`<label>${tt('builder.donor')} <select onchange="bdDonor(this.value)"><option value="">${tt('builder.donor_pick')}</option>${units.map(u=>
       `<option value="${esc(u.type)}"${u.type===b.donor?' selected':''}>${esc((u.name||u.type)+' ('+u.type+')')}</option>`).join('')}</select></label>`}
@@ -251,7 +253,7 @@ function bdApplyPaint(){
     ${s?`<table><tr><th></th><th>${tt('builder.before')}</th><th>${tt('builder.after')}</th></tr>${s.changes.map(c=>
       `<tr><th>${esc(bdLabel(c.column))}</th><td>${esc(c.before??'')}</td><td>${esc(Array.isArray(c.after)?c.after.join(', '):c.after)}</td></tr>`).join('')}</table>
       ${s.missing.length?`<div class="w-bad">${tt('builder.missing')}<ul>${s.missing.map(m=>`<li>${esc(tt(BD_MISSING[m.kind+(m.name?'':'_none')],{name:m.name}))}</li>`).join('')}</ul></div>`
-      :`<button class="primary" onclick="bdHandOver()">${tt(s.mode==='edit'?'builder.to_editor':'builder.to_new_unit')}</button>`}`:''}`;
+      :`<button class="primary" onclick="bdHandOver()">${tt(b.from==='sheets'?'builder.to_sheets':s.mode==='edit'?'builder.to_editor':'builder.to_new_unit')}</button>`}`:''}`;
 }
 const BD_MISSING={model:'builder.missing_model',projectile:'builder.missing_projectile',mount:'builder.missing_mount',
   mount_none:'builder.missing_mount_none',removal:'builder.missing_removal'};
@@ -269,6 +271,12 @@ async function bdStage(){
 }
 function bdHandOver(){
   const b=bdCurrent(),s=b.staged;if(!s||s.missing.length)return;
+  if(b.from==='sheets'){
+    // Back to Unit sheets as a paste, through its own review: the same staging,
+    // checks and Apply as a mass edit, never a second pipeline.
+    b.active=false;++b.seq;undoReset();
+    unitSheetsReturn(s.changes.map(c=>({id:s.target,column:c.column,value:c.after})));return;
+  }
   if(s.mode==='edit'){
     // Into the editor's pending edits: its Save previews, backs up and logs them.
     const e=state.ed;Object.assign(e.ov,s.field_overrides);
@@ -280,6 +288,66 @@ function bdHandOver(){
   // New unit's composer: the donor copied, with these fields on top.
   cfgFor(s.target).field_overrides={...s.field_overrides};
   startNewUnit(s.target);
+}
+/* Phase 107: a mercenary design's unit put into chosen pools of the campaign's
+   descr_mercenaries.txt. The server plans one save (a new line, or the unit's
+   one line with its numbers changed and its gates kept) and writes it with a
+   backup and a Log Undo, as the map's mercenary panel does. Only an existing
+   unit can go in a pool. Typing in a number repaints only the plan under it. */
+const BD_MERC_NUMBERS={merc_experience:0,merc_cost:500,merc_replenish_min:0.1,merc_replenish_max:0.2,merc_maximum:2,merc_initial:1};
+function bdMercPools(){const v=bdValue('merc_pools',[]);return Array.isArray(v)?v:String(v).split(',').map(s=>s.trim()).filter(Boolean);}
+function bdMercPaint(){
+  const b=bdCurrent(),el=document.getElementById('bdMerc');if(!el)return;
+  if(!b.design||bdValue('trait_mercenary',false)!==true){el.innerHTML='';return;}
+  const m=b.merc||(b.merc={}),chosen=new Set(bdMercPools());
+  const nums=Object.entries(BD_MERC_NUMBERS).map(([k,v])=>`<label class="gfrow">${esc(bdLabel(k))}<input id="bd_${k}" type="text" inputmode="decimal" value="${esc(bdValue(k,v))}" oninput="bdMercInput('${k}',this.value)"></label>`).join('');
+  let pools;
+  if(!b.unit)pools=`<p class="count">${tt('builder.merc_needs_unit')}</p>`;
+  else if(!m.loaded)pools=`<p class="count">${tt('common.reading')}</p>`;
+  else pools=`${m.campaigns.length>1?`<label>${tt('builder.merc_campaign')} <select onchange="bdMercLoad(this.value)">${m.campaigns.map(c=>`<option value="${esc(c)}"${c===m.campaign?' selected':''}>${esc(c)}</option>`).join('')}</select></label>`:''}
+    ${m.error?`<div class="w-bad">${esc(m.error)}</div>`:''}
+    <div>${m.pools.map(p=>`<label class="chk"><input type="checkbox"${chosen.has(p.name)?' checked':''} onchange="bdMercPick('${q1(esc(p.name))}',this.checked)"> ${esc(p.name)}
+      <span class="count">${ttN('builder.merc_regions',p.regions)}${p.has_unit?` · ${tt('builder.merc_has_unit')}`:''}</span></label>`).join('')}</div>
+    <button onclick="bdMercPlan(false)">${tt('builder.merc_preview')}</button><div id="bdMercPlan"></div>`;
+  el.innerHTML=`<fieldset><legend>${tt('builder.merc_title')}</legend><p class="count">${tt('builder.merc_help')}</p>${nums}${pools}</fieldset>`;
+  bdMercPlanPaint();
+  if(b.unit&&!m.loaded&&!m.loading)bdMercLoad(m.campaign||'');
+}
+function bdMercPlanPaint(){
+  const m=bdCurrent().merc||{},el=document.getElementById('bdMercPlan'),r=m.plan;if(!el)return;
+  if(!r){el.innerHTML='';return;}
+  el.innerHTML=`${r.errors.length?`<div class="w-bad"><ul>${r.errors.map(e=>`<li>${esc(e)}</li>`).join('')}</ul></div>`:''}
+    ${r.warnings.length?`<div class="w-warn"><ul>${r.warnings.map(e=>`<li>${esc(e)}</li>`).join('')}</ul></div>`:''}
+    ${r.changes.length?`<pre>${esc(r.changes.join('\n'))}</pre>`:''}
+    ${r.ok?`<button class="primary" onclick="bdMercPlan(true)">${tt('builder.merc_apply')}</button>`:''}`;
+}
+async function bdMercLoad(campaign){
+  const b=bdCurrent(),m=b.merc||(b.merc={});m.loading=true;m.plan=null;
+  let r;
+  try{r=await api.post('/api/builder/merc_load',{mod:b.mod,unit:b.unit,campaign});if(r.error&&!r.pools)throw r;}
+  catch(e){r={campaigns:[],campaign,pools:[],error:tt('builder.merc_failed')};}
+  if(b!==bdCurrent())return;
+  Object.assign(m,r,{loaded:true,loading:false});bdMercPaint();
+}
+function bdMercPick(name,on){
+  const pools=bdMercPools().filter(p=>p!==name);if(on)pools.push(name);
+  bdCurrent().design.overrides.inputs.merc_pools=pools;bdMercInput();
+}
+function bdMercInput(key,value){
+  const b=bdCurrent();if(key)b.design.overrides.inputs[key]=value;
+  if(b.merc)b.merc.plan=null;bdMercPlanPaint();bdStatus();
+}
+async function bdMercPlan(apply){
+  const b=bdCurrent(),m=b.merc;if(!m||m.busy)return;m.busy=true;
+  try{
+    const r=await api.post('/api/builder/'+(apply?'merc_apply':'merc_plan'),{mod:b.mod,unit:b.unit,campaign:m.campaign,design:b.design});
+    if(b!==bdCurrent())return;
+    if(r.error&&!r.errors)throw r;
+    if(apply&&r.applied){toast(tt('builder.merc_applied'));m.loaded=false;m.plan=null;bdMercLoad(m.campaign);return;}
+    m.plan=r;
+  }catch(e){m.plan={ok:false,changes:[],warnings:[],errors:[tt('builder.merc_failed')]};}
+  finally{m.busy=false;}
+  bdMercPlanPaint();
 }
 function bdStatus(){
   const b=bdCurrent(),el=document.getElementById('bdStatus');if(!el)return;
@@ -714,6 +782,12 @@ function bdLabels(){
     "trait_guards":tt('builder.label_trait_guards'),
     "trait_hybrid":tt('builder.label_trait_hybrid'),
     "trait_mercenary":tt('builder.label_trait_mercenary'),
+    "merc_experience":tt('builder.label_merc_experience'),
+    "merc_cost":tt('builder.label_merc_cost'),
+    "merc_replenish_min":tt('builder.label_merc_replenish_min'),
+    "merc_replenish_max":tt('builder.label_merc_replenish_max'),
+    "merc_maximum":tt('builder.label_merc_maximum'),
+    "merc_initial":tt('builder.label_merc_initial'),
     "trait_mounted":tt('builder.label_trait_mounted'),
     "trait_raider":tt('builder.label_trait_raider'),
     "trait_reckless":tt('builder.label_trait_reckless'),

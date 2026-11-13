@@ -30,7 +30,7 @@ const c={console,Set,Map,Promise,setTimeout,clearTimeout,structuredClone,confirm
  state:{src:'fixture'},modal:{innerHTML:'',querySelector:()=>null,
  querySelectorAll:s=>s==='.us-stage:checked'?['pool','experience','replenish'].map(value=>({value})):[]},
  overlay:{classList:{add(){}}},document:{getElementById:()=>({checked:true}),createElement:()=>({click(){}})},
- tt:(key,p)=>key,ttA:key=>key,esc:s=>String(s),toast(){},errText:e=>e.message,
+ betaOn:()=>false,tt:(key,p)=>key,ttA:key=>key,esc:s=>String(s),toast(){},errText:e=>e.message,
  URL:{createObjectURL:()=>'',revokeObjectURL(){}},Blob,Uint8Array,atob,
  api:{post:async(url,body)=>{calls.push({url,body});const r=await fetch(base+url,{method:'POST',
  headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});return r.json();}}};

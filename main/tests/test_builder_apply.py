@@ -130,6 +130,32 @@ class StageTests(unittest.TestCase):
         r = self.stage(design=design(), donor='Rider', fields=['attack'])
         self.assertIn({'kind': 'mount', 'name': 'ghost horse'}, r['missing'])
 
+    def test_phase116_staged_fields_go_into_unit_sheets_as_typed_drafts(self):
+        """The sheets' own paste takes what the designer stages, lists included:
+        a draft in the shared project, the EDU file untouched until the sheets'
+        native Apply, the design itself kept on the same unit."""
+        d = design(pri_preset='great_sword')
+        native = self.service(self.mod, 'preview', {'design': d, 'unit': 'Guard'})['native']
+        fields = ['attack', 'armor'] + (['attributes'] if 'attributes' in native else [])
+        staged = self.stage(design=d, unit='Guard', fields=fields)
+        cells = [{'id': staged['target'], 'column': c['column'], 'value': c['after']} for c in staged['changes']]
+        load = sheets.service(self.mod, 'load', {})
+        body = {'cells': cells, 'revision': load['revision'], 'source_token': load['source_token'],
+                'view': 'base', 'mode': 'selected'}
+        review = sheets.service(self.mod, 'paste', dict(body, dry_run=True))
+        self.assertEqual({c['column'] for c in review['changes']}, set(fields))
+        self.assertEqual(sheets.load_project(self.mod)['draft'], {})
+        sheets.service(self.mod, 'paste', body)
+        draft = sheets.load_project(self.mod)['draft']['Guard']
+        for f in fields:
+            self.assertEqual(draft[f], native[f])
+        self.assertEqual(self.file.read_text(), TEXT)
+        saved = self.service(self.mod, 'load', {'unit': 'Guard'})
+        self.service(self.mod, 'save', {'unit': 'Guard', 'design': d, 'revision': saved['revision'],
+                                        'source_token': saved['source_token']})
+        self.assertEqual(sheets.load_project(self.mod)['draft']['Guard'], draft)
+        self.assertIn('builder_design', sheets.load_project(self.mod)['units']['Guard'])
+
     def test_a_new_unit_cannot_take_a_removal(self):
         with patch('unittransfer.builder_calculator.calculate',
                    return_value={'native': {'attributes': []}, 'explanations': {}, 'metadata': {}}):

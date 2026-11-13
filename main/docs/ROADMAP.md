@@ -1351,6 +1351,8 @@ or bulk copy of generated HTML/assets.
   are safe, existing gates are preserved, and a non-mercenary design touches no
   pool file. This phase does not silently create recruitment building entries.
 
+**Finished 2026-11-13, uncut.** A *Mercenary pools* section in the designer, shown when the Mercenary subtype is ticked: the upstream builder's six numbers (experience, cost, lowest and highest replenishment, most available, available at the start, with its defaults) and a tick list of the campaign's pools, each saying how many provinces it covers and whether it already has the unit. `builder_mercs.py` (`builder_designer` actions `merc_load`, `merc_plan`, `merc_apply`) plans one save of `descr_mercenaries.txt` through `mercpools`: a pool with no line for the unit gets one, a pool with exactly one has its five numbers changed and its religions, events, years and factions kept, a pool with two lines for it is refused by name, and every other line must read back unchanged. The write is `mercpools.apply`, so it has the map panel's backup and Log Undo; a repeat finds nothing to change. A design without the subtype is refused before the file is read, only an existing unit can go in a pool, and `merc_armour` / `merc_weapon_lvl` stay in the design. Tests: `tests/test_builder_mercs.py` (8) and the pool cases in `tests/test_builder_apply_ui.js`. Checked in the browser on DaC EUR (Anfalas Herdsmen into Anfalas and Mordor), preview only, nothing applied.
+
 ## Phase 108 - Compatibility, interactive verification and documentation
 
 - Run the relevant calculator, project adapter, EDU/edit/new-unit, mercenary,
@@ -1407,6 +1409,8 @@ limits.
   fixture and interactive test results, known limitations, help/examples and
   translation checks. No release implied; archive each finished phase normally.
 
+
+**Builder bridge done 2026-11-13, uncut.** A *Design selected unit* button in Unit sheets (beta, unit views only) opens the designer on the one selected unit, in the sheets' mod; the design is kept in the same project. Its Apply panel then offers *Review in Unit sheets*: the ticked fields go back as a `paste` through the sheets' own review (Confirm or Cancel), so they stage as ordinary unit drafts with the sheets' checks and native Apply, never a second pipeline. Back returns to the sheets window. Tests: a typed-draft round trip in `tests/test_builder_apply.py`, and the bridge in `tests/test_builder_apply_ui.js` and `tests/test_unit_sheets_ui.js`. Checked in the browser on DaC EUR, review cancelled, nothing staged. **Still open in 116:** importing recruitment as an editable sheet, and the human checks of the sheets window listed in CODEX_HANDOFF.md.
 
 **Progress 2026-11-08.** Done: the supplied snapshots reconciled with the legacy outputs on disposable copies (8,055 recruitment rows; every difference classified as the per-level settlement rule, an intentional fix or a bug; Apply, repeat and Undo restore the bytes), vanilla's 413 units round-tripped through CSV and XLSX in all seven editable views, the automated UI checks, and help with examples in the sheets window. Two bugs fixed: the gunpowder minimum delay read from the wrong tuple slot, and lists merged duplicate attributes. Open: the builder bridge (needs 106), importing recruitment as an editable sheet, and the checks that need a person in a browser (listed in CODEX_HANDOFF.md).
 ---

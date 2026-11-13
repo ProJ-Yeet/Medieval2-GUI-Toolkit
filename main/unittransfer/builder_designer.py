@@ -87,6 +87,9 @@ def service(mod, action, body=None):
         return {'name':'builder.edu.txt','mime':'text/plain','text':result['edu']}
     if action == 'stage':
         return _stage(mod, body)
+    if action in ('merc_load', 'merc_plan', 'merc_apply'):
+        from . import builder_mercs
+        return builder_mercs.service(mod, action, body)
     if action not in ('load', 'preview', 'save'):
         raise contract.ContractError('designer_action')
     uid = body.get('unit', '')
