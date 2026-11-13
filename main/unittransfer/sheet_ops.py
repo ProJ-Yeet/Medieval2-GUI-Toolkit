@@ -175,7 +175,8 @@ def filter_info(rows, recruitment=False):
                         kinds[key] = 'text'
     derived = {key for row in rows for key in row.get('derived_columns',[])}
     return {key: {'type': kind, 'kind': 'derived' if key in derived else column_kind(key),
-                  'readonly': recruitment or key not in FIELDS and key not in META}
+                  'readonly': (key not in RECRUIT_NUMBERS) if recruitment
+                              else key not in FIELDS and key not in META}
             for key, kind in kinds.items()}
 
 

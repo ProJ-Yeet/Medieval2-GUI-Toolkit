@@ -327,6 +327,14 @@ Other transfer options:
   rows that all say "Barracks" are told apart by their art. The art follows the
   pool's own `requires`, so a pool gated to a set of factions wears the buildings
   those factions build.
+* **Unit sheets.** Every unit of the mod as rows to filter, edit and mass edit,
+  with CSV and XLSX in and out, the EDB's replenishment, experience and pool
+  balancing, and every `recruit_pool` line's four numbers editable too. Nothing
+  reaches a game file until a review's Apply, which backs up and logs. See
+  [SHEET_INTERCHANGE.md](main/docs/SHEET_INTERCHANGE.md).
+* **Guided unit designer (beta).** A unit's stats worked out from who the men
+  are and what they carry, handed to the Unit Editor, New unit, Unit sheets or
+  the campaign's mercenary pools. See [UNIT_DESIGNER.md](main/docs/UNIT_DESIGNER.md).
 * **Code View.** The raw game file beside the form in every editor, with
   hover-to-highlight both ways and live two-way editing. Can hide comment-only
   lines and restore them exactly. The text only scrolls when you click a box,

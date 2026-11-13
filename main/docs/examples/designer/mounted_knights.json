@@ -1,0 +1,37 @@
+{
+  "schema": "m2-builder-project",
+  "version": 1,
+  "design": {
+    "schema": "m2-unit-design",
+    "version": 1,
+    "profile": {
+      "id": "combat-reforged",
+      "revision": "d4ed9368d0db3da2000bc895e96f52a83b93cb67"
+    },
+    "inputs": {
+      "origin": "Western European",
+      "bible_formation_auto": true,
+      "unit_category": "Martial Nobility",
+      "quality": "Exceptional",
+      "category": "cavalry",
+      "class": "heavy",
+      "equipment_grade": "high",
+      "pri_preset": "heavy_couched_lance",
+      "sec_preset": "horseman_mace",
+      "armour_preset": "mail_med",
+      "armour_weight": "heavy",
+      "offhand": "medium",
+      "horse_type": "destrier",
+      "horse_origin": "western_europe",
+      "horse_barding": "mail_surcoat"
+    },
+    "presets": {},
+    "overrides": {
+      "inputs": {},
+      "native": {}
+    },
+    "metadata": {
+      "example": "Heavy shock cavalry: couched lance and mace, mail with a medium shield, a destrier in a mail surcoat."
+    }
+  }
+}

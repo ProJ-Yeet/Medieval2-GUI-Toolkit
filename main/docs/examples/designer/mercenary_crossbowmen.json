@@ -1,0 +1,41 @@
+{
+  "schema": "m2-builder-project",
+  "version": 1,
+  "design": {
+    "schema": "m2-unit-design",
+    "version": 1,
+    "profile": {
+      "id": "combat-reforged",
+      "revision": "d4ed9368d0db3da2000bc895e96f52a83b93cb67"
+    },
+    "inputs": {
+      "origin": "Western European",
+      "bible_formation_auto": true,
+      "unit_category": "Career Soldiers",
+      "quality": "Average",
+      "category": "infantry",
+      "class": "missile",
+      "equipment_grade": "common",
+      "pri_preset": "crossbow",
+      "sec_preset": "short_sword",
+      "armour_preset": "mail_light",
+      "armour_weight": "medium",
+      "offhand": "large",
+      "trait_mercenary": true,
+      "merc_experience": 1,
+      "merc_cost": 650,
+      "merc_replenish_min": 0.08,
+      "merc_replenish_max": 0.12,
+      "merc_maximum": 2,
+      "merc_initial": 1
+    },
+    "presets": {},
+    "overrides": {
+      "inputs": {},
+      "native": {}
+    },
+    "metadata": {
+      "example": "Hired crossbowmen with a large shield. The Mercenary subtype is ticked and the pool numbers are set; tick the pools to use in the mod."
+    }
+  }
+}

@@ -14466,5 +14466,30 @@
  "eng.builder.merc_initial": "Liczba początkowa nie może przekraczać maksimum",
  "eng.builder.merc_no_pools": "Wybierz co najmniej jedną pulę",
  "eng.builder.merc_twice": "{pool} ma kilka wierszy dla {unit} ({count}): zmień je w panelu najemników na mapie kampanii",
- "eng.builder.merc_stray": "Odrzucono: zapis zmieniłby wiersz innej jednostki"
+ "eng.builder.merc_stray": "Odrzucono: zapis zmieniłby wiersz innej jednostki",
+ "sheets.recruit_preview": "Przejrzyj przygotowane zmiany rekrutacji",
+ "sheets.recruit_review": {
+  "one": "Przejrzyj zmiany w {count} wierszu rekrutacji",
+  "few": "Przejrzyj zmiany w {count} wierszach rekrutacji",
+  "many": "Przejrzyj zmiany w {count} wierszach rekrutacji",
+  "other": "Przejrzyj zmiany w {count} wiersza rekrutacji"
+ },
+ "sheets.recruit_apply": "Zastosuj przejrzane zmiany rekrutacji",
+ "sheets.recruit_confirm": {
+  "one": "Zastosować przejrzane zmiany do {count} wiersza rekrutacji? Najpierw powstaje kopia zapasowa EDB, a Dziennik może to cofnąć.",
+  "few": "Zastosować przejrzane zmiany do {count} wierszy rekrutacji? Najpierw powstaje kopia zapasowa EDB, a Dziennik może to cofnąć.",
+  "many": "Zastosować przejrzane zmiany do {count} wierszy rekrutacji? Najpierw powstaje kopia zapasowa EDB, a Dziennik może to cofnąć.",
+  "other": "Zastosować przejrzane zmiany do {count} wiersza rekrutacji? Najpierw powstaje kopia zapasowa EDB, a Dziennik może to cofnąć."
+ },
+ "sheets.recruit_done": "Zmiany rekrutacji zastosowane. Dziennik może je cofnąć.",
+ "sheets.discard_recruit": "Odrzuć przygotowane zmiany rekrutacji",
+ "sheets.stale_recruit": "EDB się zmienił. Te przygotowane wiersze rekrutacji nie zawierają już puli, dla której je przygotowano; odrzuć przygotowane zmiany rekrutacji i przygotuj je ponownie:",
+ "eng.sheets.invalid_recruit_draft": "Nieprawidłowe przygotowane zmiany rekrutacji",
+ "eng.sheets.invalid_recruit_value": "{column} musi wynosić zero lub więcej, a doświadczenie być liczbą całkowitą",
+ "eng.sheets.unknown_recruit_row": "Brak wiersza rekrutacji {row} w EDB",
+ "eng.sheets.recruit_draft_stale": "Wiersz {row} EDB nie zawiera już {unit} w {building} {level}: odrzuć przygotowane zmiany rekrutacji i przygotuj je ponownie",
+ "eng.sheets.recruit_line_malformed": "Wiersz {row} EDB nie jest pełnym wierszem recruit_pool (puli)",
+ "eng.sheets.no_recruit_changes": "Brak przygotowanych zmian rekrutacji do zastosowania",
+ "eng.sheets.recruit_preview_changed": "Podgląd rekrutacji się zmienił; przejrzyj go ponownie przed zastosowaniem",
+ "eng.sheets.apply_or_discard_recruit_drafts": "Zastosuj lub odrzuć przygotowane zmiany rekrutacji przed równoważeniem EDB"
 }

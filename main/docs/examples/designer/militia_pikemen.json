@@ -1,0 +1,34 @@
+{
+  "schema": "m2-builder-project",
+  "version": 1,
+  "design": {
+    "schema": "m2-unit-design",
+    "version": 1,
+    "profile": {
+      "id": "combat-reforged",
+      "revision": "d4ed9368d0db3da2000bc895e96f52a83b93cb67"
+    },
+    "inputs": {
+      "origin": "Western European",
+      "bible_formation_auto": true,
+      "unit_category": "Urban Militia",
+      "quality": "Average",
+      "category": "infantry",
+      "class": "spearmen",
+      "equipment_grade": "common",
+      "pri_preset": "pike",
+      "sec_preset": "short_sword",
+      "armour_preset": "gambeson",
+      "armour_weight": "light",
+      "offhand": "empty"
+    },
+    "presets": {},
+    "overrides": {
+      "inputs": {},
+      "native": {}
+    },
+    "metadata": {
+      "example": "Town pike militia: a pike and short sword in a gambeson, no shield."
+    }
+  }
+}

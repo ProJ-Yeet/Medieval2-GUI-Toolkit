@@ -13756,5 +13756,26 @@
  "eng.builder.merc_initial": "Die Startzahl darf nicht über dem Höchstwert liegen",
  "eng.builder.merc_no_pools": "Wähle mindestens einen Pool aus",
  "eng.builder.merc_twice": "{pool} hat {count} Zeilen für {unit}: Ändere sie im Söldnerbereich der Kampagnenkarte",
- "eng.builder.merc_stray": "Abgelehnt: Das Speichern würde die Zeile einer anderen Einheit ändern"
+ "eng.builder.merc_stray": "Abgelehnt: Das Speichern würde die Zeile einer anderen Einheit ändern",
+ "sheets.recruit_preview": "Vorgemerkte Rekrutierungsänderungen prüfen",
+ "sheets.recruit_review": {
+  "one": "Änderungen an {count} Rekrutierungszeile prüfen",
+  "other": "Änderungen an {count} Rekrutierungszeilen prüfen"
+ },
+ "sheets.recruit_apply": "Geprüfte Rekrutierungsänderungen übernehmen",
+ "sheets.recruit_confirm": {
+  "one": "Die geprüften Änderungen an {count} Rekrutierungszeile übernehmen? Die EDB wird zuerst gesichert, und das Protokoll kann es rückgängig machen.",
+  "other": "Die geprüften Änderungen an {count} Rekrutierungszeilen übernehmen? Die EDB wird zuerst gesichert, und das Protokoll kann es rückgängig machen."
+ },
+ "sheets.recruit_done": "Rekrutierungsänderungen übernommen. Das Protokoll kann sie rückgängig machen.",
+ "sheets.discard_recruit": "Vorgemerkte Rekrutierungsänderungen verwerfen",
+ "sheets.stale_recruit": "Die EDB hat sich geändert. Diese vorgemerkten Rekrutierungszeilen enthalten nicht mehr den Pool, für den sie vorgemerkt wurden; verwirf die vorgemerkten Rekrutierungsänderungen und merke sie neu vor:",
+ "eng.sheets.invalid_recruit_draft": "Ungültige vorgemerkte Rekrutierungsänderungen",
+ "eng.sheets.invalid_recruit_value": "{column} muss null oder mehr sein, und die Erfahrung eine ganze Zahl",
+ "eng.sheets.unknown_recruit_row": "Keine Rekrutierungszeile {row} in der EDB",
+ "eng.sheets.recruit_draft_stale": "Zeile {row} der EDB enthält nicht mehr {unit} bei {building} {level}: Verwirf die vorgemerkten Rekrutierungsänderungen und merke sie neu vor",
+ "eng.sheets.recruit_line_malformed": "Zeile {row} der EDB ist keine vollständige recruit_pool-Zeile",
+ "eng.sheets.no_recruit_changes": "Es gibt keine vorgemerkten Rekrutierungsänderungen zum Übernehmen",
+ "eng.sheets.recruit_preview_changed": "Die Rekrutierungsvorschau hat sich geändert; prüfe sie vor dem Übernehmen erneut",
+ "eng.sheets.apply_or_discard_recruit_drafts": "Übernimm oder verwirf die vorgemerkten Rekrutierungsänderungen, bevor du die EDB ausbalancierst"
 }

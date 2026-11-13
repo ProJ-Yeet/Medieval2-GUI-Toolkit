@@ -13062,5 +13062,24 @@
  "eng.builder.merc_initial": "初始数量不能超过最大值",
  "eng.builder.merc_no_pools": "请至少选择一个兵池",
  "eng.builder.merc_twice": "{pool} 中有 {count} 行 {unit}：请在战役地图的雇佣兵面板中修改它们",
- "eng.builder.merc_stray": "已拒绝：此次保存会改动其他部队的行"
+ "eng.builder.merc_stray": "已拒绝：此次保存会改动其他部队的行",
+ "sheets.recruit_preview": "审核暂存的招募编辑",
+ "sheets.recruit_review": {
+  "other": "审核 {count} 行招募的更改"
+ },
+ "sheets.recruit_apply": "应用已审核的招募编辑",
+ "sheets.recruit_confirm": {
+  "other": "将已审核的编辑应用到 {count} 行招募？会先备份 EDB，并可在日志中撤消。"
+ },
+ "sheets.recruit_done": "招募编辑已应用。可在日志中撤消。",
+ "sheets.discard_recruit": "丢弃暂存的招募编辑",
+ "sheets.stale_recruit": "EDB 已更改。这些暂存的招募行已不再是暂存时的那个兵池；请丢弃暂存的招募编辑并重新暂存：",
+ "eng.sheets.invalid_recruit_draft": "暂存的招募编辑无效",
+ "eng.sheets.invalid_recruit_value": "{column} 必须为零或更大，经验必须是整数",
+ "eng.sheets.unknown_recruit_row": "EDB 中没有第 {row} 行招募",
+ "eng.sheets.recruit_draft_stale": "EDB 的第 {row} 行已不再是 {building} {level} 的 {unit}：请丢弃暂存的招募编辑并重新暂存",
+ "eng.sheets.recruit_line_malformed": "EDB 的第 {row} 行不是完整的 recruit_pool（兵池）行",
+ "eng.sheets.no_recruit_changes": "没有可应用的暂存招募更改",
+ "eng.sheets.recruit_preview_changed": "招募预览已更改；请在应用前重新审核",
+ "eng.sheets.apply_or_discard_recruit_drafts": "请先应用或丢弃暂存的招募编辑，再平衡 EDB"
 }

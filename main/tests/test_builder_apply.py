@@ -130,6 +130,28 @@ class StageTests(unittest.TestCase):
         r = self.stage(design=design(), donor='Rider', fields=['attack'])
         self.assertIn({'kind': 'mount', 'name': 'ghost horse'}, r['missing'])
 
+    def test_phase108_a_units_own_custom_attributes_survive_a_staged_list(self):
+        """An EOP mod's custom attribute (DaC's area_effect_25_2) is outside the
+        designer's vocabulary. Taking the design's attribute list must not drop it:
+        the unit's own unknown tags stay where they stood among its tags."""
+        text = TEXT.replace('ownership england\n; keep this comment',
+                            'attributes sea_faring, area_effect_25_2, hardy\nownership england\n; keep this comment')
+        self.mod.edu = edu.parse_text(text)
+        d = design()
+        d['profile'] = {'id': 'native', 'revision': '1'}
+        d['inputs'] = {}
+        d['overrides']['native'] = {'attributes': ['hardy', 'command', 'area_effect_25_2']}
+        r = self.stage(design=d, unit='Guard', fields=['attributes'])
+        after = r['changes'][0]['after']
+        self.assertEqual(after, ['area_effect_25_2', 'hardy', 'command'])
+        # A design holding every other tag as the unit has them changes nothing.
+        d['overrides']['native'] = {'attributes': ['sea_faring', 'hardy']}
+        r = self.stage(design=d, unit='Guard', fields=['attributes'])
+        self.assertEqual(r['changes'][0]['after'], ['sea_faring', 'area_effect_25_2', 'hardy'])
+        self.assertEqual(r['changes'][0]['before'], r['changes'][0]['after'])
+        self.assertIn('area_effect_25_2', r['field_overrides']['attributes'])
+        self.assertNotIn('sea_faring', after)
+
     def test_phase116_staged_fields_go_into_unit_sheets_as_typed_drafts(self):
         """The sheets' own paste takes what the designer stages, lists included:
         a draft in the shared project, the EDU file untouched until the sheets'

@@ -70,6 +70,8 @@ def validate_project(project):
     validate_groups(project)
     from . import sheet_ops
     sheet_ops.prepare_rules(project)
+    from . import sheet_recruit
+    sheet_recruit.validate(project)
     if 'balance_profile' in project:
         if not isinstance(project['balance_profile'],dict):fail(_i18n.msg('eng.sheets.invalid_balance_profile','Balance profile must be an object'))
         from . import edb_balance
@@ -368,9 +370,17 @@ def service(mod,action,body=None,cancelled=None):
                 body = dict(body, **{key:recipe.get(key) for key in ('column','operation','value','other')})
         profile_recipe = recipe is not None and 'profile' in (recipe.get('target') or {})
         rule_kind = sheet_ops.rule_kind(body.get('view'))
-        if action in ('operate', 'paste') and not profile_recipe:
-            if body.get('view') == 'recruitment':
+        recruit_cells = None
+        if action in ('operate', 'paste') and not profile_recipe and body.get('view') == 'recruitment':
+            # Phase 116: the four numbers of a recruit_pool line, staged by line.
+            if action == 'paste':
+                recruit_cells = body.get('cells')
+            elif body.get('operation', 'set') == 'set' and isinstance(body.get('ids'), list):
+                recruit_cells = [{'id': rid, 'column': body.get('column'), 'value': body.get('value')}
+                                 for rid in body['ids']]
+            else:
                 fail(_i18n.msg('eng.sheets.this_column_is_read_only', 'this column is read-only'))
+        elif action in ('operate', 'paste') and not profile_recipe:
             target_rows = (sheet_ops.rule_records(p, rule_kind)[0] if rule_kind
                            else sheet_ops.records(mod, p)[0])
             if action == 'operate':
@@ -381,6 +391,15 @@ def service(mod,action,body=None,cancelled=None):
                 ids = list(dict.fromkeys(cell.get('id') for cell in body['cells']
                                         if isinstance(cell, dict) and isinstance(cell.get('id'), str)))
                 sheet_ops.operation_targets(target_rows, ids, where=body.get('where'))
+        if action in ('recruit_preview','recruit_apply'):
+            from . import sheet_recruit
+            if action=='recruit_preview':return sheet_recruit.preview(mod,p)
+            record=sheet_recruit.apply(mod,p,body.get('plan_token'))
+            p.pop('recruit_draft',None)
+            try:save_project(mod,p,before)
+            except OSError:
+                return {'record':record,'warning':_i18n.msg('eng.sheets.applied_project_unsaved','Unit edits were applied and logged, but their project drafts could not be cleared. Reload and discard the stale drafts.')}
+            return {'record':record}
         if action in ('native_preview','native_apply'):
             from . import sheet_native
             if action=='native_preview':return sheet_native.preview(mod,p)
@@ -428,7 +447,11 @@ def service(mod,action,body=None,cancelled=None):
             edb_balance.check_cancelled(cancelled)
             return {'name':'EDB_balance_export.zip','mime':'application/zip','encoding':'base64',
                     'text':base64.b64encode(archive.getvalue()).decode('ascii')}
-        if action=='import':
+        if recruit_cells is not None:
+            from . import sheet_recruit
+            p, changes = sheet_recruit.stage(mod, p, recruit_cells)
+            report = {'changes': changes}
+        elif action=='import':
             kind=body.get('kind','csv');text=body.get('text','')
             if len(text)>20*1024*1024:fail(_i18n.msg('eng.sheets.import_is_larger_than_20_mb','import is larger than 20 MB'))
             if kind=='project':
@@ -518,6 +541,9 @@ def service(mod,action,body=None,cancelled=None):
                     except SheetError:
                         # Preserve bad source tokens for inspection and invalid filters.
                         row['invalid_columns'].append(key)
+            from . import sheet_recruit
+            sheet_recruit.overlay(rows, p)
+            stale_drafts = sheet_recruit.stale(rows, p)
         if rule_kind:
             rows, info, frozen, issues = sheet_ops.rule_records(p, rule_kind)
             report.update(filter_info=info, frozen_columns=frozen, rule_issues=issues,

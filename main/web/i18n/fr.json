@@ -13854,5 +13854,28 @@
  "eng.builder.merc_initial": "Le nombre de départ ne peut pas dépasser le maximum",
  "eng.builder.merc_no_pools": "Choisissez au moins une réserve",
  "eng.builder.merc_twice": "{pool} a {count} lignes pour {unit} : modifiez-les dans le panneau des mercenaires de la carte de campagne",
- "eng.builder.merc_stray": "Refusé : l’enregistrement modifierait la ligne d’une autre unité"
+ "eng.builder.merc_stray": "Refusé : l’enregistrement modifierait la ligne d’une autre unité",
+ "sheets.recruit_preview": "Vérifier les modifications de recrutement en attente",
+ "sheets.recruit_review": {
+  "one": "Vérifier les modifications de {count} ligne de recrutement",
+  "many": "Vérifier les modifications de {count} lignes de recrutement",
+  "other": "Vérifier les modifications de {count} lignes de recrutement"
+ },
+ "sheets.recruit_apply": "Appliquer les modifications de recrutement vérifiées",
+ "sheets.recruit_confirm": {
+  "one": "Appliquer les modifications vérifiées à {count} ligne de recrutement ? L’EDB est d’abord sauvegardé, et le Journal peut l’annuler.",
+  "many": "Appliquer les modifications vérifiées à {count} lignes de recrutement ? L’EDB est d’abord sauvegardé, et le Journal peut l’annuler.",
+  "other": "Appliquer les modifications vérifiées à {count} lignes de recrutement ? L’EDB est d’abord sauvegardé, et le Journal peut l’annuler."
+ },
+ "sheets.recruit_done": "Modifications de recrutement appliquées. Le Journal peut les annuler.",
+ "sheets.discard_recruit": "Abandonner les modifications de recrutement en attente",
+ "sheets.stale_recruit": "L’EDB a changé. Ces lignes de recrutement en attente ne contiennent plus la réserve sur laquelle elles ont été préparées ; abandonnez les modifications de recrutement en attente et préparez-les à nouveau :",
+ "eng.sheets.invalid_recruit_draft": "Modifications de recrutement en attente invalides",
+ "eng.sheets.invalid_recruit_value": "{column} doit valoir zéro ou plus, et l’expérience un nombre entier",
+ "eng.sheets.unknown_recruit_row": "Aucune ligne de recrutement {row} dans l’EDB",
+ "eng.sheets.recruit_draft_stale": "La ligne {row} de l’EDB ne contient plus {unit} à {building} {level} : abandonnez les modifications de recrutement en attente et préparez-les à nouveau",
+ "eng.sheets.recruit_line_malformed": "La ligne {row} de l’EDB n’est pas une ligne recruit_pool complète (réserve)",
+ "eng.sheets.no_recruit_changes": "Aucune modification de recrutement en attente à appliquer",
+ "eng.sheets.recruit_preview_changed": "L’aperçu du recrutement a changé ; vérifiez-le à nouveau avant d’appliquer",
+ "eng.sheets.apply_or_discard_recruit_drafts": "Appliquez ou abandonnez les modifications de recrutement en attente avant d’équilibrer l’EDB"
 }

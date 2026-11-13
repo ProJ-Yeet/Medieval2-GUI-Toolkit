@@ -11,7 +11,7 @@ function harness(){
  const c={structuredClone,console,Set,Map,Promise,setTimeout,clearTimeout,
   state:{src:'Fixture'},betaOn:()=>beta,bdOpen:(...a)=>{opened=a;},modal:{innerHTML:'',querySelectorAll:()=>[],querySelector:()=>null},overlay:{classList:{add(){}}},
   document:{getElementById:id=>elements[id]},
-  tt:(key,p)=>key+Object.values(p||{}).join(' '),ttA:key=>key,toast(){},errText:e=>e.message,
+  tt:(key,p)=>key+Object.values(p||{}).join(' '),ttN:(key,n)=>key+' '+n,confirm:()=>true,ttA:key=>key,toast(){},errText:e=>e.message,
   esc:v=>String(v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])),
   api:{post:async(url,body)=>{await new Promise(r=>setTimeout(r,2));calls.push(structuredClone(body));
    if(url.endsWith('/operate')&&body.dry_run){
@@ -821,4 +821,21 @@ async function safetyRegressions(){
  assert.equal(ds.get('USHEET.review.action'),'paste');
  assert.equal(ds.response.project.draft.first,undefined,'nothing staged before Confirm');
  console.log('PASS: the designer opens on one selected unit and returns through the review');
+ // Phase 116: on the recruitment view only the four numbers are editable, and
+ // the foot reviews and applies staged recruitment instead of unit drafts.
+ const rv=harness();await rv.c.unitSheetsOpen();rv.set('USHEET.view="recruitment"');
+ assert.equal(rv.c.unitSheetsEditable('per_turn'),true);assert.equal(rv.c.unitSheetsEditable('experience'),true);
+ assert.equal(rv.c.unitSheetsEditable('unit'),false);assert.equal(rv.c.unitSheetsEditable('attack'),false);
+ rv.c.unitSheetsPaint();
+ assert(rv.c.modal.innerHTML.includes('unitSheetsRecruitPreview()'));assert(!rv.c.modal.innerHTML.includes('unitSheetsNativePreview()'));
+ let urls=[];const post=rv.c.api.post;rv.c.api.post=async(url,body)=>{urls.push(url);
+  if(url.endsWith('recruit_preview'))return {plan_token:'t',rows:2,diff:'-a\n+b',changes:[]};
+  if(url.endsWith('recruit_apply')){assert.equal(body.plan_token,'t');return {record:{id:'x'}};}
+  return post(url,body);};
+ await rv.c.unitSheetsRecruitPreview();
+ assert(rv.c.modal.innerHTML.includes('sheets.recruit_review 2'));assert(rv.c.modal.innerHTML.includes('unitSheetsRecruitApply()'));
+ await rv.c.unitSheetsRecruitApply();
+ assert.deepEqual(urls.slice(0,2),['/api/unit_sheets/recruit_preview','/api/unit_sheets/recruit_apply']);
+ assert.equal(rv.get('USHEET.recruit'),null);
+ console.log('PASS: recruitment numbers are editable and go through their own EDB review');
 })().catch(e=>{console.error(e);process.exitCode=1;});

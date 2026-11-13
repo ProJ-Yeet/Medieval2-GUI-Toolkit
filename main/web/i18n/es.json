@@ -14216,5 +14216,28 @@
  "eng.builder.merc_initial": "El número inicial no puede superar el máximo",
  "eng.builder.merc_no_pools": "Elige al menos una reserva",
  "eng.builder.merc_twice": "{pool} tiene {count} líneas para {unit}: cámbialas en el panel de mercenarios del mapa de campaña",
- "eng.builder.merc_stray": "Rechazado: el guardado cambiaría la línea de otra unidad"
+ "eng.builder.merc_stray": "Rechazado: el guardado cambiaría la línea de otra unidad",
+ "sheets.recruit_preview": "Revisar cambios de reclutamiento pendientes",
+ "sheets.recruit_review": {
+  "one": "Revisar cambios en {count} línea de reclutamiento",
+  "many": "Revisar cambios en {count} líneas de reclutamiento",
+  "other": "Revisar cambios en {count} líneas de reclutamiento"
+ },
+ "sheets.recruit_apply": "Aplicar los cambios de reclutamiento revisados",
+ "sheets.recruit_confirm": {
+  "one": "¿Aplicar los cambios revisados a {count} línea de reclutamiento? Primero se hace una copia de seguridad del EDB, y el Historial puede deshacerlo.",
+  "many": "¿Aplicar los cambios revisados a {count} líneas de reclutamiento? Primero se hace una copia de seguridad del EDB, y el Historial puede deshacerlo.",
+  "other": "¿Aplicar los cambios revisados a {count} líneas de reclutamiento? Primero se hace una copia de seguridad del EDB, y el Historial puede deshacerlo."
+ },
+ "sheets.recruit_done": "Cambios de reclutamiento aplicados. El Historial puede deshacerlos.",
+ "sheets.discard_recruit": "Descartar cambios de reclutamiento pendientes",
+ "sheets.stale_recruit": "El EDB ha cambiado. Estas líneas de reclutamiento pendientes ya no contienen la reserva sobre la que se prepararon; descarta los cambios de reclutamiento pendientes y vuelve a prepararlos:",
+ "eng.sheets.invalid_recruit_draft": "Cambios de reclutamiento pendientes no válidos",
+ "eng.sheets.invalid_recruit_value": "{column} debe ser cero o más, y la experiencia un número entero",
+ "eng.sheets.unknown_recruit_row": "No hay línea de reclutamiento {row} en el EDB",
+ "eng.sheets.recruit_draft_stale": "La línea {row} del EDB ya no contiene {unit} en {building} {level}: descarta los cambios de reclutamiento pendientes y vuelve a prepararlos",
+ "eng.sheets.recruit_line_malformed": "La línea {row} del EDB no es una línea recruit_pool completa (reserva)",
+ "eng.sheets.no_recruit_changes": "No hay cambios de reclutamiento pendientes que aplicar",
+ "eng.sheets.recruit_preview_changed": "La vista previa del reclutamiento ha cambiado; revísala de nuevo antes de aplicar",
+ "eng.sheets.apply_or_discard_recruit_drafts": "Aplica o descarta los cambios de reclutamiento pendientes antes de equilibrar el EDB"
 }

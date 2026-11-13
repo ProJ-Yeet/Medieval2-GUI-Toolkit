@@ -2,6 +2,8 @@
 let USHEET=null;
 const USHEET_CATEGORY=Object.keys({'Category':0})[0];
 const USHEET_META=Object.keys({'Unit Race':0,'Tier':0,'Main Faction':0,'AOR':0,'Category override':0});
+// Phase 116: a recruit_pool line's four numbers, the only editable recruitment columns.
+const USHEET_RECRUIT=['initial','per_turn','maximum','experience'];
 /* Phase 116: the guided designer (beta) on the one selected unit. Its design is
    kept in this same project, and its ticked fields come back here as a paste,
    through this window's own review, so they stage as ordinary unit drafts. */
@@ -90,6 +92,7 @@ function unitSheetsColumnLabel(column){
 function unitSheetsValue(v){return Array.isArray(v)?v.join(', '):v==null?'':String(v);}
 function unitSheetsEditable(col){
  if(unitSheetsRuleKind())return col!=='id'&&!!USHEET.data.field_info[col];
+ if(USHEET.view==='recruitment')return USHEET_RECRUIT.includes(col);
  return USHEET.view!=='recruitment'&&(USHEET_META.includes(col)||!!USHEET.data.field_info[col]);}
 function unitSheetsRememberControl(control){
  // Record edits before a queued request can rebuild the window.
@@ -119,7 +122,7 @@ function unitSheetsPaint(){
  <div class="barrow">${tabs.map(([id,label])=>`<button class="mini${u.view===id?' primary':''}" onclick="unitSheetsTab('${id}')">${label}</button>`).join('')}
  <button class="mini" onclick="unitSheetsRequest('load')">${tt('sheets.refresh')}</button>
  <button class="mini" onclick="unitSheetsUndo(false)"${u.past.length?'':' disabled'}>↶</button><button class="mini" onclick="unitSheetsUndo(true)"${u.future.length?'':' disabled'}>↷</button></div>
- ${d.stale_drafts&&d.stale_drafts.length?`<div class="w-bad">${tt('sheets.stale_drafts')} ${esc(d.stale_drafts.join(', '))}</div>`:''}
+ ${d.stale_drafts&&d.stale_drafts.length?`<div class="w-bad">${u.view==='recruitment'?tt('sheets.stale_recruit'):tt('sheets.stale_drafts')} ${esc(d.stale_drafts.join(', '))}</div>`:''}
  ${u.err?`<div class="w-bad">${esc(u.err)}</div>`:''}
  ${d.formula_issues?.length?`<details><summary>${tt('sheets.interchange_formula_issues')}</summary><pre>${esc(JSON.stringify(d.formula_issues,null,2))}</pre></details>`:''}
  <div class="count">${tt('sheets.refresh_summary',{added:d.refresh.added.length,removed:d.refresh.removed.length,missing:d.refresh.missing_classifications.length})}</div>
@@ -154,8 +157,10 @@ function unitSheetsPaint(){
  <div class="barrow"><input id="usRecipeName" value="${esc(controls.usRecipeName)}" oninput="unitSheetsRememberControl(this)" onchange="unitSheetsRememberControl(this)" placeholder="${ttA('sheets.recipe_name')}"><button onclick="unitSheetsSaveRecipe()">${tt('common.save')}</button><select id="usRecipePicker" onchange="unitSheetsRememberControl(this);unitSheetsLoadRecipe(this.value)"><option value="">${tt('sheets.recipes')}</option>${unitSheetsRecipeOptions()}</select><button onclick="unitSheetsRunRecipe(document.getElementById('usRecipePicker').value)">${tt('sheets.recipe_run')}</button></div></details>
  ${unitSheetsReviewHtml()}
  ${d.changes?`<details open><summary>${tt('sheets.change_preview')}</summary><pre style="max-height:180px;overflow:auto">${esc(JSON.stringify(d.changes,null,2))}</pre></details>`:''}
+ ${u.recruit?`<details open><summary>${ttN('sheets.recruit_review',u.recruit.rows)}</summary><pre style="max-height:240px;overflow:auto">${esc(u.recruit.diff)}</pre><button onclick="unitSheetsRecruitApply()">${tt('sheets.recruit_apply')}</button></details>`:''}
  ${u.native?`<details open><summary>${tt('sheets.native_review',{count:u.native.units})}</summary><pre style="max-height:240px;overflow:auto">${esc(u.native.files.map(f=>f.diff).join('\n\n'))}</pre><button onclick="unitSheetsNativeApply()">${tt('sheets.native_apply')}</button></details>`:''}
- <div class="foot"><button onclick="unitSheetsNativePreview()">${tt('sheets.native_preview')}</button><button onclick="unitSheetsDiscard()">${tt('sheets.discard_native')}</button><button onclick="closeModal()">${tt('common.close')}</button></div></div>`;
+ <div class="foot">${u.view==='recruitment'?`<button onclick="unitSheetsRecruitPreview()">${tt('sheets.recruit_preview')}</button><button onclick="unitSheetsSave(p=>{delete p.recruit_draft;});USHEET.recruit=null">${tt('sheets.discard_recruit')}</button>`
+ :`<button onclick="unitSheetsNativePreview()">${tt('sheets.native_preview')}</button><button onclick="unitSheetsDiscard()">${tt('sheets.discard_native')}</button>`}<button onclick="closeModal()">${tt('common.close')}</button></div></div>`;
  unitSheetsRectPaint();
 }
 function unitSheetsClearRect(){
@@ -534,12 +539,13 @@ function unitSheetsMappingPlan(index,key,value){
 }
 function unitSheetsInterchangeHtml(){
  const draft=USHEET.interchange;if(!draft)return '';
- const views=['classification','base','attributes','soft','rules:replenish','rules:experience','rules:pool'];
+ const views=['classification','base','attributes','soft','rules:replenish','rules:experience','rules:pool','recruitment'];
  return `<div class="count">${tt('sheets.interchange_help')}</div>${draft.plans.map((plan,i)=>{
   const sheet=draft.info.sheets[i],head=sheet.rows.find(r=>r.number===plan.header_row)?.values||[];
   const kind=plan.view.startsWith('rules:')?plan.view.slice(6):null;
   const targets=kind?[...new Set([...(USHEET.data.project.rule_schema?.[kind]||[]).map(c=>c.name),
-   ...(kind==='replenish'?['Tier']:[USHEET_META[0],USHEET_CATEGORY,'BarracksTier','T0','T1','T2','T3','T4'])])]:['id',...USHEET_META,...USHEET.data.columns];
+   ...(kind==='replenish'?['Tier']:[USHEET_META[0],USHEET_CATEGORY,'BarracksTier','T0','T1','T2','T3','T4'])])]
+   :plan.view==='recruitment'?['id','unit','building','level',...USHEET_RECRUIT]:['id',...USHEET_META,...USHEET.data.columns];
   return `<fieldset><legend>${esc(plan.sheet)}</legend><select onchange="unitSheetsMappingPlan(${i},'view',this.value)"><option value="">${tt('sheets.interchange_skip')}</option>${views.map(view=>`<option value="${view}"${view===plan.view?' selected':''}>${esc(view)}</option>`).join('')}</select>
   <label>${tt('sheets.interchange_header')}<select onchange="unitSheetsMappingPlan(${i},'header_row',this.value)">${sheet.rows.map(row=>`<option value="${row.number}"${row.number===plan.header_row?' selected':''}>${row.number}</option>`).join('')}</select></label>
   <pre>${esc(JSON.stringify(sheet.rows.slice(0,4),null,2))}</pre>
@@ -812,6 +818,10 @@ function unitSheetsBalanceProfile(){try{const profile=JSON.parse(document.getEle
 async function unitSheetsBalanceApply(){const u=USHEET;await unitSheetsFlush();const b=u.balance;if(USHEET!==u||!b||u.busy||!confirm(tt('sheets.apply_balance_confirm',{count:b.changed_fields})))return;u.busy=true;try{const r=await unitSheetsPost('/api/unit_sheets/balance_apply',unitSheetsBody({stages:b.stages,plan_token:b.plan_token}));u.lastBalanceApply=r.record.id;u.balance=null;toast(tt('sheets.applied'));}catch(e){toast(errText(e));}finally{u.busy=false;if(USHEET===u)unitSheetsPaint();}}
 
 async function unitSheetsFlush(){const u=USHEET;if(u.inputs)for(const key of [...u.inputs.keys()])unitSheetsCommit(key,u);if(u.queue)await u.queue;}
+// Phase 116: staged recruitment numbers, reviewed as an EDB diff, then written
+// through the EDB's backed-up atomic writer; Log can undo it.
+async function unitSheetsRecruitPreview(){const u=USHEET;await unitSheetsFlush();if(u.busy)return;u.busy=true;try{u.recruit=await unitSheetsPost('/api/unit_sheets/recruit_preview',unitSheetsBody());}catch(e){u.recruit=null;toast(errText(e));}finally{u.busy=false;}if(USHEET===u)unitSheetsPaint();}
+async function unitSheetsRecruitApply(){const u=USHEET,r=u.recruit;if(!r||u.busy||!confirm(ttN('sheets.recruit_confirm',r.rows)))return;u.busy=true;try{const applied=await unitSheetsPost('/api/unit_sheets/recruit_apply',unitSheetsBody({plan_token:r.plan_token}));if(applied.warning)toast(applied.warning);u.recruit=null;u.past=[];u.future=[];toast(tt('sheets.recruit_done'));}catch(e){toast(errText(e));}finally{u.busy=false;}await unitSheetsRequest('load');}
 async function unitSheetsNativePreview(){const u=USHEET;await unitSheetsFlush();if(u.busy)return;u.busy=true;try{u.native=await unitSheetsPost('/api/unit_sheets/native_preview',unitSheetsBody());unitSheetsPaint();}catch(e){toast(errText(e));}finally{u.busy=false;}}
 async function unitSheetsNativeApply(){const u=USHEET,n=u.native;if(!n||u.busy||!confirm(tt('sheets.native_confirm',{count:n.units})))return;u.busy=true;try{const applied=await unitSheetsPost('/api/unit_sheets/native_apply',unitSheetsBody({plan_token:n.plan_token}));if(applied.warning)toast(applied.warning);u.native=null;u.past=[];u.future=[];toast(tt('sheets.native_done'));}catch(e){toast(errText(e));}finally{u.busy=false;}await unitSheetsRequest('load');}
 

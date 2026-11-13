@@ -13206,5 +13206,26 @@
  "eng.builder.merc_initial": "Başlangıç sayısı en fazla sayıyı aşamaz",
  "eng.builder.merc_no_pools": "En az bir havuz seçin",
  "eng.builder.merc_twice": "{pool} içinde {unit} için {count} satır var: bunları kampanya haritasının paralı asker panelinde değiştirin",
- "eng.builder.merc_stray": "Reddedildi: kayıt başka bir birimin satırını değiştirirdi"
+ "eng.builder.merc_stray": "Reddedildi: kayıt başka bir birimin satırını değiştirirdi",
+ "eng.sheets.invalid_recruit_value": "{column} sıfır veya daha büyük olmalı, deneyim ise tam sayı",
+ "eng.sheets.recruit_line_malformed": "EDB'nin {row}. satırı tam bir recruit_pool (havuz) satırı değil",
+ "sheets.recruit_preview": "Hazırlanan devşirme düzenlemelerini incele",
+ "sheets.recruit_review": {
+  "one": "{count} devşirme satırındaki değişiklikleri incele",
+  "other": "{count} devşirme satırındaki değişiklikleri incele"
+ },
+ "sheets.recruit_apply": "İncelenen devşirme düzenlemelerini uygula",
+ "sheets.recruit_confirm": {
+  "one": "İncelenen düzenlemeler {count} devşirme satırına uygulansın mı? Önce EDB'nin yedeği alınır ve Günlük bunu geri alabilir.",
+  "other": "İncelenen düzenlemeler {count} devşirme satırına uygulansın mı? Önce EDB'nin yedeği alınır ve Günlük bunu geri alabilir."
+ },
+ "sheets.recruit_done": "Devşirme düzenlemeleri uygulandı. Günlük bunları geri alabilir.",
+ "sheets.discard_recruit": "Hazırlanan devşirme düzenlemelerini at",
+ "sheets.stale_recruit": "EDB değişti. Bu hazırlanan devşirme satırları artık hazırlandıkları havuzu içermiyor; hazırlanan devşirme düzenlemelerini atın ve yeniden hazırlayın:",
+ "eng.sheets.invalid_recruit_draft": "Geçersiz hazırlanan devşirme düzenlemeleri",
+ "eng.sheets.unknown_recruit_row": "EDB'de {row} numaralı devşirme satırı yok",
+ "eng.sheets.recruit_draft_stale": "EDB'nin {row}. satırı artık {building} {level} içinde {unit} içermiyor: hazırlanan devşirme düzenlemelerini atın ve yeniden hazırlayın",
+ "eng.sheets.no_recruit_changes": "Uygulanacak hazırlanan devşirme değişikliği yok",
+ "eng.sheets.recruit_preview_changed": "Devşirme önizlemesi değişti; uygulamadan önce yeniden inceleyin",
+ "eng.sheets.apply_or_discard_recruit_drafts": "EDB'yi dengelemeden önce hazırlanan devşirme düzenlemelerini uygulayın veya atın"
 }

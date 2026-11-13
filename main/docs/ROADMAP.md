@@ -152,7 +152,8 @@ finishes; the schedule holds only what is left.
 | 98 | Six reports: the Spanish wording, Ko-fi, the Strat map panel, building art, texture paths, vanilla out of the packs | v2.4.6 |
 | 99 | Armory Studio after its first use, 99a-99o | beta 2026-10-15 |
 | 100 | Armory Studio's second round, and faction cards in the Unit Editor, 100a-100n | uncut |
-| 109 | Native sheet projects, parser-owned refresh, classifications and CSV/Fynn adapters | Built, uncut 2026-11-06 |
+| 102-108 | The guided unit designer: source audit, calculator, designer, portable projects, Apply to a unit, mercenary pools, checks and docs | uncut (beta) |
+| 109-116 | Unit sheets: classifications, editable views, mass edits, EDB balancing, CSV/XLSX, recruitment editing and real-data checks | uncut |
 | 117 | Verified automatic GitHub release checks, downloads and deferred portable updates | uncut |
 | 118 | Armory Studio: pre-render lighting, a lit colour texture per PBR colour texture | uncut |
 
@@ -439,8 +440,6 @@ and their lettered pieces are commits. Build the majors in this order.
 | | 96e4 | A new region wizard; many towns at once with auto-garrison | one | beta |
 | **III. Factions, units and mod data** | 96a | `can_homeless` on M2EX mods | one | both |
 | | 96e1-3, 96e5-7 | From the Oogway editor: the script builder and add-ons, checking (log, deep check, report), characters (family tree, portraits), units (model swap, voices), art (emblem, banners, recolouring), rules and mods (vanilla values, hard-link mod folders) | six areas | both |
-| **IV. Guided unit builder** | 102-108 | Stainless Steel: Reforged / Combat Reforged builder integration: source audit, calculator, designer, portable projects, Unit Editor installation, mercenary pools, and validation | seven independent phases; planned only | both |
-| **IV b. Editable sheets and EDB balancing** | 109-116 | In-app EDU/rule sheets, deep filtering and bulk edits, the user's replenish/experience/pool pipeline, import/export and verification | eight independent phases; planned only | both |
 | **V. Translations** | 88 | The remaining catalogues through 88d's workflow: 88h Portuguese (Brazil), 88i Polish, 88m Russian, 88p Traditional Chinese, 88q Japanese, 88r Korean. French (88e), Simplified Chinese (88o) and Turkish (88l) are complete drafts | six catalogues | both |
 
 **Finished phases archived on 2026-10-20** (the user: "archive the completed phases"): 77-86, 89-95, 98, 99 (but 99p) and 100 moved to `ROADMAP_ARCHIVE.md` verbatim, their rows up into the phase index. The rows this table still held for 89-94 were left over from the 2026-10-06 regroup: all six were finished on 2026-09-30, so major IV, which was 90 and 93, is gone with them.
@@ -1290,130 +1289,6 @@ the default. Measured on the four soldiers 99l was measured on, at 512.
 * **Automatic is slower**: 39 s on the knights where 99l took 10 s (the
   scale is found with 99l's ways first, then searched above it with every
   way, a trial stopping at its first block that will not go).
-
-# Phases 102-108 - Guided unit builder integration, planned 2026-11-06
-
-**User request:** incorporate [lupinemaverick's Stainless Steel: Reforged Unit
-Builder](https://github.com/lupinemaverick/stainless-steel-reforged-unit-builder),
-with the author's permission to reuse code as reported by the user, then
-"dont do it all in one go make phases in the roadmap".
-
-**Status: scoped, implementation not started.** This request schedules the work;
-it does not start a port. Work through 102 to 108 in order, one numbered phase
-per reviewable increment, with its own tests and Claude handoff. Stop at the
-phase boundary rather than treating these as seven commits in one large port.
-This specific instruction overrides the older instruction to finish a whole
-major grouping in one go for this integration. Existing scheduled work is not
-silently displaced. No release is implied.
-
-Initial source inspection is pinned to commit
-`d4ed9368d0db3da2000bc895e96f52a83b93cb67` (2026-10-15 UTC). Evidence, source-file
-mapping, compatibility questions and attribution are in
-[upstream/SSR_UNIT_BUILDER.md](upstream/SSR_UNIT_BUILDER.md).
-
-**Architecture across these phases:** a guided designer inside the existing Unit
-Editor/New unit flow; Python owns calculations, validation and file writes;
-plain JS presents the inputs and results. Reuse the existing EDU parser, Code
-View, transfer/edit planners, vocabulary and backup/undo paths. Combat Reforged
-balance is an explicitly selected rules profile, never silently applied to
-vanilla or another mod. Keep custom ability proposals as design metadata unless
-the target's runtime support has been independently established. No iframe of
-the hosted tool, second EDU parser, frontend build step, battle-runtime port,
-or bulk copy of generated HTML/assets.
-
-## Phase 106 - Apply designs to existing and new units
-
-- Let a design stage selected fields on an existing unit or create a new unit
-  from an existing donor through our New unit/transfer and edit planners.
-- Offer the selected mod's existing models, factions, mounts and projectiles;
-  resolve localization/dictionary keys and names with the existing workflows.
-  Preserve fields/comments the user did not choose to replace.
-- Preview the exact changes before Apply. Reuse backup, My Changes, Log Undo,
-  registry/cache refresh and existing Armory model/card assignment entry points.
-  Missing model/projectile/runtime prerequisites are shown before writing.
-- **Depends on:** 105. **Exit:** existing-unit and new-unit examples apply through
-  the normal planners on throwaway mods; unrelated content survives and Undo
-  restores every changed file. Applying SSR balance to another mod requires an
-  explicit profile choice, not automatic detection by a loose folder name.
-
-**Finished 2026-11-10, uncut.** The Designer's "Apply to a unit" panel: tick the calculated fields to take, and `builder_designer` action `stage` turns only those into EDU field edits against the unit being edited or a donor unit, writing nothing. Every other field, tuple member and comment stays the unit's own. A missing battle model, projectile or mount, a cavalry unit with no mount, and a field removal a new unit cannot take are listed before anything can be handed on. An existing unit's edits go into the Unit Editor's own pending edits, so its Save previews, backs up and logs them (Undo is the editor's). A new unit opens New unit's transfer composer on the donor with the fields on top, where its name, dictionary, models, factions and cards are chosen as usual. The design's profile is its own explicit choice, never inferred. Tests: `tests/test_builder_apply.py` (staging, prerequisites, and both planners on a throwaway copy of an installed mod with byte-exact Undo) and `tests/test_builder_apply_ui.js`, which the Python suite now runs with the two earlier builder UI scripts. Checked in the browser on DaC EUR (Mirkwood Bodyguard), staged only, nothing saved.
-
-## Phase 107 - Mercenary-pool integration
-
-- Turn the builder's optional mercenary settings into a plan for selected existing
-  campaign pools using `mercpools.py` and the toolkit's existing write path.
-- Support experience, cost, replenishment, maximum and initial counts where the
-  game's verified syntax supports them. Preserve pool regions, restrictions,
-  events and unrelated entries. Avoid duplicate unit lines on repeated applies.
-- Keep unconfigured armor/weapon-level extensions and campaign automation ideas
-  as project metadata. Do not implement their runtime behavior in this phase.
-- **Depends on:** 106. **Exit:** pool preview/apply/undo tests pass, repeated applies
-  are safe, existing gates are preserved, and a non-mercenary design touches no
-  pool file. This phase does not silently create recruitment building entries.
-
-**Finished 2026-11-13, uncut.** A *Mercenary pools* section in the designer, shown when the Mercenary subtype is ticked: the upstream builder's six numbers (experience, cost, lowest and highest replenishment, most available, available at the start, with its defaults) and a tick list of the campaign's pools, each saying how many provinces it covers and whether it already has the unit. `builder_mercs.py` (`builder_designer` actions `merc_load`, `merc_plan`, `merc_apply`) plans one save of `descr_mercenaries.txt` through `mercpools`: a pool with no line for the unit gets one, a pool with exactly one has its five numbers changed and its religions, events, years and factions kept, a pool with two lines for it is refused by name, and every other line must read back unchanged. The write is `mercpools.apply`, so it has the map panel's backup and Log Undo; a repeat finds nothing to change. A design without the subtype is refused before the file is read, only an existing unit can go in a pool, and `merc_armour` / `merc_weapon_lvl` stay in the design. Tests: `tests/test_builder_mercs.py` (8) and the pool cases in `tests/test_builder_apply_ui.js`. Checked in the browser on DaC EUR (Anfalas Herdsmen into Anfalas and Mordor), preview only, nothing applied.
-
-## Phase 108 - Compatibility, interactive verification and documentation
-
-- Run the relevant calculator, project adapter, EDU/edit/new-unit, mercenary,
-  localization and frontend checks together. Check installed SSR if available,
-  vanilla and an unrelated mod; report unavailable targets rather than claiming
-  they were tested. Use throwaway copies for write verification.
-- Exercise the full designer -> save/reopen -> export -> existing/new unit ->
-  optional mercenary-pool -> Undo workflows in the real UI, including narrow
-  layouts, keyboard navigation and failed requests.
-- Finish attribution/provenance, profile documentation, contribution explanations,
-  unsupported-effect descriptions and example projects. Reconcile completed
-  phases into the archive under the existing roadmap rules.
-- **Depends on:** 107. **Exit:** documented test matrix and known limitations,
-  successful preview/apply/undo, and a feature ready for normal use. No release
-  or blanket claim of battle-balance accuracy without separate verification.
-
----
-
-# Phases 109-116 - Editable sheets and bulk EDB balancing, started 2026-11-06
-
-**User request:** incorporate the workflow in the local `EDB Reader` scripts,
-reference tables and Fynn JSON export, plus the `Unit script` workbook/converters,
-with editable sheets inside our tool, deep filtering and mass editing. This is
-authorized for implementation on 2026-11-06, progressing in numbered increments
-with verification at each checkpoint. Phases 109-115 are complete; 116's
-real-data checks are done and its builder bridge waits on 106. Research and exact source locations are in
-[upstream/EDB_SHEETS_WORKFLOW.md](upstream/EDB_SHEETS_WORKFLOW.md).
-
-Use the toolkit's existing EDU/EDB parsers and edit planners. Read the selected
-mod directly by default; importing Fynn JSON, CSV or Excel is an adapter, not a
-mandatory second parser or an executable dependency. Keep user classification
-and rule tables per mod as project data, not invented EDU fields. Share unit
-identity, projects and staging contracts with 102-108, but this track can begin
-independently after its own audit. Existing priorities remain unchanged.
-
-**Implementation checkpoint, 2026-11-07:** 109-115 complete (archived).
-Typed staging/recipes, native review/apply, all three EDB stages, audit ZIP
-exports, cancellation and backed-up Apply/Undo are implemented and
-fixture-tested, with CSV/XLSX interchange; 116 planned. Non-EUR checks
-and builder integration remain. See CODEX_HANDOFF.md for exact checks, changed files and
-limits.
-
-## Phase 116 - Real-data verification and shared builder integration
-
-- Verify the supplied EDB/EDU/reference snapshots on disposable copies and a
-  non-EUR mod. Reconcile differences from legacy outputs, including intentional
-  fixes to comment stripping, missing log branches, stale JSON and ambiguous chains.
-- Exercise deep filters, keyboard/paste, mixed mass edits, new/deleted units,
-  missing/BG classifications, branched chains, fractional pools, special conditions,
-  save/reopen, export and Apply/Undo in the real UI. Check large/mostly-empty sheets.
-- Connect designs from 102-108 to the same classifications, recipes and preview
-  model when that track is available; no duplicate stat or recruitment pipeline.
-- **Depends on:** 115; builder bridge additionally needs 106. **Exit:** documented
-  fixture and interactive test results, known limitations, help/examples and
-  translation checks. No release implied; archive each finished phase normally.
-
-
-**Builder bridge done 2026-11-13, uncut.** A *Design selected unit* button in Unit sheets (beta, unit views only) opens the designer on the one selected unit, in the sheets' mod; the design is kept in the same project. Its Apply panel then offers *Review in Unit sheets*: the ticked fields go back as a `paste` through the sheets' own review (Confirm or Cancel), so they stage as ordinary unit drafts with the sheets' checks and native Apply, never a second pipeline. Back returns to the sheets window. Tests: a typed-draft round trip in `tests/test_builder_apply.py`, and the bridge in `tests/test_builder_apply_ui.js` and `tests/test_unit_sheets_ui.js`. Checked in the browser on DaC EUR, review cancelled, nothing staged. **Still open in 116:** importing recruitment as an editable sheet, and the human checks of the sheets window listed in CODEX_HANDOFF.md.
-
-**Progress 2026-11-08.** Done: the supplied snapshots reconciled with the legacy outputs on disposable copies (8,055 recruitment rows; every difference classified as the per-level settlement rule, an intentional fix or a bug; Apply, repeat and Undo restore the bytes), vanilla's 413 units round-tripped through CSV and XLSX in all seven editable views, the automated UI checks, and help with examples in the sheets window. Two bugs fixed: the gunpowder minimum delay read from the wrong tuple slot, and lists merged duplicate attributes. Open: the builder bridge (needs 106), importing recruitment as an editable sheet, and the checks that need a person in a browser (listed in CODEX_HANDOFF.md).
----
 
 # What else is open
 

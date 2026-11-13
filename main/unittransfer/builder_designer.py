@@ -39,8 +39,23 @@ def _stage(mod, body):
         raise contract.ContractError('designer_field')
     unit = units[target]
     chosen = {f: native[f] for f in fields}
-    overrides, removals = sheet_ops.field_changes(unit, chosen)
     before = sheets.fields_of(unit)
+    # Phase 108: a mod's own tags the designer's vocabulary cannot hold (an EOP
+    # custom attribute) stay on the unit, each after the unit's own tag it
+    # followed, so a design that changes nothing else changes nothing.
+    for f in fields:
+        allowed = contract._LIST_VOCAB.get(f)
+        if allowed is None:
+            continue
+        own = sheet_ops.value_of(before, sheet_ops.FIELDS[f]) or []
+        merged = list(chosen[f])
+        for i, tag in enumerate(own):
+            if tag in allowed or tag in merged:
+                continue
+            kept = [t for t in own[:i] if t in merged]
+            merged.insert(merged.index(kept[-1]) + 1 if kept else 0, tag)
+        chosen[f] = merged
+    overrides, removals = sheet_ops.field_changes(unit, chosen)
     changes = [{'column': f, 'before': sheet_ops.value_of(before, sheet_ops.FIELDS[f]), 'after': chosen[f]}
                for f in fields]
     missing = []

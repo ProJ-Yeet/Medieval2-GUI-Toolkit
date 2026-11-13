@@ -19,7 +19,17 @@ from . import i18n as _i18n, sheet_ops as ops, unit_sheets as sheets
 
 NS = 'http://schemas.openxmlformats.org/spreadsheetml/2006/main'
 REL = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships'
-VIEWS = ('classification', 'base', 'attributes', 'soft', *('rules:'+k for k in sheets.RULE_KEYS))
+VIEWS = ('classification', 'base', 'attributes', 'soft', *('rules:'+k for k in sheets.RULE_KEYS), 'recruitment')
+#: the recruitment sheet's columns: its line ID, what checks it is still that
+#: line, the context a person reads, and the four numbers it can change
+RECRUIT_IDENTITY = ('unit', 'building', 'level')
+RECRUIT_HEADERS = ('id', *RECRUIT_IDENTITY, 'settlement', 'section', 'requires', *ops.RECRUIT_NUMBERS)
+
+
+def recruit_rows(mod, project):
+    from . import edb_balance, sheet_recruit
+    rows = edb_balance.recruitments(edb_balance.fresh_edb(mod))
+    return sheet_recruit.overlay(rows, project)
 MAX_BYTES = 20 * 1024 * 1024
 MAX_CELLS = 250000
 
@@ -330,6 +340,7 @@ def prepare(mod,project,body):
     targets, selected_sheets, selected_views = set(),set(),set()
     live = sheets.live_units(mod)
     layouts = p.setdefault('interchange',{})
+    recruit_cells, recruit_live = [], None
     for plan in plans:
         if not isinstance(plan,dict):refuse('mapping_plan')
         name,view,header_row = plan.get('sheet'),plan.get('view'),plan.get('header_row')
@@ -346,9 +357,16 @@ def prepare(mod,project,body):
         if any(isinstance(h,(dict,list)) for h in headers):refuse('headers')
         mapping = resolve_mapping(plan,headers)
         kind = ops.rule_kind(view)
+        recruit = view == 'recruitment'
+        if recruit:
+            if 'id' not in mapping:refuse('identity_mapping')
+            if any(k not in ('id', *RECRUIT_IDENTITY, *ops.RECRUIT_NUMBERS) for k in mapping):
+                refuse('mapping_target')
+            if recruit_live is None:
+                recruit_live = {row['id']:row for row in recruit_rows(mod, project)}
         required = sheets.RULE_KEYS[kind] if kind else ('id',)
         if not set(required)<=set(mapping):refuse('identity_mapping')
-        if not kind and any(k not in ops.FIELDS and k not in ops.META and k!='id' for k in mapping):
+        if not kind and not recruit and any(k not in ops.FIELDS and k not in ops.META and k!='id' for k in mapping):
             refuse('mapping_target')
         if kind and any(k in ops.RULE_RESERVED-{'id'} for k in mapping):refuse('mapping_target')
         row_ids = {}
@@ -373,11 +391,31 @@ def prepare(mod,project,body):
                     result.append(item)
                 return result
             key = tuple(str(get(k) if get(k) is not None else '').strip() for k in required)
-            if not all(key) or not kind and key[0] not in live:
+            if recruit:
+                # A line number from a spreadsheet may come back as 12.0.
+                try:key = (str(int(float(key[0]))) if key[0] else '',)
+                except ValueError:key = ('',)
+            if not all(key) or not kind and key[0] not in (recruit_live if recruit else live):
                 ignored.append({'sheet':name,'row':r,'id':key,'code':'unmatched_identity'})
                 continue
             if key in seen:refuse('duplicate_identity')
             seen.add(key)
+            if recruit:
+                row = recruit_live[key[0]]
+                # The line is only this pool if every mapped identity agrees.
+                if any(str(get(k)).strip() != str(row.get(k, '')) for k in RECRUIT_IDENTITY if k in mapping):
+                    refuse('recruit_identity:'+key[0])
+                identities.add(key[0]);row_ids[str(r)] = key[0]
+                for target in ops.RECRUIT_NUMBERS:
+                    if target not in mapping:continue
+                    if 'formula' in values.get(mapping[target],{}):
+                        refuse('formula_must_be_derived:'+name+'!'+column_name(mapping[target])+str(r))
+                    if (key[0],target) in targets:refuse('duplicate_target')
+                    targets.add((key[0],target));fields.add(target)
+                    value = get(target)
+                    if value in (None,''):continue
+                    recruit_cells.append({'id':key[0],'column':target,'value':value})
+                continue
             if kind:
                 dest = existing.get(key)
                 if dest is None:
@@ -417,7 +455,7 @@ def prepare(mod,project,body):
             for c in range(width):
                 if c not in mapped_columns(mapping):
                     extra[label(headers,c)] = values.get(c,{}).get('value','')
-        if not seen and not kind:refuse('no_valid_units')
+        if not seen and not kind:refuse('no_valid_rows' if recruit else 'no_valid_units')
         if kind:
             sheets.validate_rules(kind,rule_rows)
         layouts[view] = {'table':table,'header_row':header_row,'mapping':mapping,'headers':headers,'rows':row_ids}
@@ -426,6 +464,10 @@ def prepare(mod,project,body):
         for start in range(0,len(cells),10000):
             p,native_changes = ops.stage_cells(mod,p,cells[start:start+10000],allow_clear=True)
             changes.extend(native_changes)
+    if recruit_cells:
+        from . import sheet_recruit
+        p,recruit_changes = sheet_recruit.stage(mod,p,recruit_cells,recruit_live)
+        changes.extend(recruit_changes)
     sheets.validate_project(p)
     report = {'ids':sorted(identities),'fields':sorted(fields),'changes':changes,'ignored':ignored,
               'formula_issues':issues,'preview_token':token(mod,project,body)}
@@ -485,7 +527,11 @@ def export_table(mod,project,view,layout):
     if view not in VIEWS:refuse('view')
     kind = ops.rule_kind(view)
     aliases = {}
-    if kind:
+    if view == 'recruitment':
+        rows = recruit_rows(mod, project)
+        headers = list(RECRUIT_HEADERS)
+        project = dict(project, draft={})
+    elif kind:
         rows,_,_,_ = ops.rule_records(project,kind)
         headers = ['id', *[c['name'] for c in project['rule_schema'][kind]]]
         extras = project.get('interchange_rule_extras',{}).get(kind,{})

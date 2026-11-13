@@ -3829,8 +3829,8 @@ body.look-editing :is(button,label,legend,h1,h2,h3,.trsechead,.mftab):hover{outl
 .us-table{border-collapse:separate;border-spacing:0;font-size:12px;min-width:100%}
 .us-table th,.us-table td{padding:3px;border:1px solid var(--border,#444);white-space:nowrap;background:var(--panel,#202329)}
 .us-table th{position:sticky;top:0;z-index:3;cursor:pointer}
-.us-table td:first-child,.us-table th:first-child{position:sticky;left:0;z-index:2;min-width:28px}
-.us-table td:nth-child(2),.us-table th:nth-child(2){position:sticky;left:36px;z-index:2;min-width:180px}
+.us-table td:first-child,.us-table th:first-child{position:sticky;left:0;z-index:2;box-sizing:border-box;width:36px;min-width:36px;max-width:36px}
+.us-table td:nth-child(2),.us-table th:nth-child(2){position:sticky;left:36px;z-index:2;overflow:hidden;text-overflow:ellipsis}
 .us-table th:first-child,.us-table th:nth-child(2){z-index:4}
 .us-table input:not([type=checkbox]){width:140px;min-width:90px;border:0;background:transparent;color:inherit}
 .us-table .us-changed td{background:color-mix(in srgb,var(--panel,#202329),#586c30 22%)}

@@ -322,6 +322,7 @@ def fresh_edb(mod):
 
 
 def preview(mod,project,stages=None,cancelled=None):
+    if project.get('recruit_draft'):sheets.fail(_i18n.msg('eng.sheets.apply_or_discard_recruit_drafts','Apply or discard the staged recruitment edits before balancing the EDB'))
     if project.get('draft'):sheets.fail(_i18n.msg('eng.sheets.apply_or_discard_native_unit_drafts_before_balancing_the_edb','Apply or discard native unit drafts before balancing the EDB; rules use the saved game roster'))
     result=run(mod,project,stages,fresh_edb(mod),cancelled)
     inputs={'project':sheets.revision(project),'edu':sheets.source_token(mod),
