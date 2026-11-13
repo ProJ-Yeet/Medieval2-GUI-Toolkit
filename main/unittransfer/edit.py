@@ -776,6 +776,7 @@ def plan_edit(mod: Mod, req: EditRequest) -> EditPlan:
 
     # ---- 4) point EDU slots at the new entries (only ones that really planned) ----
     planned = {n for n, _raw, _pad in plan.new_entries}
+    planned |= {nm.name for nm in req.new_models if nm.replace and nm.name in plan.entry_updates}
     for nm in req.new_models:
         if nm.assign_to and nm.name in planned:
             block = edu_mod.set_model_slot(block, nm.assign_to, nm.name)
@@ -1539,8 +1540,13 @@ def _plan_new_model(plan: EditPlan, mod: Mod, nm: NewModel,
     if nm.raw_entry:
         _plan_raw_model(plan, mod, nm, entries, taken)
         return
-    if nm.name in entries or nm.name in taken:
+    # ``replace``: put it in place of the mod's entry of that name, once
+    overwrite = nm.replace and nm.name in entries and nm.name not in plan.entry_updates
+    if (nm.name in entries or nm.name in taken) and not overwrite:
         plan.errors.append(_i18n.msg("eng.edit.a_model_entry_with_that_name", "'{name}': a model entry with that name already exists", name=nm.name))
+        return
+    if overwrite and entries[nm.name].first_entry_pad:
+        plan.errors.append(pad_entry_kept(nm.name))
         return
     clone = entries.get(nm.clone_from)
     if clone is None:
@@ -1596,7 +1602,11 @@ def _plan_new_model(plan: EditPlan, mod: Mod, nm: NewModel,
 
     raw = modeldb.rename_entry_raw(clone.raw, nm.name)
     raw = modeldb.rewrite_paths_indexed(raw, index_map, pad=clone.first_entry_pad)
-    plan.new_entries.append((nm.name, raw, clone.first_entry_pad))
+    if overwrite:
+        plan.entry_updates[nm.name] = raw
+        plan.changes.append(f"model entry '{nm.name}' replaced by a clone of '{clone.name}'")
+    else:
+        plan.new_entries.append((nm.name, raw, clone.first_entry_pad))
     taken.add(nm.name)
     facs = clone.factions()
     plan.changes.append(

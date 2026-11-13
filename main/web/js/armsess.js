@@ -17,7 +17,7 @@ function armExtrasInto(p){
   const card = state.cg ? Object.assign({}, state.cg) : null;
   if(card){ for(const k of ['saved', 'err', 'givePlan', 'units', 'poseNote', 'poseNote2']) delete card[k]; }
   p.extra = {cam: keep(ARM.cam), card: keep(card), exp: state.armExp ? keep(state.armExp.settings) : null,
-    exportOutput: state.armExp ? keep({folder: state.armExp.folder, stem: state.armExp.stem,
+    exportOutput: state.armExp ? keep({folder: state.armExp.folder, stem: state.armExp.stem, stemAuto: state.armExp.stemAuto,
       mod: state.armExp.mod ? Object.fromEntries(Object.entries(state.armExp.mod).filter(([k]) =>
         !['data','plan','written','folders','unitData'].includes(k))) : null}) : null};
 }

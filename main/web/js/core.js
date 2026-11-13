@@ -1765,7 +1765,7 @@ function wire(){
   document.querySelectorAll('.era').forEach(cb=>cb.onchange=()=>{cb.checked?state.sel.era.add(cb.value):state.sel.era.delete(cb.value);filtersChanged();});
   settingsBtn.onclick=openSettings;
   topFoldBtn.onclick=()=>topFold(true); topOpenBtn.onclick=()=>topFold(false);
-  topKofi.innerHTML=socialLinks('top')+kofiBadge();
+  topKofi.innerHTML=socialLinks();
   // …but not `logBtn.onclick=openLog`: a handler is called WITH the click,
   // and openLog's first argument is the mode to filter by. That filter
   // matched nothing, so the header's own button opened an empty log.
@@ -2113,19 +2113,21 @@ async function paintBuildTag(){
 // The README and the GitHub page link the same one. A plain target=_blank link,
 // so it opens in the browser beside the toolkit and never replaces it.
 const KOFI_URL='https://ko-fi.com/projyeet';
-const kofiLink=()=>`<a class="kofi" href="${KOFI_URL}" target="_blank" rel="noopener">${tt('core.support_on_kofi')}</a>`;
-// Ko-fi's own "Support me on Ko-fi" button, the one the README carries, at the
-// right end of the top bar, beside the fold button. It is Ko-fi's image off Ko-fi's server, so offline it
-// falls back to the plain link rather than leaving a broken picture.
-const KOFI_ART='https://ko-fi.com/img/githubbutton_sm.svg';
-const kofiBadge=()=>`<a class="kofibadge" href="${KOFI_URL}" target="_blank" rel="noopener" title="${ttA('core.support_on_kofi')}"><img src="${KOFI_ART}" alt="${ttA('core.support_on_kofi')}" onerror="this.parentNode.outerHTML=kofiLink()"></a>`;
-// The Discord server and the YouTube channel the README links, beside Ko-fi
-// wherever it is shown: the top bar, the Home footer and the credits. Plain
-// links styled as pills (no picture off another server), so they work offline.
+// Ko-fi, the Discord server and the YouTube channel the README links, as three
+// small symbols wherever they are shown: the top bar, the Home footer and the
+// credits. Drawn here (no picture off another server), so they work offline.
 const DISCORD_URL='https://discord.gg/htkpNjk5yq';
 const YOUTUBE_URL='https://www.youtube.com/@proj-yeet';
-const socialLinks=(cls)=>`<a class="social discord${cls?' '+cls:''}" href="${DISCORD_URL}" target="_blank" rel="noopener" title="${ttA('core.join_discord_title')}">${tt('core.join_discord')}</a>`
-  +`<a class="social youtube${cls?' '+cls:''}" href="${YOUTUBE_URL}" target="_blank" rel="noopener" title="${ttA('core.youtube_title')}">${tt('core.youtube')}</a>`;
+const SOCIAL_SVG={
+  discord:'<path fill-rule="evenodd" d="M19.3 5.3A16.6 16.6 0 0 0 15.2 4l-.5 1a15.4 15.4 0 0 0-5.4 0l-.5-1a16.6 16.6 0 0 0-4.1 1.3C2.1 9.2 1.4 13 1.7 16.7a16.7 16.7 0 0 0 5.1 2.6l1.1-1.7a10.8 10.8 0 0 1-1.7-.8l.4-.3a11.9 11.9 0 0 0 10.8 0l.4.3c-.5.3-1.1.6-1.7.8l1.1 1.7a16.6 16.6 0 0 0 5.1-2.6c.4-4.3-.7-8-3-11.4zM8.7 14.4c-1 0-1.9-.9-1.9-2.1s.8-2.1 1.9-2.1 1.9.9 1.9 2.1-.8 2.1-1.9 2.1zm6.6 0c-1 0-1.9-.9-1.9-2.1s.8-2.1 1.9-2.1 1.9.9 1.9 2.1-.8 2.1-1.9 2.1z"/>',
+  youtube:'<path fill-rule="evenodd" d="M21.6 7.2a2.5 2.5 0 0 0-1.8-1.8C18.2 5 12 5 12 5s-6.2 0-7.8.4a2.5 2.5 0 0 0-1.8 1.8C2 8.8 2 12 2 12s0 3.2.4 4.8a2.5 2.5 0 0 0 1.8 1.8c1.6.4 7.8.4 7.8.4s6.2 0 7.8-.4a2.5 2.5 0 0 0 1.8-1.8c.4-1.6.4-4.8.4-4.8s0-3.2-.4-4.8zM10 15V9l5.2 3z"/>',
+  kofi:'<path fill-rule="evenodd" d="M3 6h14v7a5 5 0 0 1-5 5H8a5 5 0 0 1-5-5zm14 1h1.5a3 3 0 0 1 0 6H17v-1.8h1.5a1.2 1.2 0 0 0 0-2.4H17zM10 9.2c-.7-1-2.6-.9-2.6.7 0 1.3 1.6 2.4 2.6 3.1 1-.7 2.6-1.8 2.6-3.1 0-1.6-1.9-1.7-2.6-.7z"/>',
+};
+const socialIcon=(kind,href,title)=>`<a class="socialicon ${kind}" href="${href}" target="_blank" rel="noopener" title="${title}" aria-label="${title}">`
+  +`<svg viewBox="0 0 24 24" aria-hidden="true">${SOCIAL_SVG[kind]}</svg></a>`;
+const socialLinks=()=>socialIcon('kofi',KOFI_URL,ttA('core.support_on_kofi'))
+  +socialIcon('discord',DISCORD_URL,ttA('core.join_discord_title'))
+  +socialIcon('youtube',YOUTUBE_URL,ttA('core.youtube_title'));
 async function openCredits(){
   let ver=verLabel(appBuild);
   if(!ver){try{const p=await api.get('/api/ping');ver=verLabel(p.version);}catch(e){}}
@@ -2172,7 +2174,7 @@ async function openCredits(){
       </div>
       <div style="margin-top:14px">
         <div class="lbl" style="margin-bottom:4px">${tt('core.support')}</div>
-        <div class="sociallinks">${kofiLink()}${socialLinks()}</div>
+        <div class="sociallinks">${socialLinks()}</div>
       </div>
     </div>
     <div style="padding:0 16px 16px;text-align:right">

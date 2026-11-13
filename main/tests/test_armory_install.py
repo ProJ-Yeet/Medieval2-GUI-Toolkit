@@ -89,6 +89,29 @@ class InstallTests(unittest.TestCase):
                 if slot.endswith("#3"):
                     self.assertEqual(field["armour_ug_levels"], "0, 1, 2")
 
+    def test_baked_entry_overwrites_existing_only_when_asked(self):
+        bake = Path(self.tmp.name) / "bake"
+        bake.mkdir()
+        (bake / "fresh.mesh").write_bytes(b"fixture")
+        base = dict(name="fresh", clone_from="old", bake_folder=str(bake), stem="fresh")
+        for choice in ("skip", "add"):
+            with self.subTest(choice=choice, replace=False):
+                p = armunit.plan_install(Mod(self.root), dict(base, choice=choice, unit="Guard"))
+                self.assertFalse(armunit.payload(p)["ok"])
+        db = self.root / "data/unit_models/battle_models.modeldb"
+        before = db.read_bytes()
+        req = dict(base, choice="add", unit="Guard", assign_to="armour_ug_models#3", replace=True)
+        p = armunit.plan_install(Mod(self.root), req)
+        self.assertTrue(armunit.payload(p)["ok"], armunit.payload(p))
+        self.assertEqual(dict(edu.block_fields(p["steps"][0]["plan"].edu_block))["armour_ug_models"],
+                         "old, old_t1, fresh")
+        result = armunit.apply_install(lambda _: Mod(self.root), "mod", req)
+        mod = Mod(self.root)
+        self.assertEqual(sorted(mod.modeldb.by_name()), ["fresh", "old", "old_t1"])
+        self.assertIn("_units/armory/fresh/fresh.mesh", mod.modeldb.by_name()["fresh"].raw)
+        undo(result["records"][0]["id"])
+        self.assertEqual(db.read_bytes(), before)
+
     def test_soldier_preserves_distinct_base_tier(self):
         mod = Mod(self.root)
         path = self.root / "data/export_descr_unit.txt"

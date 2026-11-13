@@ -172,7 +172,7 @@ def _new_model(req: dict, templates: Dict[str, dict], assign: str = "") -> dict:
         raise InstallError(_i18n.msg("eng.armunit.no_clone", "choose an entry to take the skeletons from, or a role template"))
     folder = (req.get("folder") or "").strip().strip("/\\") or f"unit_models/_units/armory/{name}"
     nm = {"name": name, "clone_from": clone, "dest_dir": folder, "mesh_all_lods": True,
-          "assign_to": assign}
+          "assign_to": assign, "replace": bool(req.get("replace"))}
     nm.update(baked_files(req.get("bake_folder") or "", req.get("stem") or ""))
     return nm
 

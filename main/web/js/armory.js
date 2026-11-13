@@ -296,6 +296,7 @@ const armUses = (o, key, group) => (o.src || []).some(pc => pc.asset === key && 
 function armNew(){
   if(armProj().objects.length && !confirm(tt('armory.new_project_confirm'))) return;
   state.armProj = null;
+  state.armExp = null;               // the last project's export names stay with it
   ARM.sel.clear();
   armSave();
   renderArmory();

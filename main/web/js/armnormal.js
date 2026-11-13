@@ -32,7 +32,10 @@ const ARM_NORM_MATERIALS = {
   other: {strength: 1.0, blur: 0.8, invert: false},
 };
 
-function armNormals(){ const p = armProj(); return p.normals = p.normals || {mode: 'skip', preview: true}; }
+// From the source models is the default; the export falls back to Specialized
+// when no part's model has a normal map (armExpNormFallback). `picked` marks a
+// choice made by hand, which is never changed for the user.
+function armNormals(){ const p = armProj(); return p.normals = p.normals || {mode: 'source', preview: true}; }
 
 /* The setting an object's part of the map is made with; null for Skip. */
 function armNormalSetting(o, nm){
@@ -117,6 +120,7 @@ function armNormalsHtml(){
   }else{
     body = `<div class="count armnote">${tt('armory.norm_skip_note')}</div>`;
   }
+  if(state.armExp && typeof armExpNormWarnHtml === 'function') body += armExpNormWarnHtml();
   return `<div class="armsect">${tt('armory.normal_maps')}</div>
     <div class="armpropsrow"><select onchange="armNormMode(this.value)">${ARM_NORM_MODES.map(m =>
       `<option value="${m}"${nm.mode === m ? ' selected' : ''}>${esc(armNormModeLabel(m))}</option>`).join('')}</select>
@@ -141,7 +145,7 @@ function armNormChanged(live){
   if(live){ clearTimeout(ARM.normTimer); ARM.normTimer = setTimeout(() => { armSave(); }, 300); return; }
   armSave(); armPaintObjects();
 }
-function armNormMode(m){ armNormals().mode = m; armNormChanged(); }
+function armNormMode(m){ const nm = armNormals(); nm.mode = m; nm.picked = true; if(state.armExp) state.armExp.normFell = false; armNormChanged(); }
 function armNormPreview(on){ armNormals().preview = on; armNormChanged(); }
 function armNormGeneric(k, v, live){ const nm = armNormals(); (nm.generic = nm.generic || {})[k] = v; armNormChanged(live); }
 function armNormMat(m, k, v, live){

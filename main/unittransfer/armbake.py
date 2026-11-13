@@ -1374,6 +1374,9 @@ def plan(project: dict, mod_of, settings: Optional[dict] = None, image_of: Image
                         "origin": (origins.pop() if len(origins) == 1 else "both") if origins else "main",
                         "sheets": sorted({b.sheet for b in mine}),
                         "scale": float(scales.get(str(o.get("id")), 1.0)),
+                        # every block with art has a normal map of its own to copy
+                        "source_normal": any(b.src[1] is not None for b in mine)
+                                         and all(_has_source_normal(sheets, b) for b in mine if b.src[1] is not None),
                         "islands": sum(1 for i in islands if i.obj is o)})
     sheets_out = {}
     for s in SHEETS:
@@ -1619,6 +1622,18 @@ def _block_pixels(st: dict, b: Block, margin: int, image_of: ImageOf,
     return px
 
 
+def _has_source_normal(sheets: "_Sheets", b: Block) -> bool:
+    """Whether :func:`_source_normal` has a file to read for the block, by its
+    paths alone (the plan asks this of every block, so no image is read)."""
+    sid, img, base, span, pc = b.src
+    if img is None:
+        return False
+    nm, na = sheets.normal_paths(pc)
+    if sheets.external(pc) or span == 2.0:
+        return bool(nm)
+    return bool(na if (int(base) % 2 == 1 and na) else nm)
+
+
 def _source_normal(st: dict, b: Block) -> Optional[np.ndarray]:
     """The block's source normal map, the same image layout its art comes
     from (one sheet, its attachment, or the two glued), at the art's size so
@@ -1673,7 +1688,7 @@ def render_sheets(st: dict, normals: dict, image_of: ImageOf, progress=None) -> 
     The normal map, by ``normals["mode"]``: ``skip`` flat, ``generic`` /
     ``specialized`` made from the baked art's lightness, ``source`` each
     block's own source normal map copied and turned with its art (a block whose
-    source has none is made from its art with the generic setting instead)."""
+    source has none is made from its art with the Specialized setting instead)."""
     per = st["per"]
     mode = (normals or {}).get("mode") or "skip"
     out: Dict[str, Tuple[np.ndarray, np.ndarray]] = {}
@@ -1716,7 +1731,7 @@ def render_sheets(st: dict, normals: dict, image_of: ImageOf, progress=None) -> 
             if mode == "source":
                 if id(b) in copied:
                     continue
-                setting = dict(NORMAL_GENERIC, **((normals or {}).get("generic") or {}))
+                setting = normal_setting(dict(normals or {}, mode="specialized"), b.islands[0].obj)
             else:
                 setting = normal_setting(normals, b.islands[0].obj)
             if setting is None:

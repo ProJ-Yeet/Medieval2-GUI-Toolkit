@@ -108,6 +108,14 @@ under3 = nmap[60:92, 4:20, :3].astype(int)
 check("a block whose source has none is made from its art (not flat, not copied)",
       np.abs(under3[..., :2] - 128).mean() > 0.5 and not (under3.reshape(-1, 3) == np.array(enc(0.6, 0)[:3])).all())
 check("where no block is, the map is flat", (nmap[120:, 120:, :3] == [128, 128, 255]).all())
+b4 = block("", False, 4, 60)
+b4.islands[0].obj["material"] = "skin"
+fell = armbake.render_sheets(state([b4]), {"mode": "source"}, None)["main"][1]
+spec = armbake.render_sheets(state([b4]), {"mode": "specialized"}, None)["main"][1]
+check("a block whose source has none takes the Specialized setting of its material",
+      (fell == spec).all())
+check("the plan can tell which blocks have a source normal map",
+      armbake._has_source_normal(st["sheets"], b1) and not armbake._has_source_normal(st["sheets"], b3))
 
 print("3) the art")
 check("each block's art is its source's texels, copied", (canvas[4:36, 4:20] == art[8:40, 8:24]).all())

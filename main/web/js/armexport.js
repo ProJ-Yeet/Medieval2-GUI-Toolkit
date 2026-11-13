@@ -67,15 +67,21 @@ function armExpSyncScale(){
 }
 function armExpBody(){ return {project: armProj(), scope: armExp().scope}; }
 
+/* The model the project was made from: the first imported .glb or .mesh
+   file's name, or the mod's entry it was read from. */
+function armExpImportedName(){
+  const p = armProj();
+  const a = p.assets.find(a => (p.objects || []).some(o => (o.src || []).some(pc => pc.asset === armAssetKey(a))));
+  const imported = a && (a.kind === 'external' ? (a.path || '').split(/[\\/]/).pop().replace(/\.[^.]+$/, '') : a.entry);
+  return (imported || p.name || (p.objects[0] && p.objects[0].mesh) || 'armory_model').replace(/[^A-Za-z0-9_\-]/g, '_');
+}
 async function armExportOpen(){
   const e = armExp();
   e.err = '';
-  if(!e.stem){
-    const p = armProj();
-    const a = p.assets.find(a => (p.objects || []).some(o => (o.src || []).some(pc => pc.asset === armAssetKey(a))));
-    const imported = a && (a.kind === 'external' ? (a.path || '').split(/[\\/]/).pop().replace(/\.[^.]+$/, '') : a.entry);
-    e.stem = (imported || p.name || (p.objects[0] && p.objects[0].mesh) || 'armory_model').replace(/[^A-Za-z0-9_\-]/g, '_');
-  }
+  // the name of what was imported, until the user types another
+  const auto = armExpImportedName();
+  if(!e.stem || e.stem === e.stemAuto) e.stem = auto;
+  e.stemAuto = auto;
   e.step = 'check';
   armExportPaint();
   overlay.classList.add('open');
@@ -210,6 +216,7 @@ async function armExportPlan(auto){
     const r = await api.post('/api/armory/uv', Object.assign(armExpBody(), {settings: Object.assign({}, e.settings, {auto: !!auto})}));
     if(seq !== e.seq) return;
     e.plan = r; e.err = '';
+    armExpNormFallback(r);
     if(e.sel && !armExpSelBlock()){ e.sel = null; e.selSrc = null; }
     e.drag = null;
     if(auto){
@@ -588,7 +595,6 @@ function armExpUvHtml(){
         onchange="armExpSet('rotate', this.checked)"> ${tt('armory.exp_free_turn')}</label></div>
     <div class="count armnote">${tt('armory.exp_uv_summary', {islands: P.islands, blocks: P.blocks, folded: P.folded})}</div>
     ${P.turned ? `<div class="count armnote">${tt('armory.exp_turned', {n: P.turned})}</div>` : ''}
-    ${P.fits ? '' : armExpOverflowHtml()}
     ${P.auto ? `<div class="armissue warning">${P.auto.sheet ? tt('armory.exp_auto_done', {sheet: armExpLabel(P.auto.sheet), pct: Math.round(P.auto.scale * 100)})
                                                        : tt('armory.exp_auto_moved', {n: P.auto.moved})}</div>` : ''}
     <div class="armexpuv${e.listHidden ? ' nolist' : ''}">
@@ -597,15 +603,18 @@ function armExpUvHtml(){
         <th>${tt('armory.exp_col_sheet')}</th><th>${tt('armory.exp_col_scale')}</th></tr></thead><tbody>${rows}</tbody></table></div>
       <div class="armexpsheets">${sheet('main')}${sheet('attach')}</div>
       <div id="armExpSel" class="armexpselbox">${armExpSelHtml()}</div>
-    </div>`;
+    </div>
+    ${P.fits ? '' : armExpOverflowHtml()}`;
 }
 
 /* A sheet ran out of room: say which islands did not fit and what each
-   would take, and the four ways out. */
+   would take, and the four ways out. Under the sheets, folded until opened
+   (each sheet's head already counts what is left off it); open stays open
+   through the repaints a change brings. */
 function armExpOverflowHtml(){
   const e = armExp(), P = e.plan;
   const names = new Map(P.objects.map(o => [o.id, o.name]));
-  let out = `<div class="armexpfull"><b>${tt('armory.exp_full')}</b>
+  let out = `<details class="armexpfull"${e.fullOpen ? ' open' : ''} ontoggle="armExp().fullOpen = this.open"><summary><b>${tt('armory.exp_full')}</b></summary><div class="armexpfullbody">
     <div class="armexprow"><button onclick="armExportPlan(true)">${tt('armory.exp_auto')}</button><span class="count">${tt('armory.exp_auto_note')}</span></div>`;
   for(const sh of ['main', 'attach']){
     const S = P.sheets[sh];
@@ -621,7 +630,7 @@ function armExpOverflowHtml(){
       <span class="count">${tt('armory.exp_scale_margin', {pct: S.recommended_margin})}</span>
       <span class="count">${tt('armory.exp_lower_margin')}</span></div>`;
   }
-  return out + '</div>';
+  return out + '</div></details>';
 }
 
 function armExpColour(id){
@@ -707,7 +716,7 @@ function armExpBakeHtml(){
       <select onchange="armExpNormMode(this.value)">${ARM_NORM_MODES.map(m =>
         `<option value="${m}"${armNormals().mode === m ? ' selected' : ''}>${esc(armNormModeLabel(m))}</option>`).join('')}</select></label>
       <button onclick="armExpPreview()"${e.peeking ? ' disabled' : ''} title="${ttA('armory.exp_preview_title')}">${tt('armory.exp_preview')}</button></div>
-    <div class="count">${tt('armory.exp_normals_note')}</div>
+    <div class="count">${tt('armory.exp_normals_note')}</div>${armExpNormWarnHtml()}
     <div id="armBakeProgress" role="status">${e.baking ? `${e.bakePct || 0}% <progress max="100" value="${e.bakePct || 0}"></progress>` : ''}</div>
     ${armExpPreviewHtml()}${done}`;
 }
@@ -715,10 +724,29 @@ function armExpBakeHtml(){
    same project setting, so the two never disagree. A preview already shown
    is dropped, since it no longer says what will be written. */
 function armExpNormMode(m){
-  armNormals().mode = m;
+  armNormals().mode = m; armNormals().picked = true; armExp().normFell = false;
   if(typeof armNormChanged === 'function') armNormChanged();
   armExp().peek = null;
   armExportPaint();
+}
+/* From the source models is the default. When no part's model has a normal
+   map of its own there is nothing to copy, so a choice the user never made
+   becomes Specialized, and the bake step and the objects panel say so. */
+function armExpNormFallback(P){
+  if(typeof armNormals !== 'function') return;
+  const nm = armNormals(), objs = P.objects || [];
+  if(nm.mode !== 'source' || nm.picked || !objs.length || objs.some(o => o.source_normal)) return;
+  nm.mode = 'specialized'; armExp().normFell = true;
+  if(typeof armNormChanged === 'function') armNormChanged();
+}
+function armExpNormWarnHtml(){
+  if(typeof armNormals !== 'function') return '';
+  const e = armExp(), nm = armNormals(), objs = (e.plan && e.plan.objects) || [];
+  if(nm.mode === 'specialized' && e.normFell) return `<div class="armissue warning">${tt('armory.norm_source_none')}</div>`;
+  const lack = objs.filter(o => o.source_normal === false);
+  if(nm.mode !== 'source' || !lack.length) return '';
+  const names = lack.slice(0, 8).map(o => o.name).join(', ') + (lack.length > 8 ? ', …' : '');
+  return `<div class="armissue warning">${tt('armory.norm_source_some', {names: esc(names)})}</div>`;
 }
 /* The actual images the bake would write, art and normal map for each sheet,
    rendered by the bake's own code on the server and nothing written. */
@@ -799,7 +827,11 @@ async function armExpModLoad(){
   const m = armExpMod(), e = armExp();
   if(!ARM.mods){ try{ ARM.mods = (await api.get('/api/mods')).map(x => x.name); }catch(err){ ARM.mods = []; } }
   if(!m.target) m.target = state.src || ARM.mods[0] || '';
-  if(!m.name) m.name = (e.stem || 'armory_model').toLowerCase().replace(/[^a-z0-9_]/g, '_');
+  // the entry takes the imported model's name, not the bake's file name,
+  // until the user types another
+  const auto = armExpImportedName().toLowerCase().replace(/[^a-z0-9_]/g, '_');
+  if(!m.name || m.name === m.nameAuto) m.name = auto;
+  m.nameAuto = auto;
   m.plan = null;
   if(!m.target){ armExportPaint(); return; }
   e.busy = true; armExportPaint();
@@ -881,6 +913,13 @@ function armExpAssignSlots(){
   out.push({v:`armour_ug_models#${tiers.length+1}`,t:tt('editor.armour_ug_models_add_as_a',{tiers:tiers.length+1})});
   return out;
 }
+/* Add to a unit: a new armour tier at the end of its armour_ug_models when it
+   has that line, else its soldier model; the slot list can choose another. */
+function armExpAssignDefault(){
+  const fields = (armExpMod().unitData || {}).fields || [];
+  const tiers = ((fields.find(([key]) => key === 'armour_ug_models') || [])[1] || '').split(',').map(x => x.trim()).filter(Boolean);
+  return tiers.length ? `armour_ug_models#${tiers.length + 1}` : 'soldier';
+}
 
 function armExpCharacterHtml(){
   const m=armExpMod(), target=m.characterTarget || {}, rows=(m.data || {}).characters || [];
@@ -933,12 +972,15 @@ function armExpModHtml(){
       <label>${tt('armory.exp_entry_name')}<input value="${esc(m.name)}" oninput="armExpModSet('name', this.value, true)"></label>
       <label>${tt('armory.exp_entry_folder')}<input class="armwide" value="${esc(m.folder)}" placeholder="unit_models/_units/armory/${esc(m.name)}" oninput="armExpModSet('folder', this.value, true)" onchange="armExpRememberFolder()"></label>
       <button onclick="armExpModBrowse()">${tt('armory.browse')}</button>
-      <select id="armExpFolderChoices" aria-label="${ttA('armory.folder_choices')}" onchange="armExpChooseFolder(this.value)"><option value="">${tt('armory.folder_choices')}</option>${armExpFolderChoices()}</select></div>`;
+      <select id="armExpFolderChoices" aria-label="${ttA('armory.folder_choices')}" onchange="armExpChooseFolder(this.value)"><option value="">${tt('armory.folder_choices')}</option>${armExpFolderChoices()}</select></div>
+    <div class="armexprow"><label class="armcheck" title="${ttA('armory.exp_replace_entry_title')}"><input type="checkbox"${m.replace ? ' checked' : ''}
+        onchange="armExpModSet('replace', this.checked)"> ${tt('armory.exp_replace_entry')}</label>
+      ${d.entries.includes(m.name.trim().toLowerCase()) && !m.replace ? `<span class="armexpwarn">${tt('armory.exp_entry_taken', {name: esc(m.name.trim().toLowerCase())})}</span>` : ''}</div>`;
   if(m.choice !== 'skip')
     html += `<div class="armexprow"><label>${m.choice === 'new' ? tt('armory.exp_unit_from') : tt('armory.exp_unit')}<input list="armExpUnits" value="${esc(m.unit)}"
         placeholder="${esc(tt('armory.find'))}" onchange="armExpModSet('unit', this.value)"></label>${units}
       <label>${tt('armory.assign_slot')}<select onchange="armExpModSet('assign_to',this.value)"${m.unitData ? '' : ' disabled'}>${armExpAssignSlots().map(s=>
-        `<option value="${esc(s.v)}"${s.v === (m.assign_to || 'soldier') ? ' selected' : ''}>${esc(s.t)}</option>`).join('')}</select></label></div>`;
+        `<option value="${esc(s.v)}"${s.v === (m.assign_to || armExpAssignDefault()) ? ' selected' : ''}>${esc(s.t)}</option>`).join('')}</select></label></div>`;
   if(m.choice === 'new')
     html += `<div class="armexprow"><label>${tt('armory.exp_new_type')}<input value="${esc(m.new_type)}" oninput="armExpModSet('new_type', this.value, true)"></label>
       <label>${tt('armory.exp_new_name')}<input value="${esc(m.new_name)}" oninput="armExpModSet('new_name', this.value, true)"></label></div>`;
@@ -955,7 +997,7 @@ function armExpModHtml(){
   }
   html += armExpCharacterHtml();
   html += `<div class="armexprow"><button onclick="armExpModPlan()">${tt('armory.exp_plan')}</button>
-      <button class="primary" onclick="armExpModApply()"${m.plan && m.plan.ok ? '' : ' disabled'}>${tt('armory.exp_write')}</button>
+      <button class="primary" onclick="armExpModApply()"${armExp().busy ? ' disabled' : ''}>${tt('armory.exp_write')}</button>
       <button class="mini" onclick="armExpCards()" title="${esc(tt('armory.exp_cards_later'))}">${tt('armory.exp_cards')}</button></div>`;
   if(m.plan) html += m.plan.steps.map((st, i) => `<div class="armissue ${st.errors.length ? 'error' : 'ok'}">
       <b>${m.plan.steps.length > 1 ? `${i + 1}. ` : ''}${armExpModStepTitle(st, m)}</b>
@@ -969,17 +1011,17 @@ function armExpModBody(){
   const m = armExpMod(), e = armExp();
   return {mod: m.target, choice: m.choice, name: m.name.trim().toLowerCase(), folder: m.folder.trim(),
           template: m.template, clone_from: m.template ? '' : m.clone_from.trim().toLowerCase(),
-          unit: m.unit, assign_to: m.assign_to || 'soldier', character_target: m.characterTarget || null,
+          unit: m.unit, assign_to: m.assign_to || armExpAssignDefault(), replace: !!m.replace, character_target: m.characterTarget || null,
           new_type: m.new_type.trim(), new_name: m.new_name.trim(),
           bake_folder: e.done ? e.done.folder : e.folder, stem: e.stem};
 }
 function armExpModSet(k, v, live){
   const m = armExpMod();
   m[k] = v; m.plan = null; m.written = null; armSave();
-  if(k === 'unit' || k === 'choice'){ m.assign_to='soldier'; m.folders=[]; armExpUnitFolders(); }
+  if(k === 'unit' || k === 'choice'){ m.assign_to=''; m.folders=[]; armExpUnitFolders(); }
   if(!live) armExportPaint();
 }
-function armExpModTarget(v){ const m=armExpMod(); m.target=v; m.folders=[]; m.unitData=null; m.assign_to='soldier'; m.characterTarget=null; m.characters=null; m.plan=null; m.written=null; armSave(); armExpModLoad(); }
+function armExpModTarget(v){ const m=armExpMod(); m.target=v; m.folders=[]; m.unitData=null; m.assign_to=''; m.characterTarget=null; m.characters=null; m.plan=null; m.written=null; armSave(); armExpModLoad(); }
 async function armExpModPlan(){
   const m = armExpMod(), e = armExp();
   e.busy = true; armExportPaint();
@@ -987,8 +1029,11 @@ async function armExpModPlan(){
   catch(err){ m.plan = null; e.err = errText(err); }
   e.busy = false; armExportPaint();
 }
+// Write plans first when nothing is shown yet; a plan with an error stops
+// there, shown, and nothing is written.
 async function armExpModApply(){
   const m = armExpMod(), e = armExp();
+  if(!m.plan) await armExpModPlan();
   if(!m.plan || !m.plan.ok) return;
   e.busy = true; armExportPaint();
   try{
