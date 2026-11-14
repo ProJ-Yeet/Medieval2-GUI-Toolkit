@@ -1,10 +1,8 @@
 """96f: a campaign's ``campaign_script.txt``, piece by piece.
 
-The Oogway campaign editor's *Campaign script...* (in its Events window): the
-script listed as its pieces - each monitor, loop, ``if`` block, counter and
-command at the top level - and any taken out, one, the picked ones or all, the
-frame staying. Its source is no longer public; this is built from that
-behaviour, on this toolkit's raw text editor (:mod:`unittransfer.rawtext`), so
+The script listed as its pieces - each monitor, loop, ``if`` block, counter
+and command at the top level - and any taken out, one, the picked ones or all,
+the frame staying. Built on this toolkit's raw text editor (:mod:`unittransfer.rawtext`), so
 a save is byte-exact outside the lines taken out, refused when the file
 changed since it was read, backed up, and undone from the Log.
 

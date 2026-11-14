@@ -1,4 +1,4 @@
-// Cloudflare report relay. Written independently from a description of the behaviour (2026-11-06); the design follows Pfadfinder-Adam's campaign editor report relay.
+// Cloudflare report relay.
 
 const ID = /^R-\d{8}-[0-9A-F]{6}$/;
 const REPLY = '**Reply from the reporter**';

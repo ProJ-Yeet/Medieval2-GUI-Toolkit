@@ -1,4 +1,4 @@
-/* Unit voice listening and name-call uploads. Written independently from a description of the behaviour (2026-11-06); the feature follows Pfadfinder-Adam's campaign editor. */
+/* Unit voice listening and name-call uploads. */
 
 function vxPaint(){ if(state.mode === 'sounds') renderSounds(); }
 async function vxOpen(unit){

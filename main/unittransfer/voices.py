@@ -5,8 +5,6 @@ record in a SND.PACK .idx/.dat pair, the mod's packs before the game's);
 describe what a unit says (its name calls per accent and the orders of its
 accent, each file marked found or not); and, from uploaded .wav files, plan and
 apply a name call for a unit, with backups, a log record and Undo.
-
-Written independently from a description of the behaviour (2026-11-06); the feature follows Pfadfinder-Adam's campaign editor.
 """
 from __future__ import annotations
 

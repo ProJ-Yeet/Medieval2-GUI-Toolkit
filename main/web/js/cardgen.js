@@ -5,7 +5,7 @@ const CG_FRAME_KEYS = {whole:'cards.gen_frame_whole',knees:'cards.gen_frame_knee
 const CG_GROUND_KEYS = {none:'cards.gen_ground_none',colour:'cards.gen_ground_colour',pic:'cards.gen_ground_pic',scroll:'cards.gen_ground_scroll',strat:'cards.gen_ground_strat',battle:'cards.gen_ground_battle'};
 const CG_LIGHT_KEYS = {sun:'cards.gen_light_sun',point:'cards.gen_light_point'};
 const CG_FINISH_KEYS = {blur:'cards.gen_blur',exposure:'cards.gen_exposure',brightness:'cards.gen_brightness',contrast:'cards.gen_contrast',gamma:'cards.gen_gamma',saturation:'cards.gen_saturation',hue:'cards.gen_hue',sharpen:'cards.gen_sharpen',outline:'cards.gen_outline'};
-/* Armory unit-card and information-picture maker. Written independently from a description of the behaviour (2026-11-06); the feature follows Pfadfinder-Adam's campaign editor. */
+/* Armory unit-card and information-picture maker. */
 
 const CG_WORK = {sizes: null, mod: null, library: null, rigs: {}, art: new Map(), serial: 0, draw: 0, handles: []};
 function cg(){

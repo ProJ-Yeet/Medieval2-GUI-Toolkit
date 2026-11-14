@@ -249,7 +249,7 @@ def _modeldb_spaces(mod) -> List[Finding]:
 
 
 @rule("guild.two_in_town", "Two guild buildings in one town", "warn",
-      "the Oogway campaign editor's checks (96f): a settlement holds one guild, and a "
+      "a settlement holds one guild, and a "
       "campaign that starts a town with two is refused by the game's guild system",
       "campaign", "campmap")
 def _two_guilds(mod) -> List[Finding]:

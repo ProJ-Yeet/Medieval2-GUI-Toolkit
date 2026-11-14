@@ -13354,10 +13354,8 @@ Then, the same day, three more from the user:
   `tests/test_armbake_normals` 15.
 * **101p - Discord and YouTube beside Ko-fi**, in the top bar, the Home footer
   and the credits (`socialLinks`), the README's own two links.
-* **101q - the card maker takes what Pfadfinder-Adam's does** (his
-  `campaign_editor/cardmaker.py`, read from the PR refs of
-  RTW-M2TW-Campaign-Editor, taken with his leave and credited in the modules).
-  Ours keeps its own render (poses, the IK rig, the lamp, the finish) and gains:
+* **101q - the card maker grows.**
+  It keeps its own render (poses, the IK rig, the lamp, the finish) and gains:
   *Framing* - whole man, to the knees, the thighs, the waist - fitted to the
   figure from its box in the last render (`cgFit`, orthographic so exact,
   twice for a pitched camera), again on its own when the pose or size
@@ -13371,8 +13369,7 @@ Then, the same day, three more from the user:
   `cardart.py` (`game_sprite` from `ui/*.sd.xml` through `gamepack.lookup`,
   `mod_sizes`), `/api/armory/card_art`, `/api/armory/card_sizes`.
   `tests/test_cardart` 12.
-Then, the same day, from a look at Pfadfinder-Adam's unit and building screens
-and the users' word that the toolkit is "very hard and not user friendly ...
+Then, the same day, from the users' word that the toolkit is "very hard and not user friendly ...
 especially the error logs and the console":
 
 * **101r - Delete takes the unit out of every file.** Its recruit lines, its
@@ -13387,8 +13384,7 @@ especially the error logs and the console":
   switch (`recruit_upward`, on): the game recruits only from the level a
   building stands at, so a unit given one tier was gone after an upgrade.
 * **101t - attributes explained, and M2EX / REX's own.** Every word's
-  meaning under its box (`GF_ATTR_TEXT`); the extended engines' words (Pfad's
-  `unitattrs.py`) in a fold of their own, warned about on a mod not marked
+  meaning under its box (`GF_ATTR_TEXT`); the extended engines' words in a fold of their own, warned about on a mod not marked
   M2EX; a word on `stat_mental` / `stat_ground` where it does nothing warned
   about.
 * **101u - the game's log in plain words.** One card: did it crash, after

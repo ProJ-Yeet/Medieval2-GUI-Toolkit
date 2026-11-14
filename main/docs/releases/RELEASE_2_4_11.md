@@ -3,7 +3,7 @@
 **Armory Studio's export you can steer, the base game read out of its packs,
 and errors in plain words.** Everything since v2.4.10: the UV step of the
 Armory export rebuilt, Blender and IWTE models read the right way round, the
-checks and tools taken from Mylae's and Pfad's editors, WalhallaZ's bulk
+checks and tools taken from Mylae's editor, WalhallaZ's bulk
 tools, and the fixes from ports out of Crusades and Kirsi's Bigger Map.
 
 ## New

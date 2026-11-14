@@ -7,9 +7,6 @@ emblem placed where the old one sat. The mouse-over, selected and greyed states
 copy how the mod's own old pictures differ from their normal one. plan() shows
 old beside new and writes nothing; apply() writes TGA files, backs up what it
 replaces and logs the change so Undo puts every byte back.
-
-Written independently from a description of the behaviour (2026-11-06); the
-feature follows Pfadfinder-Adam's campaign editor.
 """
 from __future__ import annotations
 
@@ -82,15 +79,16 @@ def targets(mod, slot):
     return out
 
 
-def measure(normal, other, variant):
-    """The median brightness ratio of other against normal, or None."""
-    if None in (normal, other) or normal.size != other.size:
+def state_tone(plain, styled, kind):
+    """How much brighter ``styled`` is than ``plain``, as the median ratio over
+    their solid pixels; None when there is too little to go on."""
+    if None in (plain, styled) or plain.size != styled.size:
         return None
     ratios = []
-    for a, b in zip(normal.getdata(), other.getdata()):
+    for a, b in zip(plain.getdata(), styled.getdata()):
         if a[3] <= 200 or b[3] <= 200:
             continue
-        if variant == "grey":
+        if kind == "grey":
             lum = 0.299 * a[0] + 0.587 * a[1] + 0.114 * a[2]
             if lum > 20:
                 ratios.append(b[0] / lum)
@@ -204,10 +202,10 @@ def build(src, tgts):
         if state is None:
             out[t["rel"]] = base
         elif state == "grey":
-            k = measure(old_n, old_t, "grey")
+            k = state_tone(old_n, old_t, "grey")
             out[t["rel"]] = _grey(base, DEFAULT["grey"] if k is None else k)
         else:
-            k = measure(old_n, old_t, "roll")
+            k = state_tone(old_n, old_t, "roll")
             lit = _brighten(base, DEFAULT["roll"] if k is None else k)
             if state == "select":
                 halo = _halo(old_n, old_t)

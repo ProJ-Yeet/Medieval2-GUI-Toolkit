@@ -2457,7 +2457,7 @@ def plan_transfer(source: Mod, unit_type: str, dest: Mod,
                 plan.replace_type = base_unit.type
                 # 96e5: the same kind can still ride something else - a horse's
                 # rider on a camel or an elephant sits wrong and plays the wrong
-                # animations, so say so (the Oogway editor's warning)
+                # animations, so say so
                 rides, was = mount_kind(source, unit), mount_kind(dest, base_unit)
                 if rides != was:
                     plan.warnings.append(_i18n.msg(

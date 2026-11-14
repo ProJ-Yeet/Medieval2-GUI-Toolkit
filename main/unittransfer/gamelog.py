@@ -4,9 +4,6 @@ verdict, every error and warning grouped so a repeated complaint is one row,
 a plain-English explanation where the cause is known, and, for a Script Error,
 the line of the mod's file as it is now and where in the toolkit it is fixed.
 It only reads; it writes nothing.
-
-Written independently from a description of the behaviour (2026-11-06); the
-feature follows Pfadfinder-Adam's campaign editor.
 """
 from __future__ import annotations
 

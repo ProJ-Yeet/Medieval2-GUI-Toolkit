@@ -6,8 +6,6 @@ Because a hard link is one file with two names, a write guard also lives
 here: once installed, any in-place write under a "mods" folder first gives
 that file its own copy, so saving in one mod never changes the other. The same
 guard refuses every write into the read-only base game "data" folders.
-
-Written independently from a description of the behaviour (2026-11-06); the feature follows Pfadfinder-Adam's campaign editor.
 """
 from __future__ import annotations
 

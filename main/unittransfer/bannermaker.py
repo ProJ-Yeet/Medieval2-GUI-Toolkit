@@ -1,8 +1,5 @@
 """Repaint a faction's battle-banner texture sheets in new colours, pattern and symbol.
 
-Written independently from a description of the behaviour (2026-11-06); the
-feature follows Pfadfinder-Adam's campaign editor.
-
 Every faction's banner sheet has the same layout: cloth, poles and trim sit in
 the same places, only the heraldry differs. Taking what all the sheets share
 (the median) leaves a white template: grey cloth that still carries its folds,

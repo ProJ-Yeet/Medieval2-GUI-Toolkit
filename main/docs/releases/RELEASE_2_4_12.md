@@ -4,7 +4,7 @@
 Everything since v2.4.11: the editable unit sheets with EDB balancing, the
 unit designer built on the Stainless Steel: Reforged Unit Builder, each
 faction keeping its own cards on transfer, riders on their horses in Armory
-Studio, and the last of Pfadfinder-Adam's code written anew.
+Studio, and several modules rewritten.
 
 **This is the first release with the updater.** Download it by hand once;
 from here on a portable install fetches each new release by itself and puts
@@ -59,8 +59,7 @@ it in at the next start, with your settings, sessions and backups kept.
     general, faction leader or heir a battle model, and scale an animation.
 * **The Unit Editor warns** when a faction that fields the unit would get the
   generic unit card or info picture.
-* **Credits** for Lupinemaverick's Stainless Steel: Reforged Unit Builder and
-  Pfadfinder-Adam's Campaign Editor.
+* **Credits** for Lupinemaverick's Stainless Steel: Reforged Unit Builder.
 
 ![The guided unit designer](https://github.com/ProJ-Yeet/Medieval2-GUI-Toolkit/releases/download/v2.4.12/unit-designer.png)
 ![Faction models](https://github.com/ProJ-Yeet/Medieval2-GUI-Toolkit/releases/download/v2.4.12/faction-models.png)
@@ -85,7 +84,4 @@ it in at the next start, with your settings, sessions and backups kept.
 
 ## Licence
 
-The toolkit is under the GPLv3. Versions up to v2.4.11 used parts of
-Pfadfinder-Adam's Campaign Editor; every one of them is written anew in this
-one, and four of its add-on scripts (Sack Settlement, Raze Settlement, Avoid
-Growth, Player Diplomacy) are gone. See NOTICE.
+The toolkit is under the GPLv3. See LICENSE and NOTICE.

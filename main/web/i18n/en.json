@@ -3441,7 +3441,6 @@
 "core.repair_go": "Repair it",
 "core.repair_not_now": "Not now",
 "core.repair_offer": "{file} in {mod} has hand-edit damage the toolkit recognises and can mend. The file is backed up first and the mend can be undone from the Log.",
-"core.rmce_by_pfadfinder_adam": "<a href=\"https://github.com/Pfadfinder-Adam/RTW-M2TW-Campaign-Editor\" target=\"_blank\" style=\"color:var(--accent2)\">Rome and Medieval Campaign Editor</a> by <b>Pfadfinder-Adam</b>",
 "core.search": "Search…",
 "core.search_ancillaries_and_types": "Search ancillaries and types…",
 "core.search_blocks_and_samples": "Search blocks and samples…",

@@ -10,9 +10,6 @@ Neither writes anything itself: each stages its changes into a
 ``scriptcompat.Plan``, and the caller runs it (every file backed up, one entry
 in the Log to Undo). Each leaves a small JSON note beside the changed file so
 that taking the add-on out restores exactly the old values.
-
-Written independently from a description of the behaviour (2026-11-06); the
-add-ons follow Pfadfinder-Adam's campaign editor.
 """
 from __future__ import annotations
 

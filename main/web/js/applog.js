@@ -76,7 +76,7 @@ function uiBugRedraw(){
 }
 
 /* --- the dialog -------------------------------------------------------------- */
-/* Two tabs, as the Pfadfinder (Oogway) editor has them: Send (a bug or an
+/* Two tabs: Send (a bug or an
    idea, a contact kept if wished, words to hide, screenshots added or pasted,
    Show what is sent, Save, Send) and Answers to my reports (the author's
    answers by report number, and a reply on the same report). report.py

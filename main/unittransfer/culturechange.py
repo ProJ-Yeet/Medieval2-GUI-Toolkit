@@ -1,9 +1,8 @@
 """96f: what a faction's culture change costs it, said before it is saved.
 
-The Oogway campaign editor's *Culture* pick on New / Edit faction, whose Preview
-"says which units it gains or loses and which buildings in its towns the new
-culture cannot build". Its source is no longer public, so this is built from
-that behaviour, on this toolkit's own readers.
+The faction editor's *Culture* pick says, before Save, which units the faction
+gains or loses and which buildings in its towns the new culture cannot build,
+from this toolkit's own readers.
 
 **Why a culture moves units at all.** The EDU's ``ownership`` names factions,
 so it does not change. What changes is the EDB: a level's ``requires`` and a

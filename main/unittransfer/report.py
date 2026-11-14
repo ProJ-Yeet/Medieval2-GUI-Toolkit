@@ -7,7 +7,7 @@ to send it directly to you, with a box to write notes in". The page keeps the
 log (``armlog.js``: every Armory request, error and message); this writes it
 out with what the server knows.
 
-Sending, the way the Pfadfinder (Oogway) campaign editor does it: the zip goes
+Sending: the zip goes
 to a relay (a Cloudflare Worker, ``dev/report-relay/``) that holds the GitHub
 token, commits the zip to a private reports repository and opens an issue
 there, labelled bug or idea; the reporter gets a number, and the author's

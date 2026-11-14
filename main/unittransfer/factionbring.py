@@ -9,8 +9,6 @@ figures, its pictures, and the ownership of the units both mods have alike.
 The units only the other mod has are brought afterwards by Unit Transfer, one
 log entry each, once the slot exists. Planning touches no disk; applying
 writes through the clone's own writer, so one Undo takes the faction out again.
-
-Written independently from a description of the behaviour (2026-11-06); the feature follows Pfadfinder-Adam's campaign editor.
 """
 from __future__ import annotations
 

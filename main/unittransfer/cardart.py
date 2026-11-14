@@ -5,8 +5,6 @@ game itself uses: card backgrounds, the scroll, the portrait frame. This module
 finds such a piece in the interface sheets (ui/*.sd.xml), cuts it from its page
 picture, and hands it out as a PNG. It also reads the picture size a mod's unit
 cards and info pictures use, from the TGA headers alone.
-
-Written independently from a description of the behaviour (2026-11-06); the idea of laying cards on the game's own art follows Pfadfinder-Adam's campaign editor.
 """
 import io
 import re

@@ -458,7 +458,7 @@ function edRecPickList(){
   edRecPickCount();
 }
 /* A tier ticked takes every free tier above it in the same line, and one
-   unticked takes those above it too (Pfadfinder-Adam's roster does the same):
+   unticked takes those above it too:
    the game recruits only from the level the building stands at now, so a unit
    given to one tier is gone again the moment the building is upgraded. The
    switch is remembered; off, a tick is that tier alone. */

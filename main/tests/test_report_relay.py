@@ -1,4 +1,4 @@
-"""Problem reports and ideas through the relay, as the Pfadfinder editor sends them.
+"""Problem reports and ideas through the relay.
 
 Run:  python -m tests.test_report_relay
 

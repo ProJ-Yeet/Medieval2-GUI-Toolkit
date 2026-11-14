@@ -268,8 +268,8 @@ async function homeSetM2ex(name, on){
   renderHome();
 }
 
-/* 96e7: a new mod folder from this one, its unchanged files hard links (the
-   Pfadfinder-Adam campaign editor's New mod folder). The plan comes first so
+/* 96e7: a new mod folder from this one, its unchanged files hard links. The
+   plan comes first so
    the confirm can say how much is linked and how much copied. */
 async function homeFork(base, game){
   const shown = game ? tt('home.fork_the_game') : base;

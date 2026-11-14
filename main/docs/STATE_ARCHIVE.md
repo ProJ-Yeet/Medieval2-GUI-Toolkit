@@ -52,7 +52,7 @@ application/upstream suites were not run. No implementation, mod write, commit
 or release. Resume with Phase 102 only, not the whole integration.
 
 
-## 101, later the same day - Pfad's unit and building ideas, and the screens users found hard (2026-11-03)
+## 101, later the same day - unit and building ideas, and the screens users found hard (2026-11-03)
 Built 101r-101x (ROADMAP_ARCHIVE): Delete takes the unit out of every file,
 recruit pools carried up the chain, M2EX / REX attributes and every
 attribute explained, the game's log and Health's checks in plain words with

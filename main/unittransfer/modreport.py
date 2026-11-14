@@ -1,7 +1,6 @@
 """Everything in a mod, by category, in one report to read or share (96e2).
 
-From the Pfadfinder-Adam (formerly MasterOogwayHomebrew) campaign editor's
-idea of a mod contents report. Every screen of this toolkit shows its own part
+Every screen of this toolkit shows its own part
 of a mod; this puts the whole of it on one page: the factions and what each
 holds at the start, the cultures and religions, the units by category and by
 owner, the building chains, the regions and towns, the named characters, and
@@ -170,7 +169,7 @@ def text(rep: Dict) -> str:
 def files_list(mod) -> str:
     """``mod_files.txt``: every file under the mod's ``data/`` with its size and
     date, never its contents - what a bug report needs to tell one copy of a mod
-    from another (the Pfadfinder-Adam campaign editor's report carries it)."""
+    from another."""
     import os
     import time as _time
     data = Path(mod.data)

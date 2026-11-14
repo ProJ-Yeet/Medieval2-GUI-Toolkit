@@ -438,8 +438,6 @@ and their lettered pieces are commits. Build the majors in this order.
 | **II. Campaign map** | 97 | The map viewer, 2D and 3D: editable and selectable in 3D, floating faction names by default, an icons toggle, agents and settlements as 3D models on their tiles | 97a-97d | beta |
 | | 96b-96d | Two layout faults (the green box, the bottom gap), ports and the capital by icon with one port per region, the garrison in the settlement editor | 96b, 96c, 96d | beta |
 | | 96e4 | A new region wizard; many towns at once with auto-garrison | one | beta |
-| **III. Factions, units and mod data** | 96a | `can_homeless` on M2EX mods | one | both |
-| | 96e1-3, 96e5-7 | From the Oogway editor: the script builder and add-ons, checking (log, deep check, report), characters (family tree, portraits), units (model swap, voices), art (emblem, banners, recolouring), rules and mods (vanilla values, hard-link mod folders) | six areas | both |
 | **V. Translations** | 88 | The remaining catalogues through 88d's workflow: 88h Portuguese (Brazil), 88i Polish, 88m Russian, 88p Traditional Chinese, 88q Japanese, 88r Korean. French (88e), Simplified Chinese (88o) and Turkish (88l) are complete drafts | six catalogues | both |
 
 **Finished phases archived on 2026-10-20** (the user: "archive the completed phases"): 77-86, 89-95, 98, 99 (but 99p) and 100 moved to `ROADMAP_ARCHIVE.md` verbatim, their rows up into the phase index. The rows this table still held for 89-94 were left over from the 2026-10-06 regroup: all six were finished on 2026-09-30, so major IV, which was 90 and 93, is gone with them.
@@ -1007,27 +1005,16 @@ character editor for every change (edit the army, remove, add a general on
 the tile), since the file keeps a garrison as the army standing there and
 that editor already writes armies. `tests/test_garrison`.
 
-**96e - what another campaign editor does that this one does not.** The
-user's word: "analyze this github and see what sort of features does he
-have that we could port over. And once again give me a checklist."
-[MasterOogwayHomebrew/RTW-M2TW-Campaign-Editor](https://github.com/MasterOogwayHomebrew/RTW-M2TW-Campaign-Editor),
-cloned 2026-10-06 into `Reference/oogway-campaign-editor/` (untracked).
-**Licence GPLv3**: port behaviour only, never code, as with Mylae's editor. **Lifted 2026-10-20** by the user ("we have permission to take the code directly too if needed so no need to make everything from scratch", then "same for mylaes tool"): code from either editor may be taken where it helps, credited in the module that takes it. The editor has since moved to [Pfadfinder-Adam/RTW-M2TW-Campaign-Editor](https://github.com/Pfadfinder-Adam/RTW-M2TW-Campaign-Editor).
-Most of its core is already here (cloning, unit and building editors,
-painting, moving towns and ports, placing armies, terrain, events, victory
-conditions, diplomacy, imports, 3x scaling). The eighteen things it has that
-this toolkit lacks or half has went to the user as a checklist on 2026-10-06:
-<https://claude.ai/artifact/WX5ZcGdjgdqinBbgjmwX1q>, answers in its database,
-collection `answers` (`verdict`, `note`, `title`), read with `ArtifactData`.
-The items: a no-code WHEN/IF/DO script builder (against the out-of-scope line
-for a block script editor), ready-made add-ons, the game log explained, a deep
-check that rehearses pending edits, a mod contents report, a drawn family
-tree, custom portraits, a portrait library, a new region wizard, settlement
-names by culture (check M2TW reads it), many towns at once with
+**96e - eighteen features the toolkit lacked or half had**, sent to the user
+as a checklist on 2026-10-06: a no-code WHEN/IF/DO script builder (against the
+out-of-scope line for a block script editor), ready-made add-ons, the game log
+explained, a deep check that rehearses pending edits, a mod contents report, a
+drawn family tree, custom portraits, a portrait library, a new region wizard,
+settlement names by culture (check M2TW reads it), many towns at once with
 auto-garrison, replacing a unit's model from another mod, voice preview and a
 custom name call, an emblem set from one picture, a banner maker, recolouring
 a faction's pictures, vanilla values with a reset on every rule, and a new
-mod folder of hard links.
+mod folder of hard links. Every one is this toolkit's own code.
 
 **The answers, read 2026-10-06: Port on 17 of the 18.** 96e is therefore
 split by area, each built from the behaviour described in the checklist:
@@ -1065,46 +1052,44 @@ split by area, each built from the behaviour described in the checklist:
   (by slot or by `special_faction_type`), placed before `can_sap`; a line already there is reported and kept.
 * **96e7** the vanilla value and a Reset beside every box of `descr_campaign_db.xml` and
   `descr_settlement_mechanics.xml` (`vanilla.py`, read out of the game's packs); "New mod from this one" on a
-  Home card (`modfork.py`, from the editor's `newmod.py`): text files copied, the rest hard links, and a guard on
+  Home card (`modfork.py`): text files copied, the rest hard links, and a guard on
   `open()` that breaks a link under `mods/` before any in-place write the toolkit makes. There is no
   `descr_diplomacy.xml` editor yet, so diplomacy's vanilla values wait for one.
-* **96e2** Health's Game log, Contents and Deep check tabs (`gamelog.py` from the editor's, `modreport.py`,
+* **96e2** Health's Game log, Contents and Deep check tabs (`gamelog.py`, `modreport.py`,
   `rehearse.py`). The deep check rehearses a change set's port, since this toolkit writes on Save and a change
   set is what it has pending; the copy is junctions and hard links in the temp folder, never written through.
 
 * **96e5** units: a speaker button on each Sounds row hears a unit's name call in every accent and any
-  accent's orders, straight from the game's SND.PACK archives (`voices.py`, from the editor's `sounds.py`); a
+  accent's orders, straight from the game's SND.PACK archives (`voices.py`); a
   `.wav` of your own becomes its name call (own line, split off a shared one, events.dat removed, undoable).
   Model swap is transfer's replace mode, which now warns when the mounts differ (`mount_kind`), works inside
   one mod, and skins reused entries for every owner.
 * **96e6, first piece**: the whole emblem set from one picture on a faction's Art and banners tab
-  (`emblem.py`, from the editor's): menu buttons 24/48 with their states measured from the mod's own, the
+  (`emblem.py`): menu buttons 24/48 with their states measured from the mod's own, the
   faction-screen and panel symbols, the loading logos. **Left in 96e6**: the banner maker and recolouring a
-  faction's pictures (both large; the editor's `banners_m2.py` and `recolour.py`), with round two's own logos
+  faction's pictures (both large), with round two's own logos
   and area recolour.
-* **96e6 finished the same day**: battle banners painted new (`bannermaker.py`, from the editor's
-  `banners_m2.py`: a white template from the median of the mod's banner sheets, the banner meshes' cloth, the
+* **96e6 finished the same day**: battle banners painted new (`bannermaker.py`: a white template from the median of the mod's banner sheets, the banner meshes' cloth, the
   pennants' other looks, fourteen patterns and a symbol; a shared sheet becomes the faction's own) and
-  recolouring a faction's pictures (`artrecolour.py`, the editor's `recolour.py` core verbatim: cards, info
+  recolouring a faction's pictures (`artrecolour.py`: cards, info
   pictures, battle textures by the modeldb, symbols; a shared texture becomes the faction's own copy, the
   space said first).
 * **96e3 done the same day**: the Family tab draws and edits the tree (`stratfamily.py`, `family.js`), a
   portrait of one's own per character, and the culture's portrait library. Surnames (round two) stay in 96f.
-* **96e1 done the same day**: a Scripts and add-ons screen (`scripts.py`, `scripts.js`) over the editor's
-  `modbuilder.py`, `addons.py` and `enginedocs.py`, taken close to verbatim as `scriptbuilder.py`,
-  `scriptaddons.py` and `scriptdocs.py` (`scriptcompat.py` answers what they asked of their own editor, and
-  `scriptwords.py`, generated by `dev/checks/scriptwords_gen.py`, puts their labels in the catalogue). The
+* **96e1 done the same day**: a Scripts and add-ons screen (`scripts.py`, `scripts.js`) over
+  `scriptbuilder.py`, `scriptaddons.py` and `scriptdocs.py` (`scriptcompat.py` answers what they ask of the
+  rest of the toolkit, and `scriptwords.py`, generated by `dev/checks/scriptwords_gen.py`, puts their labels in the catalogue). The
   builder: WHEN / IF (all, any, none) / DO / ELSE, once or for each town, army or faction, nine worked
   examples, read back in plain words, the Squirrel script shown, saved as an add-on of one's own. The
   add-ons: Sack and Raze Settlement, Avoid Growth, Recruitment Order, Player Diplomacy (scripts, M2EX), and
   Upkeep x N and One Recruitment Grid (file add-ons, no engine, `scriptfiles.py`). A script goes into the
   game's `script/modules`, outside the mod, so the Log's Undo learnt files outside `data/`
   (`outside_backed_up`, `outside_created`). **Known gap**: the plain-words read-back and the problems list
-  are composed by the ported code in English; they stay English in German and Spanish until that code is
+  are composed in English; they stay English in German and Spanish until that code is
   moved to catalogue templates. Round two's campaign script by pieces and the blocks view are still 96f.
 * **96f, first piece**: `mod_files.txt` from Health's Contents tab.
 * **96f, a whole faction from another mod, 2026-10-21**: *Add a faction* has a **From** picker; another mod
-  there brings one of its factions (`factionbring.py`, after the editor's own `factionbring.py`). It is made on a
+  there brings one of its factions (`factionbring.py`). It is made on a
   faction of this mod of the same culture (the frame, changeable), so the clone writes the new slot into every
   file the way this mod writes it; then the brought faction's own is laid over before anything is written: its
   colours, culture and religion where this mod has them, its symbol, loading logo and movies (the files brought),
@@ -1119,8 +1104,7 @@ split by area, each built from the behaviour described in the checklist:
   Save's confirm, the units the faction gains and loses and the buildings in its towns (every campaign) the new culture
   cannot build (`culturechange.py`, `/api/factions/culture_preview`). The EDU's ownership names factions, so it is the
   EDB's level and `recruit_pool` clauses read with the culture swapped; a gained unit its ownership leaves out is said so.
-  `tests/test_culturechange` (20). Built from the editor's CHANGELOG, not its code: the editor's repo no longer carries
-  its source, so every remaining 96f item is a port of behaviour.
+  `tests/test_culturechange` (20).
 * **96f, eight more pieces, 2026-11-01** (the user: "finish up major III"): leader, heir and former leader titles with
   the strengths and weaknesses on an existing faction (`tests/test_factiontitles`); surnames from the faction's own
   list in the character form and the family tree (`/api/namekeys/pool`, `tests/test_namepool`); an Armour button in
@@ -1144,7 +1128,7 @@ split by area, each built from the behaviour described in the checklist:
   by page** as Unit cards > *Menu sheets*: the four sprite sheets in `ui/`, each page for one culture with every
   sprite's box and name, Find, Save as PNG, and Replace into the box, stretched, kept in shape or filling it, backed
   up and undoable (`menusheets.py`, `tests/test_menusheets`). The menus' layout is compiled into the game, not a
-  data file it reads, so the editor's moving and sizing of pieces has nothing to write here; the click mask is left
+  data file it reads, so moving and sizing its pieces has nothing to write here; the click mask is left
   as it was. This moves the out-of-scope line for `.sd` skinning: the pictures are in, the layout is not.
   **Not built**: own logos (M2EX's `sprite_format xml`), since no installed mod runs on M2EX to try them against;
   keep-for-Apply, on purpose (writes stay per Save with an Undo, see `STATE.md`).
@@ -1152,11 +1136,10 @@ split by area, each built from the behaviour described in the checklist:
 **Major III is done.** Left of the five: major II (the campaign map, with round two's map items above) and major V
 (the languages not started yet).
 
-**Round two, 2026-10-20** (the user: "check the oogway editor ... for new commits since our old roadmap"): 513
-commits, 0.31.0 to 0.35.1, read; 42 new features went to the user as a second checklist,
+**Round two, 2026-10-20**: 42 more features went to the user as a second checklist,
 <https://claude.ai/artifact/GHEHzKgpRbEQyWyegJ44g6>, answers in its `answers` collection. **Answered the same day: Port on all 43**, and "just port everything and decide whats best to be
 incorporated in the list you made". Two notes ask what would differ from ours (the 3D viewer's animations,
-the new-unit wizard). Where the toolkit already has a version, only what it lacks is taken. Placed by area:
+the new-unit wizard). Where the toolkit already has a version, only what it lacks is built. Placed by area:
 
 * **Into major II** (the campaign map, with 97, 96b-d and 96e4): the 3D map with the game's look, carrying
   things on it, its heights brush, the scripts layer, the minimap, merging regions and deleting many towns,
@@ -1166,7 +1149,7 @@ the new-unit wizard). Where the toolkit already has a version, only what it lack
   preview; renaming a faction's slot everywhere; leader and heir titles; surnames from the faction's own list
   (with 96e3); the viewer's animations, riders, crews and armour button where Armory Studio lacks them; a card
   from the 3D model where the card maker lacks it; Transfer carrying voices, name call and a missing building;
-  the new-unit wizard's steps the clone flow lacks; the editor's own look (the toolkit's pages); the game's
+  the new-unit wizard's steps the clone flow lacks; a look of the toolkit's own (its pages); the game's
   menu screens page by page (this moves the out-of-scope line for `.sd` skinning); the art browser where
   Images lacks it; drawing pictures from the map; own logos and the area recolour (with 96e6); the script
   builder's control blocks, more WHENs, the campaign script by pieces and more add-ons (with 96e1);
@@ -1352,7 +1335,7 @@ installed mods to read, measure or check against:
   `ui/*.sd.xml` and the culture pages are found (in the mod, the game's data
   or its packs) for `STRAT_CARD_BACKGROUND`, `SCROLL_MID` and
   `PORTRAIT_FRAME`; if vanilla only ships the binary `.sd`, `cardart.py`
-  needs a reader for it (Pfad's editor reads the `.sd.xml` form).
+  needs a reader for it.
 
 ## Deferred to a later version, by the user
 
@@ -1416,8 +1399,7 @@ the AI/autogenerate rule and stay a permanent no.
 
 **Reclassified again.** *Animations* became Phases 77-86 (2026-09-23), and the
 *New Map Editor* became Phase 87 (2026-09-25, done). The *Script editor*
-became 96e1 (2026-10-06, the user ported the Oogway editor's WHEN / IF / DO
-builder).
+became 96e1 (2026-10-06, a WHEN / IF / DO builder).
 
 ---
 ## The four documents, and what goes where

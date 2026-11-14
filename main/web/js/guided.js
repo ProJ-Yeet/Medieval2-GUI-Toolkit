@@ -88,7 +88,7 @@ function gfVocabFor(mod){
   }).catch(()=>{});
   return GF_STATIC;
 }
-/* Unit attribute help. Written independently from a description of the behaviour (2026-11-06); the feature follows Pfadfinder-Adam's campaign editor. */
+/* Unit attribute help. */
 const GF_ATTR_TEXT = {
   'can_feign_rout': () => tt('guided.attr_can_feign_rout'),
   'sea_faring': () => tt('guided.attr_sea_faring'),
@@ -816,7 +816,7 @@ function gfWarnings(host){
 
   // A word an attribute line knows, written on stat_mental or stat_ground
   // instead: the engine takes it without a word and it does nothing there (a
-  // game test by Pfadfinder-Adam's tester: steadfast on stat_mental)
+  // game test: steadfast on stat_mental)
   ['stat_mental','stat_ground'].forEach(k=>{
     if(!has(k))return;
     const known=new Set(gfV(host,'unit_attr').concat(GF_EX_ATTRS.attributes).map(x=>String(x).toLowerCase()));

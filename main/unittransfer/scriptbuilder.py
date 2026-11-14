@@ -1,6 +1,4 @@
 """Describe, validate and compile campaign recipes into Squirrel modules.
-
-Written independently from a description of the behaviour (2026-11-06); the feature follows Pfadfinder-Adam's campaign editor.
 """
 from __future__ import annotations
 

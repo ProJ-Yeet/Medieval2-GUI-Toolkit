@@ -1,4 +1,4 @@
-/* Editable campaign family tree and portraits. Written independently from a description of the behaviour (2026-11-06); the feature follows Pfadfinder-Adam's campaign editor. */
+/* Editable campaign family tree and portraits. */
 
 function fmBody(k){ return {mod: k.mod, campaign: k.d.campaign, faction: k.faction}; }
 function fmSame(k, f){ return state.cx === k && k.fam === f; }

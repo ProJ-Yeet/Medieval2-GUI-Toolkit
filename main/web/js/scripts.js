@@ -1,6 +1,6 @@
 const SX_TAB_KEYS = {addons:'scripts.tab_addons',builder:'scripts.tab_builder',campscript:'scripts.tab_campscript'};
 const SX_VIEW_KEYS = {form:'scripts.view_form',blocks:'scripts.view_blocks'};
-/* Script add-ons, recipe builder and campaign-piece removal. Written independently from a description of the behaviour (2026-11-06); the feature follows Pfadfinder-Adam's campaign editor. */
+/* Script add-ons, recipe builder and campaign-piece removal. */
 
 function sxPart(list, key){ return (list || []).find(x => x.key === key); }
 function sxNewRecipe(){

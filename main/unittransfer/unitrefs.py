@@ -282,7 +282,7 @@ def _scan(mod, old: str, new: str, all_types, paths, rewrite: bool) -> RenameRes
 
 
 #: A line that exists only to name the unit, so deleting the unit deletes the
-#: line (Pfadfinder-Adam's editor does the same on Delete this unit): a recruit
+#: line: a recruit
 #: line in a building level, a `unit <type> ...` line of a campaign's armies
 #: and garrisons or a battle's, a mercenary pool's `unit <type>, ...`, a
 #: rebel faction's `unit <type>`. Anything else naming it (a campaign script,

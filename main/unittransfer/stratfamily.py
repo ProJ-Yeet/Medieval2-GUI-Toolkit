@@ -7,9 +7,6 @@ the complete new text of the file with nothing written, and then applied as one
 logged job that Undo can reverse. A named character can be given a portrait of
 his own (three small TGA pictures made from one), and a culture's pool of
 portraits can be grown, a number at a time, for every age at once.
-
-Written independently from a description of the behaviour (2026-11-06); the
-feature follows Pfadfinder-Adam's campaign editor.
 """
 from __future__ import annotations
 

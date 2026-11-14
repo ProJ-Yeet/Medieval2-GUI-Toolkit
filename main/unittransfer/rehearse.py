@@ -6,9 +6,6 @@ change would add, which it would clear and how many stay either way.
 The real mod is never written. The copy is almost free: folders the change does
 not touch are joined to the mod's own with junctions, and the files on the way
 to a changed file are hard links. The copy is always removed before returning.
-
-Written independently from a description of the behaviour (2026-11-06); the
-feature follows Pfadfinder-Adam's campaign editor.
 """
 from __future__ import annotations
 

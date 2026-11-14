@@ -1,6 +1,6 @@
 const HX_TAB_KEYS = {checks:'healthx.tab_checks',log:'healthx.tab_log',report:'healthx.tab_report',deep:'healthx.tab_deep'};
 const HX_REPORT_KEYS = {c_factions:'healthx.c_factions',c_cultures:'healthx.c_cultures',c_religions:'healthx.c_religions',c_units:'healthx.c_units',c_chains:'healthx.c_chains',c_regions:'healthx.c_regions',c_towns:'healthx.c_towns',c_characters:'healthx.c_characters',c_faction:'healthx.c_faction',c_culture:'healthx.c_culture',c_religion:'healthx.c_religion',c_status:'healthx.c_status',c_armies:'healthx.c_armies',by_category:'healthx.by_category',by_class:'healthx.by_class',by_owner:'healthx.by_owner'};
-/* Health game log, contents and rehearsal panels. Written independently from a description of the behaviour (2026-11-06); the feature follows Pfadfinder-Adam's campaign editor. */
+/* Health game log, contents and rehearsal panels. */
 
 function hxTabsHtml(){
   const tab = state.hl.tab || 'checks';

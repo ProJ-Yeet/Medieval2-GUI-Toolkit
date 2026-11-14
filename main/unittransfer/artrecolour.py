@@ -1,7 +1,5 @@
 """Move a faction's pictures from one pair of faction colours to another, keeping light and shade.
 
-Written independently from a description of the behaviour (2026-11-06); the feature follows Pfadfinder-Adam's campaign editor.
-
 A faction's pictures are its unit cards, its unit-info pictures, its battle
 textures (found through its records in the modeldb) and its symbols. The module
 has three steps, all on a request body naming the mod, the faction, the colours

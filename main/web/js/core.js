@@ -2157,7 +2157,6 @@ async function openCredits(){
         <div>${tt('core.twmapreader_by_withwnar')}</div>
         <div>${tt('core.armory_studio_3d_by_mreedmm')}</div>
         <div>${tt('core.ssr_unit_builder_by_lupinemaverick')}</div>
-        <div>${tt('core.rmce_by_pfadfinder_adam')}</div>
       </div>
       <div style="margin-bottom:14px">
         <div class="lbl" style="margin-bottom:4px">${tt('core.sponsored_by')}</div>
