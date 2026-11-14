@@ -2277,6 +2277,22 @@ def _dest_dictionaries(dest: Mod, dest_units: dict) -> set:
     return out
 
 
+def _dest_card_dictionaries(dest: Mod) -> set:
+    """Every dictionary with a loose unit card (``#<dict>``) or info card
+    (``<dict>_info``) in any of the destination's faction folders, whether or
+    not a unit still uses it."""
+    out = set()
+    for base, strip in ((dest.ui_units_dir, lambda s: s[1:] if s.startswith("#") else ""),
+                        (dest.ui_unit_info_dir,
+                         lambda s: s[:-5] if s.lower().endswith("_info") else "")):
+        if not base.is_dir():
+            continue
+        for fac in base.iterdir():
+            if fac.is_dir():
+                out.update(d for d in (strip(f.stem) for f in fac.iterdir()) if d)
+    return out
+
+
 def _resolve_eop_target(plan: TransferPlan, unit) -> None:
     """Decide whether the transferred unit becomes an M2TWEOP unit, and where.
 
@@ -2541,8 +2557,12 @@ def plan_transfer(source: Mod, unit_type: str, dest: Mod,
                     unit_type + " (copy)" if type_clash else unit_type)
                 want_dict = (opts.new_dictionary or "").strip() or (unit.dictionary + "_copy")
                 plan.resolved_type = _unique_label(want_type, set(dest_units), " ")
-                plan.resolved_dict = _unique_label(
-                    want_dict, _dest_dictionaries(dest, dest_units), "_")
+                taken = _dest_dictionaries(dest, dest_units)
+                if not (opts.new_dictionary or "").strip():
+                    # a name the tool picks skips one whose cards are still on
+                    # disk: kept, they would show another unit's picture
+                    taken |= _dest_card_dictionaries(dest)
+                plan.resolved_dict = _unique_label(want_dict, taken, "_")
                 for asked, got, what in ((want_type, plan.resolved_type, "type"),
                                          (want_dict, plan.resolved_dict, "dictionary")):
                     if asked != got:
