@@ -1329,13 +1329,14 @@ installed mods to read, measure or check against:
     Studio's export. Step 4 opens once the layout fits; *Show what it writes* and
     *Write into the mod* bake first when nothing is baked (`armExpEnsureBaked`).
   * **101m - tried in the app**: the faction Find box, both armour panels, Copy
-    from type, the animation rows on a model card. **101q's card art was
+    from type, the animation rows on a model card, and 101a's entry list kept
+    where it was scrolled on a tick (a DaC unit's seven entries: the dialog, the
+    list and the viewer's panes all stay put). **101q's card art was
     broken**: `cardart.py` read a made-up `.sd.xml` layout; it now reads the
     binary `ui/*.sd` through `spritesheet.py` and finds all five pieces on vanilla
     and DaC.
 * **101m, left for the user** (needs the game, or a visible window): the 3D
-  column following the tiers; the scroll kept on a tick in the battle-model
-  entry list; Armory's *Show the baked images* and *From the source models*
+  column following the tiers; Armory's *Show the baked images* and *From the source models*
   normal maps on a real bake, checked in game (if turned parts light the wrong
   way, flip the sign in `armbake.turn_normals`); the new-unit hand-off to the
   Unit Editor, which writes a unit.
