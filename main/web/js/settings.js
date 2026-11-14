@@ -452,7 +452,7 @@ function logItemHtml(e){
   const undoBtn=e.applied&&!e.undone?`<button class="danger" onclick="doUndo('${id}')">${tt('settings.undo')}</button>`:'';
   // 85: a compaction keeps the packs it replaced until it is undone; this
   // gives their space back and the Undo up
-  const forgetBtn=e.action==='pack compact'&&e.applied&&!e.undone&&!e.backup_forgotten
+  const forgetBtn=(e.action==='pack compact'||e.action==='pack duplicates')&&e.applied&&!e.undone&&!e.backup_forgotten
     ?`<button onclick="doForgetPacks('${id}')" title="${ttA('settings.delete_the_packs_this_compaction_replaced')}">${tt('settings.forget_the_old_packs')}</button>`:'';
   const revBtn=e.applied&&!e.undone&&e.newer_count
     ?`<button onclick="doRevert('${id}')" title="${ttA('settings.restore_to_its_state_at_this',{dest:esc(e.dest)})}">${tt('settings.revert_to_here',{newer_count:e.newer_count})}</button>`
@@ -478,6 +478,8 @@ function logItemHtml(e){
       // 81 and 85: a mod's animation packs appended to, or written again
       :e.action==='pack port'?tt('settings.animations_ported_into',{dest:esc(e.dest)})
       :e.action==='pack compact'?tt('settings.animation_packs_compacted_in',{dest:esc(e.dest)})
+      // 101h: duplicate animations chosen or merged, written the same way
+      :e.action==='pack duplicates'?tt('settings.animation_duplicates_in',{dest:esc(e.dest)})
       :e.mode&&e.mode!=='transfer'?tt('settings.edit_in',{mode:esc((LOG_MODES.find(m=>m.id===e.mode)||{}).label||e.mode),dest:esc(e.dest)})
       // a transfer that wrote no unit: its models only, which is what the row
       // would otherwise claim was a unit called after the source's

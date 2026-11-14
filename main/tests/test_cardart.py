@@ -5,7 +5,7 @@
 Nothing installed is needed: a mod with an interface sheet, its page picture
 and some cards is written to a temp folder.
 
-1. a sprite named in ui/*.sd.xml is cut from its page, the culture asked for
+1. a sprite named in ui/*.sd is cut from its page, the culture asked for
    first, any culture's page else; a name the card maker does not use is
    refused; a mod without the sheet gives None
 2. the size most of the mod's cards and info pictures are, from the headers
@@ -13,6 +13,7 @@ and some cards is written to a temp folder.
 """
 import json
 import shutil
+import struct
 import sys
 import threading
 import urllib.error
@@ -50,11 +51,18 @@ root = Path(_tmp.mkdtemp(prefix="ut_cardart_")) / "Card_Mod"
 data = root / "data"
 (data / "ui/southern_european/interface").mkdir(parents=True)
 (data / "ui/northern_european/interface").mkdir(parents=True)
-(data / "ui/shared.sd.xml").write_text(
-    '<sprite_sheets>\n <page file="cards_page.tga">\n'
-    '  <sprite name="STRAT_CARD_BACKGROUND" x="4" y="2" w="10" h="12"/>\n'
-    '  <sprite name="PORTRAIT_FRAME" x="20" y="0" w="16" h="16"/>\n </page>\n</sprite_sheets>\n',
-    encoding="latin-1")
+def _lp(s):
+    b = s.encode("latin-1")
+    return struct.pack("<I", len(b)) + b
+
+
+# ui/shared.sd as the game ships it: version 6, the pages first, then each
+# sprite naming its page by number and its box by left, right, top, bottom
+sd = struct.pack("<3I", 6, 1, 2) + _lp("cards_page.tga") + b"\x01" + struct.pack("<2I", 40, 20)
+sd += struct.pack("<I", 100) + b"\xff" * 100
+for name, box in (("STRAT_CARD_BACKGROUND", (4, 14, 2, 14)), ("PORTRAIT_FRAME", (20, 36, 0, 16))):
+    sd += _lp(name) + struct.pack("<5h", 0, *box) + b"\x01\x00\x00\x00\x00\x00"
+(data / "ui/shared.sd").write_bytes(sd)
 page = Image.new("RGBA", (40, 20), (0, 0, 0, 255))
 page.paste((200, 10, 10, 255), (4, 2, 14, 14))
 page.save(data / "ui/southern_european/interface/cards_page.tga")
@@ -82,7 +90,14 @@ try:
     check("a piece the sheet does not name is None", cardart.game_sprite(mod, "SCROLL_MID") is None)
     bare = FakeMod(Path(_tmp.mkdtemp(prefix="ut_cardart_bare_")))
     (bare.data).mkdir(parents=True)
-    check("a mod with no sheet (and no game found) is None", cardart.game_sprite(bare, "STRAT_CARD_BACKGROUND") is None)
+    # the game's own .sd sits in its packs, and the registry finds an install
+    # on any machine that has one, so "no game found" is made true here
+    real_root = cardart.gamepack.game_root_of
+    cardart.gamepack.game_root_of = lambda mod=None: None
+    try:
+        check("a mod with no sheet (and no game found) is None", cardart.game_sprite(bare, "STRAT_CARD_BACKGROUND") is None)
+    finally:
+        cardart.gamepack.game_root_of = real_root
 
     print("2) the mod's own sizes")
     sz = cardart.mod_sizes(mod)

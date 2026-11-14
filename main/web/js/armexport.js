@@ -104,7 +104,7 @@ function armExportPaint(){
       <button onclick="armExpScaleEnd(true);closeModal()">${tt('common.close')}</button>
       ${e.step === 'check' ? `<button class="primary" onclick="armExportStep('uv')"${errors || !e.check ? ' disabled' : ''}>${tt('armory.exp_next')}</button>` : ''}
       ${e.step === 'uv' ? `<button class="primary" onclick="armExportStep('bake')"${e.plan && e.plan.fits ? '' : ' disabled'}>${tt('armory.exp_next')}</button>` : ''}
-      ${e.step === 'bake' && e.done ? `<button class="primary" onclick="armExportStep('mod')">${tt('armory.exp_next')}</button>` : ''}
+      ${e.step === 'bake' && (e.done || (e.plan && e.plan.fits)) ? `<button class="primary" onclick="armExportStep('mod')">${tt('armory.exp_next')}</button>` : ''}
     </div></div>`;
   if(e.step === 'uv'){ armExpDrawSheets(); if(focused && focused.startsWith('armExpCv_')){ const cv=document.getElementById(focused); if(cv) cv.focus({preventScroll:true}); } }
 }
@@ -118,7 +118,9 @@ async function armExportStep(s){
   }
   if(s !== 'check' && (!e.check || e.check.issues.some(i => i.level === 'error'))){ e.step = 'check'; armExportPaint(); return; }
   if(s === 'bake' && !e.done && !(e.plan && e.plan.fits)) s = 'uv';
-  if(s === 'mod' && !e.done) s = 'bake';
+  // the mod step needs no bake of its own: Write bakes first when nothing is
+  // baked yet (armExpEnsureBaked), so only a layout that fits is asked for
+  if(s === 'mod' && !e.done && !(e.plan && e.plan.fits)) s = 'uv';
   e.step = s; e.err = '';
   armExportPaint();
   if(s === 'check') armExportCheck();
@@ -960,7 +962,8 @@ function armExpModHtml(){
   const radio = (v, label, note) => `<label class="armcheck armexpchoice"><input type="radio" name="armExpChoice"${m.choice === v ? ' checked' : ''}
       onchange="armExpModSet('choice','${v}')"> <b>${label}</b> <span class="count">${note}</span></label>`;
   const mods = (ARM.mods || []).map(x => `<option${x === m.target ? ' selected' : ''}>${esc(x)}</option>`).join('');
-  let html = `<div class="armexprow"><label>${tt('armory.exp_target_mod')}<select onchange="armExpModTarget(this.value)">${mods}</select></label></div>
+  const unbaked = armExp().done ? '' : `<div class="count armnote">${tt('armory.exp_bakes_on_write', {folder: esc(armExp().folder || '?')})}</div>`;
+  let html = `${unbaked}<div class="armexprow"><label>${tt('armory.exp_target_mod')}<select onchange="armExpModTarget(this.value)">${mods}</select></label></div>
     <div class="armexpchoices">${radio('skip', tt('armory.exp_choice_skip'), tt('armory.exp_choice_skip_note'))}
       ${radio('add', tt('armory.exp_choice_add'), tt('armory.exp_choice_add_note'))}
       ${radio('new', tt('armory.exp_choice_new'), tt('armory.exp_choice_new_note'))}</div>`;
@@ -1022,8 +1025,17 @@ function armExpModSet(k, v, live){
   if(!live) armExportPaint();
 }
 function armExpModTarget(v){ const m=armExpMod(); m.target=v; m.folders=[]; m.unitData=null; m.assign_to=''; m.characterTarget=null; m.characters=null; m.plan=null; m.written=null; armSave(); armExpModLoad(); }
+/* Nothing baked yet: bake now, into the folder and name the bake step holds,
+   so "Into a mod" works without a trip back to step 3. */
+async function armExpEnsureBaked(){
+  const e = armExp();
+  if(e.done) return true;
+  await armExpBake();
+  return !!e.done;
+}
 async function armExpModPlan(){
   const m = armExpMod(), e = armExp();
+  if(!await armExpEnsureBaked()) return;
   e.busy = true; armExportPaint();
   try{ m.plan = await api.post('/api/armory/install/plan', armExpModBody()); e.err = ''; }
   catch(err){ m.plan = null; e.err = errText(err); }

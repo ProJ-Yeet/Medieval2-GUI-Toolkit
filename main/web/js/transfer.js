@@ -1970,6 +1970,8 @@ async function doApply(){
   toast(mdl===ok
     ? tt('transfer.imported_the_battle_models_of_unit',{ok,dst:state.dst})
     : tt('transfer.unit_s_undo_in_log',{x:state.src===state.dst?tt('transfer.created'):repl===ok?tt('transfer.replaced'):tt('transfer.transferred'),ok,x2:repl&&repl!==ok?tt('transfer.replaced_2',{repl}):'',mdl:mdl?tt('transfer.models_only_2',{mdl}):'',skip:skip?tt('transfer.skipped',{skip}):'',x3:binMsg(last)}),4200);
+  // the Unit Creator's "new entry from a tier", remembered until the unit exists
+  const ugLater=types.map(t=>cfgFor(t)._ugNewFrom).filter(Boolean);
   // these ones are done - leaving them ticked invites transferring them twice
   clearSelection();
   state.cfg={};
@@ -1978,7 +1980,10 @@ async function doApply(){
     // next thing done to it does not start with finding it in the list.
     const fresh=state.mode==='edit'&&made.length===1?made[0]:'';
     try{ await loadSource(); }catch(e){}
-    if(fresh&&state.mode==='edit'&&typeof openEditor==='function')await openEditor(fresh);
+    if(fresh&&state.mode==='edit'&&typeof openEditor==='function'){
+      await openEditor(fresh);
+      if(ugLater.length&&state.ed&&state.ed.unit===fresh)edAddArmourTier(ugLater[0]);
+    }else if(ugLater.length)toast(tt('modelpicker.ug_new_not_set_up'),5200);
   }
 }
 

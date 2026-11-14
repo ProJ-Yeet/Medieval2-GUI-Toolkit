@@ -539,6 +539,9 @@
   ],
   "core.ssr_unit_builder_by_lupinemaverick": [
    "unit"
+  ],
+  "packdupes.col_copy": [
+   "copy"
   ]
  },
  "ancillaries.a_character_holds_one_ancillary_per": "Bir karakter'de tür başına bir ancillary bulunur; dolayısıyla yenisi bunun yerini alır",
@@ -11750,7 +11753,6 @@
  "app.find_a_faction": "Fraksiyon bul…",
  "modelpicker.ug_level_next": "sonraki: {n}",
  "modelpicker.ug_level_add_title": "Bir demirci seviyesi ekleyin. Boş bırakılırsa en yüksek seviyenin bir üstü kullanılır. Liste küçükten büyüğe sıralanır.",
- "modelpicker.ug_pick_entry": "Sonraki kademe olarak eklenecek savaş modeli girdisi",
  "common.name_from_type": "⇐ Türden kopyala",
  "common.name_from_type_title": "Görünen adı tür kutusundaki değerle aynı yap",
  "eng.edit.animation_record_count_changed": "{name}: girdide {have} animasyon kaydı var, ancak {got} kayıt gönderildi; burada kayıtlar değiştirilebilir, eklenemez veya kaldırılamaz",
@@ -13229,5 +13231,66 @@
  "armory.norm_source_some": "Şunların kaynak modelinde normal harita yok: {names}. Onlarınki görsellerinden Uzmanlaşmış ayarıyla üretilir.",
  "armory.exp_replace_entry": "Modda zaten varsa model girdisinin üzerine yaz",
  "armory.exp_replace_entry_title": "Yeni girdiyi, modun aynı adlı girdisinin yerine yazar. Bu adı zaten kullanan birimler yeni modeli alır. Geri al eski girdiyi geri getirir.",
- "armory.exp_entry_taken": "Modda {name} adlı bir girdi zaten var: Üzerine yaz seçeneğini işaretleyin ya da başka bir ad seçin."
+ "armory.exp_entry_taken": "Modda {name} adlı bir girdi zaten var: Üzerine yaz seçeneğini işaretleyin ya da başka bir ad seçin.",
+ "armory.exp_bakes_on_write": "Henüz pişirilmedi: Ne yazacağını göster ve Moda yaz önce pişirir, {folder} içine.",
+ "modelpicker.ug_new_after_create": "{from} tabanlı yeni bir girdi, bu birim oluşturulur oluşturulmaz Birim Düzenleyici'de hazırlanır.",
+ "modelpicker.ug_new_in_editor_after": "Yeni bir girdinin kendi mesh'i ve kendi dokusu gerekir; bunları Birim Düzenleyici'nin Savaş modelleri sekmesi belirler. Önce birim oluşturulur, sonra orada yeni kademe hazır olarak açılır.",
+ "modelpicker.ug_new_only_in_one_mod": "Yeni bir girdi yalnızca birim tek bir mod içinde oluşturulurken hazırlanabilir. Önce onu aktarın, sonra kademeyi Birim Düzenleyici'de ekleyin.",
+ "modelpicker.ug_new_not_set_up": "Yeni zırh kademesinin girdisi hazırlanmadı, çünkü birden fazla birim oluşturuldu. Birimi Birim Düzenleyici'de açın ve ＋ > 4 kullanın.",
+ "home.duplicate_animations": "Yinelenen animasyonlar…",
+ "home.duplicate_animations_note": "farklı animasyonlar tutan bir yol veya birkaç yol altında bir animasyon",
+ "settings.animation_duplicates_in": "🎞 {dest} içindeki yinelenen animasyonlar düzenlendi",
+ "packdupes.title": "{mod} içindeki yinelenen animasyonlar",
+ "packdupes.reading": "Paketler okunuyor…",
+ "packdupes.same_bytes": {
+  "one": "Bir yolun sonraki bir kopyası ilkiyle aynı baytlara sahip; Paketleri sıkıştır onu dışarıda bırakır.",
+  "other": "Yolların {count} sonraki kopyası ilkiyle aynı baytlara sahip; Paketleri sıkıştır onları dışarıda bırakır."
+ },
+ "packdupes.pending": "Yazılacak: {picks} kopya seçimi, {merges} birleştirme",
+ "packdupes.write": "Yaz",
+ "packdupes.conflicts_head": "Bir yol, farklı animasyonlar",
+ "packdupes.conflicts_note": "Paket bu yolları aynı ölçekte birden fazla kez listeliyor, her kopyanın kendi hareketi var. Oyun yalnızca ilk kopyayı oynatır. Onları karşılaştırın ve oyunun oynatması gerekeni seçin: ilk kopyanın yerini alır ve diğer kopyalar çıkarılır.",
+ "packdupes.no_conflicts": "Hiçbir yol iki farklı animasyon tutmuyor.",
+ "packdupes.scale_copies": "ölçek {scale}, {n} kopya",
+ "packdupes.compare": "Karşılaştır",
+ "packdupes.hide": "Gizle",
+ "packdupes.used_by": "Adlandıranlar: {x}",
+ "packdupes.used_by_none": "Hiçbir iskelet onu adlandırmıyor",
+ "packdupes.more": "…ve {n} tane daha. Önce bunları yazın, sonra geri kalanı için bunu yeniden açın.",
+ "packdupes.other_bones": "farklı kemikler, karşılaştırılamaz",
+ "packdupes.same_motion": "aynı hareket",
+ "packdupes.degrees": "ortalama {mean}°, en çok {max}° farklı",
+ "packdupes.col_frames": "Kareler",
+ "packdupes.col_seconds": "Saniye",
+ "packdupes.col_bones": "Kemikler",
+ "packdupes.col_size": "Boyut",
+ "packdupes.col_difference": "Şu an oynatılana göre",
+ "packdupes.play_this": "Bu kopyayı oynat",
+ "packdupes.plays_now": "şu an oynatılıyor",
+ "packdupes.the_one_played": "oyunun şu an oynattığı kopya",
+ "packdupes.pick_note": "Saniyeler saniyede 20 kareye göredir. Kemikler önce dönen kemikleri, sonra hareket edenleri sayar.",
+ "packdupes.identical_head": "Bir animasyon, birkaç yol",
+ "packdupes.no_identical": "Hiçbir animasyon iki yol altında saklanmıyor.",
+ "packdupes.merge_all": "Hepsini birleştir",
+ "packdupes.identical_total": "{groups} grup; hepsini birleştirmek {freed} boşaltır.",
+ "packdupes.merge_none": "Hiçbirini birleştirme",
+ "packdupes.group": {
+  "one": "Bir yol, {size}",
+  "other": "{count} yol, her biri {size}: bir birleştirme {freed} boşaltır"
+ },
+ "packdupes.keep_this": "Bu yolu tut",
+ "packdupes.slots_users": {
+  "one": "bir iskelet adlandırıyor",
+  "other": "{count} iskelet adlandırıyor"
+ },
+ "packdupes.kept": "tutulur",
+ "packdupes.confirm": "{mod} animasyon paketlerine {picks} kopya seçimi ve {merges} birleştirme yazılsın mı?\n\nEski paketler, siz onları Günlük'te unutana kadar saklanır ve oradaki Geri al her şeyi geri koyar. Önce oyunu kapatın.",
+ "packdupes.done_activity": "Yinelenen animasyonlar",
+ "eng.packdupes.no_packs": "Bu modun kendi animasyon paketleri yok; vanilla'nınkileri oynatıyor",
+ "eng.packdupes.no_such_path": "pack.idx içinde {scale} ölçeğinde {path} yok",
+ "eng.packdupes.nothing_chosen": "Hiçbir şey seçilmedi ya da birleştirilmedi",
+ "eng.packdupes.choice_stale": "{path} okunduğundan beri değişti; yinelenenleri yeniden okuyun",
+ "eng.packdupes.merge_stale": "{path} okunduğundan beri değişti; yinelenenleri yeniden okuyun",
+ "packdupes.col_copy": "Kopya",
+ "packdupes.identical_note": "Bu yollar her ölçekte bayt bayt aynı animasyonu tutuyor. Bir birleştirme tek bir yolu tutar, diğerlerini adlandıran her iskelet yuvasını ve descr_skeleton.txt satırını ona yönlendirir ve diğerlerini paketten çıkarır."
 }

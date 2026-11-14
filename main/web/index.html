@@ -2026,6 +2026,13 @@
   .ugadd{font-size:15px;line-height:1;padding:1px 9px 3px;font-weight:700}
   .ugadd.on{border-color:var(--accent);color:var(--accent)}
   /* the ＋ menu: four ways to add a tier, then that mode's body */
+  /* 101h: duplicate animations */
+  .pdlist{display:flex;flex-direction:column;gap:8px;margin:6px 0}
+  .pdrow{border:1px solid var(--line);border-radius:8px;padding:8px 10px;background:var(--panel2)}
+  .pdpath{display:flex;align-items:center;gap:8px;margin:3px 0 0 22px}
+  .pdpath.off{opacity:.55}
+  .pdpath code{flex:1;min-width:0;overflow-wrap:anywhere}
+  .pdcmp{margin-top:6px}
   .ugpanel{border:1px solid var(--accent);border-radius:8px;background:var(--panel2);
     padding:9px 11px 11px;margin-top:9px}
   .ugmodes{display:flex;gap:6px;flex-wrap:wrap}
@@ -3972,6 +3979,7 @@ body.look-editing :is(button,label,legend,h1,h2,h3,.trsechead,.mftab):hover{outl
 <script src="js/renameui.js"></script>
 <script src="js/undo.js"></script>
 <script src="js/home.js"></script>
+<script src="js/packdupes.js"></script>
 <script src="js/transfer.js"></script>
 <script src="js/strings.js"></script>
 <script src="js/sounds.js"></script>

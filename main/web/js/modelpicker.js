@@ -233,14 +233,12 @@ function ugLevelRemove(label,i){
 
 /* The Unit Creator's armour models, drawn the way the Unit Editor draws them:
    tier chips with the ✕ above (dropping a tier drops its level too), drag to
-   reorder, and a ＋ that repeats the last tier or names an existing entry. The
-   editor's two other modes (another unit's tiers, a new entry) need the
-   editor's own staging and stay there. */
+   reorder, and the same four-mode ＋ panel (ugPanel below). */
 function gfUgModelsWidget(host,label,cur){
   const items=csv(cur), levels=ugSortLevels(csv(host.get('armour_ug_levels')||''));
   const was=gfListWas(host,label);
-  const open=!!(state.gf&&state.gf.ugOpen);
-  const id=gfAddId(label);
+  const open=!!ugSt();
+  const later=ugCreatorLater();
   return `<div class="gfrow"><div style="flex:1;min-width:0">
     <div class="chips ug">${items.map((v,i)=>`<span class="chipd ug${was.has(v)?'':' added'}" draggable="true"
         ondragstart="gfDragStart(event,'${q1(esc(label))}',${i})"
@@ -251,37 +249,14 @@ function gfUgModelsWidget(host,label,cur){
         <button class="xup" title="${ttA('modelpicker.remove',{x:esc(v)})}" onclick="ugModelRemove('${q1(esc(label))}',${i})">✕</button></span>`).join('')
       ||`<span class="count">${tt('modelpicker.empty')}</span>`}</div>
     <div class="barrow">
-      <button class="ugadd${open?' on':''}" onclick="ugToggle()" title="${ttA('editor.add_an_armour_upgrade_tier')}">${open?'−':'＋'}</button>
+      <button class="ugadd${open?' on':''}" onclick="ugOpenPanel()" title="${ttA('editor.add_an_armour_upgrade_tier')}">${open?'−':'＋'}</button>
       <span class="count">${tt('editor.position_upgrade_level',{levels:levels.length?tt('editor.armour_ug_levels',{levels:esc(levels.join(', '))}):'',x:levels.length&&levels.length<items.length
           ? ` <span class="w-warn">${tt('editor.level_s_for_model_s',{levels_n:levels.length,models_n:items.length})}</span>`:''})}</span>
     </div>
-    ${open?`<div class="ugpanel"><div class="ugmodes">
-        <button onclick="ugRepeatLast('${q1(esc(label))}')" title="${ttA('editor.name_the_last_entry_again_as')}">${tt('editor.1_repeat_the_last_tier')}</button>
-        <input id="${id}" list="gfdl-model" placeholder="${ttA('modelpicker.ug_pick_entry')}" style="flex:1;min-width:160px;font-size:12px;padding:3px 7px"
-          onkeydown="if(event.key==='Enter'){event.preventDefault();ugModelAdd('${q1(esc(label))}');}">
-        <button onclick="ugModelAdd('${q1(esc(label))}')">${tt('common.add_2')}</button>
-      </div></div>`:''}
+    ${later?`<div class="count" style="margin-top:6px">${tt('modelpicker.ug_new_after_create',{from:esc(later)})}
+      <button class="x" title="${ttA('common.cancel')}" onclick="ugCreatorLaterClear()">✕</button></div>`:''}
+    ${ugPanel()}
   </div></div>`;
-}
-function ugToggle(){ state.gf=state.gf||{}; state.gf.ugOpen=!state.gf.ugOpen; ugRefresh(); }
-function ugModelPush(label,name){
-  const host=ugHost(), list=csv(host.get(label)||'');
-  name=(name||'').trim().toLowerCase(); if(!name)return false;
-  list.push(name);
-  host.set(label,list.join(', '));
-  ugTopUpLevels(host,list.length);
-  host.stale(); ugRefresh();
-  return true;
-}
-function ugModelAdd(label){
-  const el=document.getElementById(gfAddId(label));
-  if(ugModelPush(label,el&&el.value)){ const again=document.getElementById(gfAddId(label)); if(again)again.focus(); }
-}
-function ugRepeatLast(label){
-  const host=ugHost(), list=csv(host.get(label)||'');
-  const last=list[list.length-1]||(host.get('soldier')||'').split(',')[0];
-  if(!(last||'').trim()){ toast(tt('editor.this_unit_has_no_model_entry')); return; }
-  ugModelPush(label,last);
 }
 // a tier and its level go together, or every level above it slides down
 function ugModelRemove(label,i){
@@ -291,6 +266,281 @@ function ugModelRemove(label,i){
   if(i<levels.length&&levels.length>list.length){ levels.splice(i,1); host.set('armour_ug_levels',levels.join(', ')); }
   host.set(label,list.join(', ')); host.stale(); ugRefresh();
 }
+
+/* ---- the ＋ panel: four ways to add an armour tier, the same on both screens
+   1 repeat the last tier    - the SAME entry again, so the armour upgrade is a
+                               stat change with no model change
+   2 take a unit's upgrades  - read another unit's armour_ug_models, tick what to import
+   3 pick an existing entry  - search the whole modeldb and point a tier at one
+   4 new entry from a tier   - clone an entry and give it its own mesh/texture
+   Only mode 4 creates a modeldb entry, and that needs the Unit Editor's Battle
+   models tab: in the Unit Editor it opens there; in the Unit Creator it is
+   remembered and set up in the Unit Editor the moment the unit is created.
+   Everything goes through ugHost()'s get/set, which are the editor's own
+   edFieldVal/edSetField there and the composer's field_overrides here. */
+const ugSt=()=>state.ed?state.ed.ug:((state.gf&&state.gf.ug)||null);
+function ugSetSt(v){ if(state.ed)state.ed.ug=v; else { state.gf=state.gf||{}; state.gf.ug=v; } }
+function ugOpenPanel(){ ugSetSt(ugSt()?null:{mode:''}); ugRefresh(); }
+// after a tier lands: the panel closes, and the editor's save preview catches up
+function ugDone(){ ugSetSt(null); ugRefresh(); if(state.ed&&typeof edPreview==='function')edPreview(); }
+const ugGet=k=>ugHost().get(k)||'';
+// every entry a tier can name: the mod's, plus what this save is about to create
+function ugModelNames(){
+  const host=ugHost();
+  const base=state.ed?(state.ed.d.model_names||[]):gfV(host,'model');
+  const coming=(host.creates?host.creates():[]).map(x=>(''+x).trim().toLowerCase()).filter(Boolean);
+  return base.concat(coming.filter(n=>!base.includes(n)));
+}
+// the entries this unit draws with, which a new tier can be based on
+function ugOwnEntries(){
+  if(state.ed)return (state.ed.d.models||[]).filter(m=>!m.missing).map(m=>m.name);
+  const soldier=(ugGet('soldier').split(',')[0]||'').trim().toLowerCase();
+  // lower-case, as the Unit Editor's own entry names are, so one entry is offered once
+  return [...new Set([soldier].concat(csv(ugGet('armour_ug_models')).map(x=>x.toLowerCase())).filter(Boolean))];
+}
+function ugMode(m){
+  const u=ugSt()||{}; ugSetSt(u);
+  if(m==='clone'){ ugRepeatTier(); return; }      // nothing to configure
+  u.mode=m; u.filter='';
+  if(m==='unit'){u.unit='';u.donor=null;u.pick={};u.error='';u.loading=false;}
+  if(m==='new'){
+    const tiers=csv(ugGet('armour_ug_models')), own=ugOwnEntries();
+    u.from=own.slice().reverse().find(n=>tiers.includes(n))||own[own.length-1]||'';
+  }
+  ugRefresh();
+}
+function ugPanel(){
+  const u=ugSt(); if(!u)return '';
+  const btn=(k,label,tip)=>`<button class="${u.mode===k?'on':''}" title="${esc(tip)}"
+    onclick="ugMode('${k}')">${label}</button>`;
+  return `<div class="ugpanel">
+    <div class="ugmodes">
+      ${btn('clone',tt('editor.1_repeat_the_last_tier'),tt('editor.name_the_last_entry_again_as'))}
+      ${btn('unit',tt('editor.2_take_a_units_upgrades'),tt('editor.read_another_units_armour_ug_models'))}
+      ${btn('browse',tt('editor.3_pick_an_existing_entry'),tt('editor.search_every_entry_in_this_mods'))}
+      ${btn('new',tt('editor.4_new_entry_from_a_tier'),tt('editor.create_a_new_modeldb_entry_based'))}
+    </div>
+    ${u.mode?`<div class="ugbody">${u.mode==='unit'?ugUnitBody()
+        :u.mode==='browse'?ugBrowseBody():ugNewBody()}</div>`
+      :`<div class="count" style="margin-top:9px">${tt('editor.choose_how_the_new_tier_should')}</div>`}
+  </div>`;
+}
+
+/* -- shared: append tiers, keeping armour_ug_levels in step --
+   `opt.repeat` allows a name the list already has. Naming the same entry twice
+   is a real M2TW pattern, not a mistake - it is how a unit gets the armour
+   upgrade without a different model - so only the accidental case is guarded. */
+function ugAppend(names,donorLevels,opt){
+  const host=ugHost();
+  const models=csv(ugGet('armour_ug_models')),levels=csv(ugGet('armour_ug_levels'));
+  const added=[];
+  (names||[]).forEach((raw,i)=>{
+    const name=(raw||'').trim().toLowerCase();
+    if(!name||(models.includes(name)&&!(opt||{}).repeat))return;
+    models.push(name); added.push(name);
+    // armour_ug_levels has to stay ascending - the game reads it as "this model
+    // from this armour level up". So a donor's own level is kept only when it is
+    // still above everything here; otherwise the tier goes one past the highest.
+    const nums=levels.map(x=>parseInt(x,10)).filter(x=>!isNaN(x));
+    const max=nums.length?Math.max(...nums):0;
+    const want=parseInt(((donorLevels||[])[i]||'').trim(),10);
+    levels.push(String(!isNaN(want)&&want>max ? want : nums.length?max+1:models.length));
+  });
+  if(!added.length)return added;
+  // fewer levels than models before this add: top them up too, each one past
+  // the highest, so every tier has the level it is reached at
+  while(levels.length<models.length)levels.push(String(ugNextLevel(levels)));
+  host.set('armour_ug_models',models.join(', '));
+  host.set('armour_ug_levels',ugSortLevels(levels).join(', '));
+  host.stale();
+  return added;
+}
+
+/* -- mode 1: repeat the last tier --
+   The SAME entry name again, not a copy of it: the unit gets the armour upgrade
+   in its stats while the model on the field stays as it was (vanilla and DaC
+   both do it). With no tiers yet, the first one repeats the body model. */
+function ugRepeatTier(){
+  const models=csv(ugGet('armour_ug_models'));
+  const last=(models[models.length-1]||ugGet('soldier').split(',')[0]||'').trim().toLowerCase();
+  if(!last){toast(tt('editor.this_unit_has_no_model_entry'));return;}
+  if(!ugAppend([last],null,{repeat:true}).length)return;
+  ugDone();
+  const lv=csv(ugGet('armour_ug_levels')).slice(-1)[0];
+  toast(lv?tt('editor.repeated_next_tier_armour',{last,lv}):tt('editor.repeated_next_tier',{last}),4200);
+}
+
+/* -- mode 2: import another unit's armour upgrades --
+   The donor is picked with the same search + faction / category / class / mercs
+   filters as "＋ New unit"'s base picker, off the same state.data.units the
+   browser is showing. The filters live in `u.f`, not the DOM, because an edit
+   re-renders the whole field list. */
+const ugSelf=()=>state.ed?state.ed.d.type:state.editing;
+function ugUnitBody(){
+  const u=ugSt(),dd=state.data||{};
+  const f=u.f||(u.f={q:'',fac:'',cat:'',cls:'',merc:false});
+  // entry names are case-blind to the game, and mods write them both ways
+  const low=x=>(x||'').toLowerCase();
+  const have=new Set(csv(ugGet('armour_ug_models')).map(low)), known=new Set(ugModelNames().map(low));
+  const donor=u.loading?`<div class="count" style="margin-top:9px">${tt('editor.reading_the_unit')}</div>`
+    :u.error?`<div class="count w-bad" style="margin-top:9px">${esc(u.error)}</div>`
+    :!u.donor?''
+    :!u.donor.models.length
+      ?`<div class="count w-warn" style="margin-top:9px"><b>${esc(u.unit)}</b> ${tt('editor.has_no_armour_ug_models',{x:u.donor.soldier?tt('editor.its_body_model_is_which_mode',{soldier:esc(u.donor.soldier)}):''})}</div>`
+    :`<div class="count" style="margin-top:9px">${tt('editor.tiers_of_to_import',{unit:esc(u.unit)})}</div>
+      <div class="uglist">${u.donor.models.map((m,i)=>`<label class="ugrow">
+          <input type="checkbox" ${u.pick[i]?'checked':''} onchange="ugSt().pick[${i}]=this.checked">
+          <span class="nm">${esc(m)}</span>
+          <span class="count">${tt('editor.level',{x:esc(u.donor.levels[i]||'none'),x2:have.has(low(m))?tt('editor.already_a_tier_so_it_imports')
+              :known.has(low(m))?'':` ${tt('editor.not_in_this_mods_modeldb')}`})}</span>
+        </label>`).join('')}</div>
+      <div class="barrow">
+        <button class="primary" onclick="ugTakeUnit()">${tt('editor.add_ticked_tier_s')}</button>
+        <span class="count">${tt('editor.appended_after_the_tiers_this_unit')}</span>
+      </div>`;
+  const rows=ugUnitRows();          // sets u._n, so the count renders first time
+  return `<input id="ugSearch" style="width:100%" placeholder="${ttA('editor.filter_units')}"
+      value="${esc(f.q)}" oninput="ugFilterUnits('q',this.value)">
+    <div class="barrow" style="margin:6px 0 0">
+      <select onchange="ugFilterUnits('fac',this.value)">${
+        opts(tt('common.all_factions'),dd.factions||[],facLabel,f.fac)}</select>
+      <select onchange="ugFilterUnits('cat',this.value)">${
+        opts(tt('editor.all_categories'),dd.categories||[],null,f.cat)}</select>
+      <select onchange="ugFilterUnits('cls',this.value)">${
+        opts(tt('editor.all_classes'),dd.classes||[],null,f.cls)}</select>
+      <label class="chk"><input type="checkbox" ${f.merc?'checked':''}
+        onchange="ugFilterUnits('merc',this.checked)"> ${tt('editor.mercs_only')}</label>
+      <span class="count" id="ugCount">${u._n?`${u._n[0]}/${u._n[1]}`:''}</span>
+    </div>
+    <div class="baselist" id="ugUnitList">${rows}</div>
+    ${donor}`;
+}
+// Rows only - the filter handler rewrites just this, so typing never loses the
+// caret and the donor's tick list below is left as it is.
+function ugUnitRows(){
+  const u=ugSt(),f=u.f,all=(state.data&&state.data.units)||[],self=ugSelf();
+  const mod=ugHost().mod;
+  const qq=(f.q||'').trim().toLowerCase();
+  const units=all.filter(x=>x.type!==self
+    &&(!qq||(x.name||'').toLowerCase().includes(qq)||x.type.toLowerCase().includes(qq)
+        ||(x.dictionary||'').toLowerCase().includes(qq))
+    &&(!f.fac||(x.ownership||[]).includes(f.fac))&&(!f.cat||x.kind===f.cat)
+    &&(!f.cls||x.class===f.cls)&&(!f.merc||x.mercenary));
+  u._n=[units.length,all.length];
+  return units.slice(0,400).map(x=>`
+    <div class="baserow${u.unit===x.type?' sel':''}" onclick="ugPickUnit('${q1(esc(x.type))}')">
+      <img onerror="iconRetry(this)" src="${iconUrl(mod,x.type)}">
+      <div><div class="bn">${esc(x.name||x.type)}</div>
+        <div class="bs">${esc(x.type)} · ${esc(x.kind||'?')}${x.class?' / '+esc(x.class):''}${
+          x.mercenary?tt('editor.merc'):''}</div></div>
+    </div>`).join('')||`<div class="count" style="padding:8px">${tt('common.no_units_match')}</div>`;
+}
+function ugFilterUnits(k,v){
+  const u=ugSt(); if(!u||!u.f)return;
+  u.f[k]=v;
+  const box=document.getElementById('ugUnitList');
+  if(!box){ugRefresh();return;}
+  box.innerHTML=ugUnitRows();
+  const c=document.getElementById('ugCount');
+  if(c&&u._n)c.textContent=`${u._n[0]}/${u._n[1]}`;
+}
+async function ugPickUnit(type){
+  const u=ugSt(); if(!u)return;
+  const mod=ugHost().mod;
+  u.unit=(type||'').trim(); u.donor=null; u.pick={}; u.error='';
+  if(!u.unit){ugRefresh();return;}
+  u.loading=true; ugRefresh();
+  let r;
+  try{ r=await api.get(`/api/unit_fields?mod=${enc(mod)}&type=${enc(u.unit)}`); }
+  catch(err){ r={error:''+err}; }
+  if(ugSt()!==u||u.unit!==(type||'').trim())return;   // moved on meanwhile
+  u.loading=false;
+  if(r.error){u.error=r.error; ugRefresh(); return;}
+  const get=k=>(((r.fields||[]).find(([l])=>l===k))||['',''])[1];
+  u.donor={models:csv(get('armour_ug_models')),levels:csv(get('armour_ug_levels')),
+           soldier:(get('soldier').split(',')[0]||'').trim()};
+  // a tier this unit already has is offered but not pre-ticked - importing it
+  // would be a deliberate repeat, not something to do by default
+  const have=new Set(csv(ugGet('armour_ug_models')).map(x=>x.toLowerCase()));
+  u.donor.models.forEach((m,i)=>{u.pick[i]=!have.has(m.toLowerCase());});
+  ugRefresh();
+}
+function ugTakeUnit(){
+  const u=ugSt(); if(!u||!u.donor)return;
+  const names=[],levels=[];
+  u.donor.models.forEach((m,i)=>{ if(u.pick[i]){names.push(m); levels.push(u.donor.levels[i]||'');} });
+  if(!names.length){toast(tt('editor.nothing_ticked_to_import'));return;}
+  const added=ugAppend(names,levels,{repeat:true}),from=u.unit;
+  ugDone();
+  toast(ttN('editor.tiers_taken_from',added.length,{from}));
+}
+
+/* -- mode 3: search the whole modeldb -- */
+function ugBrowseBody(){
+  const u=ugSt();
+  return `<div class="prow" style="grid-template-columns:var(--plw) 1fr">
+      <span class="pl">${tt('editor.find_an_entry')}</span>
+      <input id="ugFind" value="${esc(u.filter||'')}" placeholder="${ttA('editor.type_part_of_an_entry_name')}"
+        oninput="ugFilter(this.value)"></div>
+    <div id="ugHits">${ugBrowseHits()}</div>`;
+}
+const UG_HITS_MAX=200;
+function ugBrowseHits(){
+  const qq=(ugSt().filter||'').trim().toLowerCase();
+  const have=new Set(csv(ugGet('armour_ug_models')).map(x=>x.toLowerCase()));
+  const all=ugModelNames();
+  const hits=all.filter(n=>!qq||n.includes(qq)),shown=hits.slice(0,UG_HITS_MAX);
+  // an entry already on the unit is still offered: naming it again is how a tier
+  // upgrades the stats without changing the model
+  return `<div class="uglist">${shown.map(n=>`<div class="ugrow" onclick="ugAddOne('${q1(esc(n))}')">
+        <span class="nm">${esc(n)}</span>
+        <span class="count">${have.has(n)?tt('editor.already_a_tier_click_to_repeat')
+                                 :tt('editor.click_to_add_as_the_next')}</span>
+      </div>`).join('')
+      ||`<div class="ugrow have"><span class="count">${tt('editor.no_entry_matches')}</span></div>`}</div>
+    <div class="count" style="margin-top:6px">${ttN('editor.hits_of_entries',all.length,{hits:hits.length,x:hits.length>shown.length
+        ? tt('editor.showing_the_first_keep_typing',{shown_n:shown.length}):''})}</div>`;
+}
+// Only the results are redrawn - a full re-render would take the focus out of
+// the box on every keystroke.
+function ugFilter(v){
+  const u=ugSt(); if(!u)return;
+  u.filter=v;
+  const box=document.getElementById('ugHits');
+  if(box)box.innerHTML=ugBrowseHits(); else ugRefresh();
+}
+function ugAddOne(name){
+  const again=csv(ugGet('armour_ug_models')).some(x=>x.toLowerCase()===name);
+  if(!ugAppend([name],null,{repeat:true}).length)return;
+  ugDone();
+  toast(tt(again?'editor.added_as_repeated_armour_tier':'editor.added_as_armour_tier',{name}));
+}
+
+/* -- mode 4: a new entry based on one of this unit's -- */
+function ugNewBody(){
+  const u=ugSt(), own=ugOwnEntries();
+  if(!own.length)return `<div class="count w-warn">${tt('editor.this_unit_has_no_readable_modeldb')}</div>`;
+  // the Creator makes the unit first; the entry is cut in the Unit Editor after
+  const creator=!state.ed, oneMod=state.src===state.dst;
+  return `<div class="prow" style="grid-template-columns:var(--plw) 1fr auto">
+      <span class="pl">${tt('editor.base_it_on')}</span>
+      <select onchange="ugSt().from=this.value">${own.map(n=>
+        `<option value="${esc(n)}" ${u.from===n?'selected':''}>${esc(n)}</option>`).join('')}</select>
+      <button class="primary" ${creator&&!oneMod?'disabled':''} onclick="ugNewFromTier()">${tt('editor.set_it_up')}</button></div>
+    <div class="count" style="margin-top:7px">${!creator?tt('editor.adds_the_tier_and_opens_the')
+      :oneMod?tt('modelpicker.ug_new_in_editor_after'):tt('modelpicker.ug_new_only_in_one_mod')}</div>`;
+}
+function ugNewFromTier(){
+  const u=ugSt(), from=u&&u.from;
+  if(state.ed){ edAddArmourTier(from); return; }
+  if(!from)return;
+  cfgFor(state.editing)._ugNewFrom=from;
+  ugDone();
+  toast(tt('modelpicker.ug_new_after_create',{from}),4200);
+}
+// the Creator's remembered mode 4, set up once the unit exists
+const ugCreatorLater=()=>(!state.ed&&state.editing&&cfgFor(state.editing)._ugNewFrom)||'';
+function ugCreatorLaterClear(){ if(state.editing)delete cfgFor(state.editing)._ugNewFrom; ugRefresh(); }
 function gfListAdd(label){
   const el=document.getElementById(gfAddId(label));
   const host=gfHost(); const v=(el&&el.value||'').trim(); if(!v)return;

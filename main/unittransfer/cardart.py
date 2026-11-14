@@ -2,57 +2,50 @@
 
 The card maker (Armory > Unit cards > Generate) lays its cards on the art the
 game itself uses: card backgrounds, the scroll, the portrait frame. This module
-finds such a piece in the interface sheets (ui/*.sd.xml), cuts it from its page
+finds such a piece in the interface sheets (ui/*.sd), cuts it from its page
 picture, and hands it out as a PNG. It also reads the picture size a mod's unit
 cards and info pictures use, from the TGA headers alone.
 """
 import io
-import re
 from collections import Counter
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
-from . import gamepack
+from . import gamepack, spritesheet
 
-SHEETS = ("shared.sd.xml", "battle.sd.xml", "strategy.sd.xml",
-          "shared2.sd.xml", "battle3.sd.xml", "strat3.sd.xml")
+#: the interface sprite sheets, read in their binary form (the game ships the
+#: .sd in every install, inside its packs; the .sd.xml is only a modder's copy)
+SHEETS = ("ui/shared.sd", "ui/strategy.sd", "ui/battle.sd")
 NAMES = ("STRAT_CARD_BACKGROUND", "BATTLE_CARD_BACKGROUND", "SCROLL_MID",
          "PORTRAIT_FRAME", "PORTRAIT_FRAME_INT")
 CULTURES = ("northern_european", "southern_european", "eastern_european",
             "middle_eastern", "greek", "mesoamerican")
 
-_PAGE_TAG = re.compile(r'<page\s+file\s*=\s*"([^"]*)"', re.I)
-_SPRITE = re.compile(
-    r'<sprite\s+name\s*=\s*"([^"]*)"\s+x\s*=\s*"(-?\d+)"\s+y\s*=\s*"(-?\d+)"'
-    r'\s+w\s*=\s*"(\d+)"\s+h\s*=\s*"(\d+)"', re.I)
 
-
-def _sheet_text(mod, sheet: str) -> str:
+def _sheet(mod, rel: str):
     try:
-        path, _where = gamepack.lookup("ui/" + sheet, mod)
+        path, _where = gamepack.lookup(rel, mod)
         if path is None:
-            return ""
-        return Path(path).read_text(encoding="latin-1")
+            return None
+        return spritesheet.parse(Path(path).read_bytes())
     except Exception:
-        return ""
+        return None
 
 
 def find_sprite(mod, name: str) -> Optional[Tuple[str, Tuple[int, int, int, int]]]:
-    """(page file, (x, y, w, h)) of a named sprite, or None."""
+    """(page file, (x, y, w, h)) of a named sprite, or None. A sprite names
+    its page by number and its box by left, right, top and bottom."""
     if not name:
         return None
     want = name.lower()
-    for sheet in SHEETS:
-        page = None
-        for line in _sheet_text(mod, sheet).splitlines():
-            m = _PAGE_TAG.search(line)
-            if m:
-                page = m.group(1)
-                continue
-            s = _SPRITE.search(line)
-            if s and page is not None and s.group(1).lower() == want:
-                x, y, w, h = (int(s.group(i)) for i in range(2, 6))
-                return page, (x, y, w, h)
+    for rel in SHEETS:
+        sheet = _sheet(mod, rel)
+        if sheet is None:
+            continue
+        for sp in sheet.sprites:
+            if sp.name.lower() == want and 0 <= sp.page < len(sheet.pages):
+                return sheet.pages[sp.page], (sp.left, sp.top, max(1, sp.right - sp.left),
+                                              max(1, sp.bottom - sp.top))
     return None
 
 

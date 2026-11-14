@@ -1463,7 +1463,8 @@ function edFactionField(label,cur){
 /* ---- armour_ug_models: reorder tiers, jump to an entry, add the next one ----
    Each tier carries a ✕ above its chip, because dropping one is not just a list
    remove: armour_ug_levels is positional too and has to lose the same slot.
-   The ＋ opens a four-mode panel - see edUgPanel. */
+   The ＋ opens the four-mode panel both screens share - see ugPanel in
+   modelpicker.js. */
 function edArmourField(label,cur){
   const models=csv(cur),levels=csv(edFieldVal('armour_ug_levels'));
   const jump=(v)=>`<button title="${ttA('editor.edit_in_the_battle_models_tab',{x:esc(v)})}"
@@ -1472,90 +1473,17 @@ function edArmourField(label,cur){
   return `<div style="flex:1;min-width:0">
     ${edChips(label,models,jump,{cls:'ug',rm:i=>`edUgRemove(${i})`})}
     <div class="barrow">
-      <button class="ugadd${open?' on':''}" onclick="edUgOpen()"
+      <button class="ugadd${open?' on':''}" onclick="ugOpenPanel()"
         title="${ttA('editor.add_an_armour_upgrade_tier')}">${open?'−':'＋'}</button>
       <span class="count">${tt('editor.position_upgrade_level',{levels:levels.length?tt('editor.armour_ug_levels',{levels:esc(levels.join(', '))}):'',x:levels.length&&levels.length!==models.length
           ? ` <span class="w-warn">${tt('editor.level_s_for_model_s',{levels_n:levels.length,models_n:models.length})}</span>`:''})}</span>
     </div>
-    ${edUgPanel()}</div>`;
+    ${ugPanel()}</div>`;
 }
 
-/* ---- the ＋ menu: four ways to add an armour tier -------------------------
-   1 repeat the last tier - the SAME entry again, so the armour upgrade is a
-                            stat change with no model change
-   2 take a unit's ugs    - read another unit's armour_ug_models, tick what to import
-   3 pick an existing entry - search the whole modeldb and point a tier at one
-   4 new entry from a tier - clone a chosen entry and give it its own mesh/texture
-   Only mode 4 creates a modeldb entry. 1-3 just name entries that already exist:
-   armour_ug_models is a list of bmdb entry names, and a new entry is only worth
-   making when the tier is actually going to look different. */
-function edUgOpen(){const e=state.ed; e.ug=e.ug?null:{mode:''}; edRenderTab();}
-function edUgMode(m){
-  const e=state.ed,u=e.ug||(e.ug={});
-  if(m==='clone'){edUgCloneLast(); return;}          // nothing to configure
-  u.mode=m; u.filter='';
-  if(m==='unit'){u.unit='';u.donor=null;u.pick={};u.error='';u.loading=false;}
-  if(m==='new'){
-    const tiers=csv(edFieldVal('armour_ug_models'));
-    const own=(e.d.models||[]).filter(x=>!x.missing).map(x=>x.name);
-    u.from=own.slice().reverse().find(n=>tiers.includes(n))||own[own.length-1]||'';
-  }
-  edRenderTab();
-}
-function edUgPanel(){
-  const u=state.ed.ug; if(!u)return '';
-  const btn=(k,label,tip)=>`<button class="${u.mode===k?'on':''}" title="${esc(tip)}"
-    onclick="edUgMode('${k}')">${label}</button>`;
-  return `<div class="ugpanel">
-    <div class="ugmodes">
-      ${btn('clone',tt('editor.1_repeat_the_last_tier'),
-        tt('editor.name_the_last_entry_again_as'))}
-      ${btn('unit',tt('editor.2_take_a_units_upgrades'),
-        tt('editor.read_another_units_armour_ug_models'))}
-      ${btn('browse',tt('editor.3_pick_an_existing_entry'),
-        tt('editor.search_every_entry_in_this_mods'))}
-      ${btn('new',tt('editor.4_new_entry_from_a_tier'),
-        tt('editor.create_a_new_modeldb_entry_based'))}
-    </div>
-    ${u.mode?`<div class="ugbody">${u.mode==='unit'?edUgUnitBody()
-        :u.mode==='browse'?edUgBrowseBody():edUgNewBody()}</div>`
-      :`<div class="count" style="margin-top:9px">${tt('editor.choose_how_the_new_tier_should')}</div>`}
-  </div>`;
-}
-
-/* -- shared: append tiers, keeping armour_ug_levels in step -- */
+/* -- the tier list as it was, put back when mode 4's pending entry is dropped -- */
 const edUgSnapshot=()=>({models:edFieldVal('armour_ug_models'),
                          levels:edFieldVal('armour_ug_levels')});
-// `opt.repeat` allows a name the list already has. Naming the same entry twice is
-// a real M2TW pattern, not a mistake - it is how a unit gets the armour upgrade
-// without a different model - so only the accidental case is guarded against.
-function edUgAppend(names,donorLevels,opt){
-  const models=csv(edFieldVal('armour_ug_models')),levels=csv(edFieldVal('armour_ug_levels'));
-  const added=[];
-  (names||[]).forEach((raw,i)=>{
-    const name=(raw||'').trim().toLowerCase();
-    if(!name||(models.includes(name)&&!(opt||{}).repeat))return;
-    models.push(name); added.push(name);
-    // armour_ug_levels has to stay ascending - the game reads it as "this model
-    // from this armour level up". So a donor's own level is kept only when it is
-    // still above everything here; otherwise the tier goes one past the highest.
-    const nums=levels.map(x=>parseInt(x,10)).filter(x=>!isNaN(x));
-    const max=nums.length?Math.max(...nums):0;
-    const want=parseInt(((donorLevels||[])[i]||'').trim(),10);
-    levels.push(String(!isNaN(want)&&want>max ? want
-                       : nums.length?max+1:models.length));
-  });
-  if(!added.length)return added;
-  // fewer levels than models before this add: top them up too, each one past
-  // the highest, so every tier has the level it is reached at
-  while(levels.length<models.length){
-    const nums=levels.map(x=>parseInt(x,10)).filter(x=>!isNaN(x));
-    levels.push(String(nums.length?Math.max(...nums)+1:1));
-  }
-  edSetField('armour_ug_models',models.join(', '));
-  edSetField('armour_ug_levels',ugSortLevels(levels).join(', '));
-  return added;
-}
 // ✕ above a tier: drop the model AND its level, or every level above it slides
 // down onto the wrong model.
 function edUgRemove(i){
@@ -1574,23 +1502,6 @@ function edUgRemove(i){
   edRenderTab(); edPreview();
 }
 
-/* -- mode 1: repeat the last tier -- */
-// The SAME entry name again, not a copy of it. armour_ug_models is a list of
-// bmdb entry names, so repeating one gives the unit the armour upgrade in its
-// stats while the model on the field stays exactly as it was - vanilla and DaC
-// both do it (isengard_bodyguard twice, at levels 3 and 6). Cloning the entry
-// instead would put a second copy of the same meshes and textures in the modeldb
-// for no visible difference.
-function edUgCloneLast(){
-  const e=state.ed,models=csv(edFieldVal('armour_ug_models'));
-  // with no tiers yet, the first one repeats the body model
-  const last=(models[models.length-1]||edFieldVal('soldier').split(',')[0]||'').trim().toLowerCase();
-  if(!last){toast(tt('editor.this_unit_has_no_model_entry'));return;}
-  if(!edUgAppend([last],null,{repeat:true}).length)return;
-  e.ug=null; edRenderTab(); edPreview();
-  const lv=csv(edFieldVal('armour_ug_levels')).slice(-1)[0];
-  toast(lv?tt('editor.repeated_next_tier_armour',{last,lv}):tt('editor.repeated_next_tier',{last}),4200);
-}
 // Where a cloned tier comes from and what it gets called: `<stem>_ug<n>`, with n
 // walked up until nothing in the mod (or pending) has that name.
 function edUgNewSpec(srcName){
@@ -1610,170 +1521,6 @@ function edUgNewSpec(srcName){
           dest_dir:(from.folder&&(from.folder.base||from.folder.suggestion))||'unit_models'};
 }
 
-/* -- mode 2: import another unit's armour upgrades --
-   The donor is picked with the same search + faction / category / class / mercs
-   filters as "＋ New unit"'s base picker, off the same state.data.units the
-   browser is showing, so finding a unit works the way it does everywhere else.
-   The filters live in `u.f` rather than in the DOM, because every edit
-   re-renders the whole tab and would otherwise reset them. */
-function edUgUnitBody(){
-  const e=state.ed,u=e.ug,d=e.d,dd=state.data||{};
-  const f=u.f||(u.f={q:'',fac:'',cat:'',cls:'',merc:false});
-  const have=new Set(csv(edFieldVal('armour_ug_models')));
-  const donor=u.loading?`<div class="count" style="margin-top:9px">${tt('editor.reading_the_unit')}</div>`
-    :u.error?`<div class="count w-bad" style="margin-top:9px">${esc(u.error)}</div>`
-    :!u.donor?''
-    :!u.donor.models.length
-      ?`<div class="count w-warn" style="margin-top:9px"><b>${esc(u.unit)}</b> ${tt('editor.has_no_armour_ug_models',{x:u.donor.soldier?tt('editor.its_body_model_is_which_mode',{soldier:esc(u.donor.soldier)}):''})}</div>`
-    :`<div class="count" style="margin-top:9px">${tt('editor.tiers_of_to_import',{unit:esc(u.unit)})}</div>
-      <div class="uglist">${u.donor.models.map((m,i)=>{
-        // an entry staged on the Battle models tab counts as known: it is not in
-        // the modeldb yet, but the save that imports this tier writes it too
-        const dup=have.has(m),
-              known=(d.model_names||[]).includes(m)||e.newModels.some(n=>n.name===m);
-        return `<label class="ugrow">
-          <input type="checkbox" ${u.pick[i]?'checked':''}
-            onchange="state.ed.ug.pick[${i}]=this.checked">
-          <span class="nm">${esc(m)}</span>
-          <span class="count">${tt('editor.level',{x:esc(u.donor.levels[i]||'none'),x2:dup?tt('editor.already_a_tier_so_it_imports')
-              :known?'':` ${tt('editor.not_in_this_mods_modeldb')}`})}</span>
-        </label>`;}).join('')}</div>
-      <div class="barrow">
-        <button class="primary" onclick="edUgTakeUnit()">${tt('editor.add_ticked_tier_s')}</button>
-        <span class="count">${tt('editor.appended_after_the_tiers_this_unit')}</span>
-      </div>`;
-  const rows=edUgUnitRows();          // sets u._n, so the count renders first time
-  return `<input id="ugSearch" style="width:100%" placeholder="${ttA('editor.filter_units')}"
-      value="${esc(f.q)}" oninput="edUgFilterUnits('q',this.value)">
-    <div class="barrow" style="margin:6px 0 0">
-      <select onchange="edUgFilterUnits('fac',this.value)">${
-        opts(tt('common.all_factions'),dd.factions||[],facLabel,f.fac)}</select>
-      <select onchange="edUgFilterUnits('cat',this.value)">${
-        opts(tt('editor.all_categories'),dd.categories||[],null,f.cat)}</select>
-      <select onchange="edUgFilterUnits('cls',this.value)">${
-        opts(tt('editor.all_classes'),dd.classes||[],null,f.cls)}</select>
-      <label class="chk"><input type="checkbox" ${f.merc?'checked':''}
-        onchange="edUgFilterUnits('merc',this.checked)"> ${tt('editor.mercs_only')}</label>
-      <span class="count" id="ugCount">${u._n?`${u._n[0]}/${u._n[1]}`:''}</span>
-    </div>
-    <div class="baselist" id="ugUnitList">${rows}</div>
-    ${donor}`;
-}
-// Rows only - the filter handler rewrites just this, so typing never loses the
-// caret and the donor's tick list below is left as it is.
-function edUgUnitRows(){
-  const e=state.ed,u=e.ug,f=u.f,all=(state.data&&state.data.units)||[];
-  const qq=(f.q||'').trim().toLowerCase();
-  const units=all.filter(x=>x.type!==e.d.type
-    &&(!qq||(x.name||'').toLowerCase().includes(qq)||x.type.toLowerCase().includes(qq)
-        ||(x.dictionary||'').toLowerCase().includes(qq))
-    &&(!f.fac||(x.ownership||[]).includes(f.fac))&&(!f.cat||x.kind===f.cat)
-    &&(!f.cls||x.class===f.cls)&&(!f.merc||x.mercenary));
-  u._n=[units.length,all.length];
-  return units.slice(0,400).map(x=>`
-    <div class="baserow${u.unit===x.type?' sel':''}" onclick="edUgPickUnit('${q1(esc(x.type))}')">
-      <img onerror="iconRetry(this)" src="${iconUrl(e.mod,x.type)}">
-      <div><div class="bn">${esc(x.name||x.type)}</div>
-        <div class="bs">${esc(x.type)} · ${esc(x.kind||'?')}${x.class?' / '+esc(x.class):''}${
-          x.mercenary?tt('editor.merc'):''}</div></div>
-    </div>`).join('')||`<div class="count" style="padding:8px">${tt('common.no_units_match')}</div>`;
-}
-function edUgFilterUnits(k,v){
-  const u=state.ed.ug; if(!u||!u.f)return;
-  u.f[k]=v;
-  const box=document.getElementById('ugUnitList');
-  if(!box){edRenderTab();return;}
-  box.innerHTML=edUgUnitRows();
-  const c=document.getElementById('ugCount');
-  if(c&&u._n)c.textContent=`${u._n[0]}/${u._n[1]}`;
-}
-async function edUgPickUnit(type){
-  const e=state.ed,u=e.ug; if(!u)return;
-  u.unit=(type||'').trim(); u.donor=null; u.pick={}; u.error='';
-  if(!u.unit){edRenderTab();return;}
-  u.loading=true; edRenderTab();
-  let r;
-  try{ r=await api.get(`/api/unit_fields?mod=${enc(e.mod)}&type=${enc(u.unit)}`); }
-  catch(err){ r={error:''+err}; }
-  if(state.ed!==e||e.ug!==u||u.unit!==(type||'').trim())return;   // moved on meanwhile
-  u.loading=false;
-  if(r.error){u.error=r.error; edRenderTab(); return;}
-  const get=k=>(((r.fields||[]).find(([l])=>l===k))||['',''])[1];
-  u.donor={models:csv(get('armour_ug_models')),levels:csv(get('armour_ug_levels')),
-           soldier:(get('soldier').split(',')[0]||'').trim()};
-  // a tier this unit already has is offered but not pre-ticked - importing it
-  // would be a deliberate repeat, not something to do by default
-  const have=new Set(csv(edFieldVal('armour_ug_models')));
-  u.donor.models.forEach((m,i)=>{u.pick[i]=!have.has(m);});
-  edRenderTab();
-}
-function edUgTakeUnit(){
-  const e=state.ed,u=e.ug; if(!u||!u.donor)return;
-  const names=[],levels=[];
-  u.donor.models.forEach((m,i)=>{
-    if(u.pick[i]){names.push(m); levels.push(u.donor.levels[i]||'');}});
-  if(!names.length){toast(tt('editor.nothing_ticked_to_import'));return;}
-  const added=edUgAppend(names,levels,{repeat:true}),from=u.unit;
-  e.ug=null; edRenderTab(); edPreview();
-  toast(ttN('editor.tiers_taken_from',added.length,{from}));
-}
-
-/* -- mode 3: search the whole modeldb -- */
-function edUgBrowseBody(){
-  const u=state.ed.ug;
-  return `<div class="prow" style="grid-template-columns:var(--plw) 1fr">
-      <span class="pl">${tt('editor.find_an_entry')}</span>
-      <input id="ugFind" value="${esc(u.filter||'')}" placeholder="${ttA('editor.type_part_of_an_entry_name')}"
-        oninput="edUgFilter(this.value)"></div>
-    <div id="ugHits">${edUgBrowseHits()}</div>`;
-}
-const UG_HITS_MAX=200;
-function edUgBrowseHits(){
-  const e=state.ed,qq=(e.ug.filter||'').trim().toLowerCase();
-  const have=new Set(csv(edFieldVal('armour_ug_models')));
-  const all=(e.d.model_names||[]).concat(e.newModels.map(n=>n.name));
-  const hits=all.filter(n=>!qq||n.includes(qq)),shown=hits.slice(0,UG_HITS_MAX);
-  // an entry already on the unit is still offered: naming it again is how a tier
-  // upgrades the stats without changing the model
-  return `<div class="uglist">${shown.map(n=>{
-      const dup=have.has(n);
-      return `<div class="ugrow" onclick="edUgAddOne('${q1(esc(n))}')">
-        <span class="nm">${esc(n)}</span>
-        <span class="count">${dup?tt('editor.already_a_tier_click_to_repeat')
-                                 :tt('editor.click_to_add_as_the_next')}</span>
-      </div>`;}).join('')
-      ||`<div class="ugrow have"><span class="count">${tt('editor.no_entry_matches')}</span></div>`}</div>
-    <div class="count" style="margin-top:6px">${ttN('editor.hits_of_entries',all.length,{hits:hits.length,x:hits.length>shown.length
-        ? tt('editor.showing_the_first_keep_typing',{shown_n:shown.length}):''})}</div>`;
-}
-// Only the results are redrawn - re-rendering the tab would take the focus out
-// of the box on every keystroke.
-function edUgFilter(v){
-  const e=state.ed; if(!e.ug)return;
-  e.ug.filter=v;
-  const box=document.getElementById('ugHits');
-  if(box)box.innerHTML=edUgBrowseHits(); else edRenderTab();
-}
-function edUgAddOne(name){
-  const e=state.ed,again=csv(edFieldVal('armour_ug_models')).includes(name);
-  if(!edUgAppend([name],null,{repeat:true}).length)return;
-  e.ug=null; edRenderTab(); edPreview();
-  toast(tt(again?'editor.added_as_repeated_armour_tier':'editor.added_as_armour_tier',{name}));
-}
-
-/* -- mode 4: a new entry based on one of this unit's -- */
-function edUgNewBody(){
-  const e=state.ed,u=e.ug;
-  const own=(e.d.models||[]).filter(m=>!m.missing).map(m=>m.name);
-  if(!own.length)return `<div class="count w-warn">${tt('editor.this_unit_has_no_readable_modeldb')}</div>`;
-  return `<div class="prow" style="grid-template-columns:var(--plw) 1fr auto">
-      <span class="pl">${tt('editor.base_it_on')}</span>
-      <select onchange="state.ed.ug.from=this.value">${own.map(n=>
-        `<option value="${esc(n)}" ${u.from===n?'selected':''}>${esc(n)}</option>`).join('')}</select>
-      <button class="primary" onclick="edUgNewFromTier()">${tt('editor.set_it_up')}</button></div>
-    <div class="count" style="margin-top:7px">${tt('editor.adds_the_tier_and_opens_the')}</div>`;
-}
-function edUgNewFromTier(){const u=state.ed.ug; edAddArmourTier(u&&u.from);}
 // Jump straight to a model's entry in the bmdb tab (the ✎ beside an armour tier
 // and the model links elsewhere both land here).
 function edJumpModel(name){
@@ -1796,7 +1543,7 @@ function edAddArmourTier(src){
   // the tier list and levels are set now so the chips show it straight away;
   // dropping the pending entry puts both back
   const tier=edUgSnapshot();
-  if(!edUgAppend([spec.name]).length)return;
+  if(!ugAppend([spec.name]).length)return;
   e.form={clone_from:spec.src,name:spec.name,dest_dir:spec.dest_dir,
           mesh_src:'',texture_src:'',normal_src:'',sprite_src:'',
           attach_texture_src:'',attach_normal_src:'',

@@ -1089,6 +1089,9 @@
   ],
   "core.ssr_unit_builder_by_lupinemaverick": [
    "unit"
+  ],
+  "packdupes.col_copy": [
+   "copy"
   ]
  },
  "ancillaries.a_character_holds_one_ancillary_per": "Ein Charakter hat pro Typ ein Gefolgsmitglied; das ist also das, was ein neues ersetzt",
@@ -12306,7 +12309,6 @@
  "app.find_a_faction": "Fraktion suchen…",
  "modelpicker.ug_level_next": "nächste: {n}",
  "modelpicker.ug_level_add_title": "Eine Schmiedestufe hinzufügen. Bleibt das Feld leer, wird die höchste Stufe um eins erhöht. Die Liste bleibt aufsteigend sortiert.",
- "modelpicker.ug_pick_entry": "Schlachtmodell-Eintrag für die nächste Ausbaustufe",
  "common.name_from_type": "⇐ Vom Typ übernehmen",
  "common.name_from_type_title": "Den angezeigten Namen auf den Inhalt des Typfelds setzen",
  "eng.edit.animation_record_count_changed": "{name}: Der Eintrag hat {have} Animationsdatensätze, übermittelt wurden {got}. Datensätze können hier geändert, aber weder hinzugefügt noch entfernt werden",
@@ -13779,5 +13781,66 @@
  "armory.norm_source_some": "Keine Normalmap im Quellmodell von: {names}. Deren Maps werden mit der Einstellung „Spezialisiert“ aus ihrer Textur erzeugt.",
  "armory.exp_replace_entry": "Modelleintrag überschreiben, wenn die Mod schon einen hat",
  "armory.exp_replace_entry_title": "Schreibt den neuen Eintrag an die Stelle des gleichnamigen Eintrags der Mod. Einheiten, die diesen Namen schon nutzen, bekommen das neue Modell. Rückgängig stellt den alten Eintrag wieder her.",
- "armory.exp_entry_taken": "Die Mod hat schon einen Eintrag namens {name}: Haken Sie „Überschreiben“ an oder wählen Sie einen anderen Namen."
+ "armory.exp_entry_taken": "Die Mod hat schon einen Eintrag namens {name}: Haken Sie „Überschreiben“ an oder wählen Sie einen anderen Namen.",
+ "armory.exp_bakes_on_write": "Noch nicht gebacken: Zeigen, was geschrieben wird und In die Mod schreiben backen zuerst, nach {folder}.",
+ "modelpicker.ug_new_after_create": "Ein neuer Eintrag auf Basis von {from} wird im Einheiten-Editor eingerichtet, sobald diese Einheit erstellt ist.",
+ "modelpicker.ug_new_in_editor_after": "Ein neuer Eintrag braucht ein eigenes Mesh und eine eigene Textur, die der Reiter Schlachtmodelle im Einheiten-Editor festlegt. Die Einheit wird zuerst erstellt, dann öffnet sie sich dort mit der neuen Ausbaustufe.",
+ "modelpicker.ug_new_only_in_one_mod": "Ein neuer Eintrag lässt sich nur einrichten, wenn die Einheit innerhalb einer Mod erstellt wird. Übertragen Sie sie zuerst und fügen Sie die Ausbaustufe dann im Einheiten-Editor hinzu.",
+ "modelpicker.ug_new_not_set_up": "Der neue Eintrag für die Rüstungs-Ausbaustufe wurde nicht eingerichtet, weil mehr als eine Einheit erstellt wurde. Öffnen Sie die Einheit im Einheiten-Editor und nutzen Sie ＋ > 4.",
+ "home.duplicate_animations": "Doppelte Animationen…",
+ "home.duplicate_animations_note": "ein Pfad mit verschiedenen Animationen, oder eine Animation unter mehreren Pfaden",
+ "settings.animation_duplicates_in": "🎞 doppelte Animationen bereinigt in {dest}",
+ "packdupes.title": "Doppelte Animationen in {mod}",
+ "packdupes.reading": "Die Pakete werden gelesen…",
+ "packdupes.same_bytes": {
+  "one": "Eine spätere Kopie eines Pfads ist Byte für Byte die erste; Pakete verdichten lässt sie weg.",
+  "other": "{count} spätere Kopien von Pfaden sind Byte für Byte die erste; Pakete verdichten lässt sie weg."
+ },
+ "packdupes.pending": "Zu schreiben: {picks} Kopie-Wahl(en), {merges} Zusammenführung(en)",
+ "packdupes.write": "Schreiben",
+ "packdupes.conflicts_head": "Ein Pfad, verschiedene Animationen",
+ "packdupes.conflicts_note": "Das Paket führt diese Pfade mehr als einmal im selben Maßstab, jede Kopie mit eigener Bewegung. Das Spiel spielt nur die erste Kopie. Vergleichen Sie sie und wählen Sie, welche das Spiel spielen soll: Sie nimmt den Platz der ersten Kopie ein, und die anderen Kopien werden entfernt.",
+ "packdupes.no_conflicts": "Kein Pfad enthält zwei verschiedene Animationen.",
+ "packdupes.scale_copies": "Maßstab {scale}, {n} Kopien",
+ "packdupes.compare": "Vergleichen",
+ "packdupes.hide": "Ausblenden",
+ "packdupes.used_by": "Genannt von: {x}",
+ "packdupes.used_by_none": "Kein Skelett nennt ihn",
+ "packdupes.more": "…und {n} weitere. Schreiben Sie diese zuerst und öffnen Sie dies dann erneut für den Rest.",
+ "packdupes.other_bones": "andere Knochen, nicht vergleichbar",
+ "packdupes.same_motion": "dieselbe Bewegung",
+ "packdupes.degrees": "weicht im Schnitt um {mean}° ab, höchstens um {max}°",
+ "packdupes.col_frames": "Frames",
+ "packdupes.col_seconds": "Sekunden",
+ "packdupes.col_bones": "Knochen",
+ "packdupes.col_size": "Größe",
+ "packdupes.col_difference": "Gegenüber der jetzt gespielten",
+ "packdupes.play_this": "Diese Kopie spielen",
+ "packdupes.plays_now": "spielt jetzt",
+ "packdupes.the_one_played": "die Kopie, die das Spiel jetzt spielt",
+ "packdupes.pick_note": "Sekunden bei 20 Frames pro Sekunde. Knochen zählt die sich drehenden Knochen, dann die sich bewegenden.",
+ "packdupes.identical_head": "Eine Animation, mehrere Pfade",
+ "packdupes.identical_note": "Diese Pfade enthalten dieselbe Animation, Byte für Byte in jedem Maßstab. Eine Zusammenführung behält einen Pfad, richtet jeden Skelett-Slot und jede Zeile in descr_skeleton.txt, die die anderen nennt, auf ihn aus und nimmt die anderen aus dem Paket.",
+ "packdupes.no_identical": "Keine Animation ist unter zwei Pfaden gespeichert.",
+ "packdupes.merge_all": "Alle zusammenführen",
+ "packdupes.identical_total": "{groups} Gruppe(n); alle zusammenzuführen gibt {freed} frei.",
+ "packdupes.merge_none": "Keine zusammenführen",
+ "packdupes.group": {
+  "one": "Ein Pfad, {size}",
+  "other": "{count} Pfade, je {size}: eine Zusammenführung gibt {freed} frei"
+ },
+ "packdupes.keep_this": "Diesen Pfad behalten",
+ "packdupes.slots_users": {
+  "one": "von einem Skelett genannt",
+  "other": "von {count} Skeletten genannt"
+ },
+ "packdupes.kept": "behalten",
+ "packdupes.confirm": "{picks} Kopie-Wahl(en) und {merges} Zusammenführung(en) in die Animationspakete von {mod} schreiben?\n\nDie alten Pakete bleiben erhalten, bis Sie sie im Protokoll verwerfen, und Rückgängig dort stellt alles wieder her. Schließen Sie zuerst das Spiel.",
+ "packdupes.done_activity": "Doppelte Animationen",
+ "eng.packdupes.no_packs": "Diese Mod hat keine eigenen Animationspakete; sie spielt die von Vanilla",
+ "eng.packdupes.no_such_path": "pack.idx hat kein {path} im Maßstab {scale}",
+ "eng.packdupes.nothing_chosen": "Nichts ist gewählt oder zusammengeführt",
+ "eng.packdupes.choice_stale": "{path} hat sich seit dem Lesen geändert; lesen Sie die Duplikate erneut",
+ "eng.packdupes.merge_stale": "{path} hat sich seit dem Lesen geändert; lesen Sie die Duplikate erneut",
+ "packdupes.col_copy": "Kopie"
 }

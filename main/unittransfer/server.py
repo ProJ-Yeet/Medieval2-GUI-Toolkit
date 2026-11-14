@@ -776,6 +776,7 @@ from . import engines as engines_mod
 from . import menusheets
 from . import stratscene
 from . import manytowns
+from . import packdupes
 from . import ancillaries, areaeffects, campimport, edbimport, mapbundle, osmmap, osmsites, settlemodel, heroabilities, hordestart, walls, characters, charmodels, projectzip, campaint, campdb, campevents, campfiles, campmap, campnew, campstrat, cas, casanim, animedit, animpack, animslot, animview, modelexport, launchcheck, packhouse, settlemech, fileswap, factionsites, sidefiles, banners, changesets, health, climatenew, guilds, mapcheck, mapfe, mapquery, mapterrain, mercpools, regiondel, edusort, factionaudit, factionbring, factionclone, factions, images, mesh, minorfiles, namekeys, portrecords, rawtext, rebelpools, renames, soundbanks, soundscripts, spawns, sprites, stratcamp, stratchar, stratedit, stratobj, strings, traits, triggers, winconds
 from . import unrecruitable, unusedunits
 from . import eop as _eop
@@ -2791,6 +2792,20 @@ class Handler(BaseHTTPRequestHandler):
                     return self._err(404, "unknown mod")
                 mod = self.registry.get(name)
                 return self._json(packhouse.report(mod.data, mod).payload())
+            if u.path in ("/api/packs/duplicates", "/api/packs/duplicates/compare"):
+                # 101h: one path holding different animations, one animation
+                # under several paths; and a path's copies side by side
+                name = (q.get("mod") or [None])[0]
+                if not name or name not in self.registry.names():
+                    return self._err(404, "unknown mod")
+                mod = self.registry.get(name)
+                if u.path.endswith("/compare"):
+                    try:
+                        scale = float((q.get("scale") or ["1"])[0])
+                    except ValueError:
+                        return self._err(400, "scale is not a number")
+                    return self._json(packdupes.compare(mod.data, (q.get("path") or [""])[0], scale))
+                return self._json(packdupes.find(mod.data))
             if u.path == "/api/mod_files":
                 name = (q.get("mod") or [None])[0]
                 if not name or name not in self.registry.names():
@@ -3664,6 +3679,14 @@ class Handler(BaseHTTPRequestHandler):
                 # 86: an edit saved into the pack, another mod's animation put
                 # in a slot, and a skeleton ported on its own
                 return self._json(self._anim_pack(u.path.rsplit("/", 1)[-1], body))
+            if u.path == "/api/packs/duplicates/apply":
+                # 101h: the chosen copies and merged paths, one logged job
+                try:
+                    mod = self.registry.get(body["mod"])
+                    rec = packdupes.apply(mod, body.get("choices") or [], body.get("merges") or [])
+                except (KeyError, animpack.PackError, OSError) as e:
+                    return self._json({"error": str(e)})
+                return self._json({"ok": True, "id": rec["id"], "summary": rec["summary"]})
             if u.path in ("/api/packs/compact", "/api/packs/forget"):
                 # 85: the animation packs written again holding only what is
                 # played, as a logged job; or that job's kept packs deleted

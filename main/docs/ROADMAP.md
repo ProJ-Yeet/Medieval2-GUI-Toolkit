@@ -1303,39 +1303,44 @@ between mods (Buildings > *From another mod*, `bimOpen`) and a whole faction
 from another mod (96f, `factionbring.py`) were already there. What is left needs
 installed mods to read, measure or check against:
 
-* **101h - Animation cleaner and consolidation.** Phase 85 (`packhouse.py`)
-  already reports what a mod's packs hold that nothing plays and writes a
-  compacted pack with Undo. Find out from the user what "cleaner and
-  consolidation" adds to that before building: candidates are skeletons no
-  model names (85 reports them and never removes them), duplicate animations
-  under different paths, and folding loose `.cas` files back into the pack.
-  Measure each on Reforged and DaC first.
-* **101k - The Unit Creator's other two ＋ modes for armour tiers.** The
-  creator now draws armour tiers like the Unit Editor (chips, ✕ above, drag,
-  ＋ with *repeat the last tier* and *name an existing entry*). The editor's
-  *take another unit's tiers* and *new entry from a tier* need the editor's
-  own staging (`state.ed.newModels`), which the composer has not got; bring
-  them across if the user asks for them.
-* **101l - Check "Install needs Preview" with the user.** No button is called
-  Install. It was read as Unit Transfer / the Unit Creator, whose Apply stopped
-  at a probe the first time a unit already existed in the destination; that
-  stop is gone and the preview is now a few plain lines over the full report.
-  If the user meant another screen, fix that one too.
-* **101m - Try the session's UI changes in the real app.** Built and unit
-  tested without a mod installed: the faction Find boxes, the armour levels
-  and models widgets on both screens (guided and raw view), the 3D column
-  following the tiers, *Copy from type*, the new-unit hand-off to the Unit
-  Editor, the animation rows on a model card, and the scroll kept on a tick in
-  the battle-model entry list. Also the Armory's *Show the baked images* and
-  *From the source models* normal maps (101n, 101o): bake a model whose parts
-  were turned, and check in game that the turned parts light the right way.
-  The turn assumes green points up the image, as the generator writes it; if
-  the game reads green the other way, flip the sign in `armbake.turn_normals`.
-  And the card maker's game pieces (101q): check on a real install that
-  `ui/*.sd.xml` and the culture pages are found (in the mod, the game's data
-  or its packs) for `STRAT_CARD_BACKGROUND`, `SCROLL_MID` and
-  `PORTRAIT_FRAME`; if vanilla only ships the binary `.sd`, `cardart.py`
-  needs a reader for it.
+* **Done 2026-11-14** (the user: "for 101h yes i want to consolidate duplicate
+  animations and give the user ability to compare and choose/merge ...
+  101k standardize both ... 101l ... make me able to press install to mod
+  without pressing preview ... 101m test it yourself"):
+  * **101h - duplicate animations** (`packdupes.py`, `web/js/packdupes.js`, Home's
+    Animation packs card > *Duplicate animations...*). One path holding different
+    animations at one scale: the copies compared (frames, seconds, bones, size,
+    and how far each one's rotations are from the copy played), and the one
+    picked takes the first copy's place. One animation under several paths
+    (every copy the same bytes, scale by scale): merged into one path, every
+    skeleton slot and `descr_skeleton.txt` anim line following. One job, written
+    by `animpack.write_compacted` (now with `swaps` for rewritten skeletons), the
+    Log's Undo and *Forget the old packs* as for 85. `tests/test_packdupes` 14.
+    Read on the installs: DaC has no path with two different animations and 598
+    groups of one animation under several paths; vanilla and the expansions 23.
+    Not built: playing a chosen copy in the 3D viewer (it fetches only the copy
+    the game plays).
+  * **101k - one armour-tier panel on both screens** (`ugPanel` in
+    `modelpicker.js`, through `ugHost()`): the Unit Creator gains *take a unit's
+    upgrades* and the searchable *pick an existing entry*; *new entry from a
+    tier* is remembered there and set up in the Unit Editor the moment the unit
+    is created (one unit at a time; a transfer between mods offers it disabled).
+    The editor's own copy is gone. Entry names compare case-blind (vanilla's
+    `Feudal_Knights` read as not in the modeldb before).
+  * **101l - Install to mod without a bake first.** The user meant Armory
+    Studio's export. Step 4 opens once the layout fits; *Show what it writes* and
+    *Write into the mod* bake first when nothing is baked (`armExpEnsureBaked`).
+  * **101m - tried in the app**: the faction Find box, both armour panels, Copy
+    from type, the animation rows on a model card. **101q's card art was
+    broken**: `cardart.py` read a made-up `.sd.xml` layout; it now reads the
+    binary `ui/*.sd` through `spritesheet.py` and finds all five pieces on vanilla
+    and DaC.
+* **101m, left for the user** (needs the game, or a visible window): the 3D
+  column following the tiers; the scroll kept on a tick in the battle-model
+  entry list; Armory's *Show the baked images* and *From the source models*
+  normal maps on a real bake, checked in game (if turned parts light the wrong
+  way, flip the sign in `armbake.turn_normals`); the new-unit hand-off to the
+  Unit Editor, which writes a unit.
 
 ## Deferred to a later version, by the user
 

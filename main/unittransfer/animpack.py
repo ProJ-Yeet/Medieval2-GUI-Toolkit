@@ -1289,21 +1289,26 @@ COMPACT_DIR = ".ut_compacted"
 
 
 def _write_pack(idx: PackIndex, keep: List[PackEntry], dat_out: Path, idx_out: Path,
-                swap: Optional[Tuple[PackEntry, bytes]] = None) -> None:
+                swap: Optional[Tuple[PackEntry, bytes]] = None,
+                swaps: Optional[Dict[int, bytes]] = None) -> None:
     """``keep``'s entries, in the order given, copied out of ``idx``'s .dat
     into a new pair of files, touching end to end from byte 20. ``swap`` is
-    one of them written with other bytes (Phase 86)."""
+    one of them written with other bytes (Phase 86); ``swaps`` is several,
+    keyed by ``id(entry)`` (101h's merged skeletons)."""
+    swaps = dict(swaps or {})
+    if swap is not None:
+        swaps[id(swap[0])] = swap[1]
     new: List[PackEntry] = []
     at = HEADER_SIZE
     for e in keep:
-        size = len(swap[1]) if swap is not None and e is swap[0] else e.size
+        size = len(swaps[id(e)]) if id(e) in swaps else e.size
         new.append(PackEntry(e.name, at, size, e.scale, e.frames, e.rot_bones, e.pos_bones))
         at += size
     out = PackIndex(idx.magic, new, idx.version, idx.version2, idx.filler, idx_out)
     with open(idx.dat_path, "rb") as src, open(dat_out, "wb") as dst:
         dst.write(out.header())
         for e in keep:
-            dst.write(swap[1] if swap is not None and e is swap[0] else idx.read_entry(e, src))
+            dst.write(swaps[id(e)] if id(e) in swaps else idx.read_entry(e, src))
         dst.flush()
         os.fsync(dst.fileno())
     idx_out.write_bytes(out.to_bytes())
@@ -1311,9 +1316,11 @@ def _write_pack(idx: PackIndex, keep: List[PackEntry], dat_out: Path, idx_out: P
         raise PackError(_i18n.msg("eng.animpack.written_st_size_bytes_at_expected", "{name}: written {st_size:,} bytes, {at:,} expected", name=dat_out.name, st_size=dat_out.stat().st_size, at=at))
 
 
-def write_compacted(anim_dir, keep: Dict[str, List[PackEntry]], kept_dir) -> List[dict]:
+def write_compacted(anim_dir, keep: Dict[str, List[PackEntry]], kept_dir,
+                    swaps: Optional[Dict[int, bytes]] = None) -> List[dict]:
     """Rewrite the packs in ``anim_dir`` holding only ``keep`` (``{"pack":
-    [...], "skeletons": [...]}``; a stem left out is not touched). Each new
+    [...], "skeletons": [...]}``; a stem left out is not touched), any entry
+    in ``swaps`` (``id(entry) -> bytes``) written with those bytes. Each new
     pair is written beside the old one and read back, and only then are the
     old files moved into ``kept_dir`` and the new ones put in their place;
     any failure puts every file back. Returns undo's rows."""
@@ -1328,7 +1335,9 @@ def write_compacted(anim_dir, keep: Dict[str, List[PackEntry]], kept_dir) -> Lis
         if idx is None:
             raise PackError(_i18n.msg("eng.animpack.has_no_idx", "{anim_dir} has no {stem}.idx", anim_dir=anim_dir, stem=stem))
         jobs.append((stem, idx, entries))
-    need = sum(HEADER_SIZE + sum(e.size for e in ents) for _s, _i, ents in jobs) + SPACE_MARGIN
+    swaps = swaps or {}
+    need = sum(HEADER_SIZE + sum(len(swaps[id(e)]) if id(e) in swaps else e.size for e in ents)
+               for _s, _i, ents in jobs) + SPACE_MARGIN
     free = shutil.disk_usage(anim_dir).free
     if free < need:
         raise PackError(_i18n.msg("eng.animpack.a_compaction_needs_x_0f_mb", "a compaction needs {x:.0f} MB free beside the packs and {x2:.0f} MB is", x=need / 1e6, x2=free / 1e6))
@@ -1337,7 +1346,7 @@ def write_compacted(anim_dir, keep: Dict[str, List[PackEntry]], kept_dir) -> Lis
         for stem, idx, entries in jobs:
             dat_new, idx_new = anim_dir / f"{stem}.dat.compact", anim_dir / f"{stem}.idx.compact"
             made += [dat_new, idx_new]
-            _write_pack(idx, entries, dat_new, idx_new)
+            _write_pack(idx, entries, dat_new, idx_new, swaps=swaps)
             back = PackIndex.read(idx_new)
             if [e.name for e in back.entries] != [e.name for e in entries]:
                 raise PackError(_i18n.msg("eng.animpack.does_not_read_back_as_written", "{name} does not read back as written", name=idx_new.name))

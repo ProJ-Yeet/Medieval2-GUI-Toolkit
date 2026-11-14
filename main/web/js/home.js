@@ -374,13 +374,15 @@ function homePacksHtml(m){
     ? `<div><button onclick="homePacksCompact('${q1(esc(m.name))}')">${tt('home.compact_the_packs')}</button>
         <span class="count">${tt('home.keeps_animation_s_and_skeleton_s',{keep_anims:P.keep_anims.toLocaleString(),keep_skels:P.keep_skels.toLocaleString()})}</span></div>`
     : '';
+  const dupes = `<div><button onclick="pdOpen('${q1(esc(m.name))}')">${tt('home.duplicate_animations')}</button>
+      <span class="count">${tt('home.duplicate_animations_note')}</span></div>`;
   return `<div>${btn}<table class="hctab">
       ${row(P.anims, P.anim_bytes, tt('home.animations_in_pack_dat'))}
       ${row(P.dead, P.dead_bytes, tt('home.dead_copies_a_path_again_at'))}
       ${row(P.other_scale, P.other_scale_bytes, tt('home.copies_at_a_scale_no_skeleton'))}
       ${row(P.unused, P.unused_bytes, tt('home.no_slot_of_any_skeleton_names'))}
       ${row(P.skeletons, P.skel_bytes, tt('home.skeletons_in_skeletons_dat'))}
-    </table>${dupNote}${twice}${P.missing_slots ? `<div class="w-bad">${tt('home.slot_s_name_a_path_pack',{missing_slots:P.missing_slots})}</div>` : ''}${unnamed}${act}</div>`;
+    </table>${dupNote}${twice}${P.missing_slots ? `<div class="w-bad">${tt('home.slot_s_name_a_path_pack',{missing_slots:P.missing_slots})}</div>` : ''}${unnamed}${act}${dupes}</div>`;
 }
 async function homePacksToggle(name){
   const key = '_packs_' + name;

@@ -813,6 +813,9 @@
   ],
   "core.ssr_unit_builder_by_lupinemaverick": [
    "unit"
+  ],
+  "packdupes.col_copy": [
+   "copy"
   ]
  },
  "ancillaries.a_character_holds_one_ancillary_per": "人物每种类型只能持有一个随从，因此此项决定新随从会替换哪个随从",
@@ -11619,7 +11622,6 @@
  "app.find_a_faction": "查找派系…",
  "modelpicker.ug_level_next": "下一个：{n}",
  "modelpicker.ug_level_add_title": "添加铁匠铺等级。留空则使用当前最高等级加一。列表按升序排列。",
- "modelpicker.ug_pick_entry": "选作下一层级的战斗模型条目",
  "common.name_from_type": "⇐ 从类型复制",
  "common.name_from_type_title": "将显示名称设为类型框中的内容",
  "eng.edit.animation_record_count_changed": "{name}：此条目有 {have} 条动画记录，但提交了 {got} 条；此处只能修改记录，不能添加或删除",
@@ -13083,5 +13085,63 @@
  "armory.norm_source_some": "以下对象的源模型没有法线贴图：{names}。它们的法线贴图将使用“专用”设置根据贴图生成。",
  "armory.exp_replace_entry": "如果模组已有同名模型条目，则覆盖它",
  "armory.exp_replace_entry_title": "将新条目写在模组中同名条目的位置。已使用该名称的部队会换用新模型。撤销可恢复旧条目。",
- "armory.exp_entry_taken": "模组中已有名为 {name} 的条目：请勾选“覆盖”，或换一个名称。"
+ "armory.exp_entry_taken": "模组中已有名为 {name} 的条目：请勾选“覆盖”，或换一个名称。",
+ "armory.exp_bakes_on_write": "尚未烘焙：“显示将写入的内容”和“写入模组”会先烘焙，输出到 {folder}。",
+ "home.duplicate_animations": "重复的动画…",
+ "home.duplicate_animations_note": "一个路径包含不同的动画，或一个动画位于多个路径下",
+ "settings.animation_duplicates_in": "🎞 已整理 {dest} 中的重复动画",
+ "packdupes.title": "{mod} 中的重复动画",
+ "packdupes.reading": "正在读取包…",
+ "packdupes.same_bytes": {
+  "other": "有 {count} 个路径的后续副本与第一个副本字节相同；“压缩包”会将其去掉。"
+ },
+ "packdupes.pending": "待写入：{picks} 个副本选择，{merges} 个合并",
+ "packdupes.write": "写入",
+ "packdupes.conflicts_head": "一个路径，不同的动画",
+ "packdupes.conflicts_note": "该包在同一比例下多次列出这些路径，每个副本各有自己的动作。游戏只播放第一个副本。请比较它们并选出游戏应播放的那个：它会取代第一个副本的位置，其他副本会被移除。",
+ "packdupes.no_conflicts": "没有路径包含两个不同的动画。",
+ "packdupes.scale_copies": "比例 {scale}，{n} 个副本",
+ "packdupes.compare": "比较",
+ "packdupes.hide": "隐藏",
+ "packdupes.used_by": "引用它的：{x}",
+ "packdupes.used_by_none": "没有骨架引用它",
+ "packdupes.more": "…还有 {n} 个。请先写入这些，再重新打开此处处理其余部分。",
+ "packdupes.other_bones": "骨骼不同，无法比较",
+ "packdupes.same_motion": "相同的动作",
+ "packdupes.degrees": "平均相差 {mean}°，最多 {max}°",
+ "packdupes.col_frames": "帧数",
+ "packdupes.col_seconds": "秒",
+ "packdupes.col_bones": "骨骼",
+ "packdupes.col_size": "大小",
+ "packdupes.col_difference": "与当前播放的相比",
+ "packdupes.play_this": "播放此副本",
+ "packdupes.plays_now": "当前播放",
+ "packdupes.the_one_played": "游戏当前播放的副本",
+ "packdupes.pick_note": "秒数按每秒 20 帧计算。骨骼一栏先计旋转的骨骼，再计移动的骨骼。",
+ "packdupes.identical_head": "一个动画，多个路径",
+ "packdupes.identical_note": "这些路径在每个比例下都逐字节包含相同的动画。合并会保留一个路径，把引用其他路径的每个骨架槽位和 descr_skeleton.txt 行都指向它，并把其他路径从包中移除。",
+ "packdupes.no_identical": "没有动画存放在两个路径下。",
+ "packdupes.merge_all": "全部合并",
+ "packdupes.identical_total": "{groups} 组；全部合并可释放 {freed}。",
+ "packdupes.merge_none": "全不合并",
+ "packdupes.group": {
+  "other": "{count} 个路径，每个 {size}：合并可释放 {freed}"
+ },
+ "packdupes.keep_this": "保留此路径",
+ "packdupes.slots_users": {
+  "other": "被 {count} 个骨架引用"
+ },
+ "packdupes.kept": "保留",
+ "packdupes.confirm": "要把 {picks} 个副本选择和 {merges} 个合并写入 {mod} 的动画包吗？\n\n旧包会一直保留，直到你在日志中将其遗弃，那里的“撤销”可以恢复一切。请先关闭游戏。",
+ "packdupes.done_activity": "重复的动画",
+ "eng.packdupes.no_packs": "此模组没有自己的动画包；它播放原版（vanilla）的动画包",
+ "eng.packdupes.no_such_path": "pack.idx 中没有比例为 {scale} 的 {path}",
+ "eng.packdupes.nothing_chosen": "未选择或合并任何内容",
+ "eng.packdupes.choice_stale": "{path} 自读取后已更改；请重新读取重复项",
+ "eng.packdupes.merge_stale": "{path} 自读取后已更改；请重新读取重复项",
+ "modelpicker.ug_new_after_create": "此部队一经创建，就会在部队编辑器中准备一个基于 {from} 的新条目。",
+ "modelpicker.ug_new_in_editor_after": "新条目需要自己的网格和贴图，由部队编辑器的“战斗模型”选项卡设置。先创建部队，然后它会在那里打开，新层级已准备好。",
+ "modelpicker.ug_new_only_in_one_mod": "只有在一个模组内创建部队时才能准备新条目。请先转移它，再在部队编辑器中添加层级。",
+ "modelpicker.ug_new_not_set_up": "新盔甲层级的条目未准备，因为创建了不止一个部队。请在部队编辑器中打开该部队并使用 ＋ > 4。",
+ "packdupes.col_copy": "副本"
 }
