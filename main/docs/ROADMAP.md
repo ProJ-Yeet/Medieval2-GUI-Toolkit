@@ -434,11 +434,9 @@ and their lettered pieces are commits. Build the majors in this order.
 
 | Major | Phase | Feature | Pieces | Line |
 |---|---|---|---|---|
-| **I c. Armory Studio, what is left** | 99p | SimpleBake's two ideas for the packer: holes and side pockets filled, free rotation as an opt-in. **Done 2026-10-20** | one | both |
-| **II. Campaign map** | 97 | The map viewer, 2D and 3D: editable and selectable in 3D, floating faction names by default, an icons toggle, agents and settlements as 3D models on their tiles | 97a-97d | beta |
-| | 96b-96d | Two layout faults (the green box, the bottom gap), ports and the capital by icon with one port per region, the garrison in the settlement editor | 96b, 96c, 96d | beta |
-| | 96e4 | A new region wizard; many towns at once with auto-garrison | one | beta |
 | **V. Translations** | 88 | The remaining catalogues through 88d's workflow: 88h Portuguese (Brazil), 88i Polish, 88m Russian, 88p Traditional Chinese, 88q Japanese, 88r Korean. French (88e), Simplified Chinese (88o) and Turkish (88l) are complete drafts | six catalogues | both |
+
+**Majors I to IV done** (taken out of this table on 2026-11-14): 99p on 2026-10-20, and major II's 97, 96b-96d and 96e4 by 2026-11-02, written up under Phase 96 and Phase 97 below. Only major V is left.
 
 **Finished phases archived on 2026-10-20** (the user: "archive the completed phases"): 77-86, 89-95, 98, 99 (but 99p) and 100 moved to `ROADMAP_ARCHIVE.md` verbatim, their rows up into the phase index. The rows this table still held for 89-94 were left over from the 2026-10-06 regroup: all six were finished on 2026-09-30, so major IV, which was 90 and 93, is gone with them.
 
