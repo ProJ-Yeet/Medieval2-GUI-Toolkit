@@ -1332,9 +1332,9 @@ the same plans its editors make.
   and undone (the editors' plans are whole-file text, so only an applied edit
   lets the next one see it); every file is then checked byte for byte against
   its backup and the Log holds nothing of it. It is not "writes nothing": the
-  mod's files are written while it runs. A preview that never touches the mod
-  would need the staged mod of 123a's first draft (an overlay every parser
-  reads through), which is the alternative if the user wants it.
+  mod's files are written while it runs. **Kept by the user, 2026-11-15**
+  ("Keep it"), over a preview that never writes (the staged mod of 123a's
+  first draft, an overlay every parser reads through).
 * **One run, one log record, one Undo.** All or nothing: an edit the plan
   refuses stops the script and nothing is written.
 * **Sandboxed.** No `io`, `os`, `debug`, `loadfile`, `dofile`, no binary
