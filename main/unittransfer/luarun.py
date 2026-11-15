@@ -33,6 +33,7 @@ import time
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional
+from . import i18n as _i18n
 
 try:  # the runtime is optional until a script is run
     import lupa.lua54 as _lua
@@ -70,7 +71,7 @@ class Result:
 
 
 def _deny_attributes(obj, name, is_setting):
-    raise AttributeError("a script cannot reach into Python objects")
+    raise AttributeError(_i18n.msg("eng.luarun.a_script_cannot_reach_into_python", "a script cannot reach into Python objects"))
 
 
 # The trusted setup, run once per state with the full library still present.
@@ -209,7 +210,7 @@ class Session:
     def __init__(self, folder: Optional[Path] = None, *, time_limit: float = TIME_LIMIT,
                  memory_limit: int = MEMORY_LIMIT, on_print: Optional[Callable[[str], None]] = None):
         if _lua is None:
-            raise ScriptError("Lua scripts need the lupa package (pip install lupa)", kind="error")
+            raise ScriptError(_i18n.msg("eng.luarun.lua_scripts_need_the_lupa_package", "Lua scripts need the lupa package (pip install lupa)"), kind="error")
         self.folder = Path(folder).resolve() if folder else None
         self.printed: List[str] = []
         self._on_print = on_print
@@ -267,7 +268,7 @@ class Session:
             return self.rt.table_from([self._build(v) for v in value])
         if callable(value):
             return value
-        raise TypeError(f"cannot hand a {type(value).__name__} to a script")
+        raise TypeError(_i18n.msg("eng.luarun.cannot_hand_a_to_a_script", "cannot hand a {name__} to a script", name__=type(value).__name__))
 
     def from_lua(self, value: Any) -> Any:
         """Lua data back as Python: an array (keys 1..n) is a list, any other
@@ -276,13 +277,13 @@ class Session:
             value = self._thaw(value)
             return self._plain(value)
         if _lua.lua_type(value) is not None:
-            raise ScriptError(f"a script cannot pass a Lua {_lua.lua_type(value)} to the toolkit")
+            raise ScriptError(_i18n.msg("eng.luarun.a_script_cannot_pass_a_lua", "a script cannot pass a Lua {lua_type} to the toolkit", lua_type=_lua.lua_type(value)))
         return value
 
     def _plain(self, t):
         if _lua.lua_type(t) != "table":
             if _lua.lua_type(t) is not None:
-                raise ScriptError(f"a script cannot pass a Lua {_lua.lua_type(t)} to the toolkit")
+                raise ScriptError(_i18n.msg("eng.luarun.a_script_cannot_pass_a_lua", "a script cannot pass a Lua {lua_type} to the toolkit", lua_type=_lua.lua_type(t)))
             return t
         items = list(t.items())
         keys = [k for k, _ in items]
@@ -304,8 +305,7 @@ class Session:
         try:
             out = self._run(source, chunk)
         except _lua.LuaMemoryError:
-            failure = ScriptError("the script ran out of memory "
-                                  f"({self.rt.get_max_memory() // (1024 * 1024)} MB limit)", kind="memory")
+            failure = ScriptError(_i18n.msg("eng.luarun.the_script_ran_out_of_memory", "the script ran out of memory ({x} MB limit)", x=self.rt.get_max_memory() // (1024 * 1024)), kind="memory")
         except _lua.LuaError as e:
             failure = ScriptError(str(e))
         finally:
@@ -313,7 +313,7 @@ class Session:
             self._deadline = float("inf")
             self._unhook()
         if timed_out:
-            raise ScriptError(f"time limit reached ({self._time_limit:g} s)", kind="time")
+            raise ScriptError(_i18n.msg("eng.luarun.time_limit_reached_time_limit_g", "time limit reached ({time_limit:g} s)", time_limit=self._time_limit), kind="time")
         if failure:
             raise failure
         ok, kind, value = out[0], out[1], out[2]

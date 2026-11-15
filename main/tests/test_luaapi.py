@@ -40,7 +40,8 @@ DAC = MODS / "Divide_and_Conquer_EUR" if MODS else None
 REL = ("export_descr_unit.txt", "text/export_units.txt", "unit_models/battle_models.modeldb",
        "descr_mount.txt", "export_descr_buildings.txt", "text/export_buildings.txt", "text/expanded.txt",
        "descr_sm_factions.txt", "world/maps/campaign/imperial_campaign/descr_mercenaries.txt",
-       "export_descr_character_traits.txt", "text/export_vnvs.txt")
+       "export_descr_character_traits.txt", "text/export_vnvs.txt", "export_descr_ancillaries.txt",
+       "text/export_ancillaries.txt")
 if not luarun.available() or not DAC or not (DAC / "data" / REL[0]).is_file():
     print("needs lupa and Divide_and_Conquer_EUR; skipped")
     sys.exit(0)
@@ -336,7 +337,25 @@ d = next((f.diff for f in rep.files if f.rel == "data/export_descr_character_tra
 check("the diff: the threshold and the two effects", "77" in d and "Command" in d and "Chivalry" in d)
 check("the preview left every byte", shas(mod) == before)
 
-print("12. the examples in docs/lua_examples, previewed")
+print("12. ancillaries")
+from unittransfer import ancillaries as _anc  # noqa: E402
+af = _anc.parse_file(mod.eda_path)
+an = next(a for a in af.ancillaries if a.effects)
+s = script("anc.lua", f"""
+local a = toolkit.ancillary({an.name!r})
+print(#toolkit.ancillaries(), a.name, #a.effects > 0)
+toolkit.edit_ancillary(a.name, {{ effects = {{ {{ attribute = "Command", amount = 2 }} }} }})
+local after = toolkit.ancillary(a.name)
+print(#after.effects, after.effects[1].attribute, after.effects[1].amount)
+""")
+rep = luaapi.run(mod, s)
+check(f"runs ({rep.error})", rep.ok)
+check("ancillaries and one with effects", rep.printed[:1] == [f"{len(af.ancillaries)}\t{an.name}\ttrue"])
+check("its effects replaced", rep.printed[1:2] == ["1\tCommand\t2"])
+check("one file changed", [f.rel for f in rep.files] == ["data/export_descr_ancillaries.txt"])
+check("the preview left every byte", shas(mod) == before)
+
+print("13. the examples in docs/lua_examples, previewed")
 ex = ROOT / "docs" / "lua_examples"
 inf = next(u for u in units if u.category == "infantry" and u.ownership)
 rep = luaapi.run(mod, ex / "raise_morale.lua", args={"faction": inf.ownership[0], "by": "2"})

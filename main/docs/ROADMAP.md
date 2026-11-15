@@ -1389,8 +1389,17 @@ phases until 80% usage limit is reached"):
   levels keyed by place from 1. The editor takes levels by position and drops
   the ones a shorter list leaves out, so the script's levels are laid over the
   full list and never drop one; adding or taking out a level is not offered.
-  Left in 126: strings, settlements and strat objects, faction clones,
-  ancillaries, triggers, the sheets.
+* **126, ancillaries: done**, the same way (`ancillaries()`, `ancillary()`,
+  `edit_ancillary()`). Left in 126: strings, settlements and strat objects,
+  faction clones, triggers, the sheets.
+* **The engine's messages have IDs** (`eng.luaapi.*`, `eng.luarun.*`, 36) and
+  are translated into de, es, fr, tr and zh-Hans (the catalogues on disk; pl
+  and ru have none yet). Codex could not run them (its configured model is
+  refused on this account), so they were written in this session and merged
+  through `i18n_todo.py --merge`, none refused. `test_i18n` 45/45. Before it,
+  the full pass was 51 failing of 261, 50 of them failing the same way on a
+  clean worktree of `ee9278d0` (this machine's mods); the 51st was
+  `test_i18n`, these messages.
 * **123 done** for `edit_unit` (fields, `false` removes, rename, dictionary,
   shown name and descriptions), `delete_unit`, `edit_model` (raw, rename, a
   texture for every faction) and `clone_model`, through `edit.plan_edit` /

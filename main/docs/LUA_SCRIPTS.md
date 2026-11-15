@@ -61,6 +61,7 @@ Everything is in one table, `toolkit`. `lua_cli.py api` prints the full list.
 | `toolkit.add_merc_unit(pool, values, campaign)` / `toolkit.delete_merc_unit(pool, place, campaign)` | add a unit line at the end, or take one out |
 | `toolkit.traits()` / `toolkit.trait(name)` | character traits and their levels and effects |
 | `toolkit.edit_trait(name, changes)` | a trait's header, or its levels by place: `{ levels = { [2] = { threshold = 5 } } }` |
+| `toolkit.ancillaries()` / `toolkit.ancillary(name)` / `toolkit.edit_ancillary(name, changes)` | ancillaries, read and changed; `effects`, when given, replace its effect lines |
 | `toolkit.mod` | `name` and `root` of the mod |
 | `args` | the `--set key=value` values, as text |
 

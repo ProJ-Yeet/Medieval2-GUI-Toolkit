@@ -39,6 +39,7 @@ from typing import Any, Callable, Dict, List, Optional
 from . import config, edu as edu_mod, edit, luarun, transfer
 from .logutil import log
 from .mod import Mod
+from . import i18n as _i18n
 
 # ---------------------------------------------------------------------------
 # the API, declared once
@@ -129,6 +130,16 @@ API: List[Fn] = [
          "what to change; `levels` is keyed by the level's place from 1, and levels not named stay as "
          "they are (a level's `effects`, when given, replace its effect lines)")],
        "", "Change one trait's header or its levels. Levels are not added or taken out here.", "edit"),
+    Fn("ancillaries", [], "toolkit.Ancillary[]", "Every ancillary in export_descr_ancillaries.txt, in file order."),
+    Fn("ancillary", [("name", "string", "the ancillary's name")], "toolkit.Ancillary?",
+       "One ancillary, or nil."),
+    Fn("edit_ancillary",
+       [("name", "string", "the ancillary"),
+        ("changes", "{type?: string, transferable?: string|integer, image?: string, unique?: boolean, "
+         "excluded_ancillaries?: string[], exclude_cultures?: string[], description?: string, "
+         "effects_description?: string, effects?: {attribute: string, amount: string|integer}[]}",
+         "what to change; `effects`, when given, replace its effect lines")],
+       "", "Change one ancillary.", "edit"),
     Fn("edit_building",
        [("line", "string", "the building line"), ("level", "string", "the level in it"),
         ("changes", "{settlement?: string, requires?: string, scalars?: table<string, string|number>, "
@@ -204,6 +215,12 @@ CLASSES = {
         ("threshold", "string|integer?"), ("description", "string?"), ("effects_description", "string?"),
         ("gain_message", "string?"), ("lose_message", "string?"), ("epithet", "string?"),
         ("effects", "{attribute: string, amount: string|integer}[]?", "the level's effect lines, all of them"),
+    ],
+    "toolkit.Ancillary": [
+        ("name", "string"), ("type", "string"), ("transferable", "string"), ("image", "string"),
+        ("unique", "boolean"), ("excluded_ancillaries", "string[]"), ("exclude_cultures", "string[]"),
+        ("description", "string"), ("effects_description", "string"),
+        ("effects", "{attribute: string, amount: string}[]"),
     ],
     "toolkit.CapabilityOp": [
         ("line", "integer?", "an existing line (from a read); leave out for a new one"),
@@ -338,6 +355,12 @@ def trait_view(t) -> dict:
                                       for e in lv["effects"]]} for lv in d["levels"]]}
 
 
+def ancillary_view(a) -> dict:
+    d = a.as_dict()
+    return {k: v for k, v in d.items() if k not in ("start", "end")} | {
+        "effects": [{"attribute": e["attribute"], "amount": e["amount"]} for e in d["effects"]]}
+
+
 def _cap(c) -> dict:
     return {"keyword": c.keyword, "args": c.args, "requires": c.requires, "line": c.line}
 
@@ -395,7 +418,7 @@ def _text_value(v) -> str:
     if isinstance(v, list):
         return ", ".join(str(x) for x in v)
     if isinstance(v, bool):
-        raise Refused("a field value is text, a number or a list; false removes the field")
+        raise Refused(_i18n.msg("eng.luaapi.a_field_value_is_text_a", "a field value is text, a number or a list; false removes the field"))
     if isinstance(v, float) and v == int(v):
         v = int(v)
     return str(v)
@@ -470,7 +493,7 @@ class Run:
 
     def _apply(self, plan, what: str, applier: Callable = None) -> None:
         if plan.errors:
-            raise Refused(f"{what}: " + "; ".join(plan.errors))
+            raise Refused(f"{what}: {'; '.join(plan.errors)}")
         # an apply forgets every cached read; the parsed modeldb is most of the
         # cost of the next edit (0.9 s on DaC's 1,678 entries), so when its file
         # was not written it is handed back
@@ -485,7 +508,7 @@ class Run:
     def edit_unit(self, t, fields=None, options=None) -> None:
         t, fields, options = str(t), fields or {}, options or {}
         if t not in self.mod.edu.by_type():
-            raise Refused(f"no unit '{t}' in {self.mod.name}")
+            raise Refused(_i18n.msg("eng.luaapi.no_unit_in", "no unit '{t}' in {name}", t=t, name=self.mod.name))
         overrides, removes = {}, []
         for k, v in fields.items():
             if v is False:
@@ -494,7 +517,7 @@ class Run:
                 overrides[str(k)] = _text_value(v)
         unknown = set(options) - {"rename", "dictionary", "name", "descr", "descr_short"}
         if unknown:
-            raise Refused(f"edit_unit: unknown option(s) {', '.join(sorted(unknown))}")
+            raise Refused(_i18n.msg("eng.luaapi.edit_unit_unknown_option_s", "edit_unit: unknown option(s) {unknown}", unknown=', '.join(sorted(unknown))))
         loc = None
         if any(k in options for k in ("name", "descr", "descr_short")):
             u = self.mod.edu.by_type()[t]
@@ -512,17 +535,17 @@ class Run:
         src, new_type, options = str(src), str(new_type).strip(), options or {}
         units = self.mod.edu.by_type()
         if src not in units:
-            raise Refused(f"no unit '{src}' in {self.mod.name}")
+            raise Refused(_i18n.msg("eng.luaapi.no_unit_in_2", "no unit '{src}' in {name}", src=src, name=self.mod.name))
         if not new_type:
-            raise Refused("clone_unit needs the new unit's type")
+            raise Refused(_i18n.msg("eng.luaapi.clone_unit_needs_the_new_units", "clone_unit needs the new unit's type"))
         if new_type in units:
-            raise Refused(f"a unit called '{new_type}' already exists in {self.mod.name}")
+            raise Refused(_i18n.msg("eng.luaapi.a_unit_called_already_exists_in", "a unit called '{new_type}' already exists in {name}", new_type=new_type, name=self.mod.name))
         unknown = set(options) - {"dictionary", "name"}
         if unknown:
-            raise Refused(f"clone_unit: unknown option(s) {', '.join(sorted(unknown))}")
+            raise Refused(_i18n.msg("eng.luaapi.clone_unit_unknown_option_s", "clone_unit: unknown option(s) {unknown}", unknown=', '.join(sorted(unknown))))
         dictionary = str(options.get("dictionary") or re.sub(r"[^a-z0-9_]+", "_", new_type.lower()).strip("_"))
         if any(u.dictionary == dictionary for u in units.values()):
-            raise Refused(f"the dictionary key '{dictionary}' is already a unit's in {self.mod.name}")
+            raise Refused(_i18n.msg("eng.luaapi.the_dictionary_key_is_already_a", "the dictionary key '{dictionary}' is already a unit's in {name}", dictionary=dictionary, name=self.mod.name))
         opts = transfer.TransferOptions(on_conflict="rename", new_type=new_type, new_dictionary=dictionary,
                                         new_name=str(options.get("name") or new_type),
                                         bring_animations=False, keep_rebuildable=False)
@@ -530,13 +553,13 @@ class Run:
         what = f"clone unit '{src}' as '{new_type}'"
         why = list(plan.errors) + [x for x in (plan.base_error, plan.option_error) if x]
         if why or plan.skipped:
-            raise Refused(f"{what}: " + ("; ".join(why) or "the transfer would skip it"))
+            raise Refused(f"{what}: {'; '.join(why) or 'the transfer would skip it'}")
         self._apply(plan, what, transfer.apply_transfer)
 
     def delete_unit(self, t, options=None) -> None:
         t, options = str(t), options or {}
         if t not in self.mod.edu.by_type():
-            raise Refused(f"no unit '{t}' in {self.mod.name}")
+            raise Refused(_i18n.msg("eng.luaapi.no_unit_in", "no unit '{t}' in {name}", t=t, name=self.mod.name))
         ops = edit.DeleteOptions(remove_loc=not options.get("keep_text", False),
                                  remove_models=bool(options.get("remove_models", False)),
                                  remove_assets=False, remove_icons=False,
@@ -547,11 +570,11 @@ class Run:
     def edit_model(self, name, changes=None) -> None:
         name, changes = str(name).lower(), changes or {}
         if self._model(name) is None:
-            raise Refused(f"no modeldb entry '{name}' in {self.mod.name}")
+            raise Refused(_i18n.msg("eng.luaapi.no_modeldb_entry_in", "no modeldb entry '{name}' in {name2}", name=name, name2=self.mod.name))
         kinds = {"texture", "normal", "sprite", "attach_texture", "attach_normal"}
         unknown = set(changes) - kinds - {"raw", "rename"}
         if unknown:
-            raise Refused(f"edit_model: unknown change(s) {', '.join(sorted(unknown))}")
+            raise Refused(_i18n.msg("eng.luaapi.edit_model_unknown_change_s", "edit_model: unknown change(s) {unknown}", unknown=', '.join(sorted(unknown))))
         me = edit.ModelEdit(entry=name, new_name=str(changes.get("rename", "")).strip().lower(),
                             raw_entry=str(changes.get("raw", "")),
                             defaults=edit._clean_paths({k: v for k, v in changes.items() if k in kinds}))
@@ -561,7 +584,7 @@ class Run:
     def clone_model(self, src, name) -> None:
         src, name = str(src).lower(), str(name).strip().lower()
         if self._model(src) is None:
-            raise Refused(f"no modeldb entry '{src}' in {self.mod.name}")
+            raise Refused(_i18n.msg("eng.luaapi.no_modeldb_entry_in_2", "no modeldb entry '{src}' in {name}", src=src, name=self.mod.name))
         nm = edit.NewModel(name=name, clone_from=src)
         self._apply(edit.plan_bmdb(self.mod, edit.EditRequest(unit="", new_models=[nm])),
                     f"clone model '{src}' as '{name}'")
@@ -598,7 +621,7 @@ class Run:
         from . import mercpools
         plan = mercpools.plan(self.mod, body)
         if plan.errors:
-            raise Refused(f"{what}: " + "; ".join(plan.errors))
+            raise Refused(f"{what}: {'; '.join(plan.errors)}")
         if not plan.text:
             self.edits.append(f"{what} (nothing to change)")
             return
@@ -609,9 +632,9 @@ class Run:
         try:
             i = int(place)
         except (TypeError, ValueError):
-            raise Refused("a mercenary unit line is named by its place in the pool, from 1")
+            raise Refused(_i18n.msg("eng.luaapi.a_mercenary_unit_line_is_named", "a mercenary unit line is named by its place in the pool, from 1"))
         if i < 1:
-            raise Refused("a mercenary unit line's place counts from 1")
+            raise Refused(_i18n.msg("eng.luaapi.a_mercenary_unit_lines_place_counts", "a mercenary unit line's place counts from 1"))
         return i - 1
 
     def edit_merc_unit(self, pool, place, edits=None, campaign=None) -> None:
@@ -651,14 +674,14 @@ class Run:
         name, changes = str(name), dict(changes or {})
         tf = self._trait_file()
         if tf is None:
-            raise Refused(f"{self.mod.name} has no {Path(self.mod.edct_path).name}")
+            raise Refused(_i18n.msg("eng.luaapi.has_no", "{name} has no {name2}", name=self.mod.name, name2=Path(self.mod.edct_path).name))
         t = tf.get(name)
         if t is None:
-            raise Refused(f"no trait '{name}' in {self.mod.name}")
+            raise Refused(_i18n.msg("eng.luaapi.no_trait_in", "no trait '{name}' in {name2}", name=name, name2=self.mod.name))
         head = {"characters", "hidden", "exclude_cultures", "no_going_back_level", "anti_traits"}
         unknown = set(changes) - head - {"levels"}
         if unknown:
-            raise Refused(f"edit_trait: unknown change(s) {', '.join(sorted(unknown))}")
+            raise Refused(_i18n.msg("eng.luaapi.edit_trait_unknown_change_s", "edit_trait: unknown change(s) {unknown}", unknown=', '.join(sorted(unknown))))
         edits = {k: changes[k] for k in head if k in changes}
         for k in ("no_going_back_level",):
             if k in edits:
@@ -674,12 +697,12 @@ class Run:
                 try:
                     i = int(k)
                 except (TypeError, ValueError):
-                    raise Refused("edit_trait: levels are keyed by their place, from 1")
+                    raise Refused(_i18n.msg("eng.luaapi.edit_trait_levels_are_keyed_by", "edit_trait: levels are keyed by their place, from 1"))
                 if not 1 <= i <= len(t.levels):
-                    raise Refused(f"trait '{name}' has {len(t.levels)} level(s), not a level {i}")
+                    raise Refused(_i18n.msg("eng.luaapi.trait_has_level_s_not_a", "trait '{name}' has {levels_n} level(s), not a level {i}", name=name, levels_n=len(t.levels), i=i))
                 bad = set(w or {}) - fields
                 if bad:
-                    raise Refused(f"edit_trait: unknown level field(s) {', '.join(sorted(bad))}")
+                    raise Refused(_i18n.msg("eng.luaapi.edit_trait_unknown_level_field_s", "edit_trait: unknown level field(s) {bad}", bad=', '.join(sorted(bad))))
                 w = dict(w or {})
                 for f in fields - {"effects"}:
                     if f in w:
@@ -692,26 +715,70 @@ class Run:
         plan = traits.plan(self.mod, {"trait": name, "action": "edit", "edits": edits})
         what = f"edit trait '{name}'"
         if plan.errors:
-            raise Refused(f"{what}: " + "; ".join(plan.errors))
+            raise Refused(f"{what}: {'; '.join(plan.errors)}")
         if not getattr(plan, "text", ""):
             self.edits.append(f"{what} (nothing to change)")
             return
         self._apply(plan, what, lambda p: traits.apply(p)["record"])
 
+    # -- ancillaries ----------------------------------------------------------
+    def _anc_file(self):
+        from . import ancillaries
+        path = Path(self.mod.eda_path)
+        return ancillaries.parse_file(path) if path.is_file() else None
+
+    def _ancillaries(self):
+        af = self._anc_file()
+        return [ancillary_view(a) for a in af.ancillaries] if af else []
+
+    def _ancillary(self, name):
+        af = self._anc_file()
+        a = af.get(str(name)) if af else None
+        return ancillary_view(a) if a else None
+
+    def edit_ancillary(self, name, changes=None) -> None:
+        from . import ancillaries
+        name, changes = str(name), dict(changes or {})
+        af = self._anc_file()
+        if af is None:
+            raise Refused(_i18n.msg("eng.luaapi.has_no", "{name} has no {name2}", name=self.mod.name, name2=Path(self.mod.eda_path).name))
+        if af.get(name) is None:
+            raise Refused(_i18n.msg("eng.luaapi.no_ancillary_in", "no ancillary '{name}' in {name2}", name=name, name2=self.mod.name))
+        fields = {"type", "transferable", "image", "unique", "excluded_ancillaries", "exclude_cultures",
+                  "description", "effects_description", "effects"}
+        unknown = set(changes) - fields
+        if unknown:
+            raise Refused(_i18n.msg("eng.luaapi.edit_ancillary_unknown_change_s", "edit_ancillary: unknown change(s) {unknown}", unknown=', '.join(sorted(unknown))))
+        edits = dict(changes)
+        for k in ("type", "transferable", "image", "description", "effects_description"):
+            if k in edits:
+                edits[k] = _text_value(edits[k])
+        if "effects" in edits:
+            edits["effects"] = [{"attribute": str(e.get("attribute", "")),
+                                 "amount": _text_value(e.get("amount", ""))} for e in (edits["effects"] or [])]
+        plan = ancillaries.plan(self.mod, {"ancillary": name, "action": "edit", "edits": edits})
+        what = f"edit ancillary '{name}'"
+        if plan.errors:
+            raise Refused(f"{what}: {'; '.join(plan.errors)}")
+        if not plan.text:
+            self.edits.append(f"{what} (nothing to change)")
+            return
+        self._apply(plan, what, lambda p: ancillaries.apply(p)["record"])
+
     def edit_building(self, line, level, changes=None) -> None:
         line, level, changes = str(line), str(level), dict(changes or {})
         edb = self._edb()
         if edb is None:
-            raise Refused(f"{self.mod.name} has no data/export_descr_buildings.txt")
+            raise Refused(_i18n.msg("eng.luaapi.has_no_data_export_descr_buildings", "{name} has no data/export_descr_buildings.txt", name=self.mod.name))
         bl = edb.get(line)
         if bl is None:
-            raise Refused(f"no building line '{line}' in {self.mod.name}")
+            raise Refused(_i18n.msg("eng.luaapi.no_building_line_in", "no building line '{line}' in {name}", line=line, name=self.mod.name))
         if bl.level(level) is None:
-            raise Refused(f"building line '{line}' has no level '{level}'")
+            raise Refused(_i18n.msg("eng.luaapi.building_line_has_no_level", "building line '{line}' has no level '{level}'", line=line, level=level))
         known = {"settlement", "requires", "scalars", "upgrades", "capabilities", "faction_capabilities"}
         unknown = set(changes) - known
         if unknown:
-            raise Refused(f"edit_building: unknown change(s) {', '.join(sorted(unknown))}")
+            raise Refused(_i18n.msg("eng.luaapi.edit_building_unknown_change_s", "edit_building: unknown change(s) {unknown}", unknown=', '.join(sorted(unknown))))
         lv = {"name": level}
         for k in ("settlement", "requires"):
             if k in changes:
@@ -725,7 +792,7 @@ class Run:
                 ops = []
                 for op in changes[k] or []:
                     if not isinstance(op, dict):
-                        raise Refused(f"edit_building: each of {k} is a table")
+                        raise Refused(_i18n.msg("eng.luaapi.edit_building_each_of_is_a", "edit_building: each of {k} is a table", k=k))
                     o = {"keyword": str(op.get("keyword", "")), "args": str(op.get("args", "")),
                          "requires": str(op.get("requires", "")), "delete": bool(op.get("delete", False))}
                     if op.get("line") is not None:
@@ -733,8 +800,7 @@ class Run:
                                                 else bl.level(level).capabilities)
                                     if c.line == int(op["line"])), None)
                         if cur is None:
-                            raise Refused(f"{line}/{level}: no {k[:-3]}y on line {op['line']} "
-                                          "(read the building again after an edit)")
+                            raise Refused(_i18n.msg("eng.luaapi.no_capability_on_line", "{line}/{level}: no {kind} on line {line2} (read the building again after an edit)", line=line, level=level, kind="faction_capability" if k.startswith("faction") else "capability", line2=op['line']))
                         o["line"] = cur.line
                         for f in ("keyword", "args", "requires"):  # unchanged unless given
                             if f not in op:
@@ -746,7 +812,7 @@ class Run:
         from . import buildings
         plan = buildings.plan_edit(self.mod, {"line": line, "levels": [lv]})
         if plan.errors:
-            raise Refused(f"edit building '{line}/{level}': " + "; ".join(plan.errors))
+            raise Refused(_i18n.msg("eng.luaapi.edit_building", "edit building '{line}/{level}': {errors}", line=line, level=level, errors='; '.join(plan.errors)))
         if not plan.edb_text and not plan.loc_text:
             self.edits.append(f"edit building '{line}/{level}' (nothing to change)")
             return
@@ -767,6 +833,8 @@ class Run:
             "edit_merc_unit": self.edit_merc_unit, "add_merc_unit": self.add_merc_unit,
             "delete_merc_unit": self.delete_merc_unit,
             "traits": self._traits, "trait": self._trait, "edit_trait": self.edit_trait,
+            "ancillaries": self._ancillaries, "ancillary": self._ancillary,
+            "edit_ancillary": self.edit_ancillary,
         }
 
         def wrap(fn):
@@ -813,7 +881,7 @@ def _fold(mod: Mod, records: List[dict], script_name: str, edits: List[str],
         # kept_existing (a transfer's "already there, left alone") restores nothing
         extra = set(m) - set(man) - {"kept_existing"}
         if extra:
-            raise RuntimeError(f"cannot fold a record with {', '.join(sorted(extra))}")
+            raise RuntimeError(_i18n.msg("eng.luaapi.cannot_fold_a_record_with", "cannot fold a record with {extra}", extra=', '.join(sorted(extra))))
         for rel in m.get("backed_up", []):
             if rel in seen_rel:
                 continue
@@ -843,6 +911,8 @@ def _fold(mod: Mod, records: List[dict], script_name: str, edits: List[str],
             if key not in seen_abs:
                 seen_abs.add(key)
                 man["ext_created"].append(p)
+    summary = "\n".join([f"Lua script {script_name} in {mod.name}"]
+                        + [f"  {e}" for e in edits] + [f"  ! {w}" for w in warnings])
     folded = {
         "id": tid, "when": time.strftime("%Y-%m-%d %H:%M:%S"),
         "mode": "lua", "action": "script",
@@ -850,8 +920,7 @@ def _fold(mod: Mod, records: List[dict], script_name: str, edits: List[str],
         "dest": mod.name, "dest_root": str(mod.root),
         "unit_type": "", "resolved_type": "", "options": {"script": script_name},
         "applied": True, "undone": False, "note": "",
-        "summary": "\n".join([f"Lua script {script_name} in {mod.name}"]
-                             + ["  " + e for e in edits] + ["  ! " + w for w in warnings]),
+        "summary": summary,
         "warnings": list(warnings), "manifest": man, "backup_root": str(root),
     }
     ids = {r["id"] for r in records}
@@ -962,8 +1031,7 @@ def run(mod: Mod, script: Path, *, apply: bool = False, args: Optional[Dict[str,
             left = _not_put_back(mod, folded)
             _drop([folded["id"]])
             if left:  # keep the backups: they are the only copy of those files now
-                rep.warnings.append("the preview could not put back " + ", ".join(left)
-                                    + f"; their backups are in {folded['backup_root']}")
+                rep.warnings.append(_i18n.msg("eng.luaapi.the_preview_could_not_put_back", "the preview could not put back {left}; their backups are in {backup_root}", left=', '.join(left), backup_root=folded['backup_root']))
             else:
                 shutil.rmtree(folded["backup_root"], ignore_errors=True)
         mod.drop_caches()
