@@ -434,9 +434,10 @@ and their lettered pieces are commits. Build the majors in this order.
 
 | Major | Phase | Feature | Pieces | Line |
 |---|---|---|---|---|
+| **VI. Lua scripts** | 120-127 | Lua scripts run from a command line that read and edit a mod through the toolkit's own plans: a sandbox, dry run first, one Log entry and one Undo per run, an annotation file for VS Code; later an app tab and every editor's data. MVP 120-123. Scoped 2026-11-15, decisions locked (under *Major VI*); built before V | 8 phases | both |
 | **V. Translations** | 88 | The remaining catalogues through 88d's workflow: 88h Portuguese (Brazil), 88i Polish, 88m Russian, 88p Traditional Chinese, 88q Japanese, 88r Korean. French (88e), Simplified Chinese (88o) and Turkish (88l) are complete drafts | six catalogues | both |
 
-**Majors I to IV done** (taken out of this table on 2026-11-14): 99p on 2026-10-20, and major II's 97, 96b-96d and 96e4 by 2026-11-02, written up under Phase 96 and Phase 97 below. Only major V is left.
+**Majors I to IV done** (taken out of this table on 2026-11-14): 99p on 2026-10-20, and major II's 97, 96b-96d and 96e4 by 2026-11-02, written up under Phase 96 and Phase 97 below. Only major V was left until major VI, Lua scripts, was scoped on 2026-11-15; the user put VI first the same day.
 
 **Finished phases archived on 2026-10-20** (the user: "archive the completed phases"): 77-86, 89-95, 98, 99 (but 99p) and 100 moved to `ROADMAP_ARCHIVE.md` verbatim, their rows up into the phase index. The rows this table still held for 89-94 were left over from the 2026-10-06 regroup: all six were finished on 2026-09-30, so major IV, which was 90 and 93, is gone with them.
 
@@ -1271,6 +1272,215 @@ the default. Measured on the four soldiers 99l was measured on, at 512.
   scale is found with 99l's ways first, then searched above it with every
   way, a trial stopping at its first block that will not go).
 
+# Major VI - Lua scripts over the toolkit's data, Phases 120-127, scoped 2026-11-15
+
+The user wants Lua scripting "something like" the Lua side of Fynn's
+Medieval II Total War Modding Tool (already in the credits), built as our own
+design, and said what it is for (2026-11-15): "not creating eop scripts but
+rather being able to edit our tools data directly through CLI via lua
+scripts". So a modder writes a `.lua` file, runs it from a command line
+against a mod, and the script reads and edits the mod **through the
+toolkit's own parsers and editors**: a batch edit written as a program, not
+a new file format and not a script the game runs. Nothing is built.
+
+**What Fynn's tool does, read for behaviour only** (his repo
+github.com/FynnTW/ModdingTool, AGPL-3.0; a local copy in
+`OneDrive\ModdingTool-master`): a CLI loads a mod, runs one Lua script
+(NLua, Lua 5.4) over the tool's in-memory unit, building and battle-model
+databases, and saves the databases named on the command line; an annotation
+file gives VS Code completion for the tool's API. That is the idea taken. His
+code, API names, flags, file layout and wording are not: everything below is
+named and written here, and where his tool writes a database out, ours makes
+the same plans its editors make.
+
+**What the toolkit already has, and builds on** (2026-11-15):
+
+* **Plans without the server.** Every editor is a `plan_*(mod, ...)` that
+  returns a plan and an `apply_*` that writes it, both pure functions over a
+  `Mod`: `edit.plan_edit` / `apply_edit` (EDU units, `EditPlan`, delete via
+  `_plan_delete`), `edit.plan_bmdb` (modeldb entries, same apply),
+  `buildings.plan_edit` / `plan_level_edit` / `plan_new_tree` and
+  `apply_edit` (EDB), `strings.plan` / `apply`, `stratedit.plan_*` (settlements),
+  `stratobj.plan`, `factionclone.plan` / `plan_many`, `sheet_native` and
+  `sheet_recruit` (109-116's sheets). `transfer_cli.py` already runs
+  `plan_transfer` / `apply_transfer` this way.
+* **`Mod`** (`mod.py:57`): opened from a folder, everything lazy and cached:
+  `edu` (with EOP unit files), `modeldb`, `edb`, `mounts`, projectiles,
+  engines, `loc`, `building_loc`, `faction_names`, vocabularies.
+* **The records**: dataclasses, not dicts (`edu.Unit`, `buildings.EdbFile` /
+  `BuildingLine` / `LevelBlock`, `modeldb.ModelEntry` with `Texture` and
+  `Animation`). Edits are **text splices** (`EditPlan.edu_text` holds the
+  whole new file), so a file keeps its comments, order and spacing.
+* **The log**: each `apply_*` takes a transfer id, backs every file up under
+  `backup_root_for(tid)` with a manifest, and appends one `transfers.json`
+  record; the Log's Undo is `transfer.undo(tid)`. **One record for many
+  plans exists once**, in `factionclone.apply_many`; every other apply writes
+  its own record, and the server's batch delete writes one per unit.
+* **No Lua runtime** anywhere. `luascan.py` only reads `.lua` as text (the
+  modeldb cleanup's and the traits screen's safety nets). The release bundles
+  its Python packages in `dev/release/build_release.py:180-198`
+  (`pip install --target ... --only-binary=:all: Pillow numpy`, then checked).
+
+**Rules this major keeps** (the locked decisions above, applied here):
+
+* **A script never writes a file.** It asks for edits; the edits are the
+  editors' own plans; the plans are written by their own `apply` code. One
+  engine, and every rule an editor enforces (a unit name that must be unique,
+  a modeldb entry the EDU still names) holds for a script too.
+* **Dry run first.** A run without `--apply` prints what would change and
+  writes nothing.
+* **One run, one log record, one Undo.** All or nothing: an edit the plan
+  refuses stops the script and nothing is written.
+* **Sandboxed.** No `io`, `os`, `debug`, `loadfile`, `dofile`, no binary
+  modules; `require` only from the script's own folder; a time and memory
+  limit; `print` goes to the CLI's output. A script from a forum post cannot
+  touch the disk or the network.
+* **No AI.** Nothing writes scripts for the modder; the permanent no on the
+  reference tool's `LuaAiAssistant` stands. Example scripts are written by
+  hand and shipped as examples.
+* **Our own design**, as above.
+* **CLI text in English**, like `transfer_cli.py`; any string the web UI
+  gains (125) goes into en and the seven kept catalogues in the same commit.
+
+**MVP is 120-123**: the sandbox, the command, reading the mod, and edits to
+units and modeldb entries written as one Undo.
+
+## Phase 120 - the Lua runtime and its sandbox (MVP)
+
+* **120a - `lupa` in the bundle.** Added to `build_release.py`'s pip line and
+  its check, and to `Install-Dependencies.bat` for a source install; the zip's
+  growth measured. It runs **Lua 5.4** (decision 1).
+* **120b - `luarun.py`**: a fresh Lua state per run, the standard library
+  trimmed to `string`, `table`, `math`, `utf8` (5.4) and a safe `print`;
+  `require` resolved only inside the script's folder; an instruction-count
+  hook for the time limit and `lupa`'s memory cap; Lua errors returned as
+  `{file, line, message, traceback}`, never a Python traceback.
+* **120c - values across the line**: Python records reach Lua as read-only
+  proxies (a field read is a lookup, a write raises "use toolkit.edit_..."),
+  Lua tables come back as plain Python values, with nil, integer and float
+  kept apart.
+* Exit: tests for each escape (`io.open`, `os.execute`, `require` of a path
+  outside the folder, `load` of bytecode, `string.dump`, a loop that never
+  ends, a table that grows without end) all refused with a clear message.
+
+## Phase 121 - the command (MVP)
+
+* **121a - `lua_cli.py`** beside `transfer_cli.py` (and the same through
+  `python -m unittransfer.lua_cli`): `run <script.lua> --mod <folder or saved
+  mod name> [--set key=value ...] [--apply]`, `undo <id>`, `api` (prints the
+  API), `annotations <folder>` (writes 124's file). `--set` values reach the
+  script as a read-only `args` table, so one script serves many runs.
+* **121b - the report**: the files a run would change, per file the records
+  touched and a unified diff (`--diff` for all of it), the `print` output, and
+  at the end either "dry run, nothing written" or the log id and how to undo
+  it. Exit codes: 0 done, 1 the script failed, 2 a plan refused, 3 bad
+  arguments.
+* **121c - the mod's name**: a saved mod from the toolkit's settings by name,
+  or any folder with a `data/`; the same `Mod` the app opens.
+* Exit: a three-line script that prints every unit of one faction runs on
+  vanilla and on DaC; `--apply` on an edit script, then `undo`, leaves every
+  file byte-identical.
+
+## Phase 122 - reading the mod (MVP)
+
+* **122a - the read API**, one global table, `toolkit` (decision 2): the mod's
+  units (every `edu.Unit` field, the localised name, which file holds it, EOP
+  or not), modeldb entries, buildings and their levels, mounts, projectiles,
+  factions and cultures, a string by key. Lists are Lua arrays in file order,
+  plus lookups by name.
+* **122b - one source for the API**: each function is declared once in
+  Python with its parameters, return shape and one-line doc; the Lua table,
+  `lua_cli.py api` and 124's annotation file are all made from that list, so
+  they cannot drift.
+* Exit: the read API's tests on fixtures; a script counting DaC's units by
+  category matches the Unit Editor's count.
+
+## Phase 123 - edits, staged and written once (MVP)
+
+* **123a - a staged mod.** The hard part. Plans are whole-file text, so a
+  second edit has to be planned against the first one's result, not the disk:
+  a `Mod` overlay whose file reads come from the pending text, re-parsed after
+  each edit, so edit two sees edit one (a unit cloned, then edited; one entry
+  renamed, then another pointed at it).
+* **123b - the first edits**: a unit's fields (`edit.plan_edit`), a new unit
+  from an existing one, a unit deleted (`_plan_delete`), a modeldb entry
+  edited, cloned or removed (`edit.plan_bmdb`). Each call returns at once in
+  Lua; a refusal raises a Lua error naming the rule.
+* **123c - one write**: at the end of an `--apply` run, every staged file is
+  backed up and written under one transfer id with one manifest and one
+  `transfers.json` record, the way `factionclone.apply_many` does, so the
+  Log's Undo (in the app or `lua_cli.py undo`) reverses the whole script.
+* Exit: a script that edits 200 units on DaC applies as one record and undoes
+  to identical bytes; a script whose 50th edit is refused writes nothing.
+
+## Phase 124 - the API documented, for VS Code
+
+* **124a - the annotation file**: `lua_cli.py annotations <folder>` writes a
+  LuaLS file (`---@class`, `---@field`, `---@param`, `---@return`) made from
+  122b's list, plus a `.luarc.json` naming it, so VS Code (or any editor with
+  the Lua language server) completes and checks the toolkit's API.
+* **124b - `docs/LUA_SCRIPTS.md`**: running a script, the sandbox, dry run and
+  Undo, the API reference made from the same list.
+* **124c - examples**, written by hand in `docs/lua_examples/`: raise one
+  stat for a faction's spearmen, clone a unit set for a new faction, point a
+  set of modeldb entries at new textures, list units with no card art.
+
+## Phase 125 - from the app, after the CLI (decision 3)
+
+Built once 120-124 have proved the API on the command line. A Lua tab on the Scripts screen, behind *Opt into beta features*: pick or
+paste a script, set its `args`, *Dry run* shows the plan in the toolkit's
+diff view, *Apply* writes it with one Log entry. The editor is CodeMirror 5
+(vendored as its own files, no build step) with Lua highlighting and 124's
+API for completion and hover. Same `luarun` and staged mod as the CLI.
+
+## Phase 126 - the rest of the data
+
+The other editors' plans, one kind per piece, in the order the user asks:
+building levels and new trees (`buildings.plan_*`), strings (`strings.plan`),
+settlements and strat objects (`stratedit`, `stratobj`), faction clones,
+traits and ancillaries, mercenary pools, the unit sheets' rows. Each joins
+123's staged mod, so a script can mix them under one Undo.
+
+## Phase 127 - tests, timing and the release
+
+The full suite plus `test_lua_*` (sandbox, CLI, read API, staging, one-record
+Undo); a large script on DaC timed (a re-parse per edit could be slow on
+2,000 units; if so, stage edits per file and re-parse once per read); the
+release zip checked with `lupa` in it.
+
+## Not this major: EOP's own game scripts
+
+Scoped first on 2026-11-15 and set aside by the user the same day. What the
+look found, for when it comes back: EOP (github.com/EOP-Labs/M2TWEOP-library,
+GPL-3.0, 3.3.1) runs LuaJIT; a mod's entry is
+`eopData/eopScripts/luaPluginScript.lua` (EOP 3) or
+`youneuoy_Data/plugins/lua/luaPluginScript.lua` (EOP 2); DaC carries three
+entry scripts (one EOP 3, two EOP 2 copies under `Activate/NORMAL` and
+`Activate/SPEED`) and its own LuaLS stubs (`eopData/eopScripts/LuaDocs.lua`,
+171 classes); vanilla and the four expansions have no Lua. An editor for
+those would reuse `rawtext`'s save path and 125's editor.
+
+## Major VI's decisions
+
+**Locked by the user on 2026-11-15:**
+
+* **`lupa`** is the Lua runtime, in Python (asked for the EOP editor's
+  syntax check; it is this major's runtime now).
+* **CodeMirror 5** for any Lua editor in the app (125).
+* **A Lua tab on the Scripts screen, behind *Opt into beta features***, for
+  the in-app side (125).
+
+**Then, the same day:**
+
+1. **Lua 5.4**, `lupa`'s 5.4 runtime: integers kept apart from floats, `utf8`,
+   the version VS Code's Lua server assumes. Not LuaJIT.
+2. **One global table, `toolkit`**: `toolkit.units`, `toolkit.unit(name)`,
+   `toolkit.edit_unit(name, {...})`; scripts read top to bottom. Not a
+   `main(mod, args)` the script defines.
+3. **The CLI first, the app tab (125) after** 120-124 have proved the API.
+4. **Major VI before major V**: the translations stay last, so every string
+   VI adds is translated once.
+
 # What else is open
 
 Every rated item is built: the five- and four-star rows, and the three-star
@@ -1403,7 +1613,9 @@ the AI/autogenerate rule and stay a permanent no.
 
 **Reclassified again.** *Animations* became Phases 77-86 (2026-09-23), and the
 *New Map Editor* became Phase 87 (2026-09-25, done). The *Script editor*
-became 96e1 (2026-10-06, a WHEN / IF / DO builder).
+became 96e1 (2026-10-06, a WHEN / IF / DO builder). Major VI (2026-11-15,
+scoped) is Lua run over the toolkit's own data from a command line, which is
+not the reference tool's *LUA Scripts* module; that row stays as it is.
 
 ---
 ## The four documents, and what goes where
