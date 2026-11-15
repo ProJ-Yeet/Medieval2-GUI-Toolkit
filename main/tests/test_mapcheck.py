@@ -593,7 +593,18 @@ def black_port(d: Path):
             lambda x, y, c: (0, 0, 0) if 13 <= x <= 14 and 11 <= y <= 12 else None)
 
 
+def _riv(paint):
+    """A breaker that paints ``{(x, y): rgb}`` onto map_features.tga."""
+    return lambda d: repaint(d, "map_features.tga", lambda x, y, c: paint.get((x, y)))
+
+
+W_, B_ = (255, 255, 255), (0, 0, 255)
 for code, breaker, expect in (
+    # Mylae's river Auto-Fix, one break per rule it answers
+    ("river_repair", _riv({(0, 0): W_, (1, 0): B_, (0, 1): B_, (1, 1): B_}), "river.rejoin"),
+    ("river_repair", _riv({(0, 0): W_, (1, 1): W_}), "river.diagonal"),
+    ("river_repair", _riv({(0, 0): W_}), "river.isolated"),
+    ("river_repair", _riv({(3, 3): B_, (4, 3): B_}), "river.no_source"),
     ("heights_black", black_port, "height.ambiguous"),
     ("resource_position",
      lambda d: edit(d, STRAT_REL, "resource silver, 5, 4", "resource silver, 5, 0"),

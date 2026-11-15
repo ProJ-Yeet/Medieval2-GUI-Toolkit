@@ -13236,5 +13236,16 @@
  "eng.diplocheck.subject_needs_m2ex": "{how} 仅由 M2EX 读取，但此模组未标记为使用 M2EX 运行。原版游戏无法读取此行。",
  "eng.diplocheck.unknown_faction": "`{name}` 在此 {kind} 行中不是 descr_sm_factions.txt 声明的派系，因此游戏会跳过它并记录脚本错误。",
  "eng.diplocheck.unknown_relation": "`{how}` 不是游戏识别的关系。游戏识别 allied_to 和 at_war_with，在 M2EX 中还识别 protectorate_of 和 client_of。",
- "eng.diplocheck.war_and_alliance": "{a} 和 {b} 在第 {l1} 行被声明为 {r1}，又在第 {l2} 行被声明为 {r2}；以后面的声明为准，即 {last}。"
+ "eng.diplocheck.war_and_alliance": "{a} 和 {b} 在第 {l1} 行被声明为 {r1}，又在第 {l2} 行被声明为 {r2}；以后面的声明为准，即 {last}。",
+ "eng.winconds.fill_multiplier": "乘数必须是大于或等于 1 的整数，而 {x} 不是",
+ "eng.winconds.this_fill_would_add_drop_or": "此次填充会添加、删除或重新排列某个派系的记录",
+ "eng.winconds.this_fill_would_change_s": "此次填充会更改派系 {faction} 的 {KEYWORD}",
+ "stratcamp.fill_button": "填充所有派系",
+ "stratcamp.fill_every": "所有派系，按地图填充",
+ "stratcamp.fill_title": "按地图填充所有派系",
+ "stratcamp.write_wins_fill": "写入按地图填充的所有派系胜利条件？\n\n{changes}{warnings}\n\n将先创建备份，dY\u0007` Log 可撤销此操作。",
+ "stratcamp.fill_note": "take_regions 将变为派系开局拥有的定居点数乘以此数值；两条 hold_regions 行都将变为其首都，也就是 descr_strat.txt 中的第一个定居点。保留 outlive。没有定居点的派系和叛军保持原样。来自 Mylae 的 M2TW Editor。",
+ "stratcamp.fill_short": "短战役：每个定居点对应的行省数",
+ "stratcamp.fill_long": "长战役：每个定居点对应的行省数",
+ "eng.winconds.fill_skipped": "保持原样，因为它们开始时没有定居点或属于叛军：{names}"
 }

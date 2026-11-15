@@ -14631,5 +14631,16 @@
  "eng.diplocheck.subject_needs_m2ex": "{how} odczytuje tylko M2EX, a ten mod nie jest oznaczony jako działający z M2EX. Podstawowa wersja gry nie potrafi odczytać tego wiersza.",
  "eng.diplocheck.unknown_faction": "`{name}` w tym wierszu {kind} nie jest frakcją zadeklarowaną w descr_sm_factions.txt, więc gra pomija ten wpis i zapisuje błąd skryptu.",
  "eng.diplocheck.unknown_relation": "`{how}` nie jest relacją odczytywaną przez grę. Gra odczytuje allied_to i at_war_with, a w M2EX także protectorate_of i client_of.",
- "eng.diplocheck.war_and_alliance": "{a} i {b} są zadeklarowane jako {r1} w wierszu {l1} oraz jako {r2} w wierszu {l2}; obowiązuje późniejszy wpis, czyli {last}."
+ "eng.diplocheck.war_and_alliance": "{a} i {b} są zadeklarowane jako {r1} w wierszu {l1} oraz jako {r2} w wierszu {l2}; obowiązuje późniejszy wpis, czyli {last}.",
+ "eng.winconds.fill_multiplier": "Mnożnik musi być liczbą całkowitą równą co najmniej 1, a {x} taki nie jest",
+ "eng.winconds.fill_skipped": "pozostają bez zmian, ponieważ zaczynają bez osady lub są rebeliantami: {names}",
+ "eng.winconds.this_fill_would_add_drop_or": "to wypełnienie dodałoby, usunęłoby lub zmieniło kolejność rekordu frakcji",
+ "eng.winconds.this_fill_would_change_s": "to wypełnienie zmieniłoby {KEYWORD} frakcji {faction}",
+ "stratcamp.fill_button": "Wypełnij wszystkie frakcje",
+ "stratcamp.fill_every": "wszystkie frakcje, wypełnione na podstawie mapy",
+ "stratcamp.fill_long": "Długa kampania: prowincje na osadę",
+ "stratcamp.fill_note": "take_regions przyjmie wartość równą liczbie osad, z którymi frakcja rozpoczyna grę, pomnożonej przez tę liczbę. Obie linie hold_regions będą wskazywać jej stolicę, pierwszą osadę w descr_strat.txt. outlive pozostanie bez zmian. Frakcje bez osad oraz rebelianci pozostaną bez zmian. Z M2TW Editor autorstwa Mylae.",
+ "stratcamp.fill_short": "Krótka kampania: prowincje na osadę",
+ "stratcamp.fill_title": "Wypełnij wszystkie frakcje na podstawie mapy",
+ "stratcamp.write_wins_fill": "Zapisać warunki zwycięstwa wszystkich frakcji, wypełnione na podstawie mapy?\n\n{changes}{warnings}\n\nNajpierw zostanie utworzona kopia zapasowa. dY\u0007` Log może cofnąć tę zmianę."
 }

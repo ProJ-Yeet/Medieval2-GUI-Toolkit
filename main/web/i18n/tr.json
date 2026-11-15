@@ -13376,5 +13376,16 @@
  "eng.diplocheck.subject_needs_m2ex": "{how} yalnızca M2EX tarafından okunur ve bu modun M2EX ile çalıştığı belirtilmemiştir. Oyunun standart sürümü bu satırı okuyamaz.",
  "eng.diplocheck.unknown_faction": "`{name}` bu {kind} satırında, descr_sm_factions.txt içinde tanımlanmış bir fraksiyon değildir; bu yüzden oyun satırı atlar ve bir script hatası kaydeder.",
  "eng.diplocheck.unknown_relation": "`{how}` oyunun okuduğu bir ilişki değildir. Oyun allied_to ve at_war_with değerlerini, M2EX'te ise protectorate_of ve client_of değerlerini okur.",
- "eng.diplocheck.war_and_alliance": "{a} ve {b}, {l1}. satırda {r1}, {l2}. satırda ise {r2} olarak tanımlanmış; son tanım geçerli olduğundan sonuç {last} olur."
+ "eng.diplocheck.war_and_alliance": "{a} ve {b}, {l1}. satırda {r1}, {l2}. satırda ise {r2} olarak tanımlanmış; son tanım geçerli olduğundan sonuç {last} olur.",
+ "eng.winconds.fill_multiplier": "Çarpan 1 veya daha büyük bir tam sayı olmalı; {x} ise bu koşulu sağlamıyor",
+ "eng.winconds.fill_skipped": "yerleşim olmadan başladıkları veya isyancı oldukları için oldukları gibi bırakılır: {names}",
+ "eng.winconds.this_fill_would_add_drop_or": "bu doldurma bir fraksiyonun kaydını ekler, siler veya yeniden sıralar",
+ "eng.winconds.this_fill_would_change_s": "bu doldurma {faction} fraksiyonunun {KEYWORD} değerini değiştirir",
+ "stratcamp.fill_button": "Tüm fraksiyonları doldur",
+ "stratcamp.fill_every": "haritaya göre doldurulan tüm fraksiyonlar",
+ "stratcamp.fill_note": "take_regions, bir fraksiyonun oyuna başladığı yerleşim sayısının bu değerle çarpımına dönüşür. Her iki hold_regions satırı da başkentini, yani descr_strat.txt içindeki ilk yerleşimi gösterir. outlive korunur. Yerleşimi olmayan fraksiyonlar ve isyancılar oldukları gibi bırakılır. Mylae'nin M2TW Editor aracından.",
+ "stratcamp.fill_title": "Tüm fraksiyonları haritaya göre doldur",
+ "stratcamp.write_wins_fill": "Tüm fraksiyonların zafer koşulları haritaya göre doldurularak yazılsın mı?\n\n{changes}{warnings}\n\nÖnce yedek alınır. dY\u0007` Log değişikliği geri alabilir.",
+ "stratcamp.fill_long": "Uzun kampanya: yerleşim başına eyalet",
+ "stratcamp.fill_short": "Kısa kampanya: yerleşim başına eyalet"
 }

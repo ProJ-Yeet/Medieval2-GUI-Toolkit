@@ -13926,5 +13926,16 @@
  "eng.diplocheck.subject_needs_m2ex": "{how} wird nur von M2EX gelesen. Dieser Mod ist nicht dafür gekennzeichnet, mit M2EX zu laufen, und das Grundspiel kann diese Zeile nicht lesen.",
  "eng.diplocheck.unknown_faction": "`{name}` in dieser {kind}-Zeile ist keine Fraktion, die descr_sm_factions.txt deklariert. Das Spiel überspringt den Eintrag und protokolliert einen Skriptfehler.",
  "eng.diplocheck.unknown_relation": "`{how}` ist keine Beziehung, die das Spiel kennt. Es erkennt allied_to und at_war_with sowie unter M2EX protectorate_of und client_of.",
- "eng.diplocheck.war_and_alliance": "Für {a} und {b} sind in Zeile {l1} {r1} und in Zeile {l2} {r2} deklariert. Der spätere Eintrag gilt, also gilt {last}."
+ "eng.diplocheck.war_and_alliance": "Für {a} und {b} sind in Zeile {l1} {r1} und in Zeile {l2} {r2} deklariert. Der spätere Eintrag gilt, also gilt {last}.",
+ "eng.winconds.fill_multiplier": "Ein Multiplikator muss eine ganze Zahl von mindestens 1 sein, und {x} ist es nicht",
+ "eng.winconds.fill_skipped": "bleiben unverändert, da sie ohne Siedlung starten oder Rebellen sind: {names}",
+ "eng.winconds.this_fill_would_add_drop_or": "Diese Auffüllung würde den Datensatz einer Fraktion hinzufügen, entfernen oder neu anordnen",
+ "eng.winconds.this_fill_would_change_s": "Diese Auffüllung würde {KEYWORD} von {faction} ändern",
+ "stratcamp.fill_button": "Alle Fraktionen auffüllen",
+ "stratcamp.fill_every": "alle Fraktionen, anhand der Karte aufgefüllt",
+ "stratcamp.fill_long": "Lange Kampagne: Provinzen pro Siedlung",
+ "stratcamp.fill_note": "take_regions wird zur Anzahl der Siedlungen, mit denen eine Fraktion startet, multipliziert mit diesem Wert. Beide hold_regions-Zeilen werden zu ihrer Hauptstadt, der ersten Siedlung in descr_strat.txt. outlive bleibt erhalten. Fraktionen ohne Siedlung und die Rebellen bleiben unverändert. Aus Mylaes M2TW Editor.",
+ "stratcamp.fill_short": "Kurze Kampagne: Provinzen pro Siedlung",
+ "stratcamp.fill_title": "Alle Fraktionen anhand der Karte auffüllen",
+ "stratcamp.write_wins_fill": "Schreiben: Siegesbedingungen aller Fraktionen anhand der Karte auffüllen?\n\n{changes}{warnings}\n\nZuerst wird eine Sicherung erstellt. Das dY\u0007` Log kann die Änderung rückgängig machen."
 }

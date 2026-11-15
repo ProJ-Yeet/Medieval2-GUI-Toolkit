@@ -3787,7 +3787,7 @@
    "reason": "campaign map + descr_strat - the flagship phase",
    "status": "triaged",
    "first_seen": "09ab33e",
-   "notes": ""
+   "notes": "ported 2026-11-16 as winconds action 'fill' and the Winning tab's 'Fill every faction from the map' (test_stratcamp 4c); landless factions and the rebels are left as they are, and a faction with no record is not given one"
   },
   "src/components/map/autoVictoryConditions.js": {
    "disposition": "port-concept",
@@ -3797,7 +3797,7 @@
    "reason": "campaign map + descr_strat - the flagship phase",
    "status": "triaged",
    "first_seen": "09ab33e",
-   "notes": ""
+   "notes": "ported 2026-11-16 as winconds action 'fill' and the Winning tab's 'Fill every faction from the map' (test_stratcamp 4c); landless factions and the rebels are left as they are, and a faction with no record is not given one"
   },
   "src/components/map/autoVictoryConditions.test.mjs": {
    "disposition": "port-concept",
@@ -3807,7 +3807,7 @@
    "reason": "campaign map + descr_strat - the flagship phase",
    "status": "triaged",
    "first_seen": "09ab33e",
-   "notes": ""
+   "notes": "ported 2026-11-16 as winconds action 'fill' and the Winning tab's 'Fill every faction from the map' (test_stratcamp 4c); landless factions and the rebels are left as they are, and a faction with no record is not given one"
   },
   "src/components/map/campaignAutoSaveLifecycle.js": {
    "disposition": "port-concept",
@@ -4257,7 +4257,7 @@
    "reason": "campaign map + descr_strat - the flagship phase",
    "status": "triaged",
    "first_seen": "09ab33e",
-   "notes": ""
+   "notes": "not ported: his click-to-move endpoint editor and inland-outlet review; our validator's river rules cover the analysis"
   },
   "src/components/map/rivers/riverAnalysis.js": {
    "disposition": "port-concept",
@@ -4267,7 +4267,7 @@
    "reason": "campaign map + descr_strat - the flagship phase",
    "status": "triaged",
    "first_seen": "09ab33e",
-   "notes": ""
+   "notes": "not ported: his click-to-move endpoint editor and inland-outlet review; our validator's river rules cover the analysis"
   },
   "src/components/map/rivers/riverCycles.js": {
    "disposition": "port-concept",
@@ -4277,7 +4277,7 @@
    "reason": "campaign map + descr_strat - the flagship phase",
    "status": "triaged",
    "first_seen": "09ab33e",
-   "notes": ""
+   "notes": "ported 2026-11-16 as unittransfer/riverfix.py, the validator's river_repair fix on river.rejoin / diagonal / isolated / no_source (tests/test_riverfix, 20; test_mapcheck round trips); narrower than his: changes only what the rules report, never moves an existing source, fragments of two kept"
   },
   "src/components/map/rivers/riverDiagonals.js": {
    "disposition": "port-concept",
@@ -4287,7 +4287,7 @@
    "reason": "campaign map + descr_strat - the flagship phase",
    "status": "triaged",
    "first_seen": "09ab33e",
-   "notes": ""
+   "notes": "ported 2026-11-16 as unittransfer/riverfix.py, the validator's river_repair fix on river.rejoin / diagonal / isolated / no_source (tests/test_riverfix, 20; test_mapcheck round trips); narrower than his: changes only what the rules report, never moves an existing source, fragments of two kept"
   },
   "src/components/map/rivers/riverEndpointPath.js": {
    "disposition": "port-concept",
@@ -4297,7 +4297,7 @@
    "reason": "campaign map + descr_strat - the flagship phase",
    "status": "triaged",
    "first_seen": "09ab33e",
-   "notes": ""
+   "notes": "not ported: his click-to-move endpoint editor and inland-outlet review; our validator's river rules cover the analysis"
   },
   "src/components/map/rivers/riverFinalCleanup.js": {
    "disposition": "port-concept",
@@ -4307,7 +4307,7 @@
    "reason": "campaign map + descr_strat - the flagship phase",
    "status": "triaged",
    "first_seen": "09ab33e",
-   "notes": ""
+   "notes": "ported 2026-11-16 as unittransfer/riverfix.py, the validator's river_repair fix on river.rejoin / diagonal / isolated / no_source (tests/test_riverfix, 20; test_mapcheck round trips); narrower than his: changes only what the rules report, never moves an existing source, fragments of two kept"
   },
   "src/components/map/rivers/riverGrid.js": {
    "disposition": "port-concept",
@@ -4317,7 +4317,7 @@
    "reason": "campaign map + descr_strat - the flagship phase",
    "status": "triaged",
    "first_seen": "09ab33e",
-   "notes": ""
+   "notes": "ported 2026-11-16 as unittransfer/riverfix.py, the validator's river_repair fix on river.rejoin / diagonal / isolated / no_source (tests/test_riverfix, 20; test_mapcheck round trips); narrower than his: changes only what the rules report, never moves an existing source, fragments of two kept"
   },
   "src/components/map/rivers/riverIssueEdits.js": {
    "disposition": "port-concept",
@@ -4327,7 +4327,7 @@
    "reason": "campaign map + descr_strat - the flagship phase",
    "status": "triaged",
    "first_seen": "09ab33e",
-   "notes": ""
+   "notes": "not ported: his click-to-move endpoint editor and inland-outlet review; our validator's river rules cover the analysis"
   },
   "src/components/map/rivers/riverLoopCorridor.js": {
    "disposition": "port-concept",
@@ -4337,7 +4337,7 @@
    "reason": "campaign map + descr_strat - the flagship phase",
    "status": "triaged",
    "first_seen": "09ab33e",
-   "notes": ""
+   "notes": "ported 2026-11-16 as unittransfer/riverfix.py, the validator's river_repair fix on river.rejoin / diagonal / isolated / no_source (tests/test_riverfix, 20; test_mapcheck round trips); narrower than his: changes only what the rules report, never moves an existing source, fragments of two kept"
   },
   "src/components/map/rivers/riverLoopFallback.js": {
    "disposition": "port-concept",
@@ -4347,7 +4347,7 @@
    "reason": "campaign map + descr_strat - the flagship phase",
    "status": "triaged",
    "first_seen": "09ab33e",
-   "notes": ""
+   "notes": "ported 2026-11-16 as unittransfer/riverfix.py, the validator's river_repair fix on river.rejoin / diagonal / isolated / no_source (tests/test_riverfix, 20; test_mapcheck round trips); narrower than his: changes only what the rules report, never moves an existing source, fragments of two kept"
   },
   "src/components/map/rivers/riverLoopLocations.js": {
    "disposition": "port-concept",
@@ -4357,7 +4357,7 @@
    "reason": "campaign map + descr_strat - the flagship phase",
    "status": "triaged",
    "first_seen": "09ab33e",
-   "notes": ""
+   "notes": "not ported: his click-to-move endpoint editor and inland-outlet review; our validator's river rules cover the analysis"
   },
   "src/components/map/rivers/riverRepair.js": {
    "disposition": "port-concept",
@@ -4367,7 +4367,7 @@
    "reason": "campaign map + descr_strat - the flagship phase",
    "status": "triaged",
    "first_seen": "09ab33e",
-   "notes": ""
+   "notes": "ported 2026-11-16 as unittransfer/riverfix.py, the validator's river_repair fix on river.rejoin / diagonal / isolated / no_source (tests/test_riverfix, 20; test_mapcheck round trips); narrower than his: changes only what the rules report, never moves an existing source, fragments of two kept"
   },
   "src/components/map/rivers/riverSources.js": {
    "disposition": "port-concept",
@@ -4377,7 +4377,7 @@
    "reason": "campaign map + descr_strat - the flagship phase",
    "status": "triaged",
    "first_seen": "09ab33e",
-   "notes": ""
+   "notes": "ported 2026-11-16 as unittransfer/riverfix.py, the validator's river_repair fix on river.rejoin / diagonal / isolated / no_source (tests/test_riverfix, 20; test_mapcheck round trips); narrower than his: changes only what the rules report, never moves an existing source, fragments of two kept"
   },
   "src/components/map/rivers/riverThin.js": {
    "disposition": "port-concept",
@@ -4387,7 +4387,7 @@
    "reason": "campaign map + descr_strat - the flagship phase",
    "status": "triaged",
    "first_seen": "09ab33e",
-   "notes": ""
+   "notes": "ported 2026-11-16 as unittransfer/riverfix.py, the validator's river_repair fix on river.rejoin / diagonal / isolated / no_source (tests/test_riverfix, 20; test_mapcheck round trips); narrower than his: changes only what the rules report, never moves an existing source, fragments of two kept"
   },
   "src/components/map/rivers/riverWater.js": {
    "disposition": "port-concept",
@@ -4397,7 +4397,7 @@
    "reason": "campaign map + descr_strat - the flagship phase",
    "status": "triaged",
    "first_seen": "09ab33e",
-   "notes": ""
+   "notes": "ported 2026-11-16 as unittransfer/riverfix.py, the validator's river_repair fix on river.rejoin / diagonal / isolated / no_source (tests/test_riverfix, 20; test_mapcheck round trips); narrower than his: changes only what the rules report, never moves an existing source, fragments of two kept"
   },
   "src/components/map/seedCampaignCharacterNames.js": {
    "disposition": "port-concept",

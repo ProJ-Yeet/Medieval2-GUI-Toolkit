@@ -913,7 +913,8 @@ def _r_river_diagonal(ck: Check) -> Iterable[Finding]:
         yield Finding(
             "river.diagonal", "warn",
             _i18n.msg("eng.mapcheck.the_river_tile_at_touches_the", "The river tile at {x},{y} touches the rest of the river only at a corner. The engine steps a river north, south, east and west, so the water stops here and starts again on the far side.", x=x, y=y),
-            file=ck.rel("map_features.tga"), tile=(x, y), what=f"{x},{y}")
+            file=ck.rel("map_features.tga"), tile=(x, y), what=f"{x},{y}",
+            fix="river_repair")
 
 
 @rule("river.isolated", "A river tile on its own", "warn",
@@ -930,7 +931,8 @@ def _r_river_isolated(ck: Check) -> Iterable[Finding]:
         yield Finding(
             "river.isolated", "warn",
             _i18n.msg("eng.mapcheck.the_river_tile_at_touches_no", "The river tile at {x},{y} touches no other river tile at all. One tile of water with no course through it.", x=x, y=y),
-            file=ck.rel("map_features.tga"), tile=(x, y), what=f"{x},{y}")
+            file=ck.rel("map_features.tga"), tile=(x, y), what=f"{x},{y}",
+            fix="river_repair")
 
 
 @rule("river.rejoin", "A river that splits and rejoins", "warn",
@@ -972,7 +974,7 @@ def _r_river_rejoin(ck: Check) -> Iterable[Finding]:
                 "river.rejoin", "warn",
                 _i18n.msg("eng.mapcheck.the_river_closes_a_loop_at", "The river closes a loop at {p},{p2}: the water leaves here and comes back to the same tile. A river the engine can build is a tree, and a loop has no mouth.", p=p[0], p2=p[1]),
                 file=ck.rel("map_features.tga"), tile=p,
-                what=f"{p[0]},{p[1]}|{q[0]},{q[1]}")
+                what=f"{p[0]},{p[1]}|{q[0]},{q[1]}", fix="river_repair")
 
 
 @rule("river.fourway", "A river crossing four ways", "warn",
@@ -1053,7 +1055,7 @@ def _r_river_no_source(ck: Check) -> Iterable[Finding]:
             "river.no_source", "warn",
             _i18n.msg("eng.mapcheck.the_river_running_through_has_no", "The river running through {start},{start2} has no source pixel anywhere along its {comp_n:,} tile(s). A course the engine can build starts at one white tile and runs to its mouth.", start=start[0], start2=start[1], comp_n=len(comp)),
             file=ck.rel("map_features.tga"), tile=start,
-            count=len(comp), what=f"{start[0]},{start[1]}")
+            count=len(comp), what=f"{start[0]},{start[1]}", fix="river_repair")
 
 
 @rule("feature.ford_in_sea", "A ford standing in open water", "warn",
@@ -1981,6 +1983,23 @@ FIXES: Dict[str, dict] = {
                 "further out, and only as far as it takes. The crossing and "
                 "the sea do not move.",
     },
+    # Mylae's river Auto-Fix (riverfix.py). One fix for four rules, because a
+    # loop, a corner join and a missing source are one network's repair and
+    # are best done in one pass in his order. It does not touch a four-way
+    # crossing, for the reason above; it does choose a source's end, inland
+    # where the sea mask can say which end that is, and the plan names every
+    # change before anything is written.
+    "river_repair": {
+        "label": "Repair rivers (Mylae's river Auto-Fix)",
+        "rule": "river.rejoin",
+        "also": ("river.diagonal", "river.isolated", "river.no_source"),
+        "file": "map_features.tga",
+        "what": "Joins a river tile that touches the rest only at a corner, "
+                "opens every loop and thins solid blocks to one tile wide "
+                "without moving a course's ends or its fords, clears a river "
+                "tile on its own, and puts a source at the inland end of a "
+                "course that has none. Only river tiles change.",
+    },
     "resource_position": {
         "label": "Delete resources that are off the map or in the sea",
         "rule": "strat.resource_position",
@@ -2005,6 +2024,8 @@ class FixPlan:
     errors: List[str] = field(default_factory=list)
     #: the findings this plan would clear, for the answer and the log
     cleared: List[Finding] = field(default_factory=list)
+    #: a layer one fix has already changed, for the next fix of the same file
+    images: Dict[str, Image.Image] = field(default_factory=dict)
 
     def summary(self) -> str:
         head = (f"fix {getattr(self.mod, 'name', '?')}'s campaign map "
@@ -2044,12 +2065,13 @@ def plan_fix(mod, codes: Sequence[str], cm: Optional[CampaignMap] = None,
 
     found: Dict[str, List[Finding]] = {}
     for code in p.codes:
-        r = RULE_BY_CODE[FIXES[code]["rule"]]
-        try:
-            got = [f for f in (r.fn(ck) or ()) if f.fix == code]
-        except Exception as exc:                       # noqa: BLE001
-            p.errors.append(_i18n.msg("eng.mapcheck.could_not_be_re_checked", "{code} could not be re-checked: {exc}", code=r.code, exc=exc))
-            continue
+        got = []
+        for rc in (FIXES[code]["rule"],) + tuple(FIXES[code].get("also", ())):
+            r = RULE_BY_CODE[rc]
+            try:
+                got += [f for f in (r.fn(ck) or ()) if f.fix == code]
+            except Exception as exc:                   # noqa: BLE001
+                p.errors.append(_i18n.msg("eng.mapcheck.could_not_be_re_checked", "{code} could not be re-checked: {exc}", code=r.code, exc=exc))
         if want is not None:
             got = [f for f in got if f.key in want]
         found[code] = got
@@ -2066,6 +2088,8 @@ def plan_fix(mod, codes: Sequence[str], cm: Optional[CampaignMap] = None,
         _plan_fords(ck, p, [f.tile for f in found["ford_none"] if f.tile])
     if found.get("crossing_smooth"):
         _plan_smooth(ck, p, [f.tile for f in found["crossing_smooth"] if f.tile])
+    if found.get("river_repair"):
+        _plan_rivers(ck, p)
     drop = sorted({f.line - 1 for f in found.get("resource_position", ())
                    if f.line > 0})
     if drop:
@@ -2148,6 +2172,7 @@ def _plan_fords(ck: Check, p: FixPlan, tiles: Sequence[Tuple[int, int]]) -> None
     except Exception as exc:                           # noqa: BLE001
         p.errors.append(_i18n.msg("eng.mapcheck.map_features_tga_could_not_be_2", "map_features.tga could not be re-encoded: {exc}", exc=exc))
         return
+    p.images[ck.rel("map_features.tga")] = img
     p.changes.append(f"map_features.tga: {moved:,} river crossing(s) standing "
                      f"in open water cleared to no feature")
 
@@ -2173,6 +2198,39 @@ def _plan_smooth(ck: Check, p: FixPlan, tiles: Sequence[Tuple[int, int]]) -> Non
         return
     p.changes.append(f"map_heights.tga: {moved:,} pixel(s) levelled around "
                      f"{len(tiles):,} river crossing(s)")
+
+
+def _plan_rivers(ck: Check, p: FixPlan) -> None:
+    """Mylae's river Auto-Fix over the whole features layer - :mod:`riverfix`.
+
+    The whole network rather than the findings' tiles: a loop is opened where
+    its cheapest arm is, which need not be the tile the rule happened to name.
+    """
+    from . import riverfix
+    cm = ck.cm
+    rel = ck.rel("map_features.tga")
+    try:
+        # after the ford fix, when both were chosen, so neither undoes the other
+        img = p.images.get(rel) or cm.layer("features").convert("RGB")
+        info = cm.info("features")
+    except MapError as exc:
+        p.errors.append(_i18n.msg("eng.mapcheck.map_features_tga_could_not_be", "map_features.tga could not be read: {exc}", exc=exc))
+        return
+    out, n = riverfix.repair(img.tobytes(), img.width, img.height, ck.sea)
+    if out == img.tobytes():
+        return
+    new = Image.frombytes("RGB", img.size, out)
+    try:
+        p.data[rel] = encode(new, info)
+    except Exception as exc:                           # noqa: BLE001
+        p.errors.append(_i18n.msg("eng.mapcheck.map_features_tga_could_not_be_2", "map_features.tga could not be re-encoded: {exc}", exc=exc))
+        return
+    said = [f"{n[k]} {label}" for k, label in (
+        ("joined", "corner join(s) bridged"), ("thinned", "block tile(s) thinned"),
+        ("opened", "loop tile(s) removed"), ("lone", "lone tile(s) cleared"),
+        ("sources", "source(s) added"), ("fords_moved", "ford(s) moved along their course"),
+        ("fords_lost", "ford(s) with no course left")) if n[k]]
+    p.changes.append("map_features.tga, rivers: " + ", ".join(said))
 
 
 def _plan_strat(ck: Check, p: FixPlan, drop: Sequence[int]) -> None:

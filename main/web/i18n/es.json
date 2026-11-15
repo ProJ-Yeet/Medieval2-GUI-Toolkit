@@ -14387,5 +14387,16 @@
  "eng.diplocheck.subject_needs_m2ex": "{how} solo se lee con M2EX, y este mod no está marcado para ejecutarse con M2EX. El juego original no puede leer esta línea.",
  "eng.diplocheck.unknown_faction": "`{name}` en esta línea de {kind} no es una facción declarada en descr_sm_factions.txt, así que el juego la omite y registra un error de script.",
  "eng.diplocheck.unknown_relation": "`{how}` no es una relación que lea el juego. El juego lee allied_to y at_war_with y, con M2EX, protectorate_of y client_of.",
- "eng.diplocheck.war_and_alliance": "{a} y {b} están declarados como {r1} en la línea {l1} y como {r2} en la línea {l2}; prevalece la declaración posterior, así que se aplica {last}."
+ "eng.diplocheck.war_and_alliance": "{a} y {b} están declarados como {r1} en la línea {l1} y como {r2} en la línea {l2}; prevalece la declaración posterior, así que se aplica {last}.",
+ "eng.winconds.fill_multiplier": "Un multiplicador debe ser un número entero de 1 o más, y {x} no lo es",
+ "eng.winconds.fill_skipped": "se dejan sin cambios porque empiezan sin asentamiento o son rebeldes: {names}",
+ "eng.winconds.this_fill_would_add_drop_or": "este relleno añadiría, quitaría o reordenaría el registro de una facción",
+ "eng.winconds.this_fill_would_change_s": "este relleno cambiaría {KEYWORD} de {faction}",
+ "stratcamp.fill_button": "Rellenar todas las facciones",
+ "stratcamp.fill_every": "todas las facciones, rellenadas según el mapa",
+ "stratcamp.fill_long": "Campaña larga: provincias por asentamiento",
+ "stratcamp.fill_note": "take_regions pasa a ser el número de asentamientos con los que empieza una facción multiplicado por este valor, y ambas líneas hold_regions pasan a ser su capital, el primer asentamiento de descr_strat.txt. outlive se conserva. Las facciones sin asentamientos y los rebeldes se dejan como están. De M2TW Editor de Mylae.",
+ "stratcamp.fill_short": "Campaña corta: provincias por asentamiento",
+ "stratcamp.fill_title": "Rellenar todas las facciones según el mapa",
+ "stratcamp.write_wins_fill": "¿Escribir las condiciones de victoria de todas las facciones, rellenadas según el mapa?\n\n{changes}{warnings}\n\nPrimero se crea una copia de seguridad, y dY\u0007` Log puede deshacerlo."
 }

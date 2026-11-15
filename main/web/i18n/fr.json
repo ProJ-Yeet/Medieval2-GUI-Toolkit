@@ -14027,5 +14027,16 @@
  "eng.diplocheck.subject_needs_m2ex": "`{how}` n'est lu que par M2EX, et ce mod n'est pas indiqué comme fonctionnant avec M2EX. Le jeu d'origine ne peut pas lire cette ligne.",
  "eng.diplocheck.unknown_faction": "`{name}` sur cette ligne de {kind} n'est pas une faction déclarée dans descr_sm_factions.txt. Le jeu l'ignore et consigne une erreur de script.",
  "eng.diplocheck.unknown_relation": "`{how}` n'est pas une relation reconnue par le jeu. Celui-ci reconnaît allied_to et at_war_with, ainsi que protectorate_of et client_of sous M2EX.",
- "eng.diplocheck.war_and_alliance": "{a} et {b} sont déclarés {r1} à la ligne {l1}, puis {r2} à la ligne {l2} ; la dernière déclaration l'emporte, donc {last} s'applique."
+ "eng.diplocheck.war_and_alliance": "{a} et {b} sont déclarés {r1} à la ligne {l1}, puis {r2} à la ligne {l2} ; la dernière déclaration l'emporte, donc {last} s'applique.",
+ "eng.winconds.fill_multiplier": "Un multiplicateur doit être un nombre entier supérieur ou égal à 1, et {x} ne l'est pas",
+ "eng.winconds.fill_skipped": "restent inchangés, car ils commencent sans colonie ou sont des rebelles : {names}",
+ "eng.winconds.this_fill_would_add_drop_or": "ce remplissage ajouterait, supprimerait ou réordonnerait l'enregistrement d'une faction",
+ "eng.winconds.this_fill_would_change_s": "ce remplissage modifierait {KEYWORD} de {faction}",
+ "stratcamp.fill_button": "Remplir toutes les factions",
+ "stratcamp.fill_every": "toutes les factions, remplies selon la carte",
+ "stratcamp.fill_long": "Campagne longue : provinces par colonie",
+ "stratcamp.fill_note": "take_regions devient le nombre de colonies avec lesquelles une faction commence, multiplié par cette valeur. Les deux lignes hold_regions deviennent sa capitale, la première colonie de descr_strat.txt. outlive est conservé. Les factions sans colonie et les rebelles restent inchangés. D'après le M2TW Editor de Mylae.",
+ "stratcamp.fill_short": "Campagne courte : provinces par colonie",
+ "stratcamp.fill_title": "Remplir toutes les factions selon la carte",
+ "stratcamp.write_wins_fill": "Écrire les conditions de victoire de toutes les factions, remplies selon la carte ?\n\n{changes}{warnings}\n\nUne sauvegarde est créée avant l'opération, et dY\u0007` Log peut l'annuler."
 }

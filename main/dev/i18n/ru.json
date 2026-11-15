@@ -14743,5 +14743,16 @@
  "eng.diplocheck.subject_needs_m2ex": "Отношение {how} читается только M2EX, а этот мод не помечен как работающий с M2EX. Обычная версия игры не может прочитать эту строку.",
  "eng.diplocheck.unknown_faction": "`{name}` в этой строке {kind} не входит в список фракций из descr_sm_factions.txt, поэтому игра пропускает его и записывает ошибку скрипта.",
  "eng.diplocheck.unknown_relation": "`{how}` не относится к числу отношений, которые читает игра. Игра читает allied_to и at_war_with, а в M2EX также protectorate_of и client_of.",
- "eng.diplocheck.war_and_alliance": "{a} и {b} объявлены как {r1} в строке {l1} и как {r2} в строке {l2}; действует более поздняя запись, то есть {last}."
+ "eng.diplocheck.war_and_alliance": "{a} и {b} объявлены как {r1} в строке {l1} и как {r2} в строке {l2}; действует более поздняя запись, то есть {last}.",
+ "eng.winconds.fill_multiplier": "Множитель должен быть целым числом не меньше 1, а {x} этому условию не соответствует",
+ "eng.winconds.this_fill_would_add_drop_or": "это заполнение добавит, удалит или изменит порядок записи фракции",
+ "eng.winconds.this_fill_would_change_s": "это заполнение изменит {KEYWORD} фракции {faction}",
+ "stratcamp.fill_button": "Заполнить все фракции",
+ "stratcamp.fill_every": "все фракции, заполненные по карте",
+ "stratcamp.fill_long": "Длинная кампания: провинций на поселение",
+ "stratcamp.fill_short": "Короткая кампания: провинций на поселение",
+ "stratcamp.fill_title": "Заполнить все фракции по карте",
+ "stratcamp.write_wins_fill": "Записать условия победы всех фракций, заполненные по карте?\n\n{changes}{warnings}\n\nСначала будет создана резервная копия. dY\u0007` Log позволит отменить изменения.",
+ "eng.winconds.fill_skipped": "останутся без изменений, так как начинают игру без поселения или являются повстанцами: {names}",
+ "stratcamp.fill_note": "take_regions станет равен числу поселений, с которыми начинает фракция, умноженному на это значение. Обе строки hold_regions будут указывать на её столицу, первое поселение в descr_strat.txt. outlive сохраняется. Фракции без поселений и повстанцы остаются без изменений. Из M2TW Editor от Mylae."
 }

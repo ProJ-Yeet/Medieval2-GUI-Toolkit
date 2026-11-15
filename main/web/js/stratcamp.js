@@ -1000,7 +1000,59 @@ function cjWinsHtml(){
       <button onclick="cjSave({action: 'delete'})">${tt('common.delete')}</button>
     </div>` : ''}
     ${cjWinAddHtml()}
+    ${cjWinFillHtml()}
   </div>`;
+}
+
+/* Mylae's "Update all factions" (autoVictoryConditions.js): every faction's
+   take_regions from the settlements it starts with, times a multiplier, and
+   both hold_regions lines its capital. One plan, one confirm, one Undo. */
+function cjWinFillHtml(){
+  const k = state.cj;
+  const f = k.winFill || (k.winFill = {long: 5, short: 3});
+  return `<div class="cjplan">
+    <div class="cshead"><b>${tt('stratcamp.fill_title')}</b></div>
+    <div class="csrow2">
+      <div class="cmfield"><label>${tt('stratcamp.fill_long')}</label>
+        <input type="number" min="1" step="1" value="${esc(f.long)}"
+          oninput="state.cj.winFill.long = this.value"></div>
+      <div class="cmfield"><label>${tt('stratcamp.fill_short')}</label>
+        <input type="number" min="1" step="1" value="${esc(f.short)}"
+          oninput="state.cj.winFill.short = this.value"></div>
+    </div>
+    <div class="count">${tt('stratcamp.fill_note')}</div>
+    <div class="csbtns"><button onclick="cjWinFill()">${tt('stratcamp.fill_button')}</button></div>
+  </div>`;
+}
+
+async function cjWinFill(){
+  const k = state.cj;
+  if(!k || k.busy) return;
+  const body = {mod: k.mod, campaign: k.d.campaign, action: 'fill',
+                long: Number(k.winFill.long), short: Number(k.winFill.short)};
+  k.busy = true;
+  let plan;
+  try{ plan = await api.post('/api/map/wins_plan', body); }
+  catch(e){ plan = {error: errText(e)}; }
+  finally{ k.busy = false; }
+  if(plan.error){ toast('✗ ' + plan.error, 8000); return; }
+  const p = plan.plan || {};
+  const warn = (p.warnings || []).slice(0, 4).map(x => '⚠ ' + x);
+  const lines = (p.changes || []).slice(0, 14);
+  if(!confirm(tt('stratcamp.write_wins_fill',{
+    changes:lines.join('\n') + ((p.changes || []).length > 14
+      ? tt('stratcamp.and_more',{changes:p.changes.length - 14}) : ''),
+    warnings:warn.length ? '\n\n' + warn.join('\n') : ''}))) return;
+  k.busy = true;
+  let res;
+  try{ res = await api.post('/api/map/wins_apply', body); }
+  catch(e){ res = {error: errText(e)}; }
+  finally{ k.busy = false; }
+  if(res.error){ toast('✗ ' + res.error, 8000); return; }
+  toast(tt('common.saved_log_can_undo_it'));
+  activity('campaign', tt('stratcamp.win_conditions',{mod:k.mod,faction:tt('stratcamp.fill_every')}));
+  k.wins = null;
+  cjWinReset();
 }
 
 //: A faction with a block and no win condition is the one thing this panel can

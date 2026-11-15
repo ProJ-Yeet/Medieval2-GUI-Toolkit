@@ -720,6 +720,29 @@ check("a record deleted takes its own blank separator with it",
 check("and the two records either side of it are untouched",
       [r.faction for r in back.records] == ["england", "slave"]
       and back.lines[0] == wf.lines[0])
+
+# Mylae's fill: every faction from the map, take = settlements x 5 (short x 3),
+# both hold lines the capital, outlive untouched
+w = winplan(action="fill")
+back = winconds.parse_wins(w.text) if w.text else None
+e = back.find("england") if back else None
+check(f"fill: England (one settlement) asks for 5 and 3 and holds London in "
+      f"both campaigns: {w.changes or w.errors}",
+      not w.errors and e is not None and e.get("take") == 5
+      and e.get("short_take") == 3 and e.get("hold") == ["London_Province"]
+      and e.get("short_hold") == ["London_Province"] and e.get("outlive") == ["france"])
+check("fill: France and the rebels start with no settlement and are left as "
+      "they were, and said so",
+      back.find("france").values == wf.find("france").values
+      and back.find("slave").values == wf.find("slave").values
+      and any("france" in x and "slave" in x for x in w.warnings))
+check("fill: the comment and the file's shape are kept",
+      back.lines[0] == wf.lines[0] and len(back.records) == 3)
+w = winplan(action="fill", long=8, short=2)
+e = winconds.parse_wins(w.text).find("england")
+check("fill: the multipliers are the form's", e.get("take") == 8 and e.get("short_take") == 2)
+check("fill: a multiplier of 0 is refused",
+      bool(winplan(action="fill", long=0).errors))
 shutil.rmtree(win_root, ignore_errors=True)
 
 # ---- 5) the two routes, a real save and its undo -------------------------------

@@ -86,7 +86,11 @@ COUNTS = ("take", "short_take")
 #: The separator every one of the 492 real value lines uses.
 SEP = " "
 
-ACTIONS = ("edit", "add", "delete")
+ACTIONS = ("edit", "add", "delete", "fill")
+
+#: Mylae's defaults for the fill: the long campaign asks for five provinces per
+#: settlement the faction starts with, the short one for three.
+FILL_LONG, FILL_SHORT = 5, 3
 
 #: The newline a preview's lines are joined with. What goes to disk
 #: is joined with the file's own, which every installed one writes
@@ -637,6 +641,8 @@ def plan_win(mod, facts, body: dict) -> WinPlan:
         return p
     p.path = wf.path
     voc = Vocabulary(facts)
+    if action == "fill":
+        return _plan_fill(p, wf, voc, facts, body)
 
     rec = wf.find(p.faction)
     if action != "add" and rec is None:
@@ -674,6 +680,93 @@ def plan_win(mod, facts, body: dict) -> WinPlan:
         p.changes = [f"{p.faction} is taken out of {REL_NAME}"]
     p.spans = [(a + 1, b + 1, n) for a, b, n in p.spans]
     p.text = "" if text == wf.serialise() else text
+    if not p.text and not p.errors:
+        p.errors.append(_i18n.msg("eng.winconds.nothing_to_change", "nothing to change"))
+    return p
+
+
+def holdings(facts) -> Dict[str, List[str]]:
+    """Each faction's provinces at the start, capital first, lower-case keys.
+
+    The capital is the faction's first settlement in descr_strat.txt, which is
+    how the game reads it and the rule Mylae's fill uses.
+    """
+    sf = getattr(facts, "strat", None)
+    out: Dict[str, List[str]] = {}
+    if sf is None:
+        return out
+    for f in sf.of_kind("faction"):
+        regions = [str(s.get("region") or "") for s in sf.descendants_of(f, "settlement")]
+        out[f.name.lower()] = [r for r in regions if r]
+    return out
+
+
+def _plan_fill(p: WinPlan, wf: WinFile, voc: Vocabulary, facts, body: dict) -> WinPlan:
+    """Every faction's win conditions from the map, in one save.
+
+    **From Mylae's M2TW Editor** (``autoVictoryConditions.js``, 2026-11-14):
+    ``take_regions`` is the number of settlements the faction starts with
+    times a multiplier (5 for the long campaign, 3 for the short), and both
+    ``hold_regions`` lines become the faction's capital. ``outlive`` is left
+    as it is. Three things differ from his: a faction with no settlement keeps
+    its record untouched (his would ask it to take 0 provinces, a campaign won
+    at turn one, and those are the factions that arrive by script), so do the
+    rebels (on DaC his rule asks them for 535 of 199 provinces), and a
+    faction with no record is not given one, since the file leaves such
+    factions out on purpose (see :func:`check_file`).
+    """
+    mults = []
+    for key, default in (("long", FILL_LONG), ("short", FILL_SHORT)):
+        got = body.get(key, default)
+        if not is_int(got) or int(got) < 1:
+            p.errors.append(_i18n.msg("eng.winconds.fill_multiplier",
+                                      "a multiplier is a whole number of 1 or more, and {x} is not",
+                                      x=repr(got)))
+            return p
+        mults.append(int(got))
+    long_x, short_x = mults
+    p.faction = "*"
+    held = holdings(facts)
+    before = wf
+    skipped: List[str] = []
+    for name in [r.faction for r in before.records]:
+        rec = wf.find(name)
+        regions = held.get(name.lower()) or []
+        if not regions or name.lower() == "slave":    # the rebels win nothing
+            skipped.append(name)
+            continue
+        values = dict(rec.values)
+        values.update(take=len(regions) * long_x, short_take=len(regions) * short_x,
+                      hold=[regions[0]], short_hold=[regions[0]])
+        if all(rec.values.get(k) == values[k] for k in ("take", "short_take", "hold", "short_hold")):
+            continue
+        said = _describe(rec.values, values)
+        lines = _edit_splice(wf, p, rec, values)
+        wf = parse_wins(wf.newline.join(lines) + (wf.newline if wf.trailing_newline else ""))
+        p.changes.append(f"{name}: " + "; ".join(said))
+    p.spans = []
+    if skipped:
+        p.warnings.append(_i18n.msg("eng.winconds.fill_skipped",
+                                    "left as they are, since they start with no settlement or are the rebels: {names}",
+                                    names=", ".join(skipped)))
+    # what a fill may change, checked against what it did
+    if [r.faction for r in wf.records] != [r.faction for r in before.records]:
+        p.errors.append(_i18n.msg("eng.winconds.this_fill_would_add_drop_or", "this fill would add, drop or reorder a faction's record"))
+        return p
+    for a, b in zip(before.records, wf.records):
+        for slot in ("outlive", "short_outlive"):
+            if a.get(slot) != b.get(slot):
+                p.errors.append(_i18n.msg("eng.winconds.this_fill_would_change_s", "this fill would change {faction}'s {KEYWORD}", faction=a.faction, KEYWORD=KEYWORD[slot]))
+                return p
+    # the records this fill wrote; a fault in one it left alone is not its to block on
+    wrote = {c.split(":", 1)[0].lower() for c in p.changes}
+    p.findings = check_file(voc, wf)
+    for rec in wf.records:
+        if rec.faction.lower() in wrote:
+            p.findings += check_record(voc, rec.faction, rec.values)
+    p.errors += [f["message"] for f in p.findings if f["fatal"]]
+    p.warnings += [f["message"] for f in p.findings if not f["fatal"]]
+    p.text = "" if wf.serialise() == before.serialise() else wf.serialise()
     if not p.text and not p.errors:
         p.errors.append(_i18n.msg("eng.winconds.nothing_to_change", "nothing to change"))
     return p
