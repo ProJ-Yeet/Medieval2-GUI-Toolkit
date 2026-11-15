@@ -1281,7 +1281,7 @@ rather being able to edit our tools data directly through CLI via lua
 scripts". So a modder writes a `.lua` file, runs it from a command line
 against a mod, and the script reads and edits the mod **through the
 toolkit's own parsers and editors**: a batch edit written as a program, not
-a new file format and not a script the game runs. Nothing is built.
+a new file format and not a script the game runs. Built 2026-11-15 (below).
 
 **What Fynn's tool does, read for behaviour only** (his repo
 github.com/FynnTW/ModdingTool, AGPL-3.0; a local copy in
@@ -1390,8 +1390,7 @@ phases until 80% usage limit is reached"):
   the ones a shorter list leaves out, so the script's levels are laid over the
   full list and never drop one; adding or taking out a level is not offered.
 * **126, ancillaries: done**, the same way (`ancillaries()`, `ancillary()`,
-  `edit_ancillary()`). Left in 126: strings, settlements and strat objects,
-  faction clones, triggers, the sheets.
+  `edit_ancillary()`).
 * **The engine's messages have IDs** (`eng.luaapi.*`, `eng.luarun.*`, 36) and
   are translated into de, es, fr, tr and zh-Hans (the catalogues on disk; pl
   and ru have none yet). Codex could not run them (its configured model is
@@ -1421,7 +1420,63 @@ phases until 80% usage limit is reached"):
   passes; `test_startup` 74/78, the same four checks failing on a clean HEAD
   worktree (this machine's mod setup).
 * The Log shows a run under its generic "edit in" row with a working Undo; a
-  label of its own needs a translated string, so it waits for 125.
+  label of its own needs a translated string, so it waits for 125. (Done in
+  125, below.)
+
+**Built 2026-11-15, the rest of 122 and 126, 125 and 127** (the user: "finish
+up the remaining lua phases"):
+
+* **122, a string by key: done**, with 126's strings: `toolkit.strings(file)`,
+  `string(file, tag)` and `edit_strings(file, changes)` through `strings.plan`
+  / `apply` (a .strings.bin in `data/text`, named `expanded`, `expanded.txt` or
+  in full). `{ TAG = "text" }` edits or adds, `false` takes out; an archive
+  with no tags is keyed by place from 1. A preview's diff shows the entries as
+  `{tag}text` lines, not "(binary file)".
+* **126, settlements and strat objects: done.** `settlements()` and
+  `edit_settlement(region, changes)` through `stratedit.plan_settlement` (the
+  values, the whole buildings list, `owner` and `place`, or `raw`);
+  `strat_objects()`, `edit_strat_object(kind, x, y, changes)` (a move, or
+  `delete = true`) and `add_strat_object(kind, values)` through
+  `stratobj.plan` / `apply`. Both take the fact table the server builds
+  (`mapquery.Facts` over `campmap.campaign_map`), so a tile off the map or a
+  region with no settlement is refused the way the panels refuse it.
+* **126, faction clones: done.** `clone_faction(source, new, {label, art})`
+  through `factionclone.plan` / `apply`. On DaC the editor's own refusal
+  (31 of 31 slots taken) is what the script gets; a clone that writes is
+  covered by `factionclone`'s own tests, not on a copy here.
+* **126, triggers: done.** `triggers(file)`, `edit_trigger`, `add_trigger`,
+  `delete_trigger` for `traits` or `ancillaries`, through the traits and
+  ancillaries editors' own save (`triggers.edit_section`), which names the
+  file's first definition and leaves it as it is. `effects` change the
+  existing effect lines in order; adding or taking one out is `raw`.
+* **126, the sheets: done.** The unit sheet's columns are EDU fields, so
+  `edit_unit` is that sheet. The recruitment sheet is `recruits()` (every
+  recruit_pool line, its numbers as numbers) and `edit_recruit(line,
+  changes)` through `sheet_recruit.plan` / `apply`, which checks the numbers
+  (experience whole, nothing below 0).
+* **125 done**, behind *Opt into beta features*: a Lua tab on the Scripts
+  screen. Open a saved script or an example, write, give `key=value` args,
+  Dry run or Apply; the report is the CLI's (printed lines, edits, warnings,
+  each file's diff in colour). `/api/lua/scripts`, `/api/lua/save`,
+  `/api/lua/run` over `luaapi.script_list`, `save_script` and `app_run` (one
+  run at a time; scripts in `config/lua_scripts`, a name kept inside it). The
+  Log has a *Lua scripts* tab and its own row label. **CodeMirror is not in
+  yet:** downloading it needs the user's yes; the tab mounts CodeMirror 5 with
+  Lua highlighting and `toolkit.` completion (Ctrl+Space) when the page has
+  it, and is a plain text box until then. The examples come from
+  `docs/lua_examples`, which the release zip does not carry yet, so a release
+  shows saved scripts only until that is decided.
+* **127**: `test_luaapi` 114/114 (strings, the campaign, faction clones,
+  triggers, recruits, the app's run; a DaC copy with its base map). Timing: an
+  edit cost 0.3 s on DaC, most of it the EDU parsed again after each write.
+  `edu._parse_block` now keeps blocks by their text (a copy each time) and the
+  byte-order-mark check runs on the first line only: 200 `edit_unit`s apply
+  in 34 s as one record whose Undo puts every byte back. More than a few
+  hundred edits need `--time-limit`. The release zip with `lupa` is checked
+  at the next release.
+* All new strings (engine messages, the tab, the Log) in en and the seven
+  catalogues, translated by Codex (`codex exec -m gpt-6-luna`, the model the
+  account takes), checked by the termbase; `test_i18n` 45/45.
 
 ## Phase 120 - the Lua runtime and its sandbox (MVP)
 

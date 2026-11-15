@@ -1092,6 +1092,13 @@
   ],
   "packdupes.col_copy": [
    "copy"
+  ],
+  "eng.luaapi.trigger_file": [
+   "ancillary",
+   "trait"
+  ],
+  "eng.luaapi.no_recruit_line": [
+   "recruit"
   ]
  },
  "ancillaries.a_character_holds_one_ancillary_per": "Ein Charakter hat pro Typ ein Gefolgsmitglied; das ist also das, was ein neues ersetzt",
@@ -13878,5 +13885,40 @@
  "eng.luarun.cannot_hand_a_to_a_script": "ein {name__} kann nicht an ein Skript übergeben werden",
  "eng.luarun.lua_scripts_need_the_lupa_package": "Lua-Skripte brauchen das Paket lupa (pip install lupa)",
  "eng.luarun.the_script_ran_out_of_memory": "dem Skript ist der Speicher ausgegangen (Grenze {x} MB)",
- "eng.luarun.time_limit_reached_time_limit_g": "Zeitlimit erreicht ({time_limit:g} s)"
+ "eng.luarun.time_limit_reached_time_limit_g": "Zeitlimit erreicht ({time_limit:g} s)",
+ "eng.luaapi.untagged_by_place": "{name} hat keine Tags: Die Einträge werden anhand ihrer Position benannt, beginnend bei 1.",
+ "eng.luaapi.edit_settlement_unknown": "edit_settlement: unbekannte Änderungen: {unknown}",
+ "eng.luaapi.edit_strat_object_unknown": "edit_strat_object: unbekannte Änderungen: {unknown}",
+ "eng.luaapi.add_strat_object_unknown": "add_strat_object: unbekannte Werte: {unknown}",
+ "eng.luaapi.clone_faction_unknown": "clone_faction: unbekannte Optionen: {unknown}",
+ "eng.luaapi.trigger_file_empty": "{name2} definiert weder eine Eigenschaft noch ein Gefolge, daher kann das Toolkit keine Trigger darin schreiben",
+ "eng.luaapi.edit_trigger_unknown": "edit_trigger: unbekannte Änderungen: {unknown}",
+ "eng.luaapi.no_trigger": "Der Trigger '{name}' ist in {name2} nicht vorhanden.",
+ "eng.luaapi.edit_recruit_unknown": "edit_recruit: unbekannte Änderungen: {unknown}",
+ "eng.luaapi.trigger_file": "Eine Trigger-Datei ist `traits` oder `ancillaries`, nicht '{file}'.",
+ "eng.luaapi.no_recruit_line": "Zeile {line} der EDB ist keine recruit_pool-Zeile (lies recruits() nach einer Bearbeitung erneut).",
+ "scripts.tab_lua": "Lua",
+ "scripts.lua_intro": "Ein Lua-Skript liest diese Mod und ändert sie mit den integrierten Editoren des Toolkits. Der Probelauf zeigt alle Dateien, die geändert würden, und schreibt nichts. Übernehmen speichert die Änderungen als einen Eintrag im Protokoll. Mit Rückgängig wird der gesamte Lauf zurückgenommen.",
+ "scripts.lua_first_line": "Gesamtzahl der Einheiten in der Mod",
+ "scripts.lua_no_runtime": "Die Lua-Laufzeitumgebung (lupa) ist nicht installiert. Führe Install-Dependencies.bat aus und starte das Toolkit anschließend neu.",
+ "scripts.lua_open": "Skript öffnen...",
+ "scripts.lua_saved": "Gespeichert",
+ "scripts.lua_examples": "Beispiele",
+ "scripts.lua_name_hint": "Dateiname, unter dem das Skript im Ordner config/lua_scripts des Toolkits gespeichert wird",
+ "scripts.lua_save": "Speichern",
+ "scripts.lua_saved_as": "Gespeichert als {name}",
+ "scripts.lua_args": "Argumente, eine key=value-Zeile pro Zeile (das Skript liest sie als args.key)",
+ "scripts.lua_dry_run": "Probelauf",
+ "scripts.lua_apply": "Übernehmen",
+ "scripts.lua_apply_confirm": "Dieses Skript auf {mod} ausführen und seine Änderungen schreiben? Das Protokoll enthält einen Eintrag für den Lauf. Mit Rückgängig wird alles zurückgenommen.",
+ "scripts.lua_running": "Wird ausgeführt...",
+ "scripts.lua_api": "Was ein Skript aufrufen kann",
+ "scripts.lua_applied": "Änderungen geschrieben. Protokolleintrag {id} ({s} s); mit Rückgängig wird der gesamte Lauf zurückgenommen.",
+ "scripts.lua_dry_done": "Probelauf: {n} Datei(en) würden geändert ({s} s). Es wird nichts geschrieben.",
+ "scripts.lua_no_change": "In {s} s abgeschlossen. Das Skript hat nichts geändert.",
+ "scripts.lua_printed": "Ausgegeben",
+ "scripts.lua_edits": "Änderungen",
+ "eng.luaapi.a_run_is_going": "Ein anderes Skript wird gerade ausgeführt. Warte, bis es beendet ist.",
+ "settings.lua_script_run_in": "📜 Lua-Skript {script} in {dest} ausgeführt",
+ "settings.lua_scripts": "Lua-Skripte"
 }

@@ -542,6 +542,13 @@
   ],
   "packdupes.col_copy": [
    "copy"
+  ],
+  "eng.luaapi.trigger_file": [
+   "ancillary",
+   "trait"
+  ],
+  "eng.luaapi.no_recruit_line": [
+   "recruit"
   ]
  },
  "ancillaries.a_character_holds_one_ancillary_per": "Bir karakter'de tür başına bir ancillary bulunur; dolayısıyla yenisi bunun yerini alır",
@@ -13328,5 +13335,40 @@
  "eng.luarun.cannot_hand_a_to_a_script": "bir {name__} script'e aktarılamaz",
  "eng.luarun.lua_scripts_need_the_lupa_package": "Lua script'leri lupa paketine ihtiyaç duyar (pip install lupa)",
  "eng.luarun.the_script_ran_out_of_memory": "script'in belleği tükendi ({x} MB sınırı)",
- "eng.luarun.time_limit_reached_time_limit_g": "süre sınırına ulaşıldı ({time_limit:g} sn)"
+ "eng.luarun.time_limit_reached_time_limit_g": "süre sınırına ulaşıldı ({time_limit:g} sn)",
+ "eng.luaapi.untagged_by_place": "{name} etikete sahip değil: girdileri 1'den başlayarak konumlarına göre adlandırılır.",
+ "eng.luaapi.edit_settlement_unknown": "edit_settlement: bilinmeyen değişiklikler: {unknown}",
+ "eng.luaapi.edit_strat_object_unknown": "edit_strat_object: bilinmeyen değişiklikler: {unknown}",
+ "eng.luaapi.add_strat_object_unknown": "add_strat_object: bilinmeyen değerler: {unknown}",
+ "eng.luaapi.clone_faction_unknown": "clone_faction: bilinmeyen seçenekler: {unknown}",
+ "eng.luaapi.trigger_file_empty": "{name2} ne özellik ne de ancillary tanımlıyor, bu yüzden araç takımı onun tetikleyicilerini yazamıyor",
+ "eng.luaapi.edit_trigger_unknown": "edit_trigger: bilinmeyen değişiklikler: {unknown}",
+ "eng.luaapi.no_trigger": "{name2} içinde '{name}' adlı tetikleyici yok.",
+ "eng.luaapi.edit_recruit_unknown": "edit_recruit: bilinmeyen değişiklikler: {unknown}",
+ "eng.luaapi.trigger_file": "Bir tetikleyici dosyası `traits` ya da `ancillaries` olmalı, '{file}' değil.",
+ "eng.luaapi.no_recruit_line": "EDB'deki {line} satırı recruit_pool satırı değil (düzenlemeden sonra recruits() sonucunu yeniden okuyun).",
+ "scripts.tab_lua": "Lua",
+ "scripts.lua_first_line": "moddaki toplam birim sayısı",
+ "scripts.lua_no_runtime": "Lua çalışma zamanı (lupa) yüklü değil. Install-Dependencies.bat dosyasını çalıştırıp araç takımını yeniden başlatın.",
+ "scripts.lua_saved": "Kaydedildi",
+ "scripts.lua_examples": "Örnekler",
+ "scripts.lua_name_hint": "Araç takımının config/lua_scripts klasöründe kaydedileceği dosya adı",
+ "scripts.lua_save": "Kaydet",
+ "scripts.lua_saved_as": "Şu adla kaydedildi: {name}",
+ "scripts.lua_dry_run": "Deneme çalıştırması",
+ "scripts.lua_apply": "Uygula",
+ "scripts.lua_running": "Çalıştırılıyor...",
+ "scripts.lua_applied": "Değişiklikler yazıldı. Günlük girdisi {id} ({s} sn); Geri al tüm çalıştırmayı geri alır.",
+ "scripts.lua_dry_done": "Deneme çalıştırması: {n} dosya değişecekti ({s} sn). Hiçbir şey yazılmadı.",
+ "scripts.lua_printed": "Yazdırıldı",
+ "scripts.lua_edits": "Değişiklikler",
+ "scripts.lua_intro": "Lua script'i bu modu okur ve araç takımının yerleşik düzenleyicileriyle değiştirir. Deneme çalıştırması, değişecek tüm dosyaları gösterir ve hiçbir şey yazmaz. Uygula, değişiklikleri Günlük'e tek bir girdi olarak yazar. Geri al, çalıştırmanın tamamını geri alır.",
+ "scripts.lua_open": "Bir script aç...",
+ "scripts.lua_args": "Bağımsız değişkenler, her satıra bir key=value (script bunları args.key olarak okur)",
+ "scripts.lua_apply_confirm": "Bu script {mod} üzerinde çalıştırılsın ve yaptığı değişiklikler yazılsın mı? Günlük, çalıştırma için tek bir girdi tutar. Geri al tüm değişiklikleri geri alır.",
+ "scripts.lua_api": "Bir script'in çağırabileceği işlevler",
+ "scripts.lua_no_change": "{s} sn içinde tamamlandı. Script hiçbir şeyi değiştirmedi.",
+ "eng.luaapi.a_run_is_going": "Başka bir script çalışıyor. Bitmesini bekleyin.",
+ "settings.lua_script_run_in": "📜 {dest} içinde çalıştırılan Lua script {script}",
+ "settings.lua_scripts": "Lua scriptleri"
 }

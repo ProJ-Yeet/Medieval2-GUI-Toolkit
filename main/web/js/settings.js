@@ -386,6 +386,7 @@ const LOG_MODES=[
   {id:'traits',     label:tt('settings.traits')},
   {id:'ancillaries',label:tt('settings.ancillaries')},
   {id:'factions',   label:tt('settings.factions')},
+  {id:'lua',        label:tt('settings.lua_scripts')},
   {id:'minorfiles', label:tt('settings.minor_files')},
   {id:'strings',    label:tt('settings.strings')},
   {id:'rawtext',    label:tt('settings.raw_text')},
@@ -468,6 +469,8 @@ function logItemHtml(e){
       :e.mode==='edit'?`${e.action==='delete'?tt('settings.deleted_in'):tt('settings.edited_in')} ${esc(e.dest)}`
       // 21: a whole file saved as text, and a faction's gaps copied from another
       :e.mode==='rawtext'?tt('settings.raw_text_saved_in',{dest:esc(e.dest)})
+      // 125: a Lua script's run, every edit of it one record
+      :e.mode==='lua'?tt('settings.lua_script_run_in',{script:esc((e.options||{}).script||''),dest:esc(e.dest)})
       // 52: a change set's records ported onto a version of the mod
       :e.mode==='changeset'?tt('settings.changes_ported_into',{dest:esc(e.dest)})
       :e.mode==='factions'&&e.action==='repair'?tt('settings.repaired_in',{dest:esc(e.dest)})

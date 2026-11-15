@@ -784,6 +784,13 @@
   ],
   "core.ssr_unit_builder_by_lupinemaverick": [
    "unit"
+  ],
+  "eng.luaapi.trigger_file": [
+   "ancillary",
+   "trait"
+  ],
+  "eng.luaapi.no_recruit_line": [
+   "recruit"
   ]
  },
  "ancillaries.a_character_holds_one_ancillary_per": "Un personnage détient un accessoire par type ; c’est donc celui que remplace un nouvel accessoire",
@@ -13978,5 +13985,40 @@
  "eng.luarun.cannot_hand_a_to_a_script": "impossible de transmettre un {name__} à un script",
  "eng.luarun.lua_scripts_need_the_lupa_package": "les scripts Lua ont besoin du paquet lupa (pip install lupa)",
  "eng.luarun.the_script_ran_out_of_memory": "le script a manqué de mémoire (limite de {x} Mo)",
- "eng.luarun.time_limit_reached_time_limit_g": "limite de temps atteinte ({time_limit:g} s)"
+ "eng.luarun.time_limit_reached_time_limit_g": "limite de temps atteinte ({time_limit:g} s)",
+ "eng.luaapi.untagged_by_place": "{name} n'a aucune balise : les entrées sont repérées par leur position, à partir de 1.",
+ "eng.luaapi.edit_settlement_unknown": "edit_settlement : modifications inconnues : {unknown}",
+ "eng.luaapi.edit_strat_object_unknown": "edit_strat_object : modifications inconnues : {unknown}",
+ "eng.luaapi.add_strat_object_unknown": "add_strat_object : valeurs inconnues : {unknown}",
+ "eng.luaapi.clone_faction_unknown": "clone_faction : options inconnues : {unknown}",
+ "eng.luaapi.trigger_file_empty": "{name2} ne définit aucun trait ni accessoire, donc la boîte à outils ne peut pas écrire ses déclencheurs",
+ "eng.luaapi.edit_trigger_unknown": "edit_trigger : modifications inconnues : {unknown}",
+ "eng.luaapi.no_trigger": "Aucun déclencheur '{name}' dans {name2}.",
+ "eng.luaapi.edit_recruit_unknown": "edit_recruit : modifications inconnues : {unknown}",
+ "eng.luaapi.trigger_file": "Un fichier de déclencheurs doit être `traits` ou `ancillaries`, pas '{file}'.",
+ "eng.luaapi.no_recruit_line": "La ligne {line} de l'EDB n'est pas une ligne recruit_pool (relisez recruits() après toute modification).",
+ "scripts.tab_lua": "Lua",
+ "scripts.lua_intro": "Un script Lua lit ce mod et le modifie au moyen des éditeurs intégrés de l'outil. La Simulation affiche tous les fichiers qu'il modifierait sans rien écrire. Appliquer enregistre les changements dans une seule entrée du journal. Annuler rétablit toute l'exécution.",
+ "scripts.lua_first_line": "nombre total d'unités du mod",
+ "scripts.lua_no_runtime": "L'environnement d'exécution Lua (lupa) n'est pas installé. Lancez Install-Dependencies.bat, puis redémarrez l'outil.",
+ "scripts.lua_open": "Ouvrir un script...",
+ "scripts.lua_saved": "Enregistré",
+ "scripts.lua_examples": "Exemples",
+ "scripts.lua_name_hint": "Nom de fichier sous lequel le script est enregistré dans le dossier config/lua_scripts de l'outil",
+ "scripts.lua_save": "Enregistrer",
+ "scripts.lua_saved_as": "Enregistré sous {name}",
+ "scripts.lua_args": "Arguments, une ligne key=value par argument (le script les lit via args.key)",
+ "scripts.lua_dry_run": "Simulation",
+ "scripts.lua_apply": "Appliquer",
+ "scripts.lua_apply_confirm": "Exécuter ce script sur {mod} et écrire ses modifications ? Le journal conserve une seule entrée pour l'exécution. Annuler rétablit tous les changements.",
+ "scripts.lua_running": "Exécution en cours...",
+ "scripts.lua_api": "Fonctions accessibles depuis un script",
+ "scripts.lua_applied": "Modifications écrites. Entrée {id} dans le journal ({s} s) ; Annuler rétablit toute l'exécution.",
+ "scripts.lua_dry_done": "Simulation : {n} fichier(s) seraient modifiés ({s} s). Rien n'est écrit.",
+ "scripts.lua_no_change": "Terminé en {s} s. Le script n'a rien modifié.",
+ "scripts.lua_printed": "Affiché",
+ "scripts.lua_edits": "Modifications",
+ "eng.luaapi.a_run_is_going": "Un autre script est en cours d'exécution. Attendez qu'il se termine.",
+ "settings.lua_script_run_in": "📜 Script Lua {script} exécuté dans {dest}",
+ "settings.lua_scripts": "Scripts Lua"
 }

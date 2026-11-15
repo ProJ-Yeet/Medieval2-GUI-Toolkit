@@ -369,5 +369,147 @@ check(f"clone_entry ({rep.error})", rep.ok and rep.printed and rep.printed[-1].s
 check("previews left every byte and an empty Log", shas(mod) == before
       and not any(e.get("mode") == "lua" and not e.get("undone") for e in config.load_log()))
 
+print("14. strings: a .strings.bin read, edited, added to, taken from")
+for rel in ("text/event_titles.txt.strings.bin", "text/battle.txt.strings.bin"):
+    shutil.copy2(DAC / "data" / rel, Path(mod.data) / rel)
+from unittransfer import stringsbin as _sbin  # noqa: E402
+sb = _sbin.read(Path(mod.data) / "text/event_titles.txt.strings.bin")
+t1, t2, t3 = sb.tags[:3]
+before = shas(mod)
+s = script("strings.lua", f"""
+local s = toolkit.strings("event_titles")
+print(#s, s[1].tag, toolkit.string("event_titles.txt", {t2!r}) == s[2].value)
+toolkit.edit_strings("event_titles", {{ [{t1!r}] = "Changed by Lua", LUA_NEW_TAG = "new one", [{t3!r}] = false }})
+print(toolkit.string("event_titles", {t1!r}), toolkit.string("event_titles", "LUA_NEW_TAG"),
+      toolkit.string("event_titles", {t3!r}) == nil)
+toolkit.edit_strings("battle", {{ [3] = "third" }})
+print(toolkit.strings("battle")[3].tag == "", toolkit.string("battle", 3))
+print(pcall(toolkit.edit_strings, "battle", {{ x = "no tags here" }}))
+""")
+rep = luaapi.run(mod, s)
+check(f"runs ({rep.error})", rep.ok)
+check("entries, a tag, a lookup", rep.printed[:1] == [f"{len(sb)}\t{t1}\ttrue"])
+check("an edit, an add and a removal read back", rep.printed[1:2] == ["Changed by Lua\tnew one\ttrue"])
+check("an untagged archive by place", rep.printed[2:3] == ["true\tthird"])
+check("an untagged archive refuses a tag", rep.printed[3:4] and rep.printed[3].startswith("false"))
+d = next((f.diff for f in rep.files if f.rel.endswith("event_titles.txt.strings.bin")), "")
+check("the preview diff shows entries, not '(binary file)'",
+      "+{LUA_NEW_TAG}new one" in d and f"-{{{t3}}}" in d)
+check("the preview left every byte", shas(mod) == before)
+
+print("15. the campaign: settlements and strat objects")
+shutil.copytree(DAC / "data/world/maps/base", Path(mod.data) / "world/maps/base")
+for p in (DAC / "data/world/maps/campaign/imperial_campaign").glob("*.txt"):
+    shutil.copy2(p, Path(mod.data) / "world/maps/campaign/imperial_campaign" / p.name)
+from unittransfer import campstrat as _cs, stratobj as _so  # noqa: E402
+sf = _cs.read_strat(mod, "imperial_campaign")
+st = sf.of_kind("settlement")[0]
+region, pop = str(st.get("region")), int(str(st.get("population")))
+res = next(n for n in _so.objects(sf) if n.kind == "resource")
+rx, ry = _so.read_spec(res).xy()
+before = shas(mod)
+s = script("camp.lua", f"""
+local st = toolkit.settlements()
+print(#st, st[1].region, st[1].population, #st[1].buildings > 0)
+toolkit.edit_settlement(st[1].region, {{ population = st[1].population + 500 }})
+print(toolkit.settlements()[1].population)
+toolkit.edit_strat_object("resource", {rx}, {ry}, {{ name = "iron" }})
+local moved
+for _, o in ipairs(toolkit.strat_objects()) do
+  if o.x == {rx} and o.y == {ry} and o.kind == "resource" then moved = o.name end
+end
+print(moved)
+print(pcall(toolkit.add_strat_object, "resource", {{ x = -5, y = 3, name = "iron" }}))
+print(pcall(toolkit.edit_settlement, "no_such_region", {{ population = 1 }}))
+""")
+rep = luaapi.run(mod, s)
+check(f"runs ({rep.error})", rep.ok)
+check("settlements read", rep.printed[:1] == [f"{len(sf.of_kind('settlement'))}\t{region}\t{pop}\ttrue"])
+check("a population edit reads back", rep.printed[1:2] == [str(pop + 500)])
+check("a resource edit reads back", rep.printed[2:3] == ["iron"])
+check("a tile off the map is refused", rep.printed[3:4] and rep.printed[3].startswith("false"))
+check("a region with no settlement is refused", rep.printed[4:5] and rep.printed[4].startswith("false"))
+check("one file, two lines", [f.rel for f in rep.files] ==
+      ["data/world/maps/campaign/imperial_campaign/descr_strat.txt"] and rep.files[0].added == 2)
+check("the preview left every byte", shas(mod) == before)
+
+print("16. faction clones")
+s = script("clone_faction.lua", """
+local f = toolkit.factions()
+print(pcall(toolkit.clone_faction, f[1].slot, "luaclone"))
+print(pcall(toolkit.clone_faction, f[1].slot, "luaclone", { colour = "red" }))
+""")
+rep = luaapi.run(mod, s)
+check(f"runs ({rep.error})", rep.ok)
+check("DaC's 31 slots: the editor's own refusal reaches the script",
+      rep.printed[:1] and rep.printed[0].startswith("false") and "slot" in rep.printed[0])
+check("an unknown option is refused", rep.printed[1:2] and "colour" in rep.printed[1])
+
+print("17. triggers")
+from unittransfer import triggers as _trg  # noqa: E402
+tg = _trg.parse_file(mod.edct_path)
+anc0 = _anc.parse_file(mod.eda_path).ancillaries[0].name
+before = shas(mod)
+s = script("trig.lua", f"""
+local t = toolkit.triggers("traits")
+print(#t, t[1].name, t[1].when_to_test, #t[1].conditions == {len(tg.triggers[0].conditions)})
+toolkit.edit_trigger("traits", t[1].name, {{ when_to_test = "CharacterTurnStart" }})
+toolkit.add_trigger("ancillaries", {{ name = "lua_test_trigger", when_to_test = "CharacterTurnEnd",
+  conditions = {{ {{ term = "IsGeneral" }} }},
+  effects = {{ {{ keyword = "AcquireAncillary", args = {{ {anc0!r}, "chance", 5 }} }} }} }})
+toolkit.delete_trigger("traits", t[2].name)
+local after = toolkit.triggers("traits")
+print(#after, after[1].when_to_test)
+local a = toolkit.triggers("ancillaries")
+print(a[#a].name, a[#a].effects[1].args[1])
+print(pcall(toolkit.delete_trigger, "traits", "no_such_trigger"), pcall(toolkit.triggers, "units"))
+""")
+rep = luaapi.run(mod, s)
+check(f"runs ({rep.error})", rep.ok)
+check("triggers read", rep.printed[:1] == [f"{len(tg.triggers)}\t{tg.triggers[0].name}\t{tg.triggers[0].when_to_test}\ttrue"])
+check("an edit and a delete read back", rep.printed[1:2] == [f"{len(tg.triggers) - 1}\tCharacterTurnStart"])
+check("an added trigger reads back", rep.printed[2:3] == [f"lua_test_trigger\t{anc0}"])
+check("a missing trigger and a wrong file are refused",
+      rep.printed[3:4] and rep.printed[3].startswith("false") and "\tfalse\t" in rep.printed[3])
+check("two files changed", sorted(f.rel for f in rep.files) ==
+      ["data/export_descr_ancillaries.txt", "data/export_descr_character_traits.txt"])
+check("the preview left every byte", shas(mod) == before)
+
+print("18. the recruitment sheet's rows")
+s = script("recruit.lua", """
+local r = toolkit.recruits()
+local x = r[1]
+print(#r > 0, type(x.line), x.unit ~= "")
+toolkit.edit_recruit(x.line, { maximum = x.maximum + 1, experience = 2 })
+local y = toolkit.recruits()[1]
+print(y.maximum == x.maximum + 1, y.experience, y.unit == x.unit)
+print(pcall(toolkit.edit_recruit, x.line, { experience = 1.5 }))
+print(pcall(toolkit.edit_recruit, 1, { maximum = 1 }))
+""")
+rep = luaapi.run(mod, s, apply=True)
+check(f"runs ({rep.error})", rep.ok)
+check("rows read", rep.printed[:1] == ["true\tnumber\ttrue"])
+check(f"an edit reads back {rep.printed[1:2]}", rep.printed[1:2] == ["true\t2\ttrue"])
+check("experience must be whole; line 1 is no recruit_pool",
+      rep.printed[2:3] and rep.printed[2].startswith("false") and rep.printed[3:4] and rep.printed[3].startswith("false"))
+check("applied as one record", rep.log_id and [f.rel for f in rep.files] == ["data/export_descr_buildings.txt"])
+luaapi.undo(rep.log_id)
+check("its Undo puts every byte back", shas(mod) == before)
+
+print("19. the app's Lua tab: saved scripts, a run as JSON")
+lst = luaapi.script_list()
+check("the runtime, the examples and the API are listed",
+      lst["available"] and {"raise_morale.lua", "clone_entry.lua"} <= {x["name"] for x in lst["examples"]}
+      and any(f["name"] == "edit_recruit" for f in lst["api"]))
+out = luaapi.app_run(mod, "../../evil name", f"print(args.n)\ntoolkit.edit_unit({u0.type!r}, {{ soldier = toolkit.unit({u0.type!r}).soldier }})",
+                     args={"n": "7"})
+check("the name stays inside config/lua_scripts", out["name"] == "evil_name.lua"
+      and (luaapi.scripts_dir() / "evil_name.lua").is_file())
+check(f"a preview as JSON ({out['error']})", out["ok"] and not out["applied"] and out["printed"] == ["7"])
+check("it is listed as saved", [x["name"] for x in luaapi.script_list()["scripts"]] == ["evil_name.lua"])
+out = luaapi.app_run(mod, "bad", "error('stop here')")
+check("a script error comes back with its line", not out["ok"] and "bad.lua:1" in out["error"])
+check("the previews left every byte", shas(mod) == before)
+
 print(f"\n{sum(ok)}/{len(ok)} passed")
 sys.exit(0 if all(ok) else 1)

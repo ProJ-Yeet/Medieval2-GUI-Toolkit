@@ -816,6 +816,22 @@
   ],
   "packdupes.col_copy": [
    "copy"
+  ],
+  "eng.luaapi.trigger_file": [
+   "ancillary",
+   "trait"
+  ],
+  "eng.luaapi.no_recruit_line": [
+   "recruit"
+  ],
+  "scripts.lua_intro": [
+   "entry"
+  ],
+  "scripts.lua_apply_confirm": [
+   "entry"
+  ],
+  "scripts.lua_applied": [
+   "entry"
   ]
  },
  "ancillaries.a_character_holds_one_ancillary_per": "人物每种类型只能持有一个随从，因此此项决定新随从会替换哪个随从",
@@ -13179,5 +13195,40 @@
  "eng.luarun.cannot_hand_a_to_a_script": "无法把 {name__} 交给脚本",
  "eng.luarun.lua_scripts_need_the_lupa_package": "Lua 脚本需要 lupa 包（pip install lupa）",
  "eng.luarun.the_script_ran_out_of_memory": "脚本内存不足（上限 {x} MB）",
- "eng.luarun.time_limit_reached_time_limit_g": "已达到时间上限（{time_limit:g} 秒）"
+ "eng.luarun.time_limit_reached_time_limit_g": "已达到时间上限（{time_limit:g} 秒）",
+ "eng.luaapi.untagged_by_place": "{name}没有标签：其条目按所在位置命名，从1开始。",
+ "eng.luaapi.edit_settlement_unknown": "edit_settlement：未知的更改：{unknown}",
+ "eng.luaapi.edit_strat_object_unknown": "edit_strat_object：未知的更改：{unknown}",
+ "eng.luaapi.add_strat_object_unknown": "add_strat_object：未知的值：{unknown}",
+ "eng.luaapi.clone_faction_unknown": "clone_faction：未知的选项：{unknown}",
+ "eng.luaapi.trigger_file_empty": "{name2}未定义任何特质或随从，因此工具包无法写入其触发器",
+ "eng.luaapi.edit_trigger_unknown": "edit_trigger：未知的更改：{unknown}",
+ "eng.luaapi.no_trigger": "{name2}中没有名为 '{name}' 的触发器。",
+ "eng.luaapi.edit_recruit_unknown": "edit_recruit：未知的更改：{unknown}",
+ "eng.luaapi.trigger_file": "触发器文件应为 `traits` 或 `ancillaries`，不能是 '{file}'。",
+ "eng.luaapi.no_recruit_line": "EDB中的第 {line} 行不是 recruit_pool 行（编辑后请重新读取 recruits()）。",
+ "scripts.tab_lua": "Lua",
+ "scripts.lua_first_line": "模组中的部队总数",
+ "scripts.lua_no_runtime": "未安装 Lua 运行环境 (lupa)。请运行 Install-Dependencies.bat，然后重启工具包。",
+ "scripts.lua_open": "打开脚本...",
+ "scripts.lua_saved": "已保存",
+ "scripts.lua_examples": "示例",
+ "scripts.lua_name_hint": "脚本保存在工具包 config/lua_scripts 文件夹中的文件名",
+ "scripts.lua_save": "保存",
+ "scripts.lua_saved_as": "已保存为 {name}",
+ "scripts.lua_args": "参数，每行一个 key=value（脚本通过 args.key 读取）",
+ "scripts.lua_dry_run": "试运行",
+ "scripts.lua_apply": "应用",
+ "scripts.lua_running": "正在运行...",
+ "scripts.lua_api": "脚本可调用的功能",
+ "scripts.lua_dry_done": "试运行：将更改 {n} 个文件（用时 {s} 秒）。未写入任何内容。",
+ "scripts.lua_no_change": "用时 {s} 秒完成。脚本未更改任何内容。",
+ "scripts.lua_printed": "已输出",
+ "scripts.lua_edits": "更改",
+ "eng.luaapi.a_run_is_going": "另一个脚本正在运行，请等待它结束。",
+ "scripts.lua_intro": "Lua 脚本会读取此模组，并通过工具包自带的编辑器修改它。试运行会显示所有可能被修改的文件，不会写入任何内容。应用会将更改作为一条记录写入日志。撤销可还原整个运行过程。",
+ "scripts.lua_apply_confirm": "要在 {mod} 上运行此脚本并写入更改吗？日志会为此次运行保留一条记录。撤销可还原所有更改。",
+ "scripts.lua_applied": "更改已写入。日志记录 {id}（{s} 秒）；撤销可还原整个运行过程。",
+ "settings.lua_script_run_in": "📜 在 {dest} 中运行的 Lua 脚本 {script}",
+ "settings.lua_scripts": "Lua 脚本"
 }

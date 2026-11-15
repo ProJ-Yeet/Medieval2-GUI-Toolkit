@@ -62,6 +62,15 @@ Everything is in one table, `toolkit`. `lua_cli.py api` prints the full list.
 | `toolkit.traits()` / `toolkit.trait(name)` | character traits and their levels and effects |
 | `toolkit.edit_trait(name, changes)` | a trait's header, or its levels by place: `{ levels = { [2] = { threshold = 5 } } }` |
 | `toolkit.ancillaries()` / `toolkit.ancillary(name)` / `toolkit.edit_ancillary(name, changes)` | ancillaries, read and changed; `effects`, when given, replace its effect lines |
+| `toolkit.strings(file)` / `toolkit.string(file, tag)` | a `data/text` .strings.bin archive's entries (`file` is `expanded`, `expanded.txt` or the whole name) |
+| `toolkit.edit_strings(file, changes)` | `{ TAG = "new text", OLD_TAG = false }`: change, add or take out entries; an archive with no tags (battle, shared, strat, tooltips) is keyed by place from 1 |
+| `toolkit.settlements(campaign)` / `toolkit.edit_settlement(region, changes, campaign)` | descr_strat.txt's settlements: values, the whole buildings list, or `owner` and `place` to give it to another faction |
+| `toolkit.strat_objects(campaign)` | every fort, watchtower and resource with its tile |
+| `toolkit.edit_strat_object(kind, x, y, changes, campaign)` / `toolkit.add_strat_object(kind, values, campaign)` | change, move (`x`, `y`, `region`), delete (`delete = true`) or add one; the tile is checked against the map |
+| `toolkit.clone_faction(source, new, options)` | the Factions screen's clone; `options` gives its shown name (`label`) and `art = false` copies no pictures |
+| `toolkit.triggers(file)` | the triggers of `traits` or `ancillaries` |
+| `toolkit.edit_trigger(file, name, changes)` / `toolkit.add_trigger(file, trigger)` / `toolkit.delete_trigger(file, name)` | change, add or take out a trigger; `changes.raw` is the whole block as text |
+| `toolkit.recruits()` / `toolkit.edit_recruit(line, changes)` | the recruitment sheet's rows (every recruit_pool line) and their four numbers |
 | `toolkit.mod` | `name` and `root` of the mod |
 | `args` | the `--set key=value` values, as text |
 
@@ -89,7 +98,12 @@ toolkit.edit_building(b.name, lv.name, { capabilities = {
 ```
 
 An edit moves the EDB's line numbers, so read the building again before the
-next edit to it.
+next edit to it. The same goes for `toolkit.recruits()` rows after an edit
+that adds or takes out a line.
+
+A unit's stats are the unit sheet's columns, so a script changes them with
+`toolkit.edit_unit`; the recruitment sheet's numbers with
+`toolkit.edit_recruit`.
 
 ## What a script cannot do
 
@@ -98,7 +112,18 @@ machine: there is no `io`, no `os` beyond `os.time`, `os.clock` and
 `os.date`, no `debug`, no `load` or `dofile`, and no binary modules.
 `require "lib.util"` reads `lib/util.lua` from the script's own folder and
 nowhere else. A run stops after 60 seconds (`--time-limit` to change it) or
-256 MB of memory.
+256 MB of memory. The time counts the edits too: on Divide and Conquer's 952
+units an edit takes about 0.15 s, so a script that changes more than a few
+hundred units needs a longer `--time-limit`.
+
+## From the app
+
+With *Opt into beta features* ticked in Settings, the Scripts screen has a
+**Lua** tab: write or open a script (your saved ones, or the examples), give
+it arguments one `key=value` a line, then **Dry run** or **Apply**. It is the
+same run as `lua_cli.py`'s, with the same report, and an applied run is one
+entry in the Log. Scripts saved there live in the toolkit's
+`config/lua_scripts` folder.
 
 The Lua is 5.4.
 

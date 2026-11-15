@@ -54,6 +54,10 @@ class Fn:
     kind: str = "read"           # read | edit
 
 
+_ARCHIVE = "the archive: `expanded`, `expanded.txt` or `text/expanded.txt.strings.bin`"
+_CAMPAIGN = "a campaign folder (default imperial_campaign)"
+_TRIGGER_FILE = "`traits` (export_descr_character_traits.txt) or `ancillaries` (export_descr_ancillaries.txt)"
+
 API: List[Fn] = [
     Fn("units", [], "toolkit.Unit[]",
        "Every unit in the mod, in file order (the EDU, then M2TWEOP unit files)."),
@@ -148,6 +152,72 @@ API: List[Fn] = [
          "what to change; capabilities not listed stay as they are")],
        "", "Change one building level: its header, its values, its upgrades or its capability lines. "
            "Line numbers change after an edit, so read the building again before the next one.", "edit"),
+    Fn("strings", [("file", "string", _ARCHIVE)], "{tag: string, value: string}[]",
+       "Every entry of one data/text .strings.bin archive, in file order. An archive addressed by "
+       "position (battle, shared, strat, tooltips) has empty tags."),
+    Fn("string", [("file", "string", _ARCHIVE),
+                  ("tag", "string|integer", "the entry's tag, or its place from 1 in an archive with no tags")],
+       "string?", "One entry's text, or nil."),
+    Fn("edit_strings",
+       [("file", "string", _ARCHIVE),
+        ("changes", "table<string|integer, string|false>",
+         "tag -> new text; a tag the archive does not have is added, false takes the entry out. "
+         "An archive with no tags is keyed by place from 1 and only takes new text")],
+       "", "Change entries of one .strings.bin archive: the Strings screen's save.", "edit"),
+    Fn("settlements", [("campaign", "string?", _CAMPAIGN)], "toolkit.Settlement[]",
+       "Every settlement in a campaign's descr_strat.txt, in file order."),
+    Fn("edit_settlement",
+       [("region", "string", "the region the settlement stands in"),
+        ("changes", "toolkit.SettlementEdit", "what to change; what is not named stays as it is"),
+        ("campaign", "string?", _CAMPAIGN)],
+       "", "Change one settlement of descr_strat.txt: its values, its buildings, or the faction "
+           "that holds it.", "edit"),
+    Fn("strat_objects", [("campaign", "string?", _CAMPAIGN)], "toolkit.StratObject[]",
+       "Every fort, watchtower and resource in a campaign's descr_strat.txt, in file order."),
+    Fn("edit_strat_object",
+       [("kind", "string", "fort, watchtower or resource"), ("x", "integer", "the tile it is on now"),
+        ("y", "integer", ""),
+        ("changes", "{x?: integer, y?: integer, type?: string, culture?: string, name?: string, "
+         "region?: string, delete?: boolean}",
+         "new values; `region` files a fort or watchtower under another section; delete = true "
+         "takes it out"),
+        ("campaign", "string?", _CAMPAIGN)],
+       "", "Change, move or delete one fort, watchtower or resource, found by its tile.", "edit"),
+    Fn("add_strat_object",
+       [("kind", "string", "fort, watchtower or resource"),
+        ("values", "{x: integer, y: integer, type?: string, culture?: string, name?: string, "
+         "region?: string}", "a resource's `name` is its kind (timber, iron...)"),
+        ("campaign", "string?", _CAMPAIGN)],
+       "", "Add a fort, watchtower or resource to descr_strat.txt.", "edit"),
+    Fn("clone_faction",
+       [("source", "string", "the faction to copy"), ("new", "string", "the new faction's name"),
+        ("options", "{label?: string, art?: boolean}?",
+         "its shown name; art = false copies no pictures")],
+       "", "A new faction copied from an existing one: the Factions screen's clone, in every file "
+           "it touches.", "edit"),
+    Fn("triggers", [("file", "string", _TRIGGER_FILE)], "toolkit.Trigger[]",
+       "Every trigger of the traits or the ancillaries file, in file order."),
+    Fn("edit_trigger",
+       [("file", "string", _TRIGGER_FILE), ("name", "string", "the trigger"),
+        ("changes", "{name?: string, when_to_test?: string, conditions?: toolkit.Condition[], "
+         "effects?: {keyword?: string, args?: string[]}[], raw?: string}",
+         "`conditions`, when given, are all of them; `effects` change the existing effect lines in "
+         "order; `raw` is the whole block as text and wins over the rest")],
+       "", "Change one trigger.", "edit"),
+    Fn("add_trigger",
+       [("file", "string", _TRIGGER_FILE),
+        ("trigger", "{name: string, when_to_test: string, conditions?: toolkit.Condition[], "
+         "effects?: {keyword: string, args: string[]}[]}", "the new trigger")],
+       "", "Add a trigger at the end of the file.", "edit"),
+    Fn("delete_trigger", [("file", "string", _TRIGGER_FILE), ("name", "string", "the trigger")],
+       "", "Take one trigger out.", "edit"),
+    Fn("recruits", [], "toolkit.Recruit[]",
+       "Every recruit_pool line of export_descr_buildings.txt: the recruitment sheet's rows."),
+    Fn("edit_recruit",
+       [("line", "integer", "the row's line in the EDB, from recruits()"),
+        ("changes", "{initial?: number, per_turn?: number, maximum?: number, experience?: integer}",
+         "the numbers to change")],
+       "", "Change the numbers of one recruit_pool line: the recruitment sheet's Apply.", "edit"),
 ]
 
 CLASSES = {
@@ -221,6 +291,39 @@ CLASSES = {
         ("unique", "boolean"), ("excluded_ancillaries", "string[]"), ("exclude_cultures", "string[]"),
         ("description", "string"), ("effects_description", "string"),
         ("effects", "{attribute: string, amount: string}[]"),
+    ],
+    "toolkit.Settlement": [
+        ("region", "string"), ("faction", "string", "the faction block it sits in"),
+        ("kind", "string", "city or castle"), ("level", "string"), ("population", "integer?"),
+        ("year_founded", "integer?"), ("plan_set", "string"), ("faction_creator", "string"),
+        ("buildings", "{line: string, level: string}[]"),
+    ],
+    "toolkit.SettlementEdit": [
+        ("kind", "string?", "city or castle"), ("level", "string?"), ("population", "integer?"),
+        ("year_founded", "integer?"), ("plan_set", "string?"), ("faction_creator", "string?"),
+        ("buildings", "{line: string, level: string}[]?", "the whole list, in order"),
+        ("owner", "string?", "move the settlement into another faction's block"),
+        ("place", "string?", "first or last in that block (first makes it the capital)"),
+        ("raw", "string?", "the whole block as text; wins over the values"),
+    ],
+    "toolkit.StratObject": [
+        ("kind", "string", "fort, watchtower or resource"), ("line", "integer", "its line in the file"),
+        ("x", "integer"), ("y", "integer"), ("type", "string"), ("culture", "string"),
+        ("name", "string", "a resource's kind"),
+    ],
+    "toolkit.Trigger": [
+        ("name", "string"), ("when_to_test", "string"), ("conditions", "toolkit.Condition[]"),
+        ("effects", "{keyword: string, args: string[]}[]"), ("raw", "string"),
+    ],
+    "toolkit.Condition": [
+        ("term", "string"), ("args", "string[]"), ("joiner", "string", "and / or; empty on the first"),
+        ("negated", "boolean"),
+    ],
+    "toolkit.Recruit": [
+        ("line", "integer"), ("unit", "string"), ("building", "string"), ("level", "string"),
+        ("settlement", "string"), ("section", "string", "capability or faction_capability"),
+        ("requires", "string"), ("initial", "number"), ("per_turn", "number"), ("maximum", "number"),
+        ("experience", "integer"),
     ],
     "toolkit.CapabilityOp": [
         ("line", "integer?", "an existing line (from a read); leave out for a new one"),
@@ -818,6 +921,332 @@ class Run:
             return
         self._apply(plan, f"edit building '{line}/{level}'", buildings.apply_edit)
 
+    def _write(self, plan, what: str, applier: Callable) -> None:
+        """An editor whose apply returns ``{record}``, and whose write the
+        mod's cached reads do not see: the caches go."""
+        if plan.errors:
+            raise Refused(f"{what}: {'; '.join(plan.errors)}")
+        self._apply(plan, what, lambda p: applier(p)["record"])
+        self.mod.drop_caches()
+
+    # -- strings --------------------------------------------------------------
+    def _archive(self, file):
+        from . import strings
+        name = str(file or "").replace("\\", "/").strip("/")
+        name = name[len("text/"):] if name.startswith("text/") else name
+        if not name.endswith(".strings.bin"):
+            name += ".strings.bin" if name.endswith(".txt") else ".txt.strings.bin"
+        try:
+            return strings.resolve(self.mod, name)
+        except strings.StringsError as e:
+            raise Refused(str(e))
+
+    def _strings(self, file):
+        from . import stringsbin
+        sb = stringsbin.read(self._archive(file))
+        return [{"tag": sb.tags[i] if sb.tagged else "", "value": v} for i, v in enumerate(sb.values)]
+
+    def _string(self, file, tag):
+        from . import stringsbin
+        sb = stringsbin.read(self._archive(file))
+        if isinstance(tag, (int, float)) and not isinstance(tag, bool):
+            i = int(tag) - 1
+        else:
+            i = sb.index_of(str(tag)) if sb.tagged else -1
+        return sb.values[i] if 0 <= i < len(sb) else None
+
+    def edit_strings(self, file, changes=None) -> None:
+        from . import strings, stringsbin
+        path = self._archive(file)
+        sb = stringsbin.read(path)
+        ch = changes or {}
+        if isinstance(ch, list):  # a Lua array: places 1..n
+            ch = {i: v for i, v in enumerate(ch, 1)}
+        body = {"file": strings.rel_of(self.mod, path), "edits": [], "adds": [], "removes": []}
+        for k, v in ch.items():
+            pos = -1
+            if not sb.tagged:
+                try:
+                    pos = int(k) - 1
+                except (TypeError, ValueError):
+                    raise Refused(_i18n.msg("eng.luaapi.untagged_by_place", "{name} has no tags: its entries are named by their place, from 1", name=path.name))
+            else:
+                pos = sb.index_of(str(k))
+            if v is False:
+                body["removes"].append(f"#{pos}" if not sb.tagged else str(k))
+            elif pos >= 0 or not sb.tagged:  # a place outside the archive: the plan refuses it
+                body["edits"].append({"pos": pos, "value": _text_value(v)})
+            else:
+                body["adds"].append({"tag": str(k), "value": _text_value(v)})
+        plan = strings.plan(self.mod, body)
+        what = f"edit strings '{path.name}'"
+        if plan.errors:
+            raise Refused(f"{what}: {'; '.join(plan.errors)}")
+        if not plan.data:
+            self.edits.append(f"{what} (nothing to change)")
+            return
+        self._apply(plan, what, strings.apply)
+        self.mod.drop_caches()
+
+    # -- the campaign: settlements and strat objects ---------------------------
+    def _facts(self, campaign):
+        from . import campmap, mapquery
+        c = self._campaign(campaign)
+        try:
+            if getattr(self, "_cm", None) is None:
+                self._cm = campmap.CampaignMap(self.mod)
+            return mapquery.Facts(self.mod, campmap.campaign_map(self.mod, c, self._cm), c)
+        except (campmap.MapError, OSError) as e:
+            raise Refused(str(e))
+
+    def _strat(self, campaign):
+        from . import campstrat, campmap
+        try:
+            return campstrat.read_strat(self.mod, self._campaign(campaign))
+        except (OSError, ValueError, campmap.MapError) as e:
+            raise Refused(str(e))
+
+    @staticmethod
+    def _int_or_none(v):
+        from .stratedit import is_int
+        return int(str(v)) if v is not None and is_int(v) else None
+
+    def _settlements(self, campaign=None):
+        from . import stratedit
+        sf = self._strat(campaign)
+        out = []
+        for n in sf.of_kind("settlement"):
+            fac = stratedit.faction_of(sf, n)
+            out.append({
+                "region": str(n.get("region") or ""),
+                "faction": str(fac.get("name") or fac.name) if fac else "",
+                "kind": str(n.get("settlement_type") or "city"), "level": str(n.get("level") or ""),
+                "population": self._int_or_none(n.get("population")),
+                "year_founded": self._int_or_none(n.get("year_founded")),
+                "plan_set": str(n.get("plan_set") or ""),
+                "faction_creator": str(n.get("faction_creator") or ""),
+                "buildings": [{"line": b.name or "", "level": str(b.get("level") or "")}
+                              for b in sf.children_of(n, "building")]})
+        return out
+
+    def edit_settlement(self, region, changes=None, campaign=None) -> None:
+        from . import stratedit
+        region, ch = str(region), dict(changes or {})
+        known = {"kind", "level", "population", "year_founded", "plan_set", "faction_creator",
+                 "buildings", "owner", "place", "raw"}
+        unknown = set(ch) - known
+        if unknown:
+            raise Refused(_i18n.msg("eng.luaapi.edit_settlement_unknown", "edit_settlement: unknown change(s) {unknown}", unknown=', '.join(sorted(unknown))))
+        edits = {k: _text_value(ch[k]) for k in stratedit.FIELDS if k in ch}
+        if "kind" in ch:
+            edits["settlement_type"] = str(ch["kind"])
+        body = {"campaign": self._campaign(campaign), "region": region, "edits": edits,
+                "owner": str(ch.get("owner") or ""), "place": str(ch.get("place") or ""),
+                "raw_block": str(ch.get("raw") or "")}
+        if "buildings" in ch:
+            body["buildings"] = [{"line": str(b.get("line", "")), "level": str(b.get("level", ""))}
+                                 for b in (ch["buildings"] or [])]
+        plan = stratedit.plan_settlement(self.mod, self._facts(campaign), body)
+        what = f"edit settlement '{region}' ({body['campaign']})"
+        if not plan.errors and not plan.text:
+            self.edits.append(f"{what} (nothing to change)")
+            return
+        self._write(plan, what, stratedit.apply_settlement)
+
+    def _strat_objects(self, campaign=None):
+        from . import stratobj
+        sf = self._strat(campaign)
+        out = []
+        for n in stratobj.objects(sf):
+            s = stratobj.read_spec(n)
+            out.append({"kind": s.kind, "line": n.start + 1, "x": self._int_or_none(s.x),
+                        "y": self._int_or_none(s.y), "type": s.type, "culture": s.culture,
+                        "name": s.name})
+        return out
+
+    def _object(self, body: dict, campaign, what: str) -> None:
+        from . import stratobj
+        body = dict(body, campaign=self._campaign(campaign))
+        plan = stratobj.plan(self.mod, self._facts(campaign), body)
+        if not plan.errors and not plan.text:
+            self.edits.append(f"{what} (nothing to change)")
+            return
+        self._write(plan, what, stratobj.apply)
+
+    _OBJ_FIELDS = {"x", "y", "type", "culture", "name", "region"}
+
+    def edit_strat_object(self, kind, x, y, changes=None, campaign=None) -> None:
+        kind, ch = str(kind).lower(), dict(changes or {})
+        unknown = set(ch) - self._OBJ_FIELDS - {"delete"}
+        if unknown:
+            raise Refused(_i18n.msg("eng.luaapi.edit_strat_object_unknown", "edit_strat_object: unknown change(s) {unknown}", unknown=', '.join(sorted(unknown))))
+        at = [int(x), int(y)]
+        if ch.get("delete"):
+            body = {"kind": kind, "action": "delete", "at": at}
+            what = f"delete {kind} at {at[0]},{at[1]}"
+        else:
+            body = {"kind": kind, "action": "edit", "at": at,
+                    **{k: (_text_value(v) if k in ("type", "culture", "name", "region") else v)
+                       for k, v in ch.items()}}
+            what = f"edit {kind} at {at[0]},{at[1]}"
+        self._object(body, campaign, what)
+
+    def add_strat_object(self, kind, values=None, campaign=None) -> None:
+        kind, v = str(kind).lower(), dict(values or {})
+        unknown = set(v) - self._OBJ_FIELDS
+        if unknown:
+            raise Refused(_i18n.msg("eng.luaapi.add_strat_object_unknown", "add_strat_object: unknown value(s) {unknown}", unknown=', '.join(sorted(unknown))))
+        self._object({"kind": kind, "action": "add", **v}, campaign,
+                     f"add {kind} at {v.get('x')},{v.get('y')}")
+
+    # -- faction clones -------------------------------------------------------
+    def clone_faction(self, source, new, options=None) -> None:
+        from . import factionclone
+        opts = dict(options or {})
+        unknown = set(opts) - {"label", "art"}
+        if unknown:
+            raise Refused(_i18n.msg("eng.luaapi.clone_faction_unknown", "clone_faction: unknown option(s) {unknown}", unknown=', '.join(sorted(unknown))))
+        body = {"source": str(source), "new": str(new), "label": str(opts.get("label") or ""),
+                "art": opts.get("art", True) is not False}
+        plan = factionclone.plan(self.mod, body)
+        what = f"clone faction '{source}' as '{new}'"
+        if not plan.errors and not plan.touched():
+            self.edits.append(f"{what} (nothing to change)")
+            return
+        self._write(plan, what, factionclone.apply)
+
+    # -- triggers -------------------------------------------------------------
+    def _trigger_owner(self, file):
+        """(the editor module, its file's path, the request key) for a
+        trigger file named ``traits`` or ``ancillaries``."""
+        from . import ancillaries, traits
+        f = str(file or "").lower()
+        if f in ("traits", "trait", "character_traits"):
+            return traits, Path(self.mod.edct_path), "trait"
+        if f in ("ancillaries", "ancillary"):
+            return ancillaries, Path(self.mod.eda_path), "ancillary"
+        raise Refused(_i18n.msg("eng.luaapi.trigger_file", "a trigger file is `traits` or `ancillaries`, not '{file}'", file=file))
+
+    def _triggers(self, file):
+        from . import triggers
+        _, path, _ = self._trigger_owner(file)
+        if not path.is_file():
+            return []
+        tf = triggers.parse_file(path)
+        return [{"name": t.name, "when_to_test": t.when_to_test,
+                 "conditions": [{"term": c.term, "args": list(c.args), "joiner": c.joiner,
+                                 "negated": c.negated} for c in t.conditions],
+                 "effects": [{"keyword": e.keyword, "args": list(e.args)} for e in t.effects],
+                 "raw": tf.block_text(t)} for t in tf.triggers]
+
+    def _trigger_save(self, file, req: dict, what: str) -> None:
+        """A trigger edit through the traits or ancillaries editor's own save:
+        both own the trigger section of their file, and a save names one of the
+        file's definitions, which it leaves as it is."""
+        module, path, key = self._trigger_owner(file)
+        if not path.is_file():
+            raise Refused(_i18n.msg("eng.luaapi.has_no", "{name} has no {name2}", name=self.mod.name, name2=path.name))
+        tf = module.parse_file(path)
+        first = (tf.traits if key == "trait" else tf.ancillaries)
+        if not first:
+            raise Refused(_i18n.msg("eng.luaapi.trigger_file_empty", "{name2} defines no trait or ancillary, so the toolkit cannot write its triggers", name2=path.name))
+        plan = module.plan(self.mod, {key: first[0].name, "action": "edit", "edits": {},
+                                      "triggers": req, "write_loc": False})
+        if plan.errors:
+            raise Refused(f"{what}: {'; '.join(plan.errors)}")
+        if not plan.text:
+            self.edits.append(f"{what} (nothing to change)")
+            return
+        self._apply(plan, what, lambda p: module.apply(p)["record"])
+
+    @staticmethod
+    def _trigger_shape(t: dict) -> dict:
+        out = {}
+        for k in ("name", "when_to_test"):
+            if k in t:
+                out[k] = _text_value(t[k])
+        if "conditions" in t:
+            out["conditions"] = [{"term": str(c.get("term", "")),
+                                  "args": [_text_value(a) for a in (c.get("args") or [])],
+                                  "joiner": str(c.get("joiner", "")), "negated": bool(c.get("negated"))}
+                                 for c in (t["conditions"] or [])]
+        if "effects" in t:
+            out["effects"] = [{k: (str(e[k]) if k == "keyword" else [_text_value(a) for a in (e[k] or [])])
+                               for k in ("keyword", "args") if k in e} for e in (t["effects"] or [])]
+        return out
+
+    def edit_trigger(self, file, name, changes=None) -> None:
+        name, ch = str(name), dict(changes or {})
+        unknown = set(ch) - {"name", "when_to_test", "conditions", "effects", "raw"}
+        if unknown:
+            raise Refused(_i18n.msg("eng.luaapi.edit_trigger_unknown", "edit_trigger: unknown change(s) {unknown}", unknown=', '.join(sorted(unknown))))
+        e = {"name": name}
+        if ch.get("raw"):
+            e["raw_block"] = str(ch["raw"])
+        else:
+            e["trigger"] = self._trigger_shape(ch)
+        self._trigger_save(file, {"edits": [e]}, f"edit trigger '{name}'")
+
+    def add_trigger(self, file, trigger=None) -> None:
+        t = self._trigger_shape(dict(trigger or {}))
+        self._trigger_save(file, {"adds": [{"trigger": t}]}, f"add trigger '{t.get('name', '')}'")
+
+    def delete_trigger(self, file, name) -> None:
+        from . import triggers
+        name = str(name)
+        _, path, _ = self._trigger_owner(file)
+        if path.is_file() and triggers.parse_file(path).get(name) is None:
+            raise Refused(_i18n.msg("eng.luaapi.no_trigger", "no trigger '{name}' in {name2}", name=name, name2=path.name))
+        self._trigger_save(file, {"removes": [name]}, f"delete trigger '{name}'")
+
+    # -- the recruitment sheet ------------------------------------------------
+    def _recruits(self):
+        from . import edb_balance
+        if self._edb() is None:
+            return []
+        from .sheet_ops import number
+
+        def num(v):
+            try:
+                n = number(v)
+            except Exception:  # noqa: BLE001 - a pool line the EDB writes oddly
+                return v
+            return int(n) if n.is_integer() else n
+        rows = edb_balance.recruitments(edb_balance.fresh_edb(self.mod))
+        return [{k: (num(r[k]) if k in ("initial", "per_turn", "maximum", "experience") else r[k])
+                 for k in ("line", "unit", "building", "level", "settlement", "section",
+                           "requires", "initial", "per_turn", "maximum", "experience")}
+                for r in rows]
+
+    def edit_recruit(self, line, changes=None) -> None:
+        from . import edb_balance, sheet_recruit, unit_sheets
+        ch = dict(changes or {})
+        rid = str(int(line))
+        what = f"edit recruit_pool line {rid}"
+        if self._edb() is None:
+            raise Refused(_i18n.msg("eng.luaapi.has_no_data_export_descr_buildings", "{name} has no data/export_descr_buildings.txt", name=self.mod.name))
+        row = next((r for r in edb_balance.recruitments(edb_balance.fresh_edb(self.mod)) if r["id"] == rid), None)
+        if row is None:
+            raise Refused(_i18n.msg("eng.luaapi.no_recruit_line", "line {line} of the EDB is not a recruit_pool line (read recruits() again after an edit)", line=rid))
+        unknown = set(ch) - set(sheet_recruit.NUMBERS)
+        if unknown:
+            raise Refused(_i18n.msg("eng.luaapi.edit_recruit_unknown", "edit_recruit: unknown change(s) {unknown}", unknown=', '.join(sorted(unknown))))
+        try:
+            fields = {k: sheet_recruit.value(k, v) for k, v in ch.items() if v != row[k]}
+            if not fields:
+                self.edits.append(f"{what} (nothing to change)")
+                return
+            project = {"recruit_draft": {rid: {"unit": row["unit"], "building": row["building"],
+                                              "level": row["level"], "fields": fields}}}
+            token = sheet_recruit.plan(self.mod, project)["plan_token"]
+
+            class _Plan:  # what _apply reads off a plan
+                errors, warnings = [], []
+            self._apply(_Plan(), what, lambda _p: sheet_recruit.apply(self.mod, project, token))
+        except unit_sheets.SheetError as e:
+            raise Refused(f"{what}: {e}")
+        self.mod.drop_caches()
+
     # -- the Lua side --------------------------------------------------------
     def table(self, session: luarun.Session):
         """The ``toolkit`` table: every API function, each converting its
@@ -835,6 +1264,13 @@ class Run:
             "traits": self._traits, "trait": self._trait, "edit_trait": self.edit_trait,
             "ancillaries": self._ancillaries, "ancillary": self._ancillary,
             "edit_ancillary": self.edit_ancillary,
+            "strings": self._strings, "string": self._string, "edit_strings": self.edit_strings,
+            "settlements": self._settlements, "edit_settlement": self.edit_settlement,
+            "strat_objects": self._strat_objects, "edit_strat_object": self.edit_strat_object,
+            "add_strat_object": self.add_strat_object, "clone_faction": self.clone_faction,
+            "triggers": self._triggers, "edit_trigger": self.edit_trigger,
+            "add_trigger": self.add_trigger, "delete_trigger": self.delete_trigger,
+            "recruits": self._recruits, "edit_recruit": self.edit_recruit,
         }
 
         def wrap(fn):
@@ -964,6 +1400,14 @@ def _changes(mod: Mod, rec: dict) -> List[FileChange]:
 
 
 def _lines(p: Path) -> Optional[List[str]]:
+    if p.name.lower().endswith(".strings.bin"):  # its entries, as the .txt beside it writes them
+        from . import stringsbin
+        try:
+            sb = stringsbin.read(p)
+        except (OSError, stringsbin.StringsBinError):
+            return None
+        return [stringsbin.record_text(t, v) if sb.tagged else f"#{i + 1} {v}"
+                for i, (t, v) in enumerate(zip(sb.tags if sb.tagged else [""] * len(sb), sb.values))]
     data = p.read_bytes()
     if b"\0" in data[:4096] and not data[:2] in (b"\xff\xfe", b"\xfe\xff"):
         return None
@@ -1054,3 +1498,62 @@ def _not_put_back(mod: Mod, rec: dict) -> List[str]:
 def undo(log_id: str) -> dict:
     """The Log's Undo, for a run's record (or any record)."""
     return transfer.undo(log_id)
+
+
+# ---------------------------------------------------------------------------
+# the app's Lua tab (Phase 125): scripts kept in config/lua_scripts, a run's
+# report as JSON. The same run as the CLI's.
+
+#: one run at a time from the app: two runs on one mod would undo each other's files
+_APP_LOCK = __import__("threading").Lock()
+
+
+def scripts_dir() -> Path:
+    return Path(config.CONFIG_DIR) / "lua_scripts"
+
+
+def _script_name(name: str) -> str:
+    import re
+    stem = re.sub(r"[^\w.-]+", "_", Path(str(name or "")).stem).strip("._") or "script"
+    return stem + ".lua"
+
+
+def script_list() -> dict:
+    """The saved scripts, the shipped examples and the API, for the tab."""
+    mine = sorted(scripts_dir().glob("*.lua")) if scripts_dir().is_dir() else []
+    ex_dir = Path(config.PROJECT_ROOT) / "docs" / "lua_examples"
+    examples = sorted(ex_dir.glob("*.lua")) if ex_dir.is_dir() else []
+    return {
+        "available": luarun.available(),
+        "scripts": [{"name": p.name, "text": p.read_text(encoding="utf-8-sig")} for p in mine],
+        "examples": [{"name": p.name, "text": p.read_text(encoding="utf-8-sig")} for p in examples],
+        "api": [{"name": f.name, "params": [p[0] for p in f.params], "returns": f.returns,
+                 "doc": f.doc, "kind": f.kind} for f in API],
+    }
+
+
+def save_script(name: str, text: str) -> Path:
+    d = scripts_dir()
+    d.mkdir(parents=True, exist_ok=True)
+    p = d / _script_name(name)
+    p.write_text(str(text or ""), encoding="utf-8")
+    return p
+
+
+def app_run(mod: Mod, name: str, text: str, *, apply: bool = False,
+            args: Optional[Dict[str, str]] = None) -> dict:
+    """Save the script, run it (a preview, or written with ``apply``) and give
+    the report as JSON."""
+    path = save_script(name, text)
+    if not _APP_LOCK.acquire(blocking=False):
+        return {"ok": False, "error_kind": "busy",
+                "error": _i18n.msg("eng.luaapi.a_run_is_going", "another script is running; wait for it to end")}
+    try:
+        rep = run(mod, path, apply=apply, args={str(k): str(v) for k, v in (args or {}).items()})
+    finally:
+        _APP_LOCK.release()
+    return {"name": path.name, "ok": rep.ok, "applied": rep.applied, "error": rep.error,
+            "error_kind": rep.error_kind, "printed": rep.printed, "edits": rep.edits,
+            "warnings": rep.warnings, "log_id": rep.log_id, "seconds": round(rep.seconds, 2),
+            "files": [{"rel": f.rel, "status": f.status, "added": f.added, "removed": f.removed,
+                       "diff": f.diff} for f in rep.files]}

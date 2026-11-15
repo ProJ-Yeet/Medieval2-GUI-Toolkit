@@ -9,6 +9,7 @@ Field reference: ModdingTool ``UnitDb.AssignFields``. Comments start with ``;``.
 """
 from __future__ import annotations
 
+import copy
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -319,7 +320,29 @@ def set_marker(raw: str, **fields: str) -> str:
     return "".join(lines)
 
 
+#: Parsed blocks by their text. A file re-read after an edit is the same text but
+#: for the edited block, so a run of edits (a Lua script's, 127) parses one block
+#: each time rather than the file's thousand. A hit is a copy, lists included:
+#: callers set fields on the units they get.
+_BLOCKS: dict = {}
+_BLOCKS_MAX = 20000
+_LISTS = ("ownership", "era0", "era1", "era2", "officers", "armour_ug_models",
+          "attributes", "stat_pri", "stat_sec")
+
+
 def _parse_block(raw: str) -> Unit:
+    held = _BLOCKS.get(raw)
+    if held is None:
+        if len(_BLOCKS) >= _BLOCKS_MAX:
+            _BLOCKS.clear()
+        held = _BLOCKS[raw] = _read_block(raw)
+    u = copy.copy(held)
+    for f in _LISTS:
+        setattr(u, f, list(getattr(held, f)))
+    return u
+
+
+def _read_block(raw: str) -> Unit:
     u = Unit(raw=raw)
     meta = marker_fields(raw)
     u.tier, u.variant = meta.get("tier", ""), meta.get("variant", "")
@@ -391,7 +414,9 @@ def parse_text(text: str) -> EduFile:
     for idx, line in enumerate(lines):
         # `without_bom`: an EDU that opens on a `type` line rather than a comment
         # loses its FIRST unit, silently, if the file carries a byte-order mark.
-        s = kb.without_bom(line.lstrip())
+        s = line.lstrip()
+        if not idx:  # a mark can only open the file
+            s = kb.without_bom(s)
         if s.startswith("type") and (len(s) == 4 or s[4].isspace()):
             # not a comment line
             if not line.lstrip().startswith(";"):

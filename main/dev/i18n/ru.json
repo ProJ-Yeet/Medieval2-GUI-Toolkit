@@ -1224,6 +1224,25 @@
   ],
   "packdupes.col_copy": [
    "copy"
+  ],
+  "eng.luaapi.trigger_file": [
+   "ancillary",
+   "trait"
+  ],
+  "eng.luaapi.no_recruit_line": [
+   "recruit"
+  ],
+  "eng.luaapi.trigger_file_empty": [
+   "ancillary"
+  ],
+  "scripts.lua_intro": [
+   "entry"
+  ],
+  "scripts.lua_apply_confirm": [
+   "entry"
+  ],
+  "scripts.lua_applied": [
+   "entry"
   ]
  },
  "home.all_present": " · все на месте",
@@ -14659,5 +14678,70 @@
  "modelpicker.ug_new_only_in_one_mod": "Новый элемент можно подготовить, только когда отряд создаётся внутри одного мода. Сначала перенесите его, затем добавьте ступень в редакторе отрядов.",
  "modelpicker.ug_new_not_set_up": "Элемент новой ступени брони не подготовлен, потому что создано больше одного отряда. Откройте отряд в редакторе отрядов и используйте ＋ > 4.",
  "packdupes.col_copy": "Копия",
- "eng.packdupes.no_packs": "У этого мода нет своих пакетов анимаций; он воспроизводит ванильные"
+ "eng.packdupes.no_packs": "У этого мода нет своих пакетов анимаций; он воспроизводит ванильные",
+ "eng.luaapi.a_field_value_is_text_a": "Значением поля может быть текст, число или список; false удаляет поле.",
+ "eng.luaapi.a_unit_called_already_exists_in": "Отряд с названием '{new_type}' уже есть в {name}.",
+ "eng.luaapi.building_line_has_no_level": "В линии зданий '{line}' нет уровня '{level}'.",
+ "eng.luaapi.cannot_fold_a_record_with": "Нельзя объединить запись с {extra}.",
+ "eng.luaapi.clone_unit_needs_the_new_units": "clone_unit требует указать тип нового отряда.",
+ "eng.luaapi.clone_unit_unknown_option_s": "clone_unit: неизвестные параметры: {unknown}",
+ "eng.luaapi.edit_ancillary_unknown_change_s": "edit_ancillary: неизвестные изменения: {unknown}",
+ "eng.luaapi.edit_building": "Ошибка при редактировании здания '{line}/{level}': {errors}",
+ "eng.luaapi.edit_building_each_of_is_a": "edit_building: каждый элемент {k} должен быть таблицей.",
+ "eng.luaapi.edit_building_unknown_change_s": "edit_building: неизвестные изменения: {unknown}",
+ "eng.luaapi.edit_model_unknown_change_s": "edit_model: неизвестные изменения: {unknown}",
+ "eng.luaapi.edit_trait_levels_are_keyed_by": "edit_trait: уровни задаются по позиции, начиная с 1.",
+ "eng.luaapi.edit_trait_unknown_change_s": "edit_trait: неизвестные изменения: {unknown}",
+ "eng.luaapi.edit_trait_unknown_level_field_s": "edit_trait: неизвестные поля уровня: {bad}",
+ "eng.luaapi.edit_unit_unknown_option_s": "edit_unit: неизвестные параметры: {unknown}",
+ "eng.luaapi.has_no": "В {name} отсутствует {name2}.",
+ "eng.luaapi.has_no_data_export_descr_buildings": "В {name} отсутствует data/export_descr_buildings.txt.",
+ "eng.luaapi.no_building_line_in": "В {name} нет линии зданий '{line}'.",
+ "eng.luaapi.no_capability_on_line": "{line}/{level}: в строке {line2} нет свойства {kind} (после правки перечитайте здание).",
+ "eng.luaapi.no_trait_in": "В {name2} нет черты '{name}'.",
+ "eng.luaapi.no_unit_in": "В {name} нет отряда '{t}'.",
+ "eng.luaapi.no_unit_in_2": "В {name} нет отряда '{src}'.",
+ "eng.luaapi.the_dictionary_key_is_already_a": "Ключ словаря '{dictionary}' уже используется отрядом в {name}.",
+ "eng.luaapi.the_preview_could_not_put_back": "Средство предпросмотра не смогло восстановить {left}; резервные копии находятся в {backup_root}.",
+ "eng.luaapi.trait_has_level_s_not_a": "Число уровней у черты '{name}' равно {levels_n}, уровня {i} нет.",
+ "eng.luaapi.edit_settlement_unknown": "edit_settlement: неизвестные изменения: {unknown}",
+ "eng.luaapi.edit_strat_object_unknown": "edit_strat_object: неизвестные изменения: {unknown}",
+ "eng.luaapi.add_strat_object_unknown": "add_strat_object: неизвестные значения: {unknown}",
+ "eng.luaapi.clone_faction_unknown": "clone_faction: неизвестные параметры: {unknown}",
+ "eng.luaapi.edit_trigger_unknown": "edit_trigger: неизвестные изменения: {unknown}",
+ "eng.luaapi.no_trigger": "В {name2} нет триггера '{name}'.",
+ "eng.luaapi.edit_recruit_unknown": "edit_recruit: неизвестные изменения: {unknown}",
+ "eng.luaapi.trigger_file": "Файл триггеров должен быть `traits` или `ancillaries`, а не '{file}'.",
+ "eng.luaapi.trigger_file_empty": "{name2} не определяет ни одной черты, ни одного приближённого, поэтому набор инструментов не может записать в нём триггеры",
+ "eng.luaapi.no_recruit_line": "Строка {line} в EDB не является строкой recruit_pool (после правки снова вызовите recruits()).",
+ "eng.luaapi.a_mercenary_unit_line_is_named": "Строка отряда наемников определяется по ее месту в пуле, начиная с 1.",
+ "eng.luaapi.a_mercenary_unit_lines_place_counts": "Нумерация строк отрядов наемников в пуле начинается с 1.",
+ "eng.luaapi.no_ancillary_in": "В {name2} нет приближенного '{name}'.",
+ "eng.luaapi.no_modeldb_entry_in": "В {name2} нет элемента modeldb '{name}'.",
+ "eng.luaapi.no_modeldb_entry_in_2": "В {name} нет элемента modeldb '{src}'.",
+ "eng.luaapi.untagged_by_place": "{name}: тегов нет, элементы именуются по своему месту, начиная с 1.",
+ "scripts.tab_lua": "Lua",
+ "scripts.lua_first_line": "общее число отрядов в моде",
+ "scripts.lua_no_runtime": "Среда выполнения Lua (lupa) не установлена. Запустите Install-Dependencies.bat, затем перезапустите инструментарий.",
+ "scripts.lua_open": "Открыть скрипт...",
+ "scripts.lua_saved": "Сохранено",
+ "scripts.lua_examples": "Примеры",
+ "scripts.lua_name_hint": "Имя файла, под которым он сохраняется в папке config/lua_scripts инструментария",
+ "scripts.lua_save": "Сохранить",
+ "scripts.lua_saved_as": "Сохранено как {name}",
+ "scripts.lua_args": "Аргументы, по одному key=value в строке (скрипт читает их как args.key)",
+ "scripts.lua_dry_run": "Пробный запуск",
+ "scripts.lua_apply": "Применить",
+ "scripts.lua_running": "Выполняется...",
+ "scripts.lua_api": "Что может вызывать скрипт",
+ "scripts.lua_dry_done": "Пробный запуск: изменилось бы {n} файлов ({s} с). Ничего не записано.",
+ "scripts.lua_no_change": "Выполнено за {s} с. Скрипт ничего не изменил.",
+ "scripts.lua_printed": "Выведено",
+ "scripts.lua_edits": "Изменения",
+ "eng.luaapi.a_run_is_going": "Другой скрипт уже выполняется. Дождитесь его завершения.",
+ "scripts.lua_intro": "Скрипт Lua читает этот мод и изменяет его с помощью встроенных редакторов инструментария. Пробный запуск показывает все файлы, которые были бы изменены, и ничего не записывает. Применить сохраняет изменения одной записью в журнале. Отменить отменяет весь запуск.",
+ "scripts.lua_apply_confirm": "Запустить этот скрипт для {mod} и записать его изменения? Журнал сохранит одну запись для запуска. Отменить вернет все изменения.",
+ "scripts.lua_applied": "Изменения записаны. Запись {id} в журнале ({s} с); Отменить вернет весь запуск.",
+ "settings.lua_script_run_in": "📜 Скрипт Lua {script} запущен в {dest}",
+ "settings.lua_scripts": "Скрипты Lua"
 }

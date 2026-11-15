@@ -3297,6 +3297,25 @@ class Handler(BaseHTTPRequestHandler):
                 mod = self.registry.get(name)
                 try:
                     if u.path in ("/api/scripts/addon/plan", "/api/scripts/addon/apply"):
+            if u.path in ("/api/lua/scripts", "/api/lua/save", "/api/lua/run"):
+                # 125: the Scripts screen's Lua tab, over luaapi (the CLI's run)
+                from . import luaapi
+                try:
+                    if u.path == "/api/lua/scripts":
+                        return self._json(luaapi.script_list())
+                    if u.path == "/api/lua/save":
+                        return self._json({"name": luaapi.save_script(body.get("name") or "",
+                                                                      body.get("text") or "").name})
+                    name = body.get("mod") or ""
+                    if name not in self.registry.names():
+                        return self._err(404, "unknown mod")
+                    out = luaapi.app_run(self.registry.get(name), body.get("name") or "",
+                                         body.get("text") or "", apply=bool(body.get("apply")),
+                                         args=body.get("args") or {})
+                    self.registry.invalidate(name)   # a preview writes and puts back, too
+                    return self._json(out)
+                except (OSError, ValueError) as e:
+                    return self._json({"error": str(e)})
                         plan = scripts.plan_addon(mod, str(body.get("key") or ""), str(body.get("action") or "install"),
                                                   body.get("values") or {})
                         if u.path.endswith("/plan"):

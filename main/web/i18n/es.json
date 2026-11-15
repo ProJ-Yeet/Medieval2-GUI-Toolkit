@@ -1180,6 +1180,13 @@
   ],
   "core.ssr_unit_builder_by_lupinemaverick": [
    "unit"
+  ],
+  "eng.luaapi.trigger_file": [
+   "ancillary",
+   "trait"
+  ],
+  "eng.luaapi.no_recruit_line": [
+   "recruit"
   ]
  },
  "ancillaries.a_character_holds_one_ancillary_per": "Un personaje solo puede tener un séquito de cada tipo, así que este es el que sustituiría uno nuevo",
@@ -14340,5 +14347,40 @@
  "eng.luarun.cannot_hand_a_to_a_script": "no se puede pasar un {name__} a un script",
  "eng.luarun.lua_scripts_need_the_lupa_package": "los scripts de Lua necesitan el paquete lupa (pip install lupa)",
  "eng.luarun.the_script_ran_out_of_memory": "el script se quedó sin memoria (límite de {x} MB)",
- "eng.luarun.time_limit_reached_time_limit_g": "se alcanzó el límite de tiempo ({time_limit:g} s)"
+ "eng.luarun.time_limit_reached_time_limit_g": "se alcanzó el límite de tiempo ({time_limit:g} s)",
+ "eng.luaapi.untagged_by_place": "{name} no tiene etiquetas: sus entradas se identifican por su posición, desde la 1.",
+ "eng.luaapi.edit_settlement_unknown": "edit_settlement: cambios desconocidos: {unknown}",
+ "eng.luaapi.edit_strat_object_unknown": "edit_strat_object: cambios desconocidos: {unknown}",
+ "eng.luaapi.add_strat_object_unknown": "add_strat_object: valores desconocidos: {unknown}",
+ "eng.luaapi.clone_faction_unknown": "clone_faction: opciones desconocidas: {unknown}",
+ "eng.luaapi.trigger_file_empty": "{name2} no define ningún rasgo ni séquito, así que el kit de herramientas no puede escribir sus disparadores",
+ "eng.luaapi.edit_trigger_unknown": "edit_trigger: cambios desconocidos: {unknown}",
+ "eng.luaapi.no_trigger": "No hay ningún disparador '{name}' en {name2}.",
+ "eng.luaapi.edit_recruit_unknown": "edit_recruit: cambios desconocidos: {unknown}",
+ "eng.luaapi.trigger_file": "Un archivo de disparadores debe ser `traits` o `ancillaries`, no '{file}'.",
+ "eng.luaapi.no_recruit_line": "La línea {line} del EDB no es una línea recruit_pool (vuelve a leer recruits() después de editar).",
+ "scripts.tab_lua": "Lua",
+ "scripts.lua_intro": "Un script de Lua lee este mod y lo modifica mediante los editores propios de la herramienta. La Simulación muestra todos los archivos que cambiaría y no escribe nada. Aplicar guarda los cambios como una sola entrada en el registro. Deshacer revierte toda la ejecución.",
+ "scripts.lua_first_line": "recuento total de unidades del mod",
+ "scripts.lua_no_runtime": "El entorno de ejecución de Lua (lupa) no está instalado. Ejecuta Install-Dependencies.bat y luego reinicia la herramienta.",
+ "scripts.lua_open": "Abrir un script...",
+ "scripts.lua_saved": "Guardado",
+ "scripts.lua_examples": "Ejemplos",
+ "scripts.lua_name_hint": "Nombre de archivo con el que se guarda en la carpeta config/lua_scripts de la herramienta",
+ "scripts.lua_save": "Guardar",
+ "scripts.lua_saved_as": "Guardado como {name}",
+ "scripts.lua_args": "Argumentos, una línea key=value por argumento (el script los lee como args.key)",
+ "scripts.lua_dry_run": "Simulación",
+ "scripts.lua_apply": "Aplicar",
+ "scripts.lua_apply_confirm": "¿Ejecutar este script en {mod} y escribir los cambios? El registro guarda una sola entrada para la ejecución. Deshacer revierte todos los cambios.",
+ "scripts.lua_running": "En ejecución...",
+ "scripts.lua_api": "Funciones que puede usar un script",
+ "scripts.lua_applied": "Cambios escritos. Entrada {id} en el registro ({s} s); Deshacer revierte toda la ejecución.",
+ "scripts.lua_dry_done": "Simulación: cambiarían {n} archivo(s) ({s} s). No se escribe nada.",
+ "scripts.lua_no_change": "Terminado en {s} s. El script no cambió nada.",
+ "scripts.lua_printed": "Impreso",
+ "scripts.lua_edits": "Cambios",
+ "eng.luaapi.a_run_is_going": "Ya se está ejecutando otro script. Espera a que termine.",
+ "settings.lua_script_run_in": "📜 Script de Lua {script} ejecutado en {dest}",
+ "settings.lua_scripts": "Scripts de Lua"
 }

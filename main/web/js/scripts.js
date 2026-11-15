@@ -1,4 +1,6 @@
-const SX_TAB_KEYS = {addons:'scripts.tab_addons',builder:'scripts.tab_builder',campscript:'scripts.tab_campscript'};
+const SX_TAB_KEYS = {addons:'scripts.tab_addons',builder:'scripts.tab_builder',campscript:'scripts.tab_campscript',lua:'scripts.tab_lua'};
+// 125: the Lua tab is offered only with *Opt into beta features*
+const sxTabs = () => ['addons','builder','campscript'].concat(betaOn() ? ['lua'] : []);
 const SX_VIEW_KEYS = {form:'scripts.view_form',blocks:'scripts.view_blocks'};
 /* Script add-ons, recipe builder and campaign-piece removal. */
 
@@ -26,10 +28,120 @@ function renderScripts(){
   if(!s || s.mod !== state.src){ loadScripts(); return; }
   if(s.busy){ main.innerHTML = `<div class="empty">${tt('common.reading')} ${esc(s.mod)}</div>`; return; }
   if(s.error){ main.innerHTML = `<div class="w-bad">${esc(s.error)}</div>`; return; }
+  if(!sxTabs().includes(s.tab)) s.tab = 'addons';
+  sxLuaKeep();
   main.innerHTML = `<div class="sxwrap"><h3>${tt('scripts.head')}</h3>
     <p class="trnote">${s.m2ex ? tt('scripts.m2ex_yes',{target: esc(s.target)}) : tt('scripts.m2ex_no')}</p>
-    <div class="hxtabs">${['addons','builder','campscript'].map(t => `<button class="${s.tab === t ? 'on' : ''}" onclick="sxTab('${t}')">${tt(SX_TAB_KEYS[t])}</button>`).join('')}</div>
-    ${s.tab === 'builder' ? sxBuilderHtml() : s.tab === 'campscript' ? sxCampaignHtml() : sxAddonsHtml()}</div>`;
+    <div class="hxtabs">${sxTabs().map(t => `<button class="${s.tab === t ? 'on' : ''}" onclick="sxTab('${t}')">${tt(SX_TAB_KEYS[t])}</button>`).join('')}</div>
+    ${s.tab === 'builder' ? sxBuilderHtml() : s.tab === 'campscript' ? sxCampaignHtml() : s.tab === 'lua' ? sxLuaHtml() : sxAddonsHtml()}</div>`;
+  if(s.tab === 'lua') sxLuaMount();
+}
+
+/* ---- 125: Lua scripts over the toolkit's data (lua_cli.py's run, from the app) ---- */
+const SX_LUA_START = 'print(#toolkit.units())\n';  // Lua, not text
+function sxLua(){
+  const s = state.sx;
+  if(!s.lua){ s.lua = {list: null, name: 'my_script.lua', text: [`-- ${tt('scripts.lua_first_line')}`, SX_LUA_START].join('\n'), args: '', busy: false, report: null}; sxLuaLoad(); }
+  return s.lua;
+}
+async function sxLuaLoad(){
+  const L = state.sx.lua;
+  try{ L.list = await api.post('/api/lua/scripts', {}); }
+  catch(e){ L.list = {error: errText(e)}; }
+  if(state.sx && state.sx.lua === L) renderScripts();
+}
+// the editor's text, name and args back into state before the page is redrawn
+function sxLuaKeep(){
+  const L = state.sx && state.sx.lua; if(!L) return;
+  if(L.cm) L.text = L.cm.getValue();
+  else { const t = document.getElementById('sxLuaText'); if(t) L.text = t.value; }
+  const n = document.getElementById('sxLuaName'); if(n) L.name = n.value;
+  const a = document.getElementById('sxLuaArgs'); if(a) L.args = a.value;
+  L.cm = null;
+}
+function sxLuaHtml(){
+  const L = sxLua();
+  if(!L.list) return `<div class="empty">${tt('common.reading')}</div>`;
+  if(L.list.error) return `<div class="w-bad">${esc(L.list.error)}</div>`;
+  if(!L.list.available) return `<p class="w-bad">${tt('scripts.lua_no_runtime')}</p>`;
+  const opt = (grp, items) => items.length ? `<optgroup label="${esc(grp)}">${items.map(x => `<option value="${esc(grp)}|${esc(x.name)}">${esc(x.name)}</option>`).join('')}</optgroup>` : '';
+  const off = L.busy ? 'disabled' : '';
+  return `<div class="sxlua">
+    <p class="trnote">${tt('scripts.lua_intro')}</p>
+    <div class="sxbtns"><select onchange="sxLuaPick(this.value)"><option value="">${tt('scripts.lua_open')}</option>
+      ${opt(tt('scripts.lua_saved'), L.list.scripts || [])}${opt(tt('scripts.lua_examples'), L.list.examples || [])}</select>
+      <input id="sxLuaName" value="${esc(L.name)}" title="${esc(tt('scripts.lua_name_hint'))}">
+      <button ${off} onclick="sxLuaSave()">${tt('scripts.lua_save')}</button></div>
+    <textarea id="sxLuaText" class="sxluatext" spellcheck="false">${esc(L.text)}</textarea>
+    <label class="sxfield">${tt('scripts.lua_args')}<textarea id="sxLuaArgs" rows="2" spellcheck="false" placeholder="faction=england">${esc(L.args)}</textarea></label>
+    <div class="sxbtns"><button ${off} onclick="sxLuaRun(false)">${tt('scripts.lua_dry_run')}</button>
+      <button class="primary" ${off} onclick="sxLuaRun(true)">${tt('scripts.lua_apply')}</button>
+      ${L.busy ? `<span class="count">${tt('scripts.lua_running')}</span>` : ''}</div>
+    ${sxLuaReport(L.report)}
+    <details class="sxluaapi"><summary>${tt('scripts.lua_api')}</summary>${(L.list.api || []).map(f =>
+      `<div><code>toolkit.${esc(f.name)}(${esc(f.params.join(', '))})</code> <span class="count">${esc(f.doc)}</span></div>`).join('')}</details>
+  </div>`;
+}
+function sxLuaReport(r){
+  if(!r) return '';
+  const head = !r.ok ? `<p class="w-bad">${esc(r.error)}</p>`
+    : r.applied ? `<p class="w-ok">${tt('scripts.lua_applied', {id: esc(r.log_id), s: r.seconds})}</p>`
+    : `<p class="trnote">${tt(r.files.length ? 'scripts.lua_dry_done' : 'scripts.lua_no_change', {n: r.files.length, s: r.seconds})}</p>`;
+  const line = l => `<div class="${l.startsWith('+') && !l.startsWith('+++') ? 'sxladd' : l.startsWith('-') && !l.startsWith('---') ? 'sxldel' : l.startsWith('@@') ? 'sxlhunk' : ''}">${esc(l) || ' '}</div>`;
+  return `<section class="bsec sxluarep">${head}
+    ${(r.printed || []).length ? `<h4>${tt('scripts.lua_printed')}</h4><pre>${esc(r.printed.join('\n'))}</pre>` : ''}
+    ${(r.edits || []).length ? `<h4>${tt('scripts.lua_edits')}</h4><ul>${r.edits.map(e => `<li>${esc(e)}</li>`).join('')}</ul>` : ''}
+    ${(r.warnings || []).length ? `<ul class="w-warn">${r.warnings.map(w => `<li>${esc(w)}</li>`).join('')}</ul>` : ''}
+    ${(r.files || []).map(f => `<details><summary>${esc(f.rel)} <span class="count">${esc(f.status)} +${f.added} -${f.removed}</span></summary>
+      <div class="sxldiff">${f.diff.split('\n').map(line).join('')}</div></details>`).join('')}</section>`;
+}
+// CodeMirror 5 with its Lua mode, when the page has it; a plain text box otherwise
+function sxLuaMount(){
+  const L = state.sx.lua, ta = document.getElementById('sxLuaText');
+  if(!ta || !window.CodeMirror) return;
+  L.cm = CodeMirror.fromTextArea(ta, {mode: 'lua', lineNumbers: true, indentUnit: 2, tabSize: 2,
+    extraKeys: {'Ctrl-Space': cm => cm.showHint && cm.showHint({hint: sxLuaHint, completeSingle: false})}});
+}
+function sxLuaHint(cm){
+  const cur = cm.getCursor(), line = cm.getLine(cur.line).slice(0, cur.ch);
+  const m = /toolkit\.(\w*)$/.exec(line); if(!m) return null;
+  const list = (state.sx.lua.list.api || []).filter(f => f.name.startsWith(m[1]))
+    .map(f => ({text: f.name + '(', displayText: `${f.name}(${f.params.join(', ')})`}));
+  return {list, from: CodeMirror.Pos(cur.line, cur.ch - m[1].length), to: cur};
+}
+function sxLuaPick(v){
+  if(!v) return;
+  sxLuaKeep();
+  const L = state.sx.lua, i = v.indexOf('|'), grp = v.slice(0, i), name = v.slice(i + 1);
+  const it = (grp === tt('scripts.lua_examples') ? L.list.examples : L.list.scripts).find(x => x.name === name);
+  if(it){
+    // into the boxes too: the redraw reads them back (sxLuaKeep)
+    const ta = document.getElementById('sxLuaText'), nm = document.getElementById('sxLuaName');
+    if(ta) ta.value = it.text;
+    if(nm) nm.value = it.name;
+    L.text = it.text; L.name = it.name; L.report = null;
+  }
+  renderScripts();
+}
+function sxLuaArgs(text){
+  const out = {};
+  for(const ln of String(text || '').split('\n')){
+    const i = ln.indexOf('='); if(i > 0) out[ln.slice(0, i).trim()] = ln.slice(i + 1).trim();
+  }
+  return out;
+}
+async function sxLuaSave(){
+  sxLuaKeep(); const L = state.sx.lua;
+  try{ const r = await api.post('/api/lua/save', {name: L.name, text: L.text}); L.name = r.name; toast(tt('scripts.lua_saved_as', {name: r.name})); sxLuaLoad(); }
+  catch(e){ toast(errText(e)); renderScripts(); }
+}
+async function sxLuaRun(apply){
+  sxLuaKeep(); const L = state.sx.lua; if(L.busy) return;
+  if(apply && !confirm(tt('scripts.lua_apply_confirm', {mod: state.sx.mod}))){ renderScripts(); return; }
+  L.busy = true; L.report = null; renderScripts();
+  try{ L.report = await api.post('/api/lua/run', {mod: state.sx.mod, name: L.name, text: L.text, args: sxLuaArgs(L.args), apply}); }
+  catch(e){ L.report = {ok: false, error: errText(e)}; }
+  finally{ L.busy = false; if(L.report && L.report.name) L.name = L.report.name; if(state.sx && state.sx.lua === L) renderScripts(); }
 }
 function sxPairs(pairs, value){
   return (pairs || []).map(([v,l]) => `<option value="${esc(v)}"${v === value ? ' selected' : ''}>${esc(l)}</option>`).join('');
