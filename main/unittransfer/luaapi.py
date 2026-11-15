@@ -79,6 +79,13 @@ API: List[Fn] = [
          "rename the unit (every file naming it follows), change its dictionary key, "
          "or its shown name and descriptions")],
        "", "Change one unit's EDU block (and its text entry).", "edit"),
+    Fn("clone_unit",
+       [("source", "string", "the unit to copy"), ("type", "string", "the new unit's `type`"),
+        ("options", "{dictionary?: string, name?: string}?",
+         "its dictionary key (default: the type in lower case, `_` for anything else) "
+         "and its shown name (default: the type)")],
+       "", "A new unit copied from an existing one in the same mod (the Transfer screen's "
+           "copy-with-a-new-name, from the mod into itself): its block, its text, its models.", "edit"),
     Fn("delete_unit",
        [("type", "string", "the unit's `type` line"),
         ("options", "{keep_text?: boolean, remove_models?: boolean, keep_refs?: boolean}?",
@@ -436,6 +443,32 @@ class Run:
                                field_overrides=overrides, remove_fields=removes, loc=loc)
         self._apply(edit.plan_edit(self.mod, req), f"edit unit '{t}'")
 
+    def clone_unit(self, src, new_type, options=None) -> None:
+        import re
+        src, new_type, options = str(src), str(new_type).strip(), options or {}
+        units = self.mod.edu.by_type()
+        if src not in units:
+            raise Refused(f"no unit '{src}' in {self.mod.name}")
+        if not new_type:
+            raise Refused("clone_unit needs the new unit's type")
+        if new_type in units:
+            raise Refused(f"a unit called '{new_type}' already exists in {self.mod.name}")
+        unknown = set(options) - {"dictionary", "name"}
+        if unknown:
+            raise Refused(f"clone_unit: unknown option(s) {', '.join(sorted(unknown))}")
+        dictionary = str(options.get("dictionary") or re.sub(r"[^a-z0-9_]+", "_", new_type.lower()).strip("_"))
+        if any(u.dictionary == dictionary for u in units.values()):
+            raise Refused(f"the dictionary key '{dictionary}' is already a unit's in {self.mod.name}")
+        opts = transfer.TransferOptions(on_conflict="rename", new_type=new_type, new_dictionary=dictionary,
+                                        new_name=str(options.get("name") or new_type),
+                                        bring_animations=False, keep_rebuildable=False)
+        plan = transfer.plan_transfer(self.mod, src, self.mod, opts)
+        what = f"clone unit '{src}' as '{new_type}'"
+        why = list(plan.errors) + [x for x in (plan.base_error, plan.option_error) if x]
+        if why or plan.skipped:
+            raise Refused(f"{what}: " + ("; ".join(why) or "the transfer would skip it"))
+        self._apply(plan, what, transfer.apply_transfer)
+
     def delete_unit(self, t, options=None) -> None:
         t, options = str(t), options or {}
         if t not in self.mod.edu.by_type():
@@ -531,7 +564,8 @@ class Run:
             "units": self._units, "unit": self._unit, "models": self._models,
             "model": self._model, "mounts": self._mounts, "factions": self._factions,
             "buildings": self._buildings, "building": self._building,
-            "edit_unit": self.edit_unit, "delete_unit": self.delete_unit,
+            "edit_unit": self.edit_unit, "clone_unit": self.clone_unit,
+            "delete_unit": self.delete_unit,
             "edit_model": self.edit_model, "clone_model": self.clone_model,
             "edit_building": self.edit_building,
         }
@@ -577,7 +611,8 @@ def _fold(mod: Mod, records: List[dict], script_name: str, edits: List[str],
     seen_rel, seen_abs = set(), set()
     for rec in records:
         m, br = rec.get("manifest") or {}, Path(rec.get("backup_root") or "")
-        extra = set(m) - set(man)
+        # kept_existing (a transfer's "already there, left alone") restores nothing
+        extra = set(m) - set(man) - {"kept_existing"}
         if extra:
             raise RuntimeError(f"cannot fold a record with {', '.join(sorted(extra))}")
         for rel in m.get("backed_up", []):

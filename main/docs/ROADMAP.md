@@ -1389,8 +1389,10 @@ phases until 80% usage limit is reached"):
   backup of each file wins. A refusal or a script error undoes the run.
   Timing on DaC (952 units): 1.1 s an edit until the parsed modeldb was handed
   back to the `Mod` when an apply did not write it; now 40 edits in 6.7 s.
-  "A new unit from an existing one" is not in: no in-mod clone plan exists
-  (only `plan_transfer` between mods), so it waits for one.
+  `toolkit.clone_unit(source, type, options)` is the Transfer screen's copy
+  under a new name, from the mod into itself (`plan_transfer` with
+  `on_conflict="rename"`, no animations, no rebuildable files): the block,
+  its text and its models reused; a taken type or dictionary is refused.
 * **124 done**: `lua_cli.py annotations <folder>` (`toolkit.lua`,
   `.luarc.json`, checked to compile), `docs/LUA_SCRIPTS.md`, three examples in
   `docs/lua_examples/` previewed by the test. The docs and examples are in the

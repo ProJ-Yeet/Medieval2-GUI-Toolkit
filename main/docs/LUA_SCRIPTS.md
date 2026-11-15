@@ -52,6 +52,7 @@ Everything is in one table, `toolkit`. `lua_cli.py api` prints the full list.
 | `toolkit.buildings()` / `toolkit.building(name)` | building lines, their levels, values, capabilities and recruit pools |
 | `toolkit.edit_building(line, level, changes)` | a level's settlement, `requires`, values (`scalars`), upgrades or capability lines |
 | `toolkit.edit_unit(type, fields, options)` | change EDU fields; `options` can rename the unit, change its dictionary, or its shown name and descriptions |
+| `toolkit.clone_unit(source, type, options)` | a new unit copied from another in the same mod; `options` gives its dictionary and shown name |
 | `toolkit.delete_unit(type, options)` | delete a unit and the lines elsewhere that name it |
 | `toolkit.edit_model(name, changes)` | the entry as text, a new name, or a texture for every faction |
 | `toolkit.clone_model(source, name)` | a new entry copied from another |

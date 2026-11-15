@@ -263,7 +263,28 @@ s = script("bld_bad.lua", f'toolkit.edit_building({bl.name!r}, "no_such_level", 
 rep = luaapi.run(mod, s)
 check("a missing level is refused", not rep.ok and rep.error_kind == "refused")
 
-print("9. the examples in docs/lua_examples, previewed")
+print("9. clone a unit")
+s = script("clone_unit.lua", f"""
+toolkit.clone_unit({u0.type!r}, "Lua Clone Unit", {{ name = "Lua's Clone" }})
+local c = toolkit.unit("Lua Clone Unit")
+print(c ~= nil, c and c.dictionary, c and c.name, c and c.soldier == toolkit.unit({u0.type!r}).soldier)
+toolkit.edit_unit("Lua Clone Unit", {{ ["stat_cost"] = "7, 7, 7, 7, 7, 7" }})
+local ok, e = pcall(toolkit.clone_unit, {u0.type!r}, {u1.type!r})
+print(ok, e)
+""")
+rep = luaapi.run(mod, s, apply=True)
+check(f"runs ({rep.error})", rep.ok)
+check("the clone, its dictionary, its shown name, its model",
+      rep.printed[:1] == ["true\tlua_clone_unit\tLua's Clone\ttrue"])
+check("cloning onto a taken name is refused", len(rep.printed) > 1 and rep.printed[1].startswith("false")
+      and "already exists" in rep.printed[1])
+log_now = config.load_log()
+check("one Log record for clone and edit", log_now[-1]["id"] == rep.log_id
+      and sum(1 for e in log_now if not e.get("undone") and e.get("applied")) == 1)
+luaapi.undo(rep.log_id)
+check("Undo puts every byte back", shas(mod) == before)
+
+print("10. the examples in docs/lua_examples, previewed")
 ex = ROOT / "docs" / "lua_examples"
 inf = next(u for u in units if u.category == "infantry" and u.ownership)
 rep = luaapi.run(mod, ex / "raise_morale.lua", args={"faction": inf.ownership[0], "by": "2"})
