@@ -1,6 +1,8 @@
 -- List the units that have no shown name in export_units.txt. Reads only.
 --
---   python lua_cli.py run docs/lua_examples/units_without_names.lua --mod <mod>
+--   python lua_cli.py run lua/examples/units_without_names.lua --mod <mod>
+--   In the app's Lua tab: pick it under Examples and give the same values in the
+--   Arguments box, one key=value a line. Guide: lua/guide.html.
 
 local missing = {}
 for _, u in ipairs(toolkit.units()) do

@@ -1521,7 +1521,7 @@ def _script_name(name: str) -> str:
 def script_list() -> dict:
     """The saved scripts, the shipped examples and the API, for the tab."""
     mine = sorted(scripts_dir().glob("*.lua")) if scripts_dir().is_dir() else []
-    ex_dir = Path(config.PROJECT_ROOT) / "docs" / "lua_examples"
+    ex_dir = Path(config.PROJECT_ROOT) / "lua" / "examples"
     examples = sorted(ex_dir.glob("*.lua")) if ex_dir.is_dir() else []
     return {
         "available": luarun.available(),

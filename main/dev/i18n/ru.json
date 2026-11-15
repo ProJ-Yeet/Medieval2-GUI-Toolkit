@@ -14743,5 +14743,6 @@
  "scripts.lua_apply_confirm": "Запустить этот скрипт для {mod} и записать его изменения? Журнал сохранит одну запись для запуска. Отменить вернет все изменения.",
  "scripts.lua_applied": "Изменения записаны. Запись {id} в журнале ({s} с); Отменить вернет весь запуск.",
  "settings.lua_script_run_in": "📜 Скрипт Lua {script} запущен в {dest}",
- "settings.lua_scripts": "Скрипты Lua"
+ "settings.lua_scripts": "Скрипты Lua",
+ "scripts.lua_guide": "Руководство: как написать скрипт"
 }

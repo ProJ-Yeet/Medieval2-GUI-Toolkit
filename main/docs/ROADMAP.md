@@ -1464,9 +1464,18 @@ up the remaining lua phases"):
   2026-11-15) is in `web/vendor/codemirror/` (205 KB, served at `/vendor/`),
   loaded the first time the tab opens: Lua highlighting in the page's colours
   (a `toolkit` theme), bracket matching, `toolkit.` completion on the dot or
-  Ctrl+Space; the plain text box stays if it cannot load. The examples come from
-  `docs/lua_examples`, which the release zip does not carry yet, so a release
-  shows saved scripts only until that is decided.
+  Ctrl+Space; the plain text box stays if it cannot load. The guide and the examples ship in the zip, 2026-11-15 (the user: "include the
+  lua examples in the release zip also make sure to create an in depth
+  documentation"): `main/lua/` (in `INCLUDE_DIRS` and the updater's
+  `COMPONENTS`) holds `guide.html`, a self-contained guide from a first script
+  to every function (it opens by double-click, and from the tab's *Guide* link
+  at `/lua/guide.html`), and `examples/`, ten commented scripts, one per kind
+  of data, which the tab lists. It replaces `docs/LUA_SCRIPTS.md` and
+  `docs/lua_examples`. Codex (`gpt-6-luna`, xhigh) reviewed the guide against
+  `luaapi.py` as a beginner: nine of its ten points were fixed; the tenth
+  (removing an entry from an archive with no tags) was wrong, the editor
+  refuses it. `test_luaapi` previews every example on DaC and checks the guide
+  has an entry for every function and names every record field.
 * **127**: `test_luaapi` 114/114 (strings, the campaign, faction clones,
   triggers, recruits, the app's run; a DaC copy with its base map). Timing: an
   edit cost 0.3 s on DaC, most of it the EDU parsed again after each write.

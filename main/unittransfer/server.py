@@ -2051,6 +2051,16 @@ class Handler(BaseHTTPRequestHandler):
                                   {"Cache-Control": "no-store"})
             if u.path.startswith("/js/"):
                 return self._web_asset(u.path, stamped="v" in q)
+            if u.path.startswith("/vendor/"):
+                # 125: third-party files the page loads on demand (CodeMirror 5)
+                return self._web_asset(u.path)
+            if u.path == "/lua/guide.html":
+                # 125: the Lua scripts guide, which also opens on its own from lua/
+                page = WEB_DIR.parent / "lua" / "guide.html"
+                if not page.is_file():
+                    return self._err(404, "no lua/guide.html")
+                return self._send(200, page.read_bytes(), "text/html; charset=utf-8",
+                                  {"Cache-Control": "no-store"})
             if u.path.startswith("/i18n/") and u.path.endswith(".json"):
                 return self._web_asset(u.path)
             if u.path == "/api/i18n/words":
@@ -2059,9 +2069,6 @@ class Handler(BaseHTTPRequestHandler):
                 if not re.fullmatch(r"[A-Za-z]{2,3}(-[A-Za-z0-9]{2,8})*", tag or ""):
                     return self._err(400, "bad language tag")
                 blob = json.dumps(i18n.words_to_translate(tag), ensure_ascii=False, indent=1).encode("utf-8")
-            if u.path.startswith("/vendor/"):
-                # 125: third-party files the page loads on demand (CodeMirror 5)
-                return self._web_asset(u.path)
                 return self._send(200, blob, "application/json; charset=utf-8",
                                   {"Content-Disposition": f'attachment; filename="{tag}.json"'})
             if u.path == "/i18n/catalogue.js":
@@ -3292,14 +3299,6 @@ class Handler(BaseHTTPRequestHandler):
                     return self._json({"ok": True, "id": rec["id"]})
                 except (stratfamily.FamilyError, ValueError) as e:
                     return self._json({"error": getattr(e, "message", None) or str(e)})
-            if u.path.startswith("/api/scripts/"):
-                # 96e1: put in / take out an add-on; read back, save or start from an example
-                name = body.get("mod") or ""
-                if name not in self.registry.names():
-                    return self._err(404, "unknown mod")
-                mod = self.registry.get(name)
-                try:
-                    if u.path in ("/api/scripts/addon/plan", "/api/scripts/addon/apply"):
             if u.path in ("/api/lua/scripts", "/api/lua/save", "/api/lua/run"):
                 # 125: the Scripts screen's Lua tab, over luaapi (the CLI's run)
                 from . import luaapi
@@ -3319,6 +3318,14 @@ class Handler(BaseHTTPRequestHandler):
                     return self._json(out)
                 except (OSError, ValueError) as e:
                     return self._json({"error": str(e)})
+            if u.path.startswith("/api/scripts/"):
+                # 96e1: put in / take out an add-on; read back, save or start from an example
+                name = body.get("mod") or ""
+                if name not in self.registry.names():
+                    return self._err(404, "unknown mod")
+                mod = self.registry.get(name)
+                try:
+                    if u.path in ("/api/scripts/addon/plan", "/api/scripts/addon/apply"):
                         plan = scripts.plan_addon(mod, str(body.get("key") or ""), str(body.get("action") or "install"),
                                                   body.get("values") or {})
                         if u.path.endswith("/plan"):

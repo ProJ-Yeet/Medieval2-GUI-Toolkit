@@ -72,7 +72,8 @@ function sxLuaHtml(){
     <div class="sxbtns"><select onchange="sxLuaPick(this.value)"><option value="">${tt('scripts.lua_open')}</option>
       ${opt(tt('scripts.lua_saved'), L.list.scripts || [])}${opt(tt('scripts.lua_examples'), L.list.examples || [])}</select>
       <input id="sxLuaName" value="${esc(L.name)}" title="${esc(tt('scripts.lua_name_hint'))}">
-      <button ${off} onclick="sxLuaSave()">${tt('scripts.lua_save')}</button></div>
+      <button ${off} onclick="sxLuaSave()">${tt('scripts.lua_save')}</button>
+      <a class="btnlink" href="lua/guide.html" target="_blank" rel="noopener">${tt('scripts.lua_guide')}</a></div>
     <textarea id="sxLuaText" class="sxluatext" spellcheck="false">${esc(L.text)}</textarea>
     <label class="sxfield">${tt('scripts.lua_args')}<textarea id="sxLuaArgs" rows="2" spellcheck="false" placeholder="faction=england">${esc(L.args)}</textarea></label>
     <div class="sxbtns"><button ${off} onclick="sxLuaRun(false)">${tt('scripts.lua_dry_run')}</button>

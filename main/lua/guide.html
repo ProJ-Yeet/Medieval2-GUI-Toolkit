@@ -1,0 +1,659 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lua Scripts Guide</title>
+<style>
+:root{--bg:#f7f6f2;--panel:#ffffff;--ink:#1d2127;--dim:#5d6672;--edge:#d9d6cc;--accent:#8a6a1f;--link:#2459c4;
+  --code:#f0eee7;--good:#1f7a45;--warn:#8a5a00;--bad:#b23b3b;--kw:#7a3db8;--str:#1f7a45;--num:#b5551d;--com:#7b8490}
+@media (prefers-color-scheme:dark){:root{--bg:#14171c;--panel:#1c2128;--ink:#e6e9ee;--dim:#98a3b3;--edge:#333c47;
+  --accent:#c8a45c;--link:#7fa8f5;--code:#232a33;--good:#5cc98a;--warn:#e0b341;--bad:#e06c6c;--kw:#c792ea;--str:#8fd694;--num:#f78c6c;--com:#8a94a3}}
+*{box-sizing:border-box}
+html{scroll-padding-top:16px}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.6 "Segoe UI",system-ui,sans-serif}
+a{color:var(--link)}
+.wrap{display:grid;grid-template-columns:260px minmax(0,1fr);max-width:1240px;margin:0 auto;gap:32px;padding:24px 16px}
+nav{position:sticky;top:16px;align-self:start;max-height:calc(100vh - 32px);overflow:auto;font-size:14px;
+  border-right:1px solid var(--edge);padding-right:16px}
+nav b{display:block;margin:14px 0 4px;color:var(--dim);font-size:12px;letter-spacing:.06em;text-transform:uppercase}
+nav a{display:block;padding:2px 0;text-decoration:none;color:var(--ink)}
+nav a:hover{color:var(--link)}
+main{min-width:0}
+h1{font-size:34px;line-height:1.2;margin:0 0 8px}
+h2{font-size:25px;margin:48px 0 10px;padding-top:12px;border-top:1px solid var(--edge)}
+h3{font-size:19px;margin:30px 0 8px}
+h4{font-size:16px;margin:20px 0 6px}
+.lede{font-size:18px;color:var(--dim);margin:0 0 20px}
+code,pre{font-family:Consolas,"Cascadia Mono",monospace;font-size:14px}
+code{background:var(--code);padding:1px 5px;border-radius:4px}
+pre{background:var(--code);padding:12px 14px;border-radius:6px;overflow:auto;line-height:1.45;border:1px solid var(--edge)}
+pre code{background:none;padding:0}
+.kw{color:var(--kw)} .st{color:var(--str)} .nu{color:var(--num)} .co{color:var(--com);font-style:italic}
+.box{border:1px solid var(--edge);border-left:4px solid var(--accent);background:var(--panel);padding:10px 14px;border-radius:6px;margin:14px 0}
+.box.warn{border-left-color:var(--warn)} .box.good{border-left-color:var(--good)}
+.box p{margin:6px 0}
+table{border-collapse:collapse;width:100%;margin:10px 0;font-size:15px;display:block;overflow-x:auto}
+th,td{border:1px solid var(--edge);padding:6px 9px;text-align:left;vertical-align:top}
+th{background:var(--panel)}
+.fn{border:1px solid var(--edge);background:var(--panel);border-radius:8px;padding:4px 16px 10px;margin:16px 0}
+.fn h4{font-family:Consolas,"Cascadia Mono",monospace;font-size:15px;margin:12px 0 4px;word-break:break-word}
+.fn h4 .ret{color:var(--dim);font-weight:normal}
+.tag{display:inline-block;font-size:12px;padding:0 7px;border-radius:9px;border:1px solid var(--edge);color:var(--dim);margin-left:6px;font-family:"Segoe UI",sans-serif}
+.tag.edit{color:var(--warn);border-color:var(--warn)}
+ol.steps li{margin:6px 0}
+kbd{border:1px solid var(--edge);border-bottom-width:2px;border-radius:4px;padding:0 5px;font-size:13px;background:var(--panel)}
+@media (max-width:900px){.wrap{grid-template-columns:1fr}nav{position:static;max-height:none;border-right:0;border-bottom:1px solid var(--edge);padding:0 0 12px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<nav aria-label="Contents">
+  <b>Start here</b>
+  <a href="#what">What Lua scripts are</a>
+  <a href="#first">Your first script, in the app</a>
+  <a href="#cli">Running from a command line</a>
+  <a href="#run">Dry run, Apply and Undo</a>
+  <b>Learning</b>
+  <a href="#lua">Lua in fifteen minutes</a>
+  <a href="#toolkit">How a script talks to the mod</a>
+  <a href="#patterns">Patterns you will use</a>
+  <a href="#examples">The example scripts</a>
+  <b>Reference</b>
+  <a href="#ref-units">Units</a>
+  <a href="#ref-models">Battle models</a>
+  <a href="#ref-world">Mounts and factions</a>
+  <a href="#ref-buildings">Buildings</a>
+  <a href="#ref-recruits">Recruitment sheet</a>
+  <a href="#ref-mercs">Mercenaries</a>
+  <a href="#ref-traits">Traits and ancillaries</a>
+  <a href="#ref-triggers">Triggers</a>
+  <a href="#ref-strings">Text (.strings.bin)</a>
+  <a href="#ref-campaign">The campaign map</a>
+  <a href="#ref-factions">Faction clones</a>
+  <a href="#ref-misc">toolkit.mod and args</a>
+  <b>When things go wrong</b>
+  <a href="#errors">Errors and what they mean</a>
+  <a href="#sandbox">What a script cannot do</a>
+  <a href="#vscode">Writing scripts in VS Code</a>
+  <a href="#faq">Questions</a>
+</nav>
+<main>
+
+<h1>Lua scripts</h1>
+<p class="lede">Change a Medieval II mod with a few lines of code: every spearman one point braver, every
+mercenary 20% cheaper, a word replaced in every message, a unit copied for a new faction. This guide
+starts from nothing and ends with every function a script can call.</p>
+
+<h2 id="what">What Lua scripts are</h2>
+<p>A Lua script is a small text file of instructions. The toolkit runs it against one mod, and the script
+<strong>reads</strong> the mod (its units, buildings, traits, campaign) and <strong>asks for changes</strong>.
+The changes are made by the toolkit's own editors, the same ones behind its screens, so every rule those
+screens keep (a unit name that must be unique, a tile that must be on the map, a number that must be
+whole) holds for a script too.</p>
+<p>Think of it as a batch edit written as a recipe. Anything you would do by clicking fifty times in the
+Unit Editor, a script does in one run, the same way every time, and you can send the script to someone
+else to run on their copy of the mod.</p>
+<div class="box">
+<p><strong>What it is not.</strong> These scripts run inside the toolkit, while you are modding. They are
+not scripts the game runs (that is M2TWEOP's own Lua, a different thing), and nothing here is loaded by
+Medieval II.</p>
+</div>
+<p>Three promises make it safe to try things:</p>
+<ul>
+<li><strong>Dry run first.</strong> A dry run shows exactly which files would change, line by line, and
+then puts everything back. Nothing is kept until you press <em>Apply</em>.</li>
+<li><strong>One run, one Undo.</strong> An applied run is a single entry in the toolkit's Log, however
+many edits it made. Its Undo takes the whole run back.</li>
+<li><strong>All or nothing.</strong> If any edit is refused, or the script stops with an error, every
+edit it had made is undone. A script never leaves a mod half changed.</li>
+</ul>
+
+<h2 id="first">Your first script, in the app</h2>
+<p>The Lua tab is a beta feature, so switch it on first.</p>
+<ol class="steps">
+<li>Open <strong>Settings</strong> (top bar) and tick <strong>Opt into beta features</strong>.</li>
+<li>Pick your mod in the <strong>Mod</strong> box at the top.</li>
+<li>Open the menu (<kbd>&#9776;</kbd>) and go to <strong>Scripts and add-ons</strong>, then the
+<strong>Lua</strong> tab.</li>
+<li>Replace the text in the editor with this:
+<pre><code><span class="kw">local</span> count = <span class="nu">0</span>
+<span class="kw">for</span> _, unit <span class="kw">in</span> ipairs(toolkit.units()) <span class="kw">do</span>
+  <span class="kw">if</span> unit.category == <span class="st">"cavalry"</span> <span class="kw">then</span>
+    count = count + <span class="nu">1</span>
+  <span class="kw">end</span>
+<span class="kw">end</span>
+print(<span class="st">"cavalry units:"</span>, count)</code></pre></li>
+<li>Press <strong>Dry run</strong>. Under <em>Printed</em> you see how many cavalry units the mod has.
+This script only reads, so it says the script changed nothing.</li>
+</ol>
+<p>Now a script that changes something. Open the <strong>Open a script...</strong> list, pick
+<code>raise_morale.lua</code> under <em>Examples</em>, type <code>faction=england</code> (or a faction your
+mod has) in the <em>Arguments</em> box, and press <strong>Dry run</strong>. The report lists the units it
+would change, and under each file a coloured diff: red lines go, green lines come in. Nothing is written
+yet. Press <strong>Apply</strong> to keep it; the <strong>Log</strong> (top bar) then shows the run under
+<em>Lua scripts</em>, with an <strong>Undo</strong> button.</p>
+<div class="box good"><p><strong>Tip:</strong> type <code>toolkit.</code> in the editor and a list of
+everything you can call opens. <kbd>Ctrl</kbd>+<kbd>Space</kbd> opens it again. The <em>What a script can
+call</em> list under the editor has the same names with one line each.</p></div>
+<p><strong>Save</strong> keeps your script under the name in the box next to it, in the toolkit's
+<code>config/lua_scripts</code> folder. Saved scripts appear in the <em>Open a script...</em> list.</p>
+
+<h2 id="cli">Running from a command line</h2>
+<p>Everything the Lua tab does also works from a command prompt, which is handy for scripts you run
+often or from a batch file. Open a command prompt in the toolkit's folder (in Explorer, type
+<code>cmd</code> in the address bar and press Enter) and run <code>lua_cli.py</code> with the toolkit's
+Python:</p>
+<table>
+<tr><th>Your toolkit</th><th>Start each command with</th></tr>
+<tr><td>The release zip (it has a <code>runtime</code> folder)</td><td><code>runtime\python.exe lua_cli.py</code></td></tr>
+<tr><td>Installed with Install-Dependencies.bat, or from source</td><td><code>py lua_cli.py</code></td></tr>
+</table>
+<pre><code>runtime\python.exe lua_cli.py run lua\examples\list_units.lua --mod Divide_and_Conquer_EUR --set faction=england
+runtime\python.exe lua_cli.py run my_script.lua --mod "C:\Games\Medieval II\mods\My_Mod" --apply
+runtime\python.exe lua_cli.py undo 20261115-101500-ab12cd
+runtime\python.exe lua_cli.py api
+runtime\python.exe lua_cli.py annotations my_scripts</code></pre>
+<table>
+<tr><th>Command</th><th>What it does</th></tr>
+<tr><td><code>run &lt;script&gt; --mod &lt;mod&gt;</code></td><td>A dry run. <code>--mod</code> is a mod's folder (one with a <code>data</code> folder in it), or the name of a mod in the game's <code>mods</code> folder that the toolkit is set up with.</td></tr>
+<tr><td><code>--apply</code></td><td>Write the changes. The run becomes one Log entry, and the last line prints its id.</td></tr>
+<tr><td><code>--set key=value</code></td><td>A value the script reads as <code>args.key</code>. Repeat it for more: <code>--set faction=england --set by=2</code>. Put a value with spaces in quotes: <code>--set unit="Feudal Knights"</code>.</td></tr>
+<tr><td><code>--diff</code></td><td>Print every changed line, not only the count per file.</td></tr>
+<tr><td><code>--time-limit 300</code></td><td>Seconds the run may take (60 unless you say).</td></tr>
+<tr><td><code>undo &lt;id&gt;</code></td><td>Take an applied run back, the same as the Log's Undo.</td></tr>
+<tr><td><code>api</code></td><td>Print every function and the fields of every record a read gives back (<code>toolkit.mod</code> and <code>args</code> are described in <a href="#ref-misc">their own section</a>).</td></tr>
+<tr><td><code>annotations &lt;folder&gt;</code></td><td>Write the files VS Code needs for completion (see <a href="#vscode">VS Code</a>).</td></tr>
+</table>
+<p>Exit codes, for batch files: <code>0</code> done, <code>1</code> the script failed, <code>2</code> an
+edit was refused, <code>3</code> bad arguments.</p>
+
+<h2 id="run">Dry run, Apply and Undo</h2>
+<p>Every run does the same thing: it runs your script from the top, and each edit the script asks for is
+made at once, so the next line of the script sees it. When the script ends:</p>
+<ul>
+<li><strong>Dry run</strong> compares every touched file with how it was, puts every file back byte for
+byte (and checks that it did), and shows you the comparison. The Log keeps nothing.</li>
+<li><strong>Apply</strong> keeps the files as the script left them and folds all its edits into one Log
+entry. The Log's <strong>Undo</strong> on that entry, or <code>lua_cli.py undo &lt;id&gt;</code>, puts back
+every file the run touched.</li>
+</ul>
+<div class="box warn">
+<p><strong>Close the game first.</strong> A dry run writes the mod's files while it runs and puts them
+back at the end. Do not run scripts while Medieval II has the mod open.</p>
+<p><strong>The Log is not a backup of your whole mod.</strong> It covers the files the toolkit wrote.
+Keep your own copy of a mod you care about, as with any editor.</p>
+</div>
+<p>If an edit is refused (say you rename a unit to a name another unit has) the run stops there, every
+edit before it is undone, and the report names the edit and the reason. The same happens when the script
+itself fails, for example by reading a field of something that is <code>nil</code>.</p>
+
+<h2 id="lua">Lua in fifteen minutes</h2>
+<p>You do not need to be a programmer. These are the only parts of Lua the examples use.</p>
+
+<h3>Comments, values and variables</h3>
+<pre><code><span class="co">-- two dashes start a comment: Lua ignores the rest of the line</span>
+<span class="kw">local</span> faction = <span class="st">"england"</span>    <span class="co">-- text (a "string"), in quotes</span>
+<span class="kw">local</span> bonus = <span class="nu">2</span>              <span class="co">-- a number</span>
+<span class="kw">local</span> hidden = <span class="kw">true</span>          <span class="co">-- true or false</span>
+<span class="kw">local</span> nothing = <span class="kw">nil</span>         <span class="co">-- nil means "no value"</span></code></pre>
+<p>Write <code>local</code> the first time you name a variable. After that, <code>bonus = bonus + 1</code>
+changes it.</p>
+
+<h3>Text</h3>
+<pre><code><span class="kw">local</span> name = <span class="st">"Feudal"</span> .. <span class="st">" Knights"</span>     <span class="co">-- .. joins text: "Feudal Knights"</span>
+print(#name)                            <span class="co">-- # is the length: 14</span>
+print(name:upper())                     <span class="co">-- FEUDAL KNIGHTS</span>
+print((<span class="st">"%s has %d men"</span>):format(name, <span class="nu">40</span>))  <span class="co">-- %s text, %d whole number</span>
+print(tonumber(<span class="st">"12"</span>) + <span class="nu">1</span>)               <span class="co">-- text to number: 13</span>
+print(tostring(<span class="nu">13</span>))                    <span class="co">-- number to text: "13"</span></code></pre>
+
+<h3>Tables: lists and records</h3>
+<p>A table holds many values. As a <strong>list</strong> it is numbered from 1 (not 0); as a
+<strong>record</strong> it has named fields.</p>
+<pre><code><span class="kw">local</span> factions = { <span class="st">"england"</span>, <span class="st">"france"</span>, <span class="st">"hre"</span> }
+print(factions[<span class="nu">1</span>])       <span class="co">-- england</span>
+print(#factions)          <span class="co">-- 3, how many</span>
+
+<span class="kw">local</span> pool = { unit = <span class="st">"Peasants"</span>, maximum = <span class="nu">4</span> }
+print(pool.unit)          <span class="co">-- Peasants</span>
+print(pool[<span class="st">"maximum"</span>])    <span class="co">-- 4, the same as pool.maximum</span>
+<span class="kw">local</span> era = { [<span class="st">"era 0"</span>] = <span class="st">"england"</span> }  <span class="co">-- a name with a space goes in [" "]</span></code></pre>
+
+<h3>Decisions and loops</h3>
+<pre><code><span class="kw">if</span> unit.category == <span class="st">"infantry"</span> <span class="kw">and</span> <span class="kw">not</span> unit.mercenary <span class="kw">then</span>
+  print(<span class="st">"a regular foot unit"</span>)
+<span class="kw">elseif</span> unit.category == <span class="st">"cavalry"</span> <span class="kw">then</span>
+  print(<span class="st">"horse"</span>)
+<span class="kw">else</span>
+  print(<span class="st">"something else"</span>)
+<span class="kw">end</span>
+
+<span class="co">-- go through a list: i is the place (1, 2, 3...), u the value</span>
+<span class="kw">for</span> i, u <span class="kw">in</span> ipairs(toolkit.units()) <span class="kw">do</span>
+  print(i, u.type)
+<span class="kw">end</span>
+
+<span class="co">-- go through a record's fields</span>
+<span class="kw">for</span> key, value <span class="kw">in</span> pairs(unit.fields) <span class="kw">do</span>
+  print(key, value)
+<span class="kw">end</span>
+
+<span class="kw">for</span> n = <span class="nu">1</span>, <span class="nu">5</span> <span class="kw">do</span> print(n) <span class="kw">end</span>   <span class="co">-- 1 to 5</span></code></pre>
+<p><code>==</code> compares, <code>~=</code> means "not equal". <code>_</code> is the usual name for a
+value you do not need.</p>
+
+<h3>Functions</h3>
+<pre><code><span class="kw">local function</span> owned_by(unit, faction)
+  <span class="kw">for</span> _, owner <span class="kw">in</span> ipairs(unit.ownership) <span class="kw">do</span>
+    <span class="kw">if</span> owner == faction <span class="kw">then return true end</span>
+  <span class="kw">end</span>
+  <span class="kw">return false</span>
+<span class="kw">end</span></code></pre>
+
+<h3>Finding things inside text</h3>
+<p>Many EDU values are text with commas, like <code>stat_mental</code> = <code>"9, normal, trained"</code>.
+Two ways to take it apart:</p>
+<pre><code><span class="co">-- 1. split on commas into a list</span>
+<span class="kw">local</span> parts = {}
+<span class="kw">for</span> piece <span class="kw">in</span> unit.fields.stat_mental:gmatch(<span class="st">"[^,]+"</span>) <span class="kw">do</span>
+  parts[#parts + <span class="nu">1</span>] = piece:match(<span class="st">"^%s*(.-)%s*$"</span>)   <span class="co">-- trimmed of spaces</span>
+<span class="kw">end</span>
+print(parts[<span class="nu">1</span>])   <span class="co">-- "9"</span>
+
+<span class="co">-- 2. match a shape: (%d+) captures a whole number</span>
+<span class="kw">local</span> morale = unit.fields.stat_mental:match(<span class="st">"^%s*(%d+)"</span>)</code></pre>
+<p>Lua's patterns are like simple wildcards: <code>%d</code> a digit, <code>%s</code> a space,
+<code>+</code> one or more, <code>.-</code> as little as possible, <code>( )</code> what to keep. In a
+pattern, <code>. % - + * ? [ ] ^ $ ( )</code> have special meanings, so put a <code>%</code> before them to
+mean the character itself.</p>
+
+<h3>Stopping, and errors on purpose</h3>
+<pre><code><span class="kw">local</span> faction = assert(args.faction, <span class="st">"give faction=&lt;name&gt; as an argument"</span>)  <span class="co">-- stop with a message if missing</span>
+<span class="kw">if</span> <span class="kw">not</span> toolkit.unit(<span class="st">"Peasants"</span>) <span class="kw">then</span> error(<span class="st">"this mod has no Peasants"</span>) <span class="kw">end</span>
+<span class="kw">local</span> ok, why = pcall(toolkit.edit_unit, <span class="st">"Peasants"</span>, { soldier = <span class="st">"x"</span> })  <span class="co">-- try; carry on if refused</span></code></pre>
+<p>Lua is <strong>case sensitive</strong>: <code>Toolkit</code> is not <code>toolkit</code>, and a unit
+called <code>"Peasants"</code> is not <code>"peasants"</code>.</p>
+
+<h2 id="toolkit">How a script talks to the mod</h2>
+<p>Everything comes from one table, <code>toolkit</code>. Its functions are of two kinds:</p>
+<ul>
+<li><strong>Reads</strong>, like <code>toolkit.units()</code> or <code>toolkit.unit("Peasants")</code>, give
+you copies of the mod's data as Lua tables. A list function gives a list in the order of the file; a
+single-item function gives the item, or <code>nil</code> if there is no such thing.</li>
+<li><strong>Edits</strong>, like <code>toolkit.edit_unit(...)</code>, change the mod. They return nothing.
+A refused edit stops the script with the reason (unless you call it inside <code>pcall</code>).</li>
+</ul>
+<h3>What you read is a copy</h3>
+<p>The tables a read gives you are read-only: <code>unit.category = "cavalry"</code> stops the script with
+<em>this table is the mod as read; change it through toolkit.edit_* functions</em>. To change something, call its edit function. To work with a list you want
+to change, copy it first:</p>
+<pre><code><span class="kw">local</span> pri = {}
+<span class="kw">for</span> i, v <span class="kw">in</span> ipairs(unit.stat_pri) <span class="kw">do</span> pri[i] = v <span class="kw">end</span>
+pri[<span class="nu">1</span>] = tostring(tonumber(pri[<span class="nu">1</span>]) + <span class="nu">1</span>)
+toolkit.edit_unit(unit.type, { stat_pri = pri })</code></pre>
+<h3>A read after an edit sees it</h3>
+<p>Edits happen as the script makes them, so you can build on them: copy a unit, then edit the copy;
+rename a modeldb entry, then point another unit at the new name. Read things again after an edit rather
+than keeping an old copy, especially where line numbers are involved (buildings, recruit pools).</p>
+<h3>Values you pass</h3>
+<ul>
+<li>Text fields take text or a number: <code>{ soldier = "peasants, 40, 0, 1" }</code>, <code>{ population = 2500 }</code>.</li>
+<li>In <code>edit_unit</code>, a list is written joined with <code>", "</code>: <code>{ ownership = { "england", "scotland" } }</code> becomes <code>ownership england, scotland</code>. Other functions that take a list (a trait's <code>characters</code>, a level's <code>effects</code>) keep it a list.</li>
+<li><code>false</code> means "off" or "take it out", in the way each function says: in <code>edit_unit</code> it removes the line (<code>{ armour_ug_models = false }</code>), in <code>edit_strings</code> it removes the entry, in <code>clone_faction</code> <code>art = false</code> copies no pictures. The reference says it for each function.</li>
+<li>Places in lists count from 1, as everywhere in Lua.</li>
+</ul>
+
+<h2 id="patterns">Patterns you will use</h2>
+<h4>Only some units</h4>
+<pre><code><span class="kw">for</span> _, u <span class="kw">in</span> ipairs(toolkit.units()) <span class="kw">do</span>
+  <span class="kw">if</span> u.category == <span class="st">"infantry"</span> <span class="kw">and</span> u.class == <span class="st">"spearmen"</span> <span class="kw">and</span> <span class="kw">not</span> u.eop <span class="kw">then</span>
+    <span class="co">-- ...</span>
+  <span class="kw">end</span>
+<span class="kw">end</span></code></pre>
+<h4>Check before you change</h4>
+<pre><code><span class="kw">if</span> toolkit.unit(args.name) <span class="kw">then</span>
+  error(args.name .. <span class="st">" is already a unit"</span>)
+<span class="kw">end</span></code></pre>
+<h4>Skip what the editors refuse, and say so</h4>
+<pre><code><span class="kw">for</span> _, u <span class="kw">in</span> ipairs(toolkit.units()) <span class="kw">do</span>
+  <span class="kw">local</span> ok, why = pcall(toolkit.edit_unit, u.type, { mount = <span class="st">"heavy horse"</span> })
+  <span class="kw">if</span> <span class="kw">not</span> ok <span class="kw">then</span> print(<span class="st">"skipped "</span> .. u.type .. <span class="st">": "</span> .. why) <span class="kw">end</span>
+<span class="kw">end</span></code></pre>
+<p>A refused edit inside <code>pcall</code> has changed nothing; the run goes on.</p>
+<h4>One script, many uses</h4>
+<pre><code><span class="kw">local</span> faction = args.faction <span class="kw">or</span> <span class="st">"england"</span>        <span class="co">-- a default</span>
+<span class="kw">local</span> by = tonumber(args.by <span class="kw">or</span> <span class="st">"1"</span>)              <span class="co">-- args are always text</span></code></pre>
+<h4>Share code between scripts</h4>
+<p>Put functions in a file next to your scripts, say <code>util.lua</code>, ending in
+<code>return { owned_by = owned_by }</code>, and load it with
+<code>local util = require "util"</code>. <code>require</code> only reads from the script's own folder
+(and folders under it: <code>require "lib.util"</code> is <code>lib/util.lua</code>).</p>
+
+<h2 id="examples">The example scripts</h2>
+<p>They are in the toolkit's <code>lua\examples</code> folder and in the Lua tab's <em>Examples</em> list.
+Each starts with comments that say what it does and which arguments it takes. Give arguments one per line in the Lua tab's <em>Arguments</em> box
+(<code>faction=england</code>), or as <code>--set faction=england</code> on the command line. Run them as dry runs first;
+read them to learn.</p>
+<table>
+<tr><th>Script</th><th>What it does</th><th>Arguments</th></tr>
+<tr><td><code>list_units.lua</code></td><td>Lists a faction's units with category, class and shown name. Reads only: start here.</td><td><code>faction</code> (leave out for all)</td></tr>
+<tr><td><code>units_without_names.lua</code></td><td>Finds units with no shown name in export_units.txt. Reads only.</td><td>none</td></tr>
+<tr><td><code>trait_report.lua</code></td><td>One trait's levels and effects, and the triggers that give it points. Reads only.</td><td><code>trait</code></td></tr>
+<tr><td><code>raise_morale.lua</code></td><td>One faction's infantry get more morale.</td><td><code>faction</code>, <code>by</code> (default 1)</td></tr>
+<tr><td><code>copy_unit_for_faction.lua</code></td><td>Copies a unit under a new name for one faction, one point stronger in attack.</td><td><code>from</code>, <code>type</code>, <code>faction</code>, <code>name</code> (the shown name, default the new type)</td></tr>
+<tr><td><code>clone_entry.lua</code></td><td>Copies a battle_models.modeldb entry, optionally with a new texture.</td><td><code>from</code>, <code>name</code>, <code>texture</code> (optional)</td></tr>
+<tr><td><code>cheaper_mercenaries.lua</code></td><td>Reprices every mercenary of a campaign.</td><td><code>factor</code> (default 0.8), <code>campaign</code> (default imperial_campaign)</td></tr>
+<tr><td><code>bigger_recruit_pools.lua</code></td><td>Raises the pool maximum wherever a unit is recruited.</td><td><code>unit</code>, <code>by</code> (default 1)</td></tr>
+<tr><td><code>grow_settlements.lua</code></td><td>Grows the population of a faction's starting settlements.</td><td><code>faction</code>, <code>percent</code> (default 10), <code>campaign</code> (default imperial_campaign)</td></tr>
+<tr><td><code>replace_text.lua</code></td><td>Replaces a word in every entry of a text archive.</td><td><code>file</code>, <code>from</code>, <code>to</code> (default: nothing, which deletes the word)</td></tr>
+</table>
+<p>To change an example, open it, change it and <strong>Save</strong> under a new name: the examples
+themselves are replaced when the toolkit updates.</p>
+
+<h2 id="reference">Reference</h2>
+<p>Every function, with what it takes and gives. <span class="tag">read</span> functions only read;
+<span class="tag edit">edit</span> functions change the mod. In the signatures, <code>?</code> after a
+name means you may leave it out.</p>
+
+<h3 id="ref-units">Units (export_descr_unit.txt)</h3>
+<div class="fn" id="fn-units"><h4>toolkit.units() <span class="ret">&rarr; Unit[]</span><span class="tag">read</span></h4>
+<p>Every unit in the mod in file order: the EDU first, then any M2TWEOP unit files.</p></div>
+<div class="fn" id="fn-unit"><h4>toolkit.unit(type) <span class="ret">&rarr; Unit or nil</span><span class="tag">read</span></h4>
+<p>One unit by its <code>type</code> line, exactly as written there.</p></div>
+<p id="cls-unit">A <strong>Unit</strong> has these fields:</p>
+<table>
+<tr><th>Field</th><th>What it is</th></tr>
+<tr><td><code>type</code>, <code>dictionary</code></td><td>Its <code>type</code> line and its dictionary key (the key of its text and its card art).</td></tr>
+<tr><td><code>name</code></td><td>The shown name, from export_units.txt (empty if it has none).</td></tr>
+<tr><td><code>category</code>, <code>class</code></td><td>For example <code>infantry</code> and <code>spearmen</code>.</td></tr>
+<tr><td><code>kind</code></td><td>The category refined by weapon, as the toolkit's lists group units.</td></tr>
+<tr><td><code>ownership</code>, <code>era0</code>, <code>era1</code>, <code>era2</code></td><td>Lists of faction names.</td></tr>
+<tr><td><code>soldier</code>, <code>officers</code>, <code>mount</code>, <code>ship</code>, <code>engine</code>, <code>animal</code></td><td>The battle model, the officers' models (a list), and what it rides, sails or pulls.</td></tr>
+<tr><td><code>armour_models</code>, <code>attributes</code></td><td>Lists.</td></tr>
+<tr><td><code>stat_pri</code>, <code>stat_sec</code>, <code>projectiles</code></td><td>Lists of the values on those lines, and the projectiles it fires.</td></tr>
+<tr><td><code>mercenary</code>, <code>eop</code></td><td>true for a mercenary unit; true for a unit in an M2TWEOP unit file.</td></tr>
+<tr><td><code>fields</code></td><td><strong>Every line of the block as text</strong>, by name: <code>u.fields.stat_mental</code>, <code>u.fields["era 0"]</code>. A repeated line is <code>officer</code>, <code>officer#2</code>, <code>officer#3</code>.</td></tr>
+<tr><td><code>field_order</code></td><td>The names in <code>fields</code>, in the order the block has them.</td></tr>
+<tr><td><code>file</code>, <code>raw</code></td><td>The file it is in, and the whole block as the file has it.</td></tr>
+</table>
+<div class="fn" id="fn-edit_unit"><h4>toolkit.edit_unit(type, fields, options?)<span class="tag edit">edit</span></h4>
+<p>Change a unit's lines. <code>fields</code> uses the names of <code>unit.fields</code>: a value is
+text, a number or a list; <code>false</code> removes the line. <code>options</code> can hold
+<code>rename</code> (a new type: every file that names the unit follows), <code>dictionary</code> (a new
+key), <code>name</code>, <code>descr</code> and <code>descr_short</code> (its shown name and descriptions in
+export_units.txt).</p>
+<pre><code>toolkit.edit_unit(<span class="st">"Peasants"</span>, { stat_cost = { <span class="nu">1</span>, <span class="nu">200</span>, <span class="nu">100</span>, <span class="nu">20</span>, <span class="nu">30</span>, <span class="nu">200</span>, <span class="nu">4</span>, <span class="nu">50</span> } },
+                  { name = <span class="st">"Village Levy"</span> })</code></pre></div>
+<div class="fn" id="fn-clone_unit"><h4>toolkit.clone_unit(source, type, options?)<span class="tag edit">edit</span></h4>
+<p>A new unit copied from one in the same mod, under a new <code>type</code>: its block, its text and
+its models (the Transfer screen's copy with a new name). <code>options</code>: <code>dictionary</code>
+(default: the type in lower case, every run of characters other than <code>a-z</code>, <code>0-9</code> and <code>_</code> turned into one <code>_</code>, and <code>_</code> trimmed from the ends: <code>"Royal Peasants"</code> becomes <code>royal_peasants</code>) and <code>name</code> (the shown name,
+default the type). A taken type or dictionary is refused.</p></div>
+<div class="fn" id="fn-delete_unit"><h4>toolkit.delete_unit(type, options?)<span class="tag edit">edit</span></h4>
+<p>Delete a unit and, by default, the lines elsewhere that name it (recruitment, armies) and its
+export_units entry. <code>options</code>: <code>keep_text = true</code> keeps the text entry,
+<code>remove_models = true</code> also removes battle models only it uses, <code>keep_refs = true</code>
+leaves the other files alone.</p></div>
+
+<h3 id="ref-models">Battle models (battle_models.modeldb)</h3>
+<div class="fn" id="fn-models"><h4>toolkit.models() <span class="ret">&rarr; Model[]</span><span class="tag">read</span></h4>
+<p>Every entry, in file order.</p></div>
+<div class="fn" id="fn-model"><h4>toolkit.model(name) <span class="ret">&rarr; Model or nil</span><span class="tag">read</span></h4>
+<p>One entry by name, in any case.</p></div>
+<p id="cls-model">A <strong>Model</strong> has <code>name</code>, <code>scale</code>, <code>lods</code> (each
+<code>{mesh, distance}</code>), <code>textures</code> and <code>attachments</code> (each
+<code>{faction, texture, normal, sprite}</code>), <code>animations</code> (each <code>{mount, primary,
+secondary, primary_weapons, secondary_weapons}</code>) and <code>raw</code>, the entry as text.</p>
+<div class="fn" id="fn-edit_model"><h4>toolkit.edit_model(name, changes)<span class="tag edit">edit</span></h4>
+<p><code>changes</code> holds one of: <code>raw</code> (the whole entry as text), <code>rename</code> (a
+new name; units that use it follow), or texture paths set for every faction: <code>texture</code>,
+<code>normal</code>, <code>sprite</code>, <code>attach_texture</code>, <code>attach_normal</code>.</p>
+<pre><code>toolkit.edit_model(<span class="st">"peasants"</span>, { texture = <span class="st">"unit_models/_units/my_peasants/textures/peasants.texture"</span> })</code></pre></div>
+<div class="fn" id="fn-clone_model"><h4>toolkit.clone_model(source, name)<span class="tag edit">edit</span></h4>
+<p>Add an entry copied from another, under a new name.</p></div>
+
+<h3 id="ref-world">Mounts and factions</h3>
+<div class="fn" id="fn-mounts"><h4>toolkit.mounts() <span class="ret">&rarr; table</span><span class="tag">read</span></h4>
+<p>Each mount in descr_mount.txt and the battle model it uses: <code>toolkit.mounts()["heavy horse"]</code>.</p></div>
+<div class="fn" id="fn-factions"><h4>toolkit.factions() <span class="ret">&rarr; {slot, name, culture}[]</span><span class="tag">read</span></h4>
+<p>Every faction in descr_sm_factions.txt: its <code>slot</code> (the name files use, like
+<code>england</code>), its shown <code>name</code> and its <code>culture</code>.</p></div>
+
+<h3 id="ref-buildings">Buildings (export_descr_buildings.txt)</h3>
+<div class="fn" id="fn-buildings"><h4>toolkit.buildings() <span class="ret">&rarr; Building[]</span><span class="tag">read</span></h4>
+<p>Every building line, in file order.</p></div>
+<div class="fn" id="fn-building"><h4>toolkit.building(name) <span class="ret">&rarr; Building or nil</span><span class="tag">read</span></h4>
+<p>One building line, like <code>"barracks"</code>.</p></div>
+<p id="cls-building">A <strong>Building</strong> has <code>name</code>, <code>convert_to</code>,
+<code>religion</code>, <code>levels</code> (the level names in upgrade order) and <code>blocks</code>, one
+per level, each with <code>name</code>, <code>settlement</code> (city, castle, or empty for both),
+<code>requires</code>, <code>scalars</code> (cost, construction and the other single values, by name),
+<code>upgrades</code>, <code>capabilities</code> and <code>faction_capabilities</code> (each
+<code>{keyword, args, requires, line}</code>) and <code>recruits</code> (each <code>{unit, initial, per_turn,
+maximum, experience, requires}</code>).</p>
+<div class="fn" id="fn-edit_building"><h4>toolkit.edit_building(line, level, changes)<span class="tag edit">edit</span></h4>
+<p>Change one level. <code>changes</code> can hold <code>settlement</code>, <code>requires</code>,
+<code>scalars</code> (only the ones named change), <code>upgrades</code> (the whole list), and
+<code>capabilities</code> / <code>faction_capabilities</code> as a list of operations. An operation names
+an existing line by its <code>line</code> from a read; one without <code>line</code> is a new line; lines
+not listed stay as they are.</p>
+<pre><code><span class="kw">local</span> b = assert(toolkit.building(<span class="st">"barracks"</span>), <span class="st">"this mod has no barracks line"</span>)
+<span class="kw">local</span> lv = b.blocks[<span class="nu">1</span>]
+assert(lv.capabilities[<span class="nu">2</span>], <span class="st">"this example needs two capability lines on the first level"</span>)
+toolkit.edit_building(b.name, lv.name, {
+  scalars = { cost = <span class="nu">500</span> },
+  capabilities = {
+    { line = lv.capabilities[<span class="nu">1</span>].line, delete = <span class="kw">true</span> },                      <span class="co">-- take one out</span>
+    { line = lv.capabilities[<span class="nu">2</span>].line, args = <span class="st">'"Peasants"  1  0.5  4  0'</span> },  <span class="co">-- change one</span>
+    { keyword = <span class="st">"recruit_pool"</span>, args = <span class="st">'"Militia"  1  0.5  2  0'</span>,           <span class="co">-- add one</span>
+      requires = <span class="st">"factions { england, }"</span> },
+  },
+})</code></pre>
+<p>An edit moves the line numbers after it, so read the building again before the next edit to it.</p></div>
+
+<h3 id="ref-recruits">The recruitment sheet</h3>
+<div class="fn" id="fn-recruits"><h4>toolkit.recruits() <span class="ret">&rarr; Recruit[]</span><span class="tag">read</span></h4>
+<p id="cls-recruit">Every <code>recruit_pool</code> line of the EDB, the rows of the toolkit's
+recruitment sheet. A <strong>Recruit</strong> has <code>line</code>, <code>unit</code>,
+<code>building</code>, <code>level</code>, <code>settlement</code>, <code>section</code> (capability or
+faction_capability), <code>requires</code>, and the four numbers <code>initial</code>,
+<code>per_turn</code>, <code>maximum</code> and <code>experience</code>.</p></div>
+<div class="fn" id="fn-edit_recruit"><h4>toolkit.edit_recruit(line, changes)<span class="tag edit">edit</span></h4>
+<p>Change a line's numbers: <code>{ maximum = 6, experience = 1 }</code>. Numbers cannot go below 0 and
+experience is whole. Only the numbers are rewritten, so lines never move.</p></div>
+
+<h3 id="ref-mercs">Mercenaries (descr_mercenaries.txt)</h3>
+<div class="fn" id="fn-mercenaries"><h4>toolkit.mercenaries(campaign?) <span class="ret">&rarr; MercPool[]</span><span class="tag">read</span></h4>
+<p id="cls-merc">Every pool of a campaign (default <code>imperial_campaign</code>). A <strong>MercPool</strong>
+has <code>name</code>, <code>regions</code> and <code>units</code>. Each unit line has <code>place</code>
+(from 1), <code>name</code>, <code>exp</code>, <code>cost</code>, <code>replenish</code> (two numbers),
+<code>max</code>, <code>initial</code>, <code>crusading</code> (true or false), and only when the line has
+them <code>start_year</code>, <code>end_year</code>, <code>religions</code>, <code>events</code> and
+<code>factions</code> (otherwise nil). A line the toolkit could not read has <code>fault</code>.</p></div>
+<div class="fn" id="fn-edit_merc_unit"><h4>toolkit.edit_merc_unit(pool, place, edits, campaign?)<span class="tag edit">edit</span></h4>
+<p>Change one unit line, named by its place: <code>{ cost = 300, replenish = { 0.1, 0.2 } }</code>.
+<code>false</code> takes an option off (<code>religions = false</code>).</p></div>
+<div class="fn" id="fn-add_merc_unit"><h4>toolkit.add_merc_unit(pool, values, campaign?)<span class="tag edit">edit</span></h4>
+<p>Add a line at the end of a pool: <code>{ name = "Swiss Pikemen", exp = 1, cost = 400, replenish =
+{ 0.1, 0.2 }, max = 2, initial = 1 }</code>.</p></div>
+<div class="fn" id="fn-delete_merc_unit"><h4>toolkit.delete_merc_unit(pool, place, campaign?)<span class="tag edit">edit</span></h4>
+<p>Take one line out. The lines after it move up one place.</p></div>
+
+<h3 id="ref-traits">Traits and ancillaries</h3>
+<div class="fn" id="fn-traits"><h4>toolkit.traits() <span class="ret">&rarr; Trait[]</span><span class="tag">read</span></h4>
+<p>Every trait in export_descr_character_traits.txt.</p></div>
+<div class="fn" id="fn-trait"><h4>toolkit.trait(name) <span class="ret">&rarr; Trait or nil</span><span class="tag">read</span></h4>
+<p id="cls-trait">A <strong>Trait</strong> has <code>name</code>, <code>characters</code>, <code>hidden</code>,
+<code>exclude_cultures</code>, <code>no_going_back_level</code>, <code>anti_traits</code> and
+<code>levels</code>; each level has <code>name</code>, <code>threshold</code>, <code>description</code>,
+<code>effects_description</code>, <code>gain_message</code>, <code>lose_message</code>,
+<code>epithet</code> and <code>effects</code> (each <code>{attribute, amount}</code>).</p></div>
+<div class="fn" id="fn-edit_trait"><h4>toolkit.edit_trait(name, changes)<span class="tag edit">edit</span></h4>
+<p>Change the header (<code>characters</code>, <code>hidden</code>, <code>exclude_cultures</code>,
+<code>no_going_back_level</code>, <code>anti_traits</code>) or levels by their place. A level's
+<code>effects</code>, when given, replace all its effect lines. Levels are not added or taken out here.</p>
+<pre><code>toolkit.edit_trait(<span class="st">"GoodCommander"</span>, { levels = {
+  [<span class="nu">2</span>] = { threshold = <span class="nu">4</span>, effects = { { attribute = <span class="st">"Command"</span>, amount = <span class="nu">2</span> } } },
+} })</code></pre></div>
+<div class="fn" id="fn-ancillaries"><h4>toolkit.ancillaries() <span class="ret">&rarr; Ancillary[]</span><span class="tag">read</span></h4>
+<p>Every ancillary in export_descr_ancillaries.txt.</p></div>
+<div class="fn" id="fn-ancillary"><h4>toolkit.ancillary(name) <span class="ret">&rarr; Ancillary or nil</span><span class="tag">read</span></h4>
+<p id="cls-ancillary">An <strong>Ancillary</strong> has <code>name</code>, <code>type</code>,
+<code>transferable</code>, <code>image</code>, <code>unique</code>, <code>excluded_ancillaries</code>,
+<code>exclude_cultures</code>, <code>description</code>, <code>effects_description</code> and
+<code>effects</code>.</p></div>
+<div class="fn" id="fn-edit_ancillary"><h4>toolkit.edit_ancillary(name, changes)<span class="tag edit">edit</span></h4>
+<p>Change any of those fields but the name. <code>effects</code>, when given, replace all its effect
+lines.</p></div>
+
+<h3 id="ref-triggers">Triggers</h3>
+<p>Triggers are the rules at the end of the traits and ancillaries files that give points or
+ancillaries. Each function takes the file as <code>"traits"</code> or <code>"ancillaries"</code>.</p>
+<div class="fn" id="fn-triggers"><h4>toolkit.triggers(file) <span class="ret">&rarr; Trigger[]</span><span class="tag">read</span></h4>
+<p id="cls-trigger">A <strong>Trigger</strong> has <code>name</code>, <code>when_to_test</code>,
+<code>conditions</code> (each <code>{term, args, joiner, negated}</code>: <code>joiner</code> is
+<code>and</code> or <code>or</code>, empty on the first), <code>effects</code> (each <code>{keyword,
+args}</code>, like <code>Affects GoodCommander 1 Chance 50</code>) and <code>raw</code>, the block as
+text.</p></div>
+<div class="fn" id="fn-edit_trigger"><h4>toolkit.edit_trigger(file, name, changes)<span class="tag edit">edit</span></h4>
+<p><code>changes</code> can hold <code>name</code>, <code>when_to_test</code>, <code>conditions</code> (all
+of them, in order) and <code>effects</code> (changes to the existing effect lines, in order). To add or
+take out an effect line, give <code>raw</code>: the whole block as text, which wins over the rest.</p>
+<pre><code>toolkit.edit_trigger(<span class="st">"traits"</span>, <span class="st">"battle_won_commander"</span>, {
+  conditions = { { term = <span class="st">"WonBattle"</span> }, { term = <span class="st">"IsGeneral"</span>, joiner = <span class="st">"and"</span> } },
+})</code></pre></div>
+<div class="fn" id="fn-add_trigger"><h4>toolkit.add_trigger(file, trigger)<span class="tag edit">edit</span></h4>
+<p>Add a trigger at the end of the file:</p>
+<pre><code>toolkit.add_trigger(<span class="st">"ancillaries"</span>, {
+  name = <span class="st">"my_tutor_trigger"</span>, when_to_test = <span class="st">"CharacterComingOfAge"</span>,
+  conditions = { { term = <span class="st">"IsGeneral"</span> } },
+  effects = { { keyword = <span class="st">"AcquireAncillary"</span>, args = { <span class="st">"tutor"</span>, <span class="st">"chance"</span>, <span class="nu">20</span> } } },
+})</code></pre></div>
+<div class="fn" id="fn-delete_trigger"><h4>toolkit.delete_trigger(file, name)<span class="tag edit">edit</span></h4>
+<p>Take one trigger out.</p></div>
+
+<h3 id="ref-strings">Text (.strings.bin)</h3>
+<p>The game reads its text from <code>data\text\*.strings.bin</code> archives. Each function takes the
+archive as <code>"expanded"</code>, <code>"expanded.txt"</code> or
+<code>"text/expanded.txt.strings.bin"</code>. Most archives tag each entry (<code>{SOME_TAG}text</code>);
+four (battle, shared, strat, tooltips) have no tags and are addressed by place from 1.</p>
+<div class="fn" id="fn-strings"><h4>toolkit.strings(file) <span class="ret">&rarr; {tag, value}[]</span><span class="tag">read</span></h4>
+<p>Every entry, in file order. <code>tag</code> is empty in an archive with no tags.</p></div>
+<div class="fn" id="fn-string"><h4>toolkit.string(file, tag) <span class="ret">&rarr; text or nil</span><span class="tag">read</span></h4>
+<p>One entry's text, by tag or, in an archive with no tags, by place.</p></div>
+<div class="fn" id="fn-edit_strings"><h4>toolkit.edit_strings(file, changes)<span class="tag edit">edit</span></h4>
+<p>Change many entries in one call: a tag that is there gets the new text, one that is not is added,
+<code>false</code> takes one out. An archive with no tags is keyed by place from 1 and only takes new text for entries it has: adding or taking out an entry there is refused, because the game finds those entries by their place and every one after it would move.</p>
+<pre><code>toolkit.edit_strings(<span class="st">"expanded"</span>, { ENGLAND = <span class="st">"Kingdom of England"</span>, MY_NEW_TAG = <span class="st">"New text"</span>, OLD_TAG = <span class="kw">false</span> })</code></pre>
+<p>If the mod keeps a <code>.txt</code> beside the archive, the game may rebuild the archive from it;
+change the <code>.txt</code> too, or delete it, so the two agree.</p></div>
+
+<h3 id="ref-campaign">The campaign map (descr_strat.txt)</h3>
+<p>These take an optional <code>campaign</code> folder name, <code>imperial_campaign</code> unless you say.
+Checks run against the mod's own map, so the mod needs <code>data\world\maps\base</code>.</p>
+<div class="fn" id="fn-settlements"><h4>toolkit.settlements(campaign?) <span class="ret">&rarr; Settlement[]</span><span class="tag">read</span></h4>
+<p id="cls-settlement">A <strong>Settlement</strong> has <code>region</code>, <code>faction</code> (the
+faction whose block it is in), <code>kind</code> (city or castle), <code>level</code>,
+<code>population</code>, <code>year_founded</code>, <code>plan_set</code>, <code>faction_creator</code> and
+<code>buildings</code> (each <code>{line, level}</code>). <code>population</code> and <code>year_founded</code>
+are nil when the file has no whole number there, so check before doing maths with them.</p></div>
+<div class="fn" id="fn-edit_settlement"><h4>toolkit.edit_settlement(region, changes, campaign?)<span class="tag edit">edit</span></h4>
+<p><code>changes</code> can hold <code>kind</code>, <code>level</code>, <code>population</code>,
+<code>year_founded</code>, <code>plan_set</code>, <code>faction_creator</code>, <code>buildings</code> (the
+whole list, in order), <code>owner</code> (give it to another faction) with <code>place</code>
+(<code>"first"</code> makes it that faction's capital, or <code>"last"</code>), or <code>raw</code>, the
+whole block as text. Problems the settlement panel would show come back as warnings in the report.</p>
+<pre><code>toolkit.edit_settlement(<span class="st">"London_Province"</span>, { population = <span class="nu">6000</span>, level = <span class="st">"large_city"</span> })
+toolkit.edit_settlement(<span class="st">"York_Province"</span>, { owner = <span class="st">"scotland"</span>, place = <span class="st">"last"</span> })</code></pre></div>
+<div class="fn" id="fn-strat_objects"><h4>toolkit.strat_objects(campaign?) <span class="ret">&rarr; StratObject[]</span><span class="tag">read</span></h4>
+<p id="cls-stratobject">Every fort, watchtower and resource. A <strong>StratObject</strong> has
+<code>kind</code>, <code>line</code>, <code>x</code>, <code>y</code>, <code>type</code>,
+<code>culture</code> and, for a resource, <code>name</code> (timber, iron...).</p></div>
+<div class="fn" id="fn-edit_strat_object"><h4>toolkit.edit_strat_object(kind, x, y, changes, campaign?)<span class="tag edit">edit</span></h4>
+<p>Find one by its kind and tile and change it: <code>x</code> and <code>y</code> move it, and
+<code>type</code>, <code>culture</code>, <code>name</code>, <code>region</code> change those;
+<code>delete = true</code> takes it out. A tile off the map is refused.</p></div>
+<div class="fn" id="fn-add_strat_object"><h4>toolkit.add_strat_object(kind, values, campaign?)<span class="tag edit">edit</span></h4>
+<p>Add one: <code>toolkit.add_strat_object("resource", { x = 120, y = 88, name = "iron" })</code>. A fort
+or watchtower is filed under the region its tile is in, unless you give <code>region</code>.</p></div>
+
+<h3 id="ref-factions">Faction clones</h3>
+<div class="fn" id="fn-clone_faction"><h4>toolkit.clone_faction(source, new, options?)<span class="tag edit">edit</span></h4>
+<p>The Factions screen's clone: a new faction copied from an existing one in every file it touches.
+<code>options</code>: <code>label</code> (its shown name) and <code>art = false</code> (copy no pictures).
+The game has a fixed number of faction slots; a mod that uses them all refuses a new one.</p></div>
+
+<h3 id="ref-misc">toolkit.mod and args</h3>
+<p><code>toolkit.mod.name</code> is the mod's folder name and <code>toolkit.mod.root</code> its folder.
+<code>args</code> holds the values given as <em>Arguments</em> in the Lua tab or with <code>--set</code>;
+they are always text, so use <code>tonumber(args.by)</code> for a number.</p>
+
+<h2 id="errors">Errors and what they mean</h2>
+<table>
+<tr><th>You see</th><th>What happened</th><th>What to do</th></tr>
+<tr><td><code>my_script.lua:12: attempt to index a nil value (local 'u')</code></td><td>Line 12 used a field of something that is <code>nil</code>, usually a <code>toolkit.unit(...)</code> that found nothing.</td><td>Check the name (it is case sensitive), or test <code>if u then ... end</code> first.</td></tr>
+<tr><td><code>attempt to perform arithmetic on a string value</code></td><td>Maths on text, often an <code>args</code> value.</td><td>Wrap it: <code>tonumber(args.by)</code>.</td></tr>
+<tr><td><code>no unit 'X' in MyMod</code>, <code>no trigger ...</code></td><td>An edit named something the mod does not have.</td><td>Read the list first and copy the name from it.</td></tr>
+<tr><td><code>edit_unit: unknown option(s) ...</code></td><td>A misspelt option or field name.</td><td>Check the reference above.</td></tr>
+<tr><td>A refusal with the editor's reason (a taken name, a tile off the map, experience not whole...)</td><td>The toolkit's own rules said no. Nothing was written.</td><td>Fix the value, or use <code>pcall</code> to skip it.</td></tr>
+<tr><td><code>time limit reached (60 s)</code></td><td>The run took more than a minute. Each edit takes about a tenth of a second on a big mod.</td><td>On the command line add <code>--time-limit 300</code>. In the app, split the work into smaller runs.</td></tr>
+<tr><td><code>the script ran out of memory (256 MB limit)</code></td><td>The script built a table too big (256 MB).</td><td>Usually a loop that never ends.</td></tr>
+<tr><td><code>another script is running</code></td><td>The app runs one script at a time.</td><td>Wait for it to end.</td></tr>
+<tr><td><code>The Lua runtime (lupa) is not installed</code></td><td>A source install without the Lua package.</td><td>Run Install-Dependencies.bat, or <code>py -m pip install lupa</code>.</td></tr>
+</table>
+<p>A dry run or an apply that fails has written nothing: the report says so, and how many edits before
+the failure were undone.</p>
+
+<h2 id="sandbox">What a script cannot do</h2>
+<p>Scripts run in a sandbox, so a script someone posts on a forum cannot harm your computer:</p>
+<ul>
+<li>no <code>io</code> (no reading or writing files of its own), no <code>os</code> beyond
+<code>os.time</code>, <code>os.clock</code> and <code>os.date</code>, no <code>debug</code>, no
+<code>load</code>, <code>loadfile</code> or <code>dofile</code>, no compiled modules;</li>
+<li><code>require</code> reads only from the script's own folder;</li>
+<li>every change goes through the toolkit's editors, into the one mod the run is for;</li>
+<li>a run stops after 60 seconds or 256 MB.</li>
+</ul>
+<p>It is still your mod: read a script you did not write before you apply it, and look at its dry run.</p>
+<p>The Lua is version 5.4: <code>string</code>, <code>table</code>, <code>math</code>, <code>utf8</code>
+and <code>coroutine</code> are there, with integers kept apart from decimals (<code>3 // 2</code> is
+<code>1</code>, <code>3 / 2</code> is <code>1.5</code>).</p>
+
+<h2 id="vscode">Writing scripts in VS Code</h2>
+<p>The Lua tab completes the toolkit's names already. For longer scripts, Visual Studio Code with the
+<em>Lua</em> extension (by sumneko) completes and checks them too:</p>
+<ol class="steps">
+<li>Make a folder for your scripts.</li>
+<li>Run <code>runtime\python.exe lua_cli.py annotations "C:\path\to\that\folder"</code>. It writes
+<code>toolkit.lua</code> (a description of every function, never run) and <code>.luarc.json</code>.</li>
+<li>Open the folder in VS Code. Typing <code>toolkit.</code> lists every function with its parameters, and
+a misspelt field is underlined.</li>
+</ol>
+<p>Run the annotations command again after the toolkit updates, so new functions appear.</p>
+
+<h2 id="faq">Questions</h2>
+<h4>Will the game see my changes?</h4>
+<p>Yes: an applied run changes the mod's own files, the same files the game reads. Start a new campaign
+for changes to descr_strat.txt; most other changes apply when the game starts.</p>
+<h4>Can I undo an apply from last week?</h4>
+<p>Yes, from the Log, as long as the files have not been changed by something else since. If they have,
+the Log offers <em>Revert to here</em> on an older entry instead.</p>
+<h4>Does a dry run touch my files?</h4>
+<p>It writes them while it runs and puts every byte back at the end, then checks. That is how each edit
+can see the ones before it. Keep the game closed while you run scripts.</p>
+<h4>Why did my edit not change the shown name in game?</h4>
+<p>Shown names come from text files. <code>edit_unit</code> with <code>options.name</code> writes
+export_units.txt; if the mod ships a compiled <code>.strings.bin</code> of it the game may read that
+instead.</p>
+<h4>How do I find the right name for something?</h4>
+<p>Print it: <code>for _, b in ipairs(toolkit.buildings()) do print(b.name) end</code>. Every name in
+this guide's examples is from the base game; your mod's may differ.</p>
+<h4>Can a script write a new file, or read one?</h4>
+<p>No. A script works only through the functions in this guide. That is what makes it safe to run
+someone else's script.</p>
+
+</main>
+</div>
+</body>
+</html>

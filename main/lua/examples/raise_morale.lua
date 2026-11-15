@@ -1,10 +1,12 @@
 -- Raise the morale of one faction's infantry.
 --
---   python lua_cli.py run docs/lua_examples/raise_morale.lua --mod <mod> --set faction=england --set by=2
+--   python lua_cli.py run lua/examples/raise_morale.lua --mod <mod> --set faction=england --set by=2
+--   In the app's Lua tab: pick it under Examples and give the same values in the
+--   Arguments box, one key=value a line. Guide: lua/guide.html.
 --
 -- Add --apply to write it. stat_mental is "morale, discipline, training".
 
-local faction = assert(args.faction, "give --set faction=<name>")
+local faction = assert(args.faction, "give faction=<name> as an argument")
 local by = tonumber(args.by or "1")
 
 local function owns(u, f)

@@ -52,7 +52,9 @@ INCLUDE_FILES = ("app.py", "transfer_cli.py", "lua_cli.py", "Full Cleaner.bat")
 #: It used to be `tools/`, which also held seven scripts no release has any use
 #: for and which went out in every zip because they happened to sit next to the
 #: binary. The developer scripts are under dev/ now and nothing here reaches them.
-INCLUDE_DIRS = ("unittransfer", "web", "vendor")
+#: lua/ is the Lua scripts' guide (guide.html, opened from the Scripts screen's
+#: Lua tab or by double-click) and the example scripts the tab offers.
+INCLUDE_DIRS = ("unittransfer", "web", "vendor", "lua")
 #: Nothing optional ships beside the app any more. Until Phase 98f the vanilla
 #: building art went in as `vanilla_ui/` (35 MB, a rule of its own after four
 #: releases forgot it); it is now read out of the player's own game, from its

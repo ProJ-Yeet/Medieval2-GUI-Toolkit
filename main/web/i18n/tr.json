@@ -13370,5 +13370,6 @@
  "scripts.lua_no_change": "{s} sn içinde tamamlandı. Script hiçbir şeyi değiştirmedi.",
  "eng.luaapi.a_run_is_going": "Başka bir script çalışıyor. Bitmesini bekleyin.",
  "settings.lua_script_run_in": "📜 {dest} içinde çalıştırılan Lua script {script}",
- "settings.lua_scripts": "Lua scriptleri"
+ "settings.lua_scripts": "Lua scriptleri",
+ "scripts.lua_guide": "Rehber: script nasıl yazılır"
 }

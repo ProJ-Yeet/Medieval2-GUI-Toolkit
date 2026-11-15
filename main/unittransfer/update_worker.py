@@ -27,7 +27,7 @@ else:
 MANIFEST = 'release-manifest.json'
 COMPONENTS = {'app.py', 'transfer_cli.py', 'lua_cli.py', 'Full Cleaner.bat',
               'Launch-Medieval2-GUI-Toolkit.bat', 'Install-Dependencies.bat',
-              'Troubleshoot.bat', 'README.txt', 'LICENSE', 'NOTICE', 'unittransfer', 'web', 'vendor', 'runtime'}
+              'Troubleshoot.bat', 'README.txt', 'LICENSE', 'NOTICE', 'unittransfer', 'web', 'vendor', 'lua', 'runtime'}
 
 
 class UpdateInProgress(RuntimeError):

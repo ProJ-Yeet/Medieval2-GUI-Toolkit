@@ -13230,5 +13230,6 @@
  "scripts.lua_apply_confirm": "要在 {mod} 上运行此脚本并写入更改吗？日志会为此次运行保留一条记录。撤销可还原所有更改。",
  "scripts.lua_applied": "更改已写入。日志记录 {id}（{s} 秒）；撤销可还原整个运行过程。",
  "settings.lua_script_run_in": "📜 在 {dest} 中运行的 Lua 脚本 {script}",
- "settings.lua_scripts": "Lua 脚本"
+ "settings.lua_scripts": "Lua 脚本",
+ "scripts.lua_guide": "指南：如何编写脚本"
 }

@@ -14020,5 +14020,6 @@
  "scripts.lua_edits": "Modifications",
  "eng.luaapi.a_run_is_going": "Un autre script est en cours d'exécution. Attendez qu'il se termine.",
  "settings.lua_script_run_in": "📜 Script Lua {script} exécuté dans {dest}",
- "settings.lua_scripts": "Scripts Lua"
+ "settings.lua_scripts": "Scripts Lua",
+ "scripts.lua_guide": "Guide : comment écrire un script"
 }

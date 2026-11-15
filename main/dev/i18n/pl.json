@@ -14631,5 +14631,6 @@
  "scripts.lua_edits": "Zmiany",
  "eng.luaapi.a_run_is_going": "Inny skrypt jest już uruchomiony. Poczekaj, aż się zakończy.",
  "settings.lua_script_run_in": "📜 Skrypt Lua {script} uruchomiony w {dest}",
- "settings.lua_scripts": "Skrypty Lua"
+ "settings.lua_scripts": "Skrypty Lua",
+ "scripts.lua_guide": "Poradnik: jak napisać skrypt"
 }

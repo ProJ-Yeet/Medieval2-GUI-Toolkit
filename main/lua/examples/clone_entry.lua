@@ -1,10 +1,12 @@
 -- Copy a battle-model entry under a new name, optionally with a new texture.
 --
---   python lua_cli.py run docs/lua_examples/clone_entry.lua --mod <mod> --set from=<entry> --set name=<new entry>
+--   python lua_cli.py run lua/examples/clone_entry.lua --mod <mod> --set from=<entry> --set name=<new entry>
 --   ... --set texture=unit_models/_units/my_unit/textures/my_unit.texture
+--   In the app's Lua tab: pick it under Examples and give the same values in the
+--   Arguments box, one key=value a line. Guide: lua/guide.html.
 
-local from = assert(args.from, "give --set from=<entry>")
-local name = assert(args.name, "give --set name=<new entry>")
+local from = assert(args.from, "give from=<entry> as an argument")
+local name = assert(args.name, "give name=<new entry> as an argument")
 
 if toolkit.model(name) then
   error(("an entry called %s is already in the modeldb"):format(name))

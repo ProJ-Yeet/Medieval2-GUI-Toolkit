@@ -355,8 +355,8 @@ check("its effects replaced", rep.printed[1:2] == ["1\tCommand\t2"])
 check("one file changed", [f.rel for f in rep.files] == ["data/export_descr_ancillaries.txt"])
 check("the preview left every byte", shas(mod) == before)
 
-print("13. the examples in docs/lua_examples, previewed")
-ex = ROOT / "docs" / "lua_examples"
+print("13. the examples in lua/examples, previewed")
+ex = ROOT / "lua" / "examples"
 inf = next(u for u in units if u.category == "infantry" and u.ownership)
 rep = luaapi.run(mod, ex / "raise_morale.lua", args={"faction": inf.ownership[0], "by": "2"})
 check(f"raise_morale ({rep.error}{rep.printed[-1:] if rep.printed else ''})",
@@ -510,6 +510,52 @@ check("it is listed as saved", [x["name"] for x in luaapi.script_list()["scripts
 out = luaapi.app_run(mod, "bad", "error('stop here')")
 check("a script error comes back with its line", not out["ok"] and "bad.lua:1" in out["error"])
 check("the previews left every byte", shas(mod) == before)
+
+print("20. every example in lua/examples, previewed on the DaC copy")
+inf_faction = inf.ownership[0]
+rec_unit = next(r["unit"] for r in __import__("unittransfer.edb_balance", fromlist=["x"]).recruitments(
+    __import__("unittransfer.edb_balance", fromlist=["x"]).fresh_edb(mod)))
+camp_faction = str(_cs.read_strat(mod, "imperial_campaign").of_kind("settlement")[0].get("region") and
+                   [r for r in luaapi.Run(mod)._settlements()][0]["faction"])
+EXAMPLE_ARGS = {
+    "list_units.lua": ({"faction": inf_faction}, "unit(s)", False),
+    "units_without_names.lua": ({}, "units have no shown name", False),
+    "raise_morale.lua": ({"faction": inf_faction, "by": "1"}, "morale", True),
+    "clone_entry.lua": ({"from": src, "name": "lua_example_clone2"}, "lua_example_clone2:", True),
+    "cheaper_mercenaries.lua": ({"factor": "0.8"}, "repriced", True),
+    "replace_text.lua": ({"file": "event_titles", "from": "Merchant", "to": "Trader"}, "changed in event_titles", True),
+    "grow_settlements.lua": ({"faction": camp_faction, "percent": "10"}, "grown by 10%", True),
+    "bigger_recruit_pools.lua": ({"unit": rec_unit, "by": "1"}, "recruit_pool line(s)", True),
+    "trait_report.lua": ({"trait": tr.name}, "Triggers that give it points:", False),
+    "copy_unit_for_faction.lua": ({"from": inf.type, "type": "Lua Example Copy", "faction": inf_faction}, "copied as", True),
+}
+check("every example has a run here", sorted(EXAMPLE_ARGS) == sorted(p.name for p in ex.glob("*.lua")))
+for name, (a, says, writes) in sorted(EXAMPLE_ARGS.items()):
+    rep = luaapi.run(mod, ex / name, args=a, time_limit=180)
+    check(f"{name} ({rep.error or (rep.printed[-1] if rep.printed else '')})",
+          rep.ok and any(says in line for line in rep.printed) and bool(rep.files) == writes)
+check("the examples' previews left every byte", shas(mod) == before)
+
+print("21. the guide: every function and record, an edit refused inside pcall")
+guide = (ROOT / "lua" / "guide.html").read_text(encoding="utf-8")
+missing = [f.name for f in luaapi.API if f'id="fn-{f.name}"' not in guide]
+check(f"lua/guide.html has an entry for every function ({missing})", not missing)
+records = {"toolkit.Unit": "cls-unit", "toolkit.Model": "cls-model", "toolkit.Building": "cls-building",
+           "toolkit.Recruit": "cls-recruit", "toolkit.MercPool": "cls-merc", "toolkit.Trait": "cls-trait",
+           "toolkit.Ancillary": "cls-ancillary", "toolkit.Trigger": "cls-trigger",
+           "toolkit.Settlement": "cls-settlement", "toolkit.StratObject": "cls-stratobject"}
+check("and for every record a read gives back", all(f'id="{a}"' in guide for a in records.values()))
+undocumented = [f"{c}.{fl[0]}" for c, a in records.items() for fl in luaapi.CLASSES[c]
+                if f"<code>{fl[0]}</code>" not in guide]
+check(f"every field of those records is named in it ({undocumented})", not undocumented)
+check("no em or en dashes in it", chr(0x2014) not in guide and chr(0x2013) not in guide)
+s = script("pcall.lua", f"""
+local ok, why = pcall(toolkit.edit_unit, "no such unit", {{ soldier = "x" }})
+print(ok, why ~= nil)
+toolkit.edit_unit({u0.type!r}, {{ soldier = toolkit.unit({u0.type!r}).soldier }})
+""")
+rep = luaapi.run(mod, s)
+check(f"a refusal caught by pcall leaves the run going ({rep.error})", rep.ok and rep.printed[:1] == ["false\ttrue"])
 
 print(f"\n{sum(ok)}/{len(ok)} passed")
 sys.exit(0 if all(ok) else 1)

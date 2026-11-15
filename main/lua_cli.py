@@ -12,6 +12,9 @@ Without --apply a run is a preview: the script's edits are made, compared and
 undone, and the report shows exactly what --apply would change.
 
 Exit codes: 0 done, 1 the script failed, 2 an edit was refused, 3 bad arguments.
+
+The guide, from a first script to every function: lua/guide.html. Examples:
+lua/examples/.
 """
 from __future__ import annotations
 
@@ -106,7 +109,8 @@ def cmd_annotations(a) -> int:
 
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(prog="lua_cli.py",
-                                 description="Run a Lua script against a Medieval II mod.")
+                                 description="Run a Lua script against a Medieval II mod.",
+                                 epilog="The guide: lua/guide.html. Examples: lua/examples/.")
     sub = ap.add_subparsers(dest="cmd", required=True)
     r = sub.add_parser("run", help="run a script (a preview unless --apply)")
     r.add_argument("script")
