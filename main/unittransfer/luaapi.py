@@ -119,6 +119,16 @@ API: List[Fn] = [
        [("pool", "string", "the pool's name"), ("place", "integer", "the unit line's place, from 1"),
         ("campaign", "string?", "default imperial_campaign")],
        "", "Take one unit line out of a mercenary pool. The lines after it move up one place.", "edit"),
+    Fn("traits", [], "toolkit.Trait[]", "Every trait in export_descr_character_traits.txt, in file order."),
+    Fn("trait", [("name", "string", "the trait's name")], "toolkit.Trait?", "One trait, or nil."),
+    Fn("edit_trait",
+       [("name", "string", "the trait"),
+        ("changes", "{characters?: string[], hidden?: boolean, exclude_cultures?: string[], "
+         "no_going_back_level?: string, anti_traits?: string[], "
+         "levels?: table<integer, toolkit.LevelEdit>}",
+         "what to change; `levels` is keyed by the level's place from 1, and levels not named stay as "
+         "they are (a level's `effects`, when given, replace its effect lines)")],
+       "", "Change one trait's header or its levels. Levels are not added or taken out here.", "edit"),
     Fn("edit_building",
        [("line", "string", "the building line"), ("level", "string", "the level in it"),
         ("changes", "{settlement?: string, requires?: string, scalars?: table<string, string|number>, "
@@ -179,6 +189,21 @@ CLASSES = {
         ("initial", "integer"), ("start_year", "integer?"), ("end_year", "integer?"),
         ("religions", "string[]?"), ("events", "string[]?"), ("factions", "string[]?"),
         ("crusading", "boolean"), ("fault", "string", "why the line could not be read, if it could not"),
+    ],
+    "toolkit.Trait": [
+        ("name", "string"), ("characters", "string[]"), ("hidden", "boolean"),
+        ("exclude_cultures", "string[]"), ("no_going_back_level", "string"), ("anti_traits", "string[]"),
+        ("levels", "toolkit.TraitLevel[]"),
+    ],
+    "toolkit.TraitLevel": [
+        ("name", "string"), ("threshold", "string"), ("description", "string"),
+        ("effects_description", "string"), ("gain_message", "string"), ("lose_message", "string"),
+        ("epithet", "string"), ("effects", "{attribute: string, amount: string}[]"),
+    ],
+    "toolkit.LevelEdit": [
+        ("threshold", "string|integer?"), ("description", "string?"), ("effects_description", "string?"),
+        ("gain_message", "string?"), ("lose_message", "string?"), ("epithet", "string?"),
+        ("effects", "{attribute: string, amount: string|integer}[]?", "the level's effect lines, all of them"),
     ],
     "toolkit.CapabilityOp": [
         ("line", "integer?", "an existing line (from a read); leave out for a new one"),
@@ -301,6 +326,16 @@ def model_view(e) -> dict:
                         "secondary_weapons": list(a.sec_weapons)} for a in e.animations],
         "raw": e.raw,
     }
+
+
+def trait_view(t) -> dict:
+    d = t.as_dict()
+    return {"name": d["name"], "characters": d["characters"], "hidden": d["hidden"],
+            "exclude_cultures": d["exclude_cultures"], "no_going_back_level": d["no_going_back_level"],
+            "anti_traits": d["anti_traits"],
+            "levels": [{k: v for k, v in lv.items() if k not in ("start", "end")}
+                       | {"effects": [{"attribute": e["attribute"], "amount": e["amount"]}
+                                      for e in lv["effects"]]} for lv in d["levels"]]}
 
 
 def _cap(c) -> dict:
@@ -596,6 +631,73 @@ class Run:
         self._merc({"campaign": c, "action": "unit_delete", "pool": str(pool), "unit": self._place(place)},
                    f"delete mercenary '{pool}' #{place} ({c})")
 
+    # -- traits ---------------------------------------------------------------
+    def _trait_file(self):
+        from . import traits
+        path = Path(self.mod.edct_path)
+        return traits.parse_file(path) if path.is_file() else None
+
+    def _traits(self):
+        tf = self._trait_file()
+        return [trait_view(t) for t in tf.traits] if tf else []
+
+    def _trait(self, name):
+        tf = self._trait_file()
+        t = tf.get(str(name)) if tf else None
+        return trait_view(t) if t else None
+
+    def edit_trait(self, name, changes=None) -> None:
+        from . import traits
+        name, changes = str(name), dict(changes or {})
+        tf = self._trait_file()
+        if tf is None:
+            raise Refused(f"{self.mod.name} has no {Path(self.mod.edct_path).name}")
+        t = tf.get(name)
+        if t is None:
+            raise Refused(f"no trait '{name}' in {self.mod.name}")
+        head = {"characters", "hidden", "exclude_cultures", "no_going_back_level", "anti_traits"}
+        unknown = set(changes) - head - {"levels"}
+        if unknown:
+            raise Refused(f"edit_trait: unknown change(s) {', '.join(sorted(unknown))}")
+        edits = {k: changes[k] for k in head if k in changes}
+        for k in ("no_going_back_level",):
+            if k in edits:
+                edits[k] = _text_value(edits[k])
+        if "levels" in changes:
+            lv = changes["levels"] or {}
+            if isinstance(lv, list):  # a Lua array: places 1..n
+                lv = {i: x for i, x in enumerate(lv, 1)}
+            wanted = [{} for _ in t.levels]
+            fields = {"threshold", "description", "effects_description", "gain_message",
+                      "lose_message", "epithet", "effects"}
+            for k, w in lv.items():
+                try:
+                    i = int(k)
+                except (TypeError, ValueError):
+                    raise Refused("edit_trait: levels are keyed by their place, from 1")
+                if not 1 <= i <= len(t.levels):
+                    raise Refused(f"trait '{name}' has {len(t.levels)} level(s), not a level {i}")
+                bad = set(w or {}) - fields
+                if bad:
+                    raise Refused(f"edit_trait: unknown level field(s) {', '.join(sorted(bad))}")
+                w = dict(w or {})
+                for f in fields - {"effects"}:
+                    if f in w:
+                        w[f] = _text_value(w[f])
+                if "effects" in w:
+                    w["effects"] = [{"attribute": str(e.get("attribute", "")),
+                                     "amount": _text_value(e.get("amount", ""))} for e in (w["effects"] or [])]
+                wanted[i - 1] = w
+            edits["levels"] = wanted
+        plan = traits.plan(self.mod, {"trait": name, "action": "edit", "edits": edits})
+        what = f"edit trait '{name}'"
+        if plan.errors:
+            raise Refused(f"{what}: " + "; ".join(plan.errors))
+        if not getattr(plan, "text", ""):
+            self.edits.append(f"{what} (nothing to change)")
+            return
+        self._apply(plan, what, lambda p: traits.apply(p)["record"])
+
     def edit_building(self, line, level, changes=None) -> None:
         line, level, changes = str(line), str(level), dict(changes or {})
         edb = self._edb()
@@ -664,6 +766,7 @@ class Run:
             "edit_building": self.edit_building, "mercenaries": self._mercenaries,
             "edit_merc_unit": self.edit_merc_unit, "add_merc_unit": self.add_merc_unit,
             "delete_merc_unit": self.delete_merc_unit,
+            "traits": self._traits, "trait": self._trait, "edit_trait": self.edit_trait,
         }
 
         def wrap(fn):

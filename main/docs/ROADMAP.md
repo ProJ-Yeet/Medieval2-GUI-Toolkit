@@ -1383,9 +1383,14 @@ phases until 80% usage limit is reached"):
 * **126, mercenary pools: done.** `toolkit.mercenaries(campaign)` and
   `edit_merc_unit` / `add_merc_unit` / `delete_merc_unit` through
   `mercpools.plan` / `apply`, a line named by its place from 1 (Lua's way;
-  the editor counts from 0), `false` taking an option off. Left in 126:
-  strings, settlements and strat objects, faction clones, traits and
-  ancillaries, the sheets.
+  the editor counts from 0), `false` taking an option off.
+* **126, traits: done.** `toolkit.traits()`, `trait()` and `edit_trait(name,
+  changes)` through `traits.plan` / `apply`: the header lists and flags, and
+  levels keyed by place from 1. The editor takes levels by position and drops
+  the ones a shorter list leaves out, so the script's levels are laid over the
+  full list and never drop one; adding or taking out a level is not offered.
+  Left in 126: strings, settlements and strat objects, faction clones,
+  ancillaries, triggers, the sheets.
 * **123 done** for `edit_unit` (fields, `false` removes, rename, dictionary,
   shown name and descriptions), `delete_unit`, `edit_model` (raw, rename, a
   texture for every faction) and `clone_model`, through `edit.plan_edit` /

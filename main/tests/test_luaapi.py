@@ -39,7 +39,8 @@ MODS = _realmod.mods(required=False)
 DAC = MODS / "Divide_and_Conquer_EUR" if MODS else None
 REL = ("export_descr_unit.txt", "text/export_units.txt", "unit_models/battle_models.modeldb",
        "descr_mount.txt", "export_descr_buildings.txt", "text/export_buildings.txt", "text/expanded.txt",
-       "descr_sm_factions.txt", "world/maps/campaign/imperial_campaign/descr_mercenaries.txt")
+       "descr_sm_factions.txt", "world/maps/campaign/imperial_campaign/descr_mercenaries.txt",
+       "export_descr_character_traits.txt", "text/export_vnvs.txt")
 if not luarun.available() or not DAC or not (DAC / "data" / REL[0]).is_file():
     print("needs lupa and Divide_and_Conquer_EUR; skipped")
     sys.exit(0)
@@ -311,7 +312,31 @@ check("the diff is the cost line only (the add and the delete cancel)",
       and rep.files[0].added == 1 and rep.files[0].removed == 1)
 check("the preview left every byte", shas(mod) == before)
 
-print("11. the examples in docs/lua_examples, previewed")
+print("11. traits")
+from unittransfer import traits as _traits  # noqa: E402
+tf = _traits.parse_file(mod.edct_path)
+tr = next(t for t in tf.traits if len(t.levels) >= 2 and t.levels[1].effects)
+s = script("traits.lua", f"""
+local t = toolkit.trait({tr.name!r})
+print(#toolkit.traits(), t.name, #t.levels, t.levels[2].threshold)
+toolkit.edit_trait(t.name, {{ levels = {{ [2] = {{ threshold = 77, effects = {{
+  {{ attribute = "Command", amount = 3 }}, {{ attribute = "Chivalry", amount = -1 }} }} }} }} }})
+local after = toolkit.trait(t.name)
+print(#after.levels, after.levels[2].threshold, #after.levels[2].effects, after.levels[1].threshold == t.levels[1].threshold)
+local ok = pcall(toolkit.edit_trait, t.name, {{ levels = {{ [99] = {{ threshold = 1 }} }} }})
+print(ok)
+""")
+rep = luaapi.run(mod, s)
+check(f"runs ({rep.error})", rep.ok)
+check("traits, levels, a threshold", rep.printed[:1] == [f"{len(tf.traits)}\t{tr.name}\t{len(tr.levels)}\t{tr.levels[1].threshold}"])
+check("level 2 changed, level count and level 1 kept",
+      len(rep.printed) > 1 and rep.printed[1] == f"{len(tr.levels)}\t77\t2\ttrue")
+check("a level that is not there is refused", rep.printed[2:3] == ["false"])
+d = next((f.diff for f in rep.files if f.rel == "data/export_descr_character_traits.txt"), "")
+check("the diff: the threshold and the two effects", "77" in d and "Command" in d and "Chivalry" in d)
+check("the preview left every byte", shas(mod) == before)
+
+print("12. the examples in docs/lua_examples, previewed")
 ex = ROOT / "docs" / "lua_examples"
 inf = next(u for u in units if u.category == "infantry" and u.ownership)
 rep = luaapi.run(mod, ex / "raise_morale.lua", args={"faction": inf.ownership[0], "by": "2"})
