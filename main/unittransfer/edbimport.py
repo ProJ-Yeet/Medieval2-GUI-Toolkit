@@ -341,7 +341,9 @@ def _text(p: TreePlan, src, spans: Dict[str, List[str]], mapping: Dict[str, str]
     ``town_guard`` worded for someone called ``house``.
     """
     path = p.dst.data / B.LOC_REL
-    if not path.is_file():
+    # a released mod often has only the .strings.bin, or reads the base game's
+    text, enc = localization.read_for_edit(path, p.dst)
+    if not text.strip():
         p.errors.append(_i18n.msg("eng.edbimport.has_no_data_so_the_levels", "{name} has no data/{LOC_REL}, so the levels would have no names, and a level with no text key stops the game. Nothing written.", name=p.dst.name, LOC_REL=B.LOC_REL))
         return
     have = _pairs(src)
@@ -380,7 +382,6 @@ def _text(p: TreePlan, src, spans: Dict[str, List[str]], mapping: Dict[str, str]
                     writes[new] = have[key]
     if filled:
         p.warnings.append(_i18n.msg("eng.edbimport.text_key_s_the_source_does", "{filled} text key(s) the source does not have were written with the level's code name or left blank - the game stops on a level with a key missing", filled=filled))
-    text, enc = localization.read_file(path)
     p.loc_text = stringsbin.upsert_txt(text, writes)
     p.loc_encoding = enc
     p.changes.append(f"{len(writes)} text key(s) in {B.LOC_REL}")

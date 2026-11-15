@@ -495,5 +495,24 @@ check("a refusal comes back as an error with the plan", bool(bad.get("error"))
       and bad.get("plan", {}).get("errors"))
 httpd.shutdown()
 
+print("\n9) a destination with only the compiled .strings.bin")
+from unittransfer import stringsbin  # noqa: E402
+loc = into / B.LOC_REL
+kept = loc.read_bytes()
+had = dict(stringsbin.from_txt(loc.read_text(encoding="utf-16")))
+binp = stringsbin.bin_path_for(loc)
+stringsbin.write(binp, stringsbin.compile_txt(loc.read_text(encoding="utf-16")))
+loc.unlink()
+p = E.plan(Mod(into.parent), S, {"lines": ["smithy_76"]})
+pairs = dict(stringsbin.from_txt(p.loc_text))
+check(f"no .txt, only the .bin: it plans ({'; '.join(p.errors)})", p.payload()["ok"])
+check("the text is rebuilt from the .bin, every name kept, the new ones added",
+      set(had) <= set(pairs) and pairs.get("forge_76") == "Forge")
+binp.unlink()
+p = E.plan(Mod(into.parent), S, {"lines": ["smithy_76"]})
+check("neither file, and no game to read it from: refused, nothing planned",
+      p.errors and not p.loc_text)
+loc.write_bytes(kept)
+
 print(f"\n{sum(ok)}/{len(ok)} checks passed")
 sys.exit(0 if all(ok) else 1)

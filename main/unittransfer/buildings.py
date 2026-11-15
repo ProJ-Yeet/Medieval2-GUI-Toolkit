@@ -2446,12 +2446,12 @@ def _plan_new_localisation(mod, spec: dict, plan: BuildingPlan) -> str:
     heading the browser groups the levels under, and 227 of the 277 real lines
     have one.
     """
-    path = mod.data / LOC_REL
-    if not path.exists():
+    # a released mod often has only the .strings.bin, or reads the base game's
+    text, _ = localization.read_for_edit(mod.data / LOC_REL, mod)
+    if not text.strip():
         plan.errors.append(
             _i18n.msg("eng.buildings.has_no_data_so_the_new", "{name} has no data/{LOC_REL}, so the new levels would have no names - and a level with no text key crashes the game. Nothing written.", name=mod.name, LOC_REL=LOC_REL))
         return ""
-    text = path.read_text(encoding=localization.ENCODING)
     for lv in (spec.get("levels") or []):
         key = lv["name"]
         text = localization.upsert_record(text, key, str(lv.get("label") or key),
@@ -2616,11 +2616,10 @@ def _plan_localisation(mod, body: dict, plan: BuildingPlan) -> str:
              if "loc" in lv or "loc_cultures" in lv]
     if not edits:
         return ""
-    path = mod.data / LOC_REL
-    if not path.exists():
+    text, _ = localization.read_for_edit(mod.data / LOC_REL, mod)
+    if not text.strip():
         plan.warnings.append(_i18n.msg("eng.buildings.has_no_data_names_not_written", "{name} has no data/{LOC_REL} - names not written", name=mod.name, LOC_REL=LOC_REL))
         return ""
-    text = path.read_text(encoding=localization.ENCODING)
     changed = False
     for lv in edits:
         name = str(lv.get("name") or "")

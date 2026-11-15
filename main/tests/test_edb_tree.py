@@ -518,8 +518,41 @@ else:
     (bare / "data").mkdir(parents=True)
     shutil.copy2(src_root / "data" / B.EDB_REL, bare / "data" / B.EDB_REL)
     p = B.plan_new_tree(Mod(bare), {"name": "zz_forge", "levels": [{"name": "zz_1"}]})
-    check("no text/export_buildings.txt means refused, not half written",
-          p.errors and not p.loc_text)
+    from unittransfer import gamepack
+    if gamepack.lookup(B.LOC_REL + ".strings.bin", Mod(bare))[0] is None:
+        check("no text/export_buildings.txt, and no game to read it from: "
+              "refused, not half written", p.errors and not p.loc_text)
+    else:   # the game's own packs hold it, and the game reads it from there
+        check("no text/export_buildings.txt: the base game's text is the start, "
+              "every name in it kept", not p.errors and p.loc_text.count("{") > 100)
+
+    # ---- a released mod ships only the compiled .strings.bin: the text is
+    # rebuilt from it, every name it holds kept ----
+    from unittransfer import stringsbin
+    (bare / "data" / "text").mkdir()
+    stringsbin.write(stringsbin.bin_path_for(bare / "data" / B.LOC_REL),
+                     stringsbin.compile_txt("{bare_old}Old Hall\n{bare_old_desc}Old.\n"))
+    p = B.plan_new_tree(Mod(bare), {"name": "zz_forge", "levels": [{"name": "zz_1"}]})
+    pairs = dict(stringsbin.from_txt(p.loc_text))
+    check(f"only export_buildings.txt.strings.bin: planned ({'; '.join(p.errors)})",
+          not p.errors and pairs.get("bare_old") == "Old Hall" and "zz_1" in pairs)
+    # the same for lines brought in from another mod (test_edbimport needs ROCSS)
+    from unittransfer import edbimport
+
+    class _NoNames:
+        def knows(self, name):
+            return False
+    src = Path(_tmp.mkdtemp(prefix="ut_bare_")) / "src"
+    (src / "data" / "text").mkdir(parents=True)
+    (src / "data" / B.LOC_REL).write_text("﻿{zz_1}Forge\n{zz_1_desc}A forge.\n"
+                                          "{zz_1_desc_short}Forge.\n", encoding="utf-16-le")
+    tp = edbimport.TreePlan(dst=Mod(bare))
+    edbimport._text(tp, Mod(src), {"zz_forge": ["zz_1"]}, {}, _NoNames(), set())
+    pairs = dict(stringsbin.from_txt(tp.loc_text))
+    check(f"brought from another mod into a .bin-only mod: planned ({'; '.join(tp.errors)})",
+          not tp.errors and pairs.get("bare_old") == "Old Hall"
+          and pairs.get("zz_1") == "Forge")
+    shutil.rmtree(src.parent, ignore_errors=True)
     shutil.rmtree(bare.parent, ignore_errors=True)
     shutil.rmtree(work.parent, ignore_errors=True)
 
