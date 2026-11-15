@@ -56,6 +56,9 @@ Everything is in one table, `toolkit`. `lua_cli.py api` prints the full list.
 | `toolkit.delete_unit(type, options)` | delete a unit and the lines elsewhere that name it |
 | `toolkit.edit_model(name, changes)` | the entry as text, a new name, or a texture for every faction |
 | `toolkit.clone_model(source, name)` | a new entry copied from another |
+| `toolkit.mercenaries(campaign)` | a campaign's mercenary pools and their unit lines (default `imperial_campaign`) |
+| `toolkit.edit_merc_unit(pool, place, edits, campaign)` | change one unit line, named by its place from 1; `false` takes an option off |
+| `toolkit.add_merc_unit(pool, values, campaign)` / `toolkit.delete_merc_unit(pool, place, campaign)` | add a unit line at the end, or take one out |
 | `toolkit.mod` | `name` and `root` of the mod |
 | `args` | the `--set key=value` values, as text |
 

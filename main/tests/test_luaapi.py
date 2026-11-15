@@ -39,7 +39,7 @@ MODS = _realmod.mods(required=False)
 DAC = MODS / "Divide_and_Conquer_EUR" if MODS else None
 REL = ("export_descr_unit.txt", "text/export_units.txt", "unit_models/battle_models.modeldb",
        "descr_mount.txt", "export_descr_buildings.txt", "text/export_buildings.txt", "text/expanded.txt",
-       "descr_sm_factions.txt")
+       "descr_sm_factions.txt", "world/maps/campaign/imperial_campaign/descr_mercenaries.txt")
 if not luarun.available() or not DAC or not (DAC / "data" / REL[0]).is_file():
     print("needs lupa and Divide_and_Conquer_EUR; skipped")
     sys.exit(0)
@@ -284,7 +284,34 @@ check("one Log record for clone and edit", log_now[-1]["id"] == rep.log_id
 luaapi.undo(rep.log_id)
 check("Undo puts every byte back", shas(mod) == before)
 
-print("10. the examples in docs/lua_examples, previewed")
+print("10. mercenary pools")
+s = script("mercs.lua", f"""
+local pools = toolkit.mercenaries()
+local p = pools[1]
+local u = p.units[1]
+print(#pools > 0, #p.units > 1, u.place, type(u.cost))
+toolkit.edit_merc_unit(p.name, 1, {{ cost = u.cost + 111 }})
+toolkit.add_merc_unit(p.name, {{ name = {u0.type!r}, exp = 1, cost = 999, replenish = {{0.1, 0.2}}, max = 2, initial = 1 }})
+local after = toolkit.mercenaries()[1]
+print(after.units[1].cost == u.cost + 111, after.units[#after.units].name, #after.units == #p.units + 1)
+toolkit.delete_merc_unit(p.name, #after.units)
+print(#toolkit.mercenaries()[1].units == #p.units)
+local ok, e = pcall(toolkit.edit_merc_unit, p.name, 0, {{ cost = 1 }})
+print(ok)
+""")
+rep = luaapi.run(mod, s)
+check(f"runs ({rep.error})", rep.ok)
+check("pools, units, places from 1, numbers", rep.printed[:1] == ["true\ttrue\t1\tnumber"])
+check("an edit and an add read back", len(rep.printed) > 1 and rep.printed[1] == f"true\t{u0.type}\ttrue")
+check("the delete reads back", len(rep.printed) > 2 and rep.printed[2] == "true")
+check("place 0 is refused", rep.printed[3:4] == ["false"])
+d = next((f.diff for f in rep.files if f.rel.endswith("descr_mercenaries.txt")), "")
+check("the diff is the cost line only (the add and the delete cancel)",
+      [f.rel for f in rep.files] == ["data/world/maps/campaign/imperial_campaign/descr_mercenaries.txt"]
+      and rep.files[0].added == 1 and rep.files[0].removed == 1)
+check("the preview left every byte", shas(mod) == before)
+
+print("11. the examples in docs/lua_examples, previewed")
 ex = ROOT / "docs" / "lua_examples"
 inf = next(u for u in units if u.category == "infantry" and u.ownership)
 rep = luaapi.run(mod, ex / "raise_morale.lua", args={"faction": inf.ownership[0], "by": "2"})

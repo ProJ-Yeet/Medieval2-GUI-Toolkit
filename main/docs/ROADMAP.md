@@ -1379,8 +1379,13 @@ phases until 80% usage limit is reached"):
   changes)` through `buildings.plan_edit` / `apply_edit`: settlement,
   `requires`, scalars, upgrades, and capability and faction-capability lines
   as the Buildings screen's operations (an existing line by its `line`, a new
-  one without, `delete`). Left in 126: strings, settlements and strat
-  objects, faction clones, traits and ancillaries, mercenary pools, sheets.
+  one without, `delete`).
+* **126, mercenary pools: done.** `toolkit.mercenaries(campaign)` and
+  `edit_merc_unit` / `add_merc_unit` / `delete_merc_unit` through
+  `mercpools.plan` / `apply`, a line named by its place from 1 (Lua's way;
+  the editor counts from 0), `false` taking an option off. Left in 126:
+  strings, settlements and strat objects, faction clones, traits and
+  ancillaries, the sheets.
 * **123 done** for `edit_unit` (fields, `false` removes, rename, dictionary,
   shown name and descriptions), `delete_unit`, `edit_model` (raw, rename, a
   texture for every faction) and `clone_model`, through `edit.plan_edit` /

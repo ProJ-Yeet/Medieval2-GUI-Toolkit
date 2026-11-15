@@ -101,6 +101,24 @@ API: List[Fn] = [
     Fn("clone_model",
        [("source", "string", "the entry to copy"), ("name", "string", "the new entry's name")],
        "", "Add a modeldb entry copied from an existing one.", "edit"),
+    Fn("mercenaries", [("campaign", "string?", "a campaign folder (default imperial_campaign)")],
+       "toolkit.MercPool[]", "Every mercenary pool of a campaign's descr_mercenaries.txt, in file order."),
+    Fn("edit_merc_unit",
+       [("pool", "string", "the pool's name"), ("place", "integer", "the unit line's place in it, from 1"),
+        ("edits", "table<string, any>",
+         "exp, cost, replenish {a, b}, max, initial, start_year, end_year, religions, events, factions, "
+         "crusading; false takes an option off (crusading = false clears the flag)"),
+        ("campaign", "string?", "default imperial_campaign")],
+       "", "Change one unit line of a mercenary pool.", "edit"),
+    Fn("add_merc_unit",
+       [("pool", "string", "the pool's name"),
+        ("values", "table<string, any>", "name, exp, cost, replenish {a, b}, max, initial, and any option"),
+        ("campaign", "string?", "default imperial_campaign")],
+       "", "Add a unit line at the end of a mercenary pool.", "edit"),
+    Fn("delete_merc_unit",
+       [("pool", "string", "the pool's name"), ("place", "integer", "the unit line's place, from 1"),
+        ("campaign", "string?", "default imperial_campaign")],
+       "", "Take one unit line out of a mercenary pool. The lines after it move up one place.", "edit"),
     Fn("edit_building",
        [("line", "string", "the building line"), ("level", "string", "the level in it"),
         ("changes", "{settlement?: string, requires?: string, scalars?: table<string, string|number>, "
@@ -150,6 +168,17 @@ CLASSES = {
     "toolkit.Capability": [
         ("keyword", "string"), ("args", "string"), ("requires", "string"),
         ("line", "integer", "its line in the EDB, which names it in a CapabilityOp"),
+    ],
+    "toolkit.MercPool": [
+        ("name", "string"), ("regions", "string[]"),
+        ("units", "toolkit.MercUnit[]", "its unit lines, in file order"),
+    ],
+    "toolkit.MercUnit": [
+        ("place", "integer", "its place in the pool, from 1"), ("name", "string"),
+        ("exp", "integer"), ("cost", "integer"), ("replenish", "number[]"), ("max", "integer"),
+        ("initial", "integer"), ("start_year", "integer?"), ("end_year", "integer?"),
+        ("religions", "string[]?"), ("events", "string[]?"), ("factions", "string[]?"),
+        ("crusading", "boolean"), ("fault", "string", "why the line could not be read, if it could not"),
     ],
     "toolkit.CapabilityOp": [
         ("line", "integer?", "an existing line (from a read); leave out for a new one"),
@@ -502,6 +531,71 @@ class Run:
         self._apply(edit.plan_bmdb(self.mod, edit.EditRequest(unit="", new_models=[nm])),
                     f"clone model '{src}' as '{name}'")
 
+    # -- mercenary pools ------------------------------------------------------
+    @staticmethod
+    def _campaign(c) -> str:
+        from . import campstrat
+        return str(c or campstrat.DEFAULT_CAMPAIGN)
+
+    def _mercenaries(self, campaign=None):
+        from . import mercpools
+        try:
+            ov = mercpools.overview(self.mod, self._campaign(campaign))
+        except mercpools.MercError as e:
+            raise Refused(e.message)
+        return [{"name": p["name"], "regions": p["regions"],
+                 "units": [dict({k: v for k, v in u.items() if k != "line"}, place=i)
+                           for i, u in enumerate(p["units"], 1)]} for p in ov["pools"]]
+
+    @staticmethod
+    def _merc_values(d, *, editing: bool) -> dict:
+        out = {}
+        for k, v in (d or {}).items():
+            k = str(k)
+            if v is False and k != "crusading":
+                if not editing:
+                    continue
+                v = None
+            out[k] = v
+        return out
+
+    def _merc(self, body: dict, what: str) -> None:
+        from . import mercpools
+        plan = mercpools.plan(self.mod, body)
+        if plan.errors:
+            raise Refused(f"{what}: " + "; ".join(plan.errors))
+        if not plan.text:
+            self.edits.append(f"{what} (nothing to change)")
+            return
+        self._apply(plan, what, lambda p: mercpools.apply(p)["record"])
+
+    @staticmethod
+    def _place(place) -> int:
+        try:
+            i = int(place)
+        except (TypeError, ValueError):
+            raise Refused("a mercenary unit line is named by its place in the pool, from 1")
+        if i < 1:
+            raise Refused("a mercenary unit line's place counts from 1")
+        return i - 1
+
+    def edit_merc_unit(self, pool, place, edits=None, campaign=None) -> None:
+        c = self._campaign(campaign)
+        self._merc({"campaign": c, "action": "unit_edit", "pool": str(pool), "unit": self._place(place),
+                    "edits": self._merc_values(edits, editing=True)},
+                   f"edit mercenary '{pool}' #{place} ({c})")
+
+    def add_merc_unit(self, pool, values=None, campaign=None) -> None:
+        c = self._campaign(campaign)
+        self._merc({"campaign": c, "action": "unit_add", "pool": str(pool),
+                    "values": self._merc_values(values, editing=False)},
+                   f"add mercenary '{(values or {}).get('name', '')}' to '{pool}' ({c})")
+
+    def delete_merc_unit(self, pool, place, campaign=None) -> None:
+        c = self._campaign(campaign)
+        self._merc({"campaign": c, "action": "unit_delete", "pool": str(pool), "unit": self._place(place)},
+                   f"delete mercenary '{pool}' #{place} ({c})")
+
     def edit_building(self, line, level, changes=None) -> None:
         line, level, changes = str(line), str(level), dict(changes or {})
         edb = self._edb()
@@ -567,7 +661,9 @@ class Run:
             "edit_unit": self.edit_unit, "clone_unit": self.clone_unit,
             "delete_unit": self.delete_unit,
             "edit_model": self.edit_model, "clone_model": self.clone_model,
-            "edit_building": self.edit_building,
+            "edit_building": self.edit_building, "mercenaries": self._mercenaries,
+            "edit_merc_unit": self.edit_merc_unit, "add_merc_unit": self.add_merc_unit,
+            "delete_merc_unit": self.delete_merc_unit,
         }
 
         def wrap(fn):
