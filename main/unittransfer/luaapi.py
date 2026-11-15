@@ -1,0 +1,621 @@
+"""The ``toolkit`` table a Lua script sees, and one script run (Phases 122-123).
+
+A script reads the mod through functions (``toolkit.units()``,
+``toolkit.unit(name)``, ``toolkit.models()``...) and changes it through
+``toolkit.edit_*`` / ``toolkit.delete_*`` / ``toolkit.clone_*``. It never
+writes a file: every change is the plan the editor screens make
+(:func:`unittransfer.edit.plan_edit`, :func:`unittransfer.edit.plan_bmdb`),
+written by their own :func:`unittransfer.edit.apply_edit`, so every rule
+those screens keep holds for a script too.
+
+**One run, one Log record.** Plans are whole-file text, so each change has to
+see the ones before it: a run applies its changes one by one as the script
+makes them (the reads after a change see it), then folds the records those
+applies wrote into ONE record (:func:`_fold`) whose manifest holds, per file,
+the state from before the run. The Log's Undo, in the app or
+``lua_cli.py undo``, takes the whole run back. A change the editors refuse,
+or any error in the script, undoes what the run had already applied and
+writes nothing.
+
+**A preview is a run taken back.** Without ``apply`` the run does all of the
+above, compares every touched file with its state before the run, and undoes
+the record, so the report shows exactly what an applied run would change. The
+mod is touched while that happens; when it ends every file is byte-identical
+to before (checked) and the Log holds nothing from it.
+
+**The API is declared once** (:data:`API`): the Lua table, ``lua_cli.py api``
+and the annotation file are all made from that list.
+"""
+from __future__ import annotations
+
+import difflib
+import hashlib
+import shutil
+import time
+from dataclasses import dataclass, field
+from pathlib import Path
+from typing import Any, Callable, Dict, List, Optional
+
+from . import config, edu as edu_mod, edit, luarun, transfer
+from .logutil import log
+from .mod import Mod
+
+# ---------------------------------------------------------------------------
+# the API, declared once
+
+
+@dataclass
+class Fn:
+    name: str
+    params: List[tuple]          # (name, LuaLS type, doc)
+    returns: str                 # LuaLS type, "" for none
+    doc: str
+    kind: str = "read"           # read | edit
+
+
+API: List[Fn] = [
+    Fn("units", [], "toolkit.Unit[]",
+       "Every unit in the mod, in file order (the EDU, then M2TWEOP unit files)."),
+    Fn("unit", [("type", "string", "the unit's `type` line")], "toolkit.Unit?",
+       "One unit by its `type`, or nil."),
+    Fn("models", [], "toolkit.Model[]", "Every battle_models.modeldb entry, in file order."),
+    Fn("model", [("name", "string", "the entry name, any case")], "toolkit.Model?",
+       "One modeldb entry by name, or nil."),
+    Fn("mounts", [], "table<string, string>", "Each mount in descr_mount.txt and the model it uses."),
+    Fn("edit_unit",
+       [("type", "string", "the unit's `type` line"),
+        ("fields", "table<string, string|number|string[]|false>",
+         "EDU field -> new value (a list is joined with \", \"); false removes the field. "
+         "A repeated field is addressed as `officer#2`."),
+        ("options", "{rename?: string, dictionary?: string, name?: string, descr?: string, "
+         "descr_short?: string}?",
+         "rename the unit (every file naming it follows), change its dictionary key, "
+         "or its shown name and descriptions")],
+       "", "Change one unit's EDU block (and its text entry).", "edit"),
+    Fn("delete_unit",
+       [("type", "string", "the unit's `type` line"),
+        ("options", "{keep_text?: boolean, remove_models?: boolean, keep_refs?: boolean}?",
+         "keep its export_units entry; also remove battle models only it uses; "
+         "leave the recruitment and army lines that name it")],
+       "", "Delete one unit, and by default every line elsewhere that names it.", "edit"),
+    Fn("edit_model",
+       [("name", "string", "the entry name"),
+        ("changes", "{raw?: string, rename?: string, texture?: string, normal?: string, "
+         "sprite?: string, attach_texture?: string, attach_normal?: string}",
+         "the whole entry as text, a new name (units follow), or a texture path for every faction")],
+       "", "Change one modeldb entry.", "edit"),
+    Fn("clone_model",
+       [("source", "string", "the entry to copy"), ("name", "string", "the new entry's name")],
+       "", "Add a modeldb entry copied from an existing one.", "edit"),
+]
+
+CLASSES = {
+    "toolkit.Unit": [
+        ("type", "string"), ("dictionary", "string"), ("name", "string", "shown name, from export_units"),
+        ("category", "string"), ("class", "string"), ("kind", "string", "category refined by weapon"),
+        ("ownership", "string[]"), ("era0", "string[]"), ("era1", "string[]"), ("era2", "string[]"),
+        ("soldier", "string", "battle model"), ("officers", "string[]"), ("mount", "string"),
+        ("ship", "string"), ("engine", "string"), ("animal", "string"),
+        ("armour_models", "string[]"), ("attributes", "string[]"), ("mercenary", "boolean"),
+        ("stat_pri", "string[]"), ("stat_sec", "string[]"), ("projectiles", "string[]"),
+        ("fields", "table<string, string>", "every field line as text, `officer#2` for repeats"),
+        ("field_order", "string[]", "the field names in file order"),
+        ("eop", "boolean", "in an M2TWEOP unit file"), ("file", "string", "the file it is in"),
+        ("raw", "string", "the block as the file has it"),
+    ],
+    "toolkit.Model": [
+        ("name", "string"), ("scale", "number"),
+        ("lods", "{mesh: string, distance: integer}[]"),
+        ("textures", "{faction: string, texture: string, normal: string, sprite: string}[]"),
+        ("attachments", "{faction: string, texture: string, normal: string, sprite: string}[]"),
+        ("animations", "{mount: string, primary: string, secondary: string, "
+                       "primary_weapons: string[], secondary_weapons: string[]}[]"),
+        ("raw", "string"),
+    ],
+}
+
+
+def api_text() -> str:
+    """The API as plain text, for ``lua_cli.py api``."""
+    out = []
+    for f in API:
+        sig = ", ".join(p[0] for p in f.params)
+        out.append(f"toolkit.{f.name}({sig})" + (f" -> {f.returns}" if f.returns else ""))
+        out.append(f"    {f.doc}")
+        for p in f.params:
+            out.append(f"    {p[0]}: {p[2]}")
+    for cls, flds in CLASSES.items():
+        out.append(f"\n{cls}:")
+        for fl in flds:
+            out.append(f"    .{fl[0]}: {fl[1]}" + (f"  ({fl[2]})" if len(fl) > 2 else ""))
+    return "\n".join(out)
+
+
+def annotations() -> str:
+    """A LuaLS annotation file for the API, so VS Code (or any editor running
+    the Lua language server) completes and checks ``toolkit`` and ``args``."""
+    out = ["---@meta",
+           "-- The Medieval II GUI Toolkit's Lua API (lua_cli.py). Made by",
+           "-- `python lua_cli.py annotations <folder>`; do not edit by hand.", ""]
+    for cls, flds in CLASSES.items():
+        out.append(f"---@class {cls}")
+        for fl in flds:
+            out.append(f"---@field {fl[0]} {fl[1]}" + (f" {fl[2]}" if len(fl) > 2 else ""))
+        out.append("")
+    out += ["---@class toolkit.Mod", "---@field name string the mod's folder name",
+            "---@field root string the mod's folder", "",
+            "---The mod the script runs against. Reads see every edit made before them;",
+            "---edits are previewed unless the run has --apply.",
+            "---@class toolkit", "---@field mod toolkit.Mod", "toolkit = {}", ""]
+    for f in API:
+        out.append(f"---{f.doc}")
+        for p in f.params:
+            out.append(f"---@param {p[0]} {p[1]} {p[2]}")
+        if f.returns:
+            out.append(f"---@return {f.returns}")
+        args = ", ".join(p[0] for p in f.params)
+        out += [f"function toolkit.{f.name}({args}) end", ""]
+    out += ["---Values given on the command line with --set key=value.",
+            "---@type table<string, string>", "args = {}", ""]
+    return "\n".join(out)
+
+
+def write_annotations(folder: Path) -> List[Path]:
+    """``toolkit.lua`` and a ``.luarc.json`` that points the language server
+    at it (Lua 5.4, the sandbox's library), in ``folder``."""
+    import json
+    folder = Path(folder)
+    folder.mkdir(parents=True, exist_ok=True)
+    stub = folder / "toolkit.lua"
+    stub.write_text(annotations(), encoding="utf-8")
+    rc = folder / ".luarc.json"
+    cfg = json.loads(rc.read_text(encoding="utf-8")) if rc.is_file() else {}
+    cfg["runtime.version"] = "Lua 5.4"
+    cfg["runtime.builtin"] = {**cfg.get("runtime.builtin", {}),
+                              "io": "disable", "os": "disable", "debug": "disable",
+                              "package": "disable"}
+    libs = list(cfg.get("workspace.library", []))
+    if "toolkit.lua" not in libs:
+        libs.append("toolkit.lua")
+    cfg["workspace.library"] = libs
+    rc.write_text(json.dumps(cfg, indent=2) + "\n", encoding="utf-8")
+    return [stub, rc]
+
+
+# ---------------------------------------------------------------------------
+# reads
+
+
+def _rel(mod: Mod, path: str) -> str:
+    try:
+        return Path(path).resolve().relative_to(Path(mod.root).resolve()).as_posix()
+    except (ValueError, OSError):
+        return str(path)
+
+
+def unit_view(mod: Mod, u) -> dict:
+    loc = mod.loc.get(u.dictionary)
+    pairs = edu_mod.block_fields(u.raw)
+    return {
+        "type": u.type, "dictionary": u.dictionary, "name": loc.name if loc else "",
+        "category": u.category, "class": u.class_type, "kind": u.kind(),
+        "ownership": list(u.ownership), "era0": list(u.era0), "era1": list(u.era1),
+        "era2": list(u.era2), "soldier": u.soldier_model, "officers": list(u.officers),
+        "mount": u.mount, "ship": u.ship, "engine": u.engine, "animal": u.animal,
+        "armour_models": list(u.armour_ug_models), "attributes": list(u.attributes),
+        "mercenary": bool(u.mercenary_unit), "stat_pri": list(u.stat_pri),
+        "stat_sec": list(u.stat_sec), "projectiles": u.projectiles(),
+        "fields": {k: v for k, v in pairs}, "field_order": [k for k, _ in pairs],
+        "eop": bool(u.is_eop),
+        "file": _rel(mod, u.eop_file) if u.is_eop else "data/export_descr_unit.txt",
+        "raw": u.raw,
+    }
+
+
+def _tex(t) -> dict:
+    return {"faction": t.faction, "texture": t.texture, "normal": t.normal, "sprite": t.sprite}
+
+
+def model_view(e) -> dict:
+    return {
+        "name": e.name, "scale": e.scale,
+        "lods": [{"mesh": m, "distance": d} for m, d in e.lods],
+        "textures": [_tex(t) for t in e.main_textures],
+        "attachments": [_tex(t) for t in e.attach_textures],
+        "animations": [{"mount": a.mount_type, "primary": a.primary_skeleton,
+                        "secondary": a.secondary_skeleton,
+                        "primary_weapons": list(a.pri_weapons),
+                        "secondary_weapons": list(a.sec_weapons)} for a in e.animations],
+        "raw": e.raw,
+    }
+
+
+# ---------------------------------------------------------------------------
+# a run
+
+
+class Refused(Exception):
+    """An edit the editors refuse: the script stops and nothing is written."""
+
+
+@dataclass
+class FileChange:
+    rel: str
+    status: str                  # changed | created | deleted
+    diff: str = ""
+    added: int = 0
+    removed: int = 0
+
+
+@dataclass
+class Report:
+    script: str
+    mod: str
+    applied: bool = False
+    ok: bool = False
+    error: str = ""
+    error_kind: str = ""
+    printed: List[str] = field(default_factory=list)
+    edits: List[str] = field(default_factory=list)
+    warnings: List[str] = field(default_factory=list)
+    files: List[FileChange] = field(default_factory=list)
+    log_id: str = ""
+    seconds: float = 0.0
+
+
+def _text_value(v) -> str:
+    if isinstance(v, list):
+        return ", ".join(str(x) for x in v)
+    if isinstance(v, bool):
+        raise Refused("a field value is text, a number or a list; false removes the field")
+    if isinstance(v, float) and v == int(v):
+        v = int(v)
+    return str(v)
+
+
+class Run:
+    """One script against one mod."""
+
+    def __init__(self, mod: Mod, *, script_name: str = "script.lua"):
+        self.mod = mod
+        self.script_name = script_name
+        self.records: List[dict] = []
+        self.edits: List[str] = []
+        self.warnings: List[str] = []
+        self.refused: List[str] = []
+
+    # -- reads ---------------------------------------------------------------
+    def _units(self):
+        return [unit_view(self.mod, u) for u in self.mod.edu.units]
+
+    def _unit(self, t):
+        u = self.mod.edu.by_type().get(str(t))
+        return unit_view(self.mod, u) if u else None
+
+    def _models(self):
+        return [model_view(e) for e in self.mod.modeldb.entries]
+
+    def _model(self, name):
+        n = str(name).lower()
+        e = next((e for e in self.mod.modeldb.entries if e.name.lower() == n), None)
+        return model_view(e) if e else None
+
+    def _mounts(self):
+        return {str(k): str(v) for k, v in (self.mod.mounts or {}).items()}
+
+    # -- edits ---------------------------------------------------------------
+    def _modeldb_stamp(self):
+        out = []
+        paths = [self.mod.modeldb_path]
+        try:
+            from . import modeltext
+            paths.append(modeltext.text_path(self.mod))
+        except Exception:  # noqa: BLE001 - a mod without text models
+            pass
+        for p in paths:
+            try:
+                st = Path(p).stat()
+                out.append((str(p), st.st_size, st.st_mtime_ns))
+            except OSError:
+                out.append((str(p), -1, -1))
+        return out
+
+    def _apply(self, plan, what: str) -> None:
+        if plan.errors:
+            raise Refused(f"{what}: " + "; ".join(plan.errors))
+        # apply_edit forgets every cached read; the parsed modeldb is most of the
+        # cost of the next edit (0.9 s on DaC's 1,678 entries), so when its file
+        # was not written it is handed back
+        cached, stamp = self.mod.__dict__.get("modeldb"), self._modeldb_stamp()
+        rec = edit.apply_edit(plan)
+        if cached is not None and "modeldb" not in self.mod.__dict__ and self._modeldb_stamp() == stamp:
+            self.mod.__dict__["modeldb"] = cached
+        self.records.append(rec)
+        self.edits.append(what)
+        self.warnings += [f"{what}: {w}" for w in plan.warnings]
+
+    def edit_unit(self, t, fields=None, options=None) -> None:
+        t, fields, options = str(t), fields or {}, options or {}
+        if t not in self.mod.edu.by_type():
+            raise Refused(f"no unit '{t}' in {self.mod.name}")
+        overrides, removes = {}, []
+        for k, v in fields.items():
+            if v is False:
+                removes.append(str(k))
+            else:
+                overrides[str(k)] = _text_value(v)
+        unknown = set(options) - {"rename", "dictionary", "name", "descr", "descr_short"}
+        if unknown:
+            raise Refused(f"edit_unit: unknown option(s) {', '.join(sorted(unknown))}")
+        loc = None
+        if any(k in options for k in ("name", "descr", "descr_short")):
+            u = self.mod.edu.by_type()[t]
+            cur = self.mod.loc.get(u.dictionary)
+            loc = {"name": options.get("name", cur.name if cur else ""),
+                   "descr": options.get("descr", (cur.descr or "") if cur else ""),
+                   "descr_short": options.get("descr_short", (cur.descr_short or "") if cur else "")}
+        req = edit.EditRequest(unit=t, new_type=str(options.get("rename", "")).strip(),
+                               new_dictionary=str(options.get("dictionary", "")).strip(),
+                               field_overrides=overrides, remove_fields=removes, loc=loc)
+        self._apply(edit.plan_edit(self.mod, req), f"edit unit '{t}'")
+
+    def delete_unit(self, t, options=None) -> None:
+        t, options = str(t), options or {}
+        if t not in self.mod.edu.by_type():
+            raise Refused(f"no unit '{t}' in {self.mod.name}")
+        ops = edit.DeleteOptions(remove_loc=not options.get("keep_text", False),
+                                 remove_models=bool(options.get("remove_models", False)),
+                                 remove_assets=False, remove_icons=False,
+                                 remove_refs=not options.get("keep_refs", False))
+        req = edit.EditRequest(unit=t, delete=True, delete_options=ops)
+        self._apply(edit.plan_edit(self.mod, req), f"delete unit '{t}'")
+
+    def edit_model(self, name, changes=None) -> None:
+        name, changes = str(name).lower(), changes or {}
+        if self._model(name) is None:
+            raise Refused(f"no modeldb entry '{name}' in {self.mod.name}")
+        kinds = {"texture", "normal", "sprite", "attach_texture", "attach_normal"}
+        unknown = set(changes) - kinds - {"raw", "rename"}
+        if unknown:
+            raise Refused(f"edit_model: unknown change(s) {', '.join(sorted(unknown))}")
+        me = edit.ModelEdit(entry=name, new_name=str(changes.get("rename", "")).strip().lower(),
+                            raw_entry=str(changes.get("raw", "")),
+                            defaults=edit._clean_paths({k: v for k, v in changes.items() if k in kinds}))
+        self._apply(edit.plan_bmdb(self.mod, edit.EditRequest(unit="", model_edits=[me])),
+                    f"edit model '{name}'")
+
+    def clone_model(self, src, name) -> None:
+        src, name = str(src).lower(), str(name).strip().lower()
+        if self._model(src) is None:
+            raise Refused(f"no modeldb entry '{src}' in {self.mod.name}")
+        nm = edit.NewModel(name=name, clone_from=src)
+        self._apply(edit.plan_bmdb(self.mod, edit.EditRequest(unit="", new_models=[nm])),
+                    f"clone model '{src}' as '{name}'")
+
+    # -- the Lua side --------------------------------------------------------
+    def table(self, session: luarun.Session):
+        """The ``toolkit`` table: every API function, each converting its
+        arguments from Lua and its result to frozen Lua data."""
+        impl: Dict[str, Callable] = {
+            "units": self._units, "unit": self._unit, "models": self._models,
+            "model": self._model, "mounts": self._mounts, "edit_unit": self.edit_unit,
+            "delete_unit": self.delete_unit, "edit_model": self.edit_model,
+            "clone_model": self.clone_model,
+        }
+
+        def wrap(fn):
+            def call(*args):
+                try:
+                    out = fn(*[session.from_lua(a) for a in args])
+                except Refused as e:
+                    self.refused.append(str(e))
+                    raise RuntimeError(str(e)) from None
+                except (KeyError, ValueError) as e:
+                    raise RuntimeError(str(e).strip("'\"")) from None
+                return None if out is None else session.to_lua(out)
+            return call
+
+        t = {f.name: wrap(impl[f.name]) for f in API}
+        t["mod"] = {"name": self.mod.name, "root": str(self.mod.root)}
+        return session.to_lua(t)
+
+
+# ---------------------------------------------------------------------------
+# folding the run's records into one
+
+
+def _sha(p: Path) -> Optional[str]:
+    try:
+        return hashlib.sha1(p.read_bytes()).hexdigest()
+    except OSError:
+        return None
+
+
+def _fold(mod: Mod, records: List[dict], script_name: str, edits: List[str],
+          warnings: List[str]) -> dict:
+    """One Log record for every apply in a run. Per file, the first record
+    that touched it says what it was before the run: its backup, or "did not
+    exist". The record's backups are copied under one new backup folder, the
+    run's own records leave the Log and their folders go."""
+    tid = config.new_transfer_id()
+    root = config.backup_root_for(tid)
+    man: Dict[str, list] = {"backed_up": [], "created": [], "deleted": [],
+                            "ext_backed_up": [], "ext_created": []}
+    seen_rel, seen_abs = set(), set()
+    for rec in records:
+        m, br = rec.get("manifest") or {}, Path(rec.get("backup_root") or "")
+        extra = set(m) - set(man)
+        if extra:
+            raise RuntimeError(f"cannot fold a record with {', '.join(sorted(extra))}")
+        for rel in m.get("backed_up", []):
+            if rel in seen_rel:
+                continue
+            seen_rel.add(rel)
+            src, dst = br / "data" / rel, root / "data" / rel
+            dst.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(src, dst)
+            man["backed_up"].append(rel)
+        for rel in m.get("created", []):
+            if rel not in seen_rel:
+                seen_rel.add(rel)
+                man["created"].append(rel)
+        for rel in m.get("deleted", []):
+            if rel not in man["deleted"]:
+                man["deleted"].append(rel)
+        for e in m.get("ext_backed_up", []):
+            key = str(Path(e["path"]).resolve()).lower()
+            if key in seen_abs:
+                continue
+            seen_abs.add(key)
+            dst = root / "ext" / f"{len(man['ext_backed_up']):03d}_{Path(e['path']).name}"
+            dst.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(e["backup"], dst)
+            man["ext_backed_up"].append({"path": e["path"], "backup": str(dst)})
+        for p in m.get("ext_created", []):
+            key = str(Path(p).resolve()).lower()
+            if key not in seen_abs:
+                seen_abs.add(key)
+                man["ext_created"].append(p)
+    folded = {
+        "id": tid, "when": time.strftime("%Y-%m-%d %H:%M:%S"),
+        "mode": "lua", "action": "script",
+        "source": mod.name, "source_root": str(mod.root),
+        "dest": mod.name, "dest_root": str(mod.root),
+        "unit_type": "", "resolved_type": "", "options": {"script": script_name},
+        "applied": True, "undone": False, "note": "",
+        "summary": "\n".join([f"Lua script {script_name} in {mod.name}"]
+                             + ["  " + e for e in edits] + ["  ! " + w for w in warnings]),
+        "warnings": list(warnings), "manifest": man, "backup_root": str(root),
+    }
+    ids = {r["id"] for r in records}
+    entries = [e for e in config.load_log() if e.get("id") not in ids]
+    entries.append(folded)
+    config.save_log(entries)
+    for r in records:
+        shutil.rmtree(r.get("backup_root") or "", ignore_errors=True)
+    return folded
+
+
+def _changes(mod: Mod, rec: dict) -> List[FileChange]:
+    """Each file the folded record covers, before (its backup) against now."""
+    man, root, data = rec["manifest"], Path(rec["backup_root"]), Path(mod.data)
+    pairs = []  # (label, before path or None, now path)
+    for rel in man["backed_up"]:
+        pairs.append((f"data/{rel}", root / "data" / rel, data / rel))
+    for rel in man["created"]:
+        pairs.append((f"data/{rel}", None, data / rel))
+    for e in man["ext_backed_up"]:
+        pairs.append((_rel(mod, e["path"]), Path(e["backup"]), Path(e["path"])))
+    for p in man["ext_created"]:
+        pairs.append((_rel(mod, p), None, Path(p)))
+    out = []
+    for label, before, now in pairs:
+        if before is not None and now.is_file() and _sha(before) == _sha(now):
+            continue
+        status = "created" if before is None else ("changed" if now.is_file() else "deleted")
+        fc = FileChange(label, status)
+        a = _lines(before) if before is not None else []
+        b = _lines(now) if now.is_file() else []
+        if a is None or b is None:
+            fc.diff = "(binary file)"
+        else:
+            d = list(difflib.unified_diff(a, b, f"a/{label}", f"b/{label}", lineterm="", n=2))
+            fc.diff = "\n".join(d)
+            fc.added = sum(1 for x in d if x.startswith("+") and not x.startswith("+++"))
+            fc.removed = sum(1 for x in d if x.startswith("-") and not x.startswith("---"))
+        out.append(fc)
+    return out
+
+
+def _lines(p: Path) -> Optional[List[str]]:
+    data = p.read_bytes()
+    if b"\0" in data[:4096] and not data[:2] in (b"\xff\xfe", b"\xfe\xff"):
+        return None
+    for enc in ("utf-16", "utf-8") if data[:2] in (b"\xff\xfe", b"\xfe\xff") else ("utf-8", "latin-1"):
+        try:
+            return data.decode(enc).splitlines()
+        except UnicodeDecodeError:
+            continue
+    return None
+
+
+def _drop(rec_ids) -> None:
+    ids = set(rec_ids)
+    config.save_log([e for e in config.load_log() if e.get("id") not in ids])
+
+
+def _take_back(records: List[dict]) -> None:
+    """Undo a run's applies, newest first, and leave nothing in the Log."""
+    for r in reversed(records):
+        try:
+            transfer.undo(r["id"])
+        except Exception as e:  # noqa: BLE001 - keep putting back the rest
+            log.warning("LUA    could not undo %s: %s", r.get("id"), e)
+    _drop([r["id"] for r in records])
+    for r in records:
+        shutil.rmtree(r.get("backup_root") or "", ignore_errors=True)
+
+
+def run(mod: Mod, script: Path, *, apply: bool = False, args: Optional[Dict[str, str]] = None,
+        time_limit: float = luarun.TIME_LIMIT, on_print: Optional[Callable[[str], None]] = None) -> Report:
+    """Run ``script`` against ``mod``: a preview, or with ``apply`` a write
+    that leaves one Log record."""
+    script = Path(script)
+    rep = Report(script=script.name, mod=mod.name, applied=False)
+    started = time.monotonic()
+    r = Run(mod, script_name=script.name)
+    try:
+        session = luarun.Session(script.parent, time_limit=time_limit, on_print=on_print)
+    except luarun.ScriptError as e:
+        rep.error, rep.error_kind = e.message, e.kind
+        return rep
+    session.set_global("toolkit", r.table(session))
+    session.set_global("args", session.to_lua({str(k): str(v) for k, v in (args or {}).items()}))
+    try:
+        res = session.run(script.read_text(encoding="utf-8-sig"), script.name)
+        rep.printed = res.printed
+    except luarun.ScriptError as e:
+        rep.printed = list(session.printed)
+        rep.error, rep.error_kind = e.message, e.kind
+        if e.kind == "error" and any(x in e.message for x in r.refused):
+            rep.error_kind = "refused"
+        _take_back(r.records)
+        rep.edits, rep.warnings = r.edits, r.warnings
+        rep.seconds = time.monotonic() - started
+        return rep
+    rep.edits, rep.warnings = r.edits, r.warnings
+    rep.ok = True
+    if r.records:
+        folded = _fold(mod, r.records, script.name, r.edits, r.warnings)
+        rep.files = _changes(mod, folded)
+        if apply:
+            rep.applied, rep.log_id = True, folded["id"]
+        else:
+            transfer.undo(folded["id"])
+            left = _not_put_back(mod, folded)
+            _drop([folded["id"]])
+            if left:  # keep the backups: they are the only copy of those files now
+                rep.warnings.append("the preview could not put back " + ", ".join(left)
+                                    + f"; their backups are in {folded['backup_root']}")
+            else:
+                shutil.rmtree(folded["backup_root"], ignore_errors=True)
+        mod.drop_caches()
+    rep.seconds = time.monotonic() - started
+    return rep
+
+
+def _not_put_back(mod: Mod, rec: dict) -> List[str]:
+    """After a preview's undo: every file the run touched must be its backup's
+    bytes again, and every file it created gone."""
+    man, root, data = rec["manifest"], Path(rec["backup_root"]), Path(mod.data)
+    bad = [f"data/{rel}" for rel in man["backed_up"]
+           if _sha(root / "data" / rel) != _sha(data / rel)]
+    bad += [f"data/{rel}" for rel in man["created"] if (data / rel).exists()]
+    bad += [e["path"] for e in man["ext_backed_up"] if _sha(Path(e["backup"])) != _sha(Path(e["path"]))]
+    bad += [p for p in man["ext_created"] if Path(p).exists()]
+    return bad
+
+
+def undo(log_id: str) -> dict:
+    """The Log's Undo, for a run's record (or any record)."""
+    return transfer.undo(log_id)

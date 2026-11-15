@@ -25,7 +25,7 @@ else:
     _i18n = _Messages()
 
 MANIFEST = 'release-manifest.json'
-COMPONENTS = {'app.py', 'transfer_cli.py', 'Full Cleaner.bat',
+COMPONENTS = {'app.py', 'transfer_cli.py', 'lua_cli.py', 'Full Cleaner.bat',
               'Launch-Medieval2-GUI-Toolkit.bat', 'Install-Dependencies.bat',
               'Troubleshoot.bat', 'README.txt', 'LICENSE', 'NOTICE', 'unittransfer', 'web', 'vendor', 'runtime'}
 

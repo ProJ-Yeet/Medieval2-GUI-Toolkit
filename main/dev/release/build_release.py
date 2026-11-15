@@ -8,7 +8,7 @@ The point is that the person you send it to installs nothing. The zip carries
 Python's official *embeddable* distribution with Pillow already in it, so they
 unzip and double-click `Launch-Medieval2-GUI-Toolkit.bat`.
 
-Only the bare minimum ships: `app.py`, `transfer_cli.py`, `Full Cleaner.bat`,
+Only the bare minimum ships: `app.py`, `transfer_cli.py`, `lua_cli.py`, `Full Cleaner.bat`,
 `unittransfer/`, `web/`, the launcher, `Install-Dependencies.bat` and a README.
 Never `config/` (personal settings, backups and the transfer log), `.cache/`,
 `tests/`, `graphify-out/` or `__pycache__` - shipping `config/` would hand over
@@ -45,7 +45,7 @@ EMBED_URL = (f"https://www.python.org/ftp/python/{PY_VERSION}/"
 #: Full Cleaner.bat is not run by the tool any more - unittransfer/cleaner.py
 #: deletes export_units.txt.strings.bin itself instead. It still ships so anyone
 #: who wants the full sweep can copy it into a mod and run it by hand.
-INCLUDE_FILES = ("app.py", "transfer_cli.py", "Full Cleaner.bat")
+INCLUDE_FILES = ("app.py", "transfer_cli.py", "lua_cli.py", "Full Cleaner.bat")
 #: vendor/ carries nvcompress.exe + its DLLs (NVIDIA Texture Tools 2.0), which
 #: Sprites mode shells out to for TGA -> DXT5. ~1MB, and without it the convert
 #: step can't run at all - so it ships rather than being a manual download.
@@ -177,10 +177,10 @@ def stage_runtime(stage: Path) -> None:
 
     site = runtime / "Lib" / "site-packages"
     site.mkdir(parents=True, exist_ok=True)
-    log("runtime: installing Pillow and numpy…")
+    log("runtime: installing Pillow, numpy and lupa…")
     res = subprocess.run(
         [sys.executable, "-m", "pip", "install", "--upgrade", "--target", str(site),
-         "--only-binary=:all:", "Pillow", "numpy"],
+         "--only-binary=:all:", "Pillow", "numpy", "lupa"],
         capture_output=True, text=True)
     if res.returncode != 0:
         raise SystemExit("pip install Pillow failed:\n" + res.stdout + res.stderr)
@@ -189,13 +189,18 @@ def stage_runtime(stage: Path) -> None:
         shutil.rmtree(junk, ignore_errors=True)
     for junk in site.rglob("__pycache__"):
         rmtree(junk)
+    # lupa ships seven Lua runtimes (3.5 MB); Lua scripts (luarun.py) use 5.4 only
+    for junk in (site / "lupa").glob("*.pyd"):
+        if not junk.name.startswith("lua54."):
+            junk.unlink()
 
     ok = subprocess.run([str(runtime / "python.exe"), "-c",
-                         "import PIL, numpy;from PIL import Image;print(PIL.__version__, numpy.__version__)"],
+                         "import PIL, numpy, lupa.lua54 as L;from PIL import Image;"
+                         "print(PIL.__version__, numpy.__version__, L.LuaRuntime().lua_version)"],
                         capture_output=True, text=True)
     if ok.returncode != 0:
-        raise SystemExit("bundled runtime cannot import Pillow:\n" + ok.stdout + ok.stderr)
-    log(f"runtime: Pillow and numpy {ok.stdout.strip()} verified inside the bundle")
+        raise SystemExit("bundled runtime cannot import Pillow, numpy or lupa:\n" + ok.stdout + ok.stderr)
+    log(f"runtime: Pillow, numpy and lupa (Lua) {ok.stdout.strip()} verified inside the bundle")
 
     size = sum(p.stat().st_size for p in runtime.rglob("*") if p.is_file())
     log(f"runtime: {size / 1e6:.1f} MB")

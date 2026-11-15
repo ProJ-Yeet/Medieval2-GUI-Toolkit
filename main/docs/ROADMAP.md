@@ -1327,8 +1327,14 @@ the same plans its editors make.
   editors' own plans; the plans are written by their own `apply` code. One
   engine, and every rule an editor enforces (a unit name that must be unique,
   a modeldb entry the EDU still names) holds for a script too.
-* **Dry run first.** A run without `--apply` prints what would change and
-  writes nothing.
+* **Preview first.** A run without `--apply` shows exactly what would change.
+  **Changed in building, 2026-11-15:** a preview is the run applied, compared
+  and undone (the editors' plans are whole-file text, so only an applied edit
+  lets the next one see it); every file is then checked byte for byte against
+  its backup and the Log holds nothing of it. It is not "writes nothing": the
+  mod's files are written while it runs. A preview that never touches the mod
+  would need the staged mod of 123a's first draft (an overlay every parser
+  reads through), which is the alternative if the user wants it.
 * **One run, one log record, one Undo.** All or nothing: an edit the plan
   refuses stops the script and nothing is written.
 * **Sandboxed.** No `io`, `os`, `debug`, `loadfile`, `dofile`, no binary
@@ -1344,6 +1350,48 @@ the same plans its editors make.
 
 **MVP is 120-123**: the sandbox, the command, reading the mod, and edits to
 units and modeldb entries written as one Undo.
+
+**Built 2026-11-15, the MVP and 124** (the user: "start working on those
+phases until 80% usage limit is reached"):
+
+* **120 done.** `lupa` 2.8 (MIT, installed here with the user's yes) in
+  `build_release.py`'s pip line and its check, the six runtimes other than 5.4
+  deleted from the bundle (3.5 MB of 4.1); `Install-Dependencies.bat` installs
+  it too. `unittransfer/luarun.py`: `Session`, `ScriptError`, `run_file`.
+  Found on the way: a count hook every 10,000 instructions is swallowed by a
+  `pcall` loop (it fires inside the protected part), and a Lua hook belongs to
+  one thread, so a coroutine ran free. Once past the deadline the hook now
+  fires on every instruction, and `coroutine.create` / `wrap` set it on each
+  new coroutine. Not stopped: one long call inside C (a pathological
+  `string.find`). `tests/test_luarun.py` 40/40.
+* **121 done**, `lua_cli.py` at `main/` (`run`, `--apply`, `--diff`, `--set`,
+  `--time-limit`, `undo`, `api`, `annotations`), exit codes as written. A mod by
+  folder or by name under `med2_root/mods`. It ships (`INCLUDE_FILES`,
+  `update_worker.COMPONENTS`).
+* **122 in part**: `toolkit.units()`, `unit()`, `models()`, `model()`,
+  `mounts()`, `toolkit.mod`, `args`, declared once in `luaapi.API` /
+  `CLASSES`. **Left:** factions and cultures, buildings and levels, a string by
+  key (they go with 126's edits).
+* **123 done** for `edit_unit` (fields, `false` removes, rename, dictionary,
+  shown name and descriptions), `delete_unit`, `edit_model` (raw, rename, a
+  texture for every faction) and `clone_model`, through `edit.plan_edit` /
+  `plan_bmdb` / `apply_edit`. Each edit is applied as the script makes it;
+  `luaapi._fold` turns the run's records into one (`mode` `lua`), first
+  backup of each file wins. A refusal or a script error undoes the run.
+  Timing on DaC (952 units): 1.1 s an edit until the parsed modeldb was handed
+  back to the `Mod` when an apply did not write it; now 40 edits in 6.7 s.
+  "A new unit from an existing one" is not in: no in-mod clone plan exists
+  (only `plan_transfer` between mods), so it waits for one.
+* **124 done**: `lua_cli.py annotations <folder>` (`toolkit.lua`,
+  `.luarc.json`, checked to compile), `docs/LUA_SCRIPTS.md`, three examples in
+  `docs/lua_examples/` previewed by the test. The docs and examples are in the
+  repo, not in the release zip yet (a `docs` folder in the zip is a release
+  decision).
+* `tests/test_luaapi.py` 46/46 on a copy of DaC's four files. `test_updater`
+  passes; `test_startup` 74/78, the same four checks failing on a clean HEAD
+  worktree (this machine's mod setup).
+* The Log shows a run under its generic "edit in" row with a working Undo; a
+  label of its own needs a translated string, so it waits for 125.
 
 ## Phase 120 - the Lua runtime and its sandbox (MVP)
 
@@ -1365,8 +1413,7 @@ units and modeldb entries written as one Undo.
 
 ## Phase 121 - the command (MVP)
 
-* **121a - `lua_cli.py`** beside `transfer_cli.py` (and the same through
-  `python -m unittransfer.lua_cli`): `run <script.lua> --mod <folder or saved
+* **121a - `lua_cli.py`** beside `transfer_cli.py`: `run <script.lua> --mod <folder or saved
   mod name> [--set key=value ...] [--apply]`, `undo <id>`, `api` (prints the
   API), `annotations <folder>` (writes 124's file). `--set` values reach the
   script as a read-only `args` table, so one script serves many runs.

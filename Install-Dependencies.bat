@@ -70,7 +70,7 @@ if errorlevel 1 (
 )
 echo.
 
-%PY% -c "import PIL, numpy" >nul 2>nul
+%PY% -c "import PIL, numpy, lupa.lua54" >nul 2>nul
 if %errorlevel%==0 (
     for /f "tokens=*" %%v in ('%PY% -c "import PIL;print(PIL.__version__)"') do echo Pillow is already installed: %%v
     echo.
@@ -80,10 +80,10 @@ if %errorlevel%==0 (
     exit /b 0
 )
 
-echo Pillow is not installed yet. Installing with:
-echo    %PY% -m pip install pillow numpy
+echo Pillow, numpy or lupa is not installed yet. Installing with:
+echo    %PY% -m pip install pillow numpy lupa
 echo.
-%PY% -m pip install --disable-pip-version-check pillow numpy
+%PY% -m pip install --disable-pip-version-check pillow numpy lupa
 if not %errorlevel%==0 (
     echo.
     echo ============================================================

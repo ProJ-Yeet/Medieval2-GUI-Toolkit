@@ -1,0 +1,239 @@
+"""Lua scripts over the toolkit's data: reads, preview, apply, one Undo (121-123).
+
+    python -m tests.test_luaapi
+
+Runs on a copy of DaC's unit, text and modeldb files (skipped without DaC),
+with the toolkit's config, Log and backups in a temporary folder.
+
+1. the read API: every unit and entry, a unit's fields, frozen tables
+2. a preview changes nothing on disk and leaves nothing in the Log, and says
+   what --apply would change
+3. --apply: one Log record for many edits; its Undo puts every byte back
+4. edits see the edits before them (a rename, then the new name)
+5. an edit the editor refuses, and a script error, undo the run's edits
+6. delete a unit; clone a modeldb entry, then edit the clone
+7. lua_cli.py: run, --apply, undo, api, and its exit codes
+"""
+import hashlib
+import shutil
+import subprocess
+import sys
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT))
+
+from tests import _realmod, _tmp  # noqa: E402
+from unittransfer import config, luaapi, luarun  # noqa: E402
+from unittransfer.mod import Mod  # noqa: E402
+
+ok = []
+
+
+def check(label, cond):
+    ok.append(bool(cond))
+    print(f"  [{'OK ' if cond else 'FAIL'}] {label}")
+
+
+MODS = _realmod.mods(required=False)
+DAC = MODS / "Divide_and_Conquer_EUR" if MODS else None
+REL = ("export_descr_unit.txt", "text/export_units.txt", "unit_models/battle_models.modeldb",
+       "descr_mount.txt")
+if not luarun.available() or not DAC or not (DAC / "data" / REL[0]).is_file():
+    print("needs lupa and Divide_and_Conquer_EUR; skipped")
+    sys.exit(0)
+
+tmp = Path(_tmp.mkdtemp(prefix="ut_luaapi_"))
+cfg = tmp / "config"
+cfg.mkdir()
+config.CONFIG_DIR = cfg
+config.BACKUP_DIR = cfg / "backups"
+config.SETTINGS_PATH = cfg / "settings.json"
+config.LOG_PATH = cfg / "transfers.json"
+
+
+def fresh(tag) -> Mod:
+    root = tmp / tag / "mods" / "Dest"
+    for rel in REL:
+        (root / "data" / rel).parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(DAC / "data" / rel, root / "data" / rel)
+    return Mod(root)
+
+
+def shas(mod) -> dict:
+    return {p.relative_to(mod.root).as_posix(): hashlib.sha1(p.read_bytes()).hexdigest()
+            for p in sorted(Path(mod.root).rglob("*")) if p.is_file()}
+
+
+def script(name, text) -> Path:
+    p = tmp / "scripts" / name
+    p.parent.mkdir(exist_ok=True)
+    p.write_text(text, encoding="utf-8")
+    return p
+
+
+mod = fresh("a")
+units = mod.edu.units
+u0, u1 = units[0], units[1]
+print(f"(DaC copy: {len(units)} units, {len(mod.modeldb.entries)} modeldb entries)")
+
+print("1. reads")
+s = script("read.lua", f"""
+local us = toolkit.units()
+local u = toolkit.unit({u0.type!r})
+print(#us, #toolkit.models(), u.type, u.fields.category, #u.field_order > 5, u.eop)
+print(toolkit.unit("no such unit") == nil, toolkit.mod.name)
+local ok, e = pcall(function() u.category = "x" end)
+print(ok, toolkit.model(u.soldier) ~= nil)
+""")
+rep = luaapi.run(mod, s)
+check(f"runs ({rep.error})", rep.ok)
+check("counts and fields", rep.printed and rep.printed[0] ==
+      f"{len(units)}\t{len(mod.modeldb.entries)}\t{u0.type}\t{u0.category}\ttrue\tfalse")
+check("a missing unit is nil; mod name", rep.printed[1] == "true\tDest")
+check("a write is refused; its soldier entry is found", rep.printed[2] == "false\ttrue")
+check("reading leaves no Log record", config.load_log() == [])
+
+print("2. preview")
+before = shas(mod)
+edit_two = script("two.lua", f"""
+local a = toolkit.unit({u0.type!r})
+toolkit.edit_unit(a.type, {{ ["stat_pri_armour"] = "9, 9, 9, metal" }})
+toolkit.edit_unit({u1.type!r}, {{ ["stat_mental"] = "13, disciplined, trained" }})
+print(toolkit.unit(a.type).fields.stat_pri_armour)
+""")
+rep = luaapi.run(mod, edit_two)
+check(f"preview ok ({rep.error})", rep.ok and not rep.applied)
+check("the second read sees the first edit", rep.printed == ["9, 9, 9, metal"])
+check("one file would change", [f.rel for f in rep.files] == ["data/export_descr_unit.txt"])
+check("its diff has both edits", rep.files and "9, 9, 9, metal" in rep.files[0].diff
+      and "13, disciplined, trained" in rep.files[0].diff)
+check("every byte back after a preview", shas(mod) == before)
+check("the Log holds nothing", config.load_log() == [])
+check("no backup folder left", not any(config.BACKUP_DIR.glob("*")) if config.BACKUP_DIR.exists() else True)
+
+print("3. apply")
+rep = luaapi.run(mod, edit_two, apply=True)
+log = config.load_log()
+check("applied", rep.ok and rep.applied and rep.log_id)
+check("one Log record, mode lua", len(log) == 1 and log[0]["mode"] == "lua" and log[0]["id"] == rep.log_id)
+check("the file changed", shas(mod) != before)
+check("the edit is on disk", "9, 9, 9, metal" in Mod(mod.root).edu.by_type()[u0.type].raw)
+luaapi.undo(rep.log_id)
+check("Undo puts every byte back", shas(mod) == before)
+
+print("4. chained")
+mod = fresh("b")
+before = shas(mod)
+s = script("chain.lua", f"""
+toolkit.edit_unit({u0.type!r}, {{}}, {{rename = "lua renamed unit"}})
+toolkit.edit_unit("lua renamed unit", {{ ["stat_cost"] = "1, 1, 1, 1, 1, 1" }})
+print(toolkit.unit({u0.type!r}) == nil, toolkit.unit("lua renamed unit").fields.stat_cost)
+""")
+rep = luaapi.run(mod, s, apply=True)
+check(f"rename then edit by the new name ({rep.error})", rep.ok and rep.printed == ["true\t1, 1, 1, 1, 1, 1"])
+check("one record for both", len(config.load_log()) == 2 and config.load_log()[-1]["id"] == rep.log_id)
+luaapi.undo(rep.log_id)
+check("Undo puts every byte back", shas(mod) == before)
+
+print("5. refused and failed")
+n_log = len(config.load_log())
+s = script("refused.lua", f"""
+toolkit.edit_unit({u0.type!r}, {{ ["stat_cost"] = "2, 2, 2, 2, 2, 2" }})
+toolkit.edit_unit({u1.type!r}, {{}}, {{rename = {u0.type!r}}})
+""")
+rep = luaapi.run(mod, s, apply=True)
+check(f"refused ({rep.error_kind}: {rep.error[:70]})", not rep.ok and rep.error_kind == "refused")
+check("the first edit was undone", shas(mod) == before)
+check("nothing new in the Log", len(config.load_log()) == n_log)
+s = script("fails.lua", f"""
+toolkit.edit_unit({u0.type!r}, {{ ["stat_cost"] = "3, 3, 3, 3, 3, 3" }})
+local x = nil
+print(x.y)
+""")
+rep = luaapi.run(mod, s, apply=True)
+check(f"a script error ({rep.error_kind})", not rep.ok and rep.error_kind == "error" and "fails.lua:4" in rep.error)
+check("its edit was undone, nothing in the Log", shas(mod) == before and len(config.load_log()) == n_log)
+s = script("nounit.lua", 'toolkit.edit_unit("no such unit", {})')
+rep = luaapi.run(mod, s, apply=True)
+check("a missing unit is refused", not rep.ok and rep.error_kind == "refused" and "no unit" in rep.error)
+
+print("6. delete, clone")
+victim = units[-1]
+src = victim.soldier_model.lower()
+s = script("del.lua", f"""
+toolkit.delete_unit({victim.type!r})
+print(toolkit.unit({victim.type!r}) == nil)
+toolkit.clone_model({src!r}, "lua_clone_entry")
+toolkit.edit_model("lua_clone_entry", {{ texture = "unit_models/_units/lua/test.texture" }})
+local m = toolkit.model("lua_clone_entry")
+print(m ~= nil, m and m.textures[1].texture)
+""")
+rep = luaapi.run(mod, s, apply=True)
+check(f"runs ({rep.error})", rep.ok)
+check("the unit is gone", rep.printed[:1] == ["true"])
+check("the clone exists with its new texture",
+      len(rep.printed) > 1 and rep.printed[1] == "true\tunit_models/_units/lua/test.texture")
+check("the modeldb and the EDU changed", {"data/unit_models/battle_models.modeldb",
+                                          "data/export_descr_unit.txt"} <= {f.rel for f in rep.files})
+luaapi.undo(rep.log_id)
+check("Undo puts every byte back", shas(mod) == before)
+
+print("7. the CLI")
+cli = [sys.executable, str(ROOT / "lua_cli.py")]
+env_cfg = ("import sys; sys.argv[0]='lua_cli.py'; from unittransfer import config; from pathlib import Path; "
+           f"c=Path({str(cfg)!r}); config.CONFIG_DIR=c; config.BACKUP_DIR=c/'backups'; "
+           "config.SETTINGS_PATH=c/'settings.json'; config.LOG_PATH=c/'transfers.json'; "
+           "import lua_cli; sys.exit(lua_cli.main(sys.argv[1:]))")
+
+
+def cli_run(*a):
+    return subprocess.run([sys.executable, "-c", env_cfg, *a], cwd=ROOT, capture_output=True, text=True,
+                          creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
+
+
+p = cli_run("api")
+check("api lists edit_unit", p.returncode == 0 and "toolkit.edit_unit(" in p.stdout)
+ann = tmp / "ann"
+p = cli_run("annotations", str(ann))
+stub = (ann / "toolkit.lua").read_text(encoding="utf-8") if (ann / "toolkit.lua").is_file() else ""
+check("annotations written", p.returncode == 0 and (ann / ".luarc.json").is_file()
+      and "---@class toolkit.Unit" in stub and "function toolkit.clone_model(source, name) end" in stub)
+try:
+    luarun.Session().run(stub, "toolkit.lua")
+    stub_ok = True
+except luarun.ScriptError as e:
+    stub_ok = str(e)
+check(f"the annotation file is valid Lua ({stub_ok})", stub_ok is True)
+check("every API function is in it", all(f"function toolkit.{f.name}(" in stub for f in luaapi.API))
+p = cli_run("run", str(edit_two), "--mod", str(mod.root))
+check("a preview run exits 0 and says so", p.returncode == 0 and "preview" in p.stdout and shas(mod) == before)
+p = cli_run("run", str(edit_two), "--mod", str(mod.root), "--apply")
+lid = next((ln.split()[-1] for ln in p.stdout.splitlines() if "lua_cli.py undo" in ln), "")
+check("--apply exits 0 with a Log id", p.returncode == 0 and lid and shas(mod) != before)
+p = cli_run("undo", lid)
+check("undo exits 0 and puts it back", p.returncode == 0 and shas(mod) == before)
+p = cli_run("run", str(tmp / "scripts" / "refused.lua"), "--mod", str(mod.root), "--apply")
+check("a refused edit exits 2", p.returncode == 2)
+p = cli_run("run", str(tmp / "scripts" / "fails.lua"), "--mod", str(mod.root))
+check("a script error exits 1", p.returncode == 1)
+p = cli_run("run", "nope.lua", "--mod", str(mod.root))
+check("a missing script exits 3", p.returncode == 3)
+check("still every byte as it was", shas(mod) == before)
+
+print("8. the examples in docs/lua_examples, previewed")
+ex = ROOT / "docs" / "lua_examples"
+inf = next(u for u in units if u.category == "infantry" and u.ownership)
+rep = luaapi.run(mod, ex / "raise_morale.lua", args={"faction": inf.ownership[0], "by": "2"})
+check(f"raise_morale ({rep.error}{rep.printed[-1:] if rep.printed else ''})",
+      rep.ok and rep.files and "get +2 morale" in rep.printed[-1])
+rep = luaapi.run(mod, ex / "units_without_names.lua")
+check(f"units_without_names ({rep.error})", rep.ok and rep.printed and "units have no shown name" in rep.printed[-1]
+      and not rep.files)
+rep = luaapi.run(mod, ex / "clone_entry.lua", args={"from": src, "name": "lua_example_clone"})
+check(f"clone_entry ({rep.error})", rep.ok and rep.printed and rep.printed[-1].startswith("lua_example_clone:"))
+check("previews left every byte and an empty Log", shas(mod) == before
+      and not any(e.get("mode") == "lua" and not e.get("undone") for e in config.load_log()))
+
+print(f"\n{sum(ok)}/{len(ok)} passed")
+sys.exit(0 if all(ok) else 1)
