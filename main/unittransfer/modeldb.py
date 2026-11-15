@@ -1269,6 +1269,25 @@ def add_texture_factions(raw: str, factions, prefer: Optional[str] = None,
     return out
 
 
+def add_attach_records(raw: str, texture: str, normal: str, pad: bool = False) -> str:
+    """Give an entry with no attachment records one per main-texture faction.
+
+    A model baked over two sheets needs both, but a clone source can have main
+    textures only (every horse in the mods we know). Each record is written the
+    way a unit entry's is: faction, texture, normal map and the bare ``0`` that
+    says an attachment has no sprite. Checked in game: a horse drawn this way
+    shows both sheets. An entry that already has attachment records is left
+    alone. ``pad`` - see :func:`entry_path_spans`.
+    """
+    main, att = _texture_group_spans(raw, pad=pad)
+    if att["records"] or not main["records"]:
+        return raw
+    added = "".join(f"\n{len(r['fac'])} {r['fac']}\n{len(texture)} {texture}\n{len(normal)} {normal} 0"
+                    for r in main["records"])
+    out = raw[:att["records_start"]] + added + raw[att["records_start"]:]
+    return out[:att["cnt_start"]] + str(len(main["records"])) + out[att["cnt_end"]:]
+
+
 def set_texture_factions(raw: str, factions, prefer: Optional[str] = None,
                          pad: bool = False) -> str:
     """Make each texture group hold *exactly* ``factions``, in that order.

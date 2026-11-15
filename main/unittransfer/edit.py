@@ -1569,9 +1569,9 @@ def _plan_new_model(plan: EditPlan, mod: Mod, nm: NewModel,
     att_norm_rel = (_plan_file_copy(plan, mod, Path(nm.attach_normal_src), tex_dir)
                     if nm.attach_normal_src else None)
 
-    if att_tex_rel and not any(s["group"] == "attach" for s in slots):
-        # 95k: an attachment sheet needs a record to sit in, and the clone has none
-        plan.warnings.append(_i18n.msg("eng.edit.clone_has_no_attachment", "'{clone}' has no attachment texture record, so the attachment sheet is copied but nothing points at it: clone an entry that has one", clone=clone.name))
+    # 95k: an attachment sheet needs records to sit in. A clone with none (every
+    # horse) is given one per faction after the paths are written, below
+    att_records = bool(att_tex_rel) and not any(s["group"] == "attach" for s in slots)
     if mesh_rel:
         meshes = [s for s in slots if s["kind"] == "mesh"]
         for k, s in enumerate(meshes):
@@ -1602,6 +1602,11 @@ def _plan_new_model(plan: EditPlan, mod: Mod, nm: NewModel,
 
     raw = modeldb.rename_entry_raw(clone.raw, nm.name)
     raw = modeldb.rewrite_paths_indexed(raw, index_map, pad=clone.first_entry_pad)
+    if att_records:
+        raw = modeldb.add_attach_records(raw, att_tex_rel, att_norm_rel or norm_rel or att_tex_rel,
+                                         pad=clone.first_entry_pad)
+        plan.changes.append(f"'{nm.name}': attachment records added for its attachment sheet "
+                            f"('{clone.name}' has none)")
     if overwrite:
         plan.entry_updates[nm.name] = raw
         plan.changes.append(f"model entry '{nm.name}' replaced by a clone of '{clone.name}'")
