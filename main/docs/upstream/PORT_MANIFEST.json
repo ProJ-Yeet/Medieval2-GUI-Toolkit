@@ -3100,6 +3100,2342 @@
    "status": "triaged",
    "first_seen": "439aa9b",
    "notes": ""
+  },
+  "base44/functions/geofabrikRegions/entry.ts": {
+   "disposition": "skip",
+   "phases": [],
+   "reason": "Base44 cloud entity schemas - no cloud in our design",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/components/assets/AnimationTransport.jsx": {
+   "disposition": "port-concept",
+   "phases": [
+    "15"
+   ],
+   "reason": "3D model + texture viewer",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/components/assets/ModelSkeletonImport.jsx": {
+   "disposition": "port-concept",
+   "phases": [
+    "15"
+   ],
+   "reason": "3D model + texture viewer",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/components/assets/useAnimPlayback.js": {
+   "disposition": "port-concept",
+   "phases": [
+    "15"
+   ],
+   "reason": "3D model + texture viewer",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/components/edb/BuildingRequirementResults.jsx": {
+   "disposition": "port-concept",
+   "phases": [
+    "12"
+   ],
+   "reason": "EDB editor UI: collapsible tree, new-tree flow, capability/requirement builders",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/components/edb/BuildingRequirementValidation.jsx": {
+   "disposition": "port-concept",
+   "phases": [
+    "12"
+   ],
+   "reason": "EDB editor UI: collapsible tree, new-tree flow, capability/requirement builders",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/components/edb/buildingRequirementEntries.js": {
+   "disposition": "port-concept",
+   "phases": [
+    "12"
+   ],
+   "reason": "EDB editor UI: collapsible tree, new-tree flow, capability/requirement builders",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/components/edb/buildingRequirementSources.js": {
+   "disposition": "port-concept",
+   "phases": [
+    "12"
+   ],
+   "reason": "EDB editor UI: collapsible tree, new-tree flow, capability/requirement builders",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/components/edb/buildingRequirementValidation.js": {
+   "disposition": "port-concept",
+   "phases": [
+    "12"
+   ],
+   "reason": "EDB editor UI: collapsible tree, new-tree flow, capability/requirement builders",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/components/export/ExportValidationDialog.jsx": {
+   "disposition": "out-of-scope",
+   "phases": [],
+   "reason": "V2 out of scope - future expansion only",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/components/export/campaignArchive.js": {
+   "disposition": "out-of-scope",
+   "phases": [],
+   "reason": "V2 out of scope - future expansion only",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/components/export/campaignArchive.test.mjs": {
+   "disposition": "out-of-scope",
+   "phases": [],
+   "reason": "V2 out of scope - future expansion only",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/components/export/campaignNamesExport.js": {
+   "disposition": "out-of-scope",
+   "phases": [],
+   "reason": "V2 out of scope - future expansion only",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/components/export/characterNamesExport.js": {
+   "disposition": "out-of-scope",
+   "phases": [],
+   "reason": "V2 out of scope - future expansion only",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/components/export/currentCampaignFilesExport.js": {
+   "disposition": "out-of-scope",
+   "phases": [],
+   "reason": "V2 out of scope - future expansion only",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/components/export/exportFingerprint.js": {
+   "disposition": "out-of-scope",
+   "phases": [],
+   "reason": "V2 out of scope - future expansion only",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/components/export/exportOriginals.js": {
+   "disposition": "out-of-scope",
+   "phases": [],
+   "reason": "V2 out of scope - future expansion only",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/components/export/exportValidation.js": {
+   "disposition": "out-of-scope",
+   "phases": [],
+   "reason": "V2 out of scope - future expansion only",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/components/export/sharedEditedFilesExport.js": {
+   "disposition": "out-of-scope",
+   "phases": [],
+   "reason": "V2 out of scope - future expansion only",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/components/export/sharedEditedFilesExport.test.mjs": {
+   "disposition": "out-of-scope",
+   "phases": [],
+   "reason": "V2 out of scope - future expansion only",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/components/export/sharedExportSources.js": {
+   "disposition": "out-of-scope",
+   "phases": [],
+   "reason": "V2 out of scope - future expansion only",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/components/export/sharedStringsExport.js": {
+   "disposition": "out-of-scope",
+   "phases": [],
+   "reason": "V2 out of scope - future expansion only",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/components/export/sharedTextExport.js": {
+   "disposition": "out-of-scope",
+   "phases": [],
+   "reason": "V2 out of scope - future expansion only",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/components/export/zipFilePrecedence.js": {
+   "disposition": "out-of-scope",
+   "phases": [],
+   "reason": "V2 out of scope - future expansion only",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/components/factions/factionNamesDuplicate.js": {
+   "disposition": "port-concept",
+   "phases": [
+    "11"
+   ],
+   "reason": "descr_sm_factions, banners, faction strings",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/components/factions/factionNamesDuplicate.test.mjs": {
+   "disposition": "port-concept",
+   "phases": [
+    "11"
+   ],
+   "reason": "descr_sm_factions, banners, faction strings",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/components/map/BulkSettlementEditor.jsx": {
+   "disposition": "port-concept",
+   "phases": [
+    "16"
+   ],
+   "reason": "campaign map + descr_strat - the flagship phase",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/components/map/BulkSettlementFields.jsx": {
+   "disposition": "port-concept",
+   "phases": [
+    "16"
+   ],
+   "reason": "campaign map + descr_strat - the flagship phase",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/components/map/CampaignDiplomacyEditor.jsx": {
+   "disposition": "port-concept",
+   "phases": [
+    "16"
+   ],
+   "reason": "campaign map + descr_strat - the flagship phase",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/components/map/CampaignDropdown.jsx": {
+   "disposition": "port-concept",
+   "phases": [
+    "16"
+   ],
+   "reason": "campaign map + descr_strat - the flagship phase",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/components/map/CampaignDropdownMenu.jsx": {
+   "disposition": "port-concept",
+   "phases": [
+    "16"
+   ],
+   "reason": "campaign map + descr_strat - the flagship phase",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/components/map/CampaignMapLocate.jsx": {
+   "disposition": "port-concept",
+   "phases": [
+    "16"
+   ],
+   "reason": "campaign map + descr_strat - the flagship phase",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/components/map/CampaignRecoveryController.js": {
+   "disposition": "port-concept",
+   "phases": [
+    "16"
+   ],
+   "reason": "campaign map + descr_strat - the flagship phase",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/components/map/CampaignRecoveryStatus.jsx": {
+   "disposition": "port-concept",
+   "phases": [
+    "16"
+   ],
+   "reason": "campaign map + descr_strat - the flagship phase",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/components/map/CampaignSearchSelect.jsx": {
+   "disposition": "port-concept",
+   "phases": [
+    "16"
+   ],
+   "reason": "campaign map + descr_strat - the flagship phase",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/components/map/CampaignUndoControls.jsx": {
+   "disposition": "port-concept",
+   "phases": [
+    "16"
+   ],
+   "reason": "campaign map + descr_strat - the flagship phase",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/components/map/CampaignValidationTab.jsx": {
+   "disposition": "port-concept",
+   "phases": [
+    "16"
+   ],
+   "reason": "campaign map + descr_strat - the flagship phase",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/components/map/ChangePreviewDialog.jsx": {
+   "disposition": "port-concept",
+   "phases": [
+    "16"
+   ],
+   "reason": "campaign map + descr_strat - the flagship phase",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/components/map/CharacterNameSelect.jsx": {
+   "disposition": "port-concept",
+   "phases": [
+    "16"
+   ],
+   "reason": "campaign map + descr_strat - the flagship phase",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/components/map/CharacterRecordRow.jsx": {
+   "disposition": "port-concept",
+   "phases": [
+    "16"
+   ],
+   "reason": "campaign map + descr_strat - the flagship phase",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/components/map/ClientStateRulesNotice.jsx": {
+   "disposition": "port-concept",
+   "phases": [
+    "16"
+   ],
+   "reason": "campaign map + descr_strat - the flagship phase",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/components/map/DiplomacyCheckResults.jsx": {
+   "disposition": "port-concept",
+   "phases": [
+    "16"
+   ],
+   "reason": "campaign map + descr_strat - the flagship phase",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/components/map/DiplomacyEntryForm.jsx": {
+   "disposition": "port-concept",
+   "phases": [
+    "16"
+   ],
+   "reason": "campaign map + descr_strat - the flagship phase",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/components/map/DiplomacyEntryType.jsx": {
+   "disposition": "port-concept",
+   "phases": [
+    "16"
+   ],
+   "reason": "campaign map + descr_strat - the flagship phase",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/components/map/DiplomacyRows.jsx": {
+   "disposition": "port-concept",
+   "phases": [
+    "16"
+   ],
+   "reason": "campaign map + descr_strat - the flagship phase",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/components/map/DiplomacyStandingUpdater.jsx": {
+   "disposition": "port-concept",
+   "phases": [
+    "16"
+   ],
+   "reason": "campaign map + descr_strat - the flagship phase",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/components/map/DiplomacyTargets.jsx": {
+   "disposition": "port-concept",
+   "phases": [
+    "16"
+   ],
+   "reason": "campaign map + descr_strat - the flagship phase",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/components/map/FamilyCharacterDetails.jsx": {
+   "disposition": "port-concept",
+   "phases": [
+    "16"
+   ],
+   "reason": "campaign map + descr_strat - the flagship phase",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/components/map/FamilyCharacterList.jsx": {
+   "disposition": "port-concept",
+   "phases": [
+    "16"
+   ],
+   "reason": "campaign map + descr_strat - the flagship phase",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/components/map/FamilyGraphCard.jsx": {
+   "disposition": "port-concept",
+   "phases": [
+    "16"
+   ],
+   "reason": "campaign map + descr_strat - the flagship phase",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/components/map/FamilyGraphLines.jsx": {
+   "disposition": "port-concept",
+   "phases": [
+    "16"
+   ],
+   "reason": "campaign map + descr_strat - the flagship phase",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/components/map/FamilyGraphView.jsx": {
+   "disposition": "port-concept",
+   "phases": [
+    "16"
+   ],
+   "reason": "campaign map + descr_strat - the flagship phase",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/components/map/FamilyMemberCreateForm.jsx": {
+   "disposition": "port-concept",
+   "phases": [
+    "16"
+   ],
+   "reason": "campaign map + descr_strat - the flagship phase",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/components/map/FamilyMemberPanel.jsx": {
+   "disposition": "port-concept",
+   "phases": [
+    "16"
+   ],
+   "reason": "campaign map + descr_strat - the flagship phase",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/components/map/FamilyMemberSlot.jsx": {
+   "disposition": "port-concept",
+   "phases": [
+    "16"
+   ],
+   "reason": "campaign map + descr_strat - the flagship phase",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/components/map/FamilyRelationActions.jsx": {
+   "disposition": "port-concept",
+   "phases": [
+    "16"
+   ],
+   "reason": "campaign map + descr_strat - the flagship phase",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/components/map/FamilyRulesStatus.jsx": {
+   "disposition": "port-concept",
+   "phases": [
+    "16"
+   ],
+   "reason": "campaign map + descr_strat - the flagship phase",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/components/map/FamilyTreeProblems.jsx": {
+   "disposition": "port-concept",
+   "phases": [
+    "16"
+   ],
+   "reason": "campaign map + descr_strat - the flagship phase",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/components/map/FamilyTreeSelect.jsx": {
+   "disposition": "port-concept",
+   "phases": [
+    "16"
+   ],
+   "reason": "campaign map + descr_strat - the flagship phase",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/components/map/FamilyVisualEditor.jsx": {
+   "disposition": "port-concept",
+   "phases": [
+    "16"
+   ],
+   "reason": "campaign map + descr_strat - the flagship phase",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/components/map/NewCharacterNameForm.jsx": {
+   "disposition": "port-concept",
+   "phases": [
+    "16"
+   ],
+   "reason": "campaign map + descr_strat - the flagship phase",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/components/map/SettlementCorrectionPreview.jsx": {
+   "disposition": "port-concept",
+   "phases": [
+    "16"
+   ],
+   "reason": "campaign map + descr_strat - the flagship phase",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/components/map/SettlementListFilters.jsx": {
+   "disposition": "port-concept",
+   "phases": [
+    "16"
+   ],
+   "reason": "campaign map + descr_strat - the flagship phase",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/components/map/SettlementMechanicsStatus.jsx": {
+   "disposition": "port-concept",
+   "phases": [
+    "16"
+   ],
+   "reason": "campaign map + descr_strat - the flagship phase",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/components/map/SettlementTypeFields.jsx": {
+   "disposition": "port-concept",
+   "phases": [
+    "16"
+   ],
+   "reason": "campaign map + descr_strat - the flagship phase",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/components/map/SettlementTypeToggle.jsx": {
+   "disposition": "port-concept",
+   "phases": [
+    "16"
+   ],
+   "reason": "campaign map + descr_strat - the flagship phase",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/components/map/SettlementValidationResults.jsx": {
+   "disposition": "port-concept",
+   "phases": [
+    "16"
+   ],
+   "reason": "campaign map + descr_strat - the flagship phase",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/components/map/SettlementValidationView.jsx": {
+   "disposition": "port-concept",
+   "phases": [
+    "16"
+   ],
+   "reason": "campaign map + descr_strat - the flagship phase",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/components/map/StratChangePreview.jsx": {
+   "disposition": "port-concept",
+   "phases": [
+    "16"
+   ],
+   "reason": "campaign map + descr_strat - the flagship phase",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/components/map/StratPanelTabs.jsx": {
+   "disposition": "port-concept",
+   "phases": [
+    "16"
+   ],
+   "reason": "campaign map + descr_strat - the flagship phase",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/components/map/TgaBitmapOverlay.jsx": {
+   "disposition": "port-concept",
+   "phases": [
+    "16"
+   ],
+   "reason": "campaign map + descr_strat - the flagship phase",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/components/map/VictoryAutoUpdate.jsx": {
+   "disposition": "port-concept",
+   "phases": [
+    "16"
+   ],
+   "reason": "campaign map + descr_strat - the flagship phase",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/components/map/autoVictoryConditions.js": {
+   "disposition": "port-concept",
+   "phases": [
+    "16"
+   ],
+   "reason": "campaign map + descr_strat - the flagship phase",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/components/map/autoVictoryConditions.test.mjs": {
+   "disposition": "port-concept",
+   "phases": [
+    "16"
+   ],
+   "reason": "campaign map + descr_strat - the flagship phase",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/components/map/campaignAutoSaveLifecycle.js": {
+   "disposition": "port-concept",
+   "phases": [
+    "16"
+   ],
+   "reason": "campaign map + descr_strat - the flagship phase",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/components/map/campaignCheckpoint.js": {
+   "disposition": "port-concept",
+   "phases": [
+    "16"
+   ],
+   "reason": "campaign map + descr_strat - the flagship phase",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/components/map/campaignDropdownKeyboard.js": {
+   "disposition": "port-concept",
+   "phases": [
+    "16"
+   ],
+   "reason": "campaign map + descr_strat - the flagship phase",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/components/map/campaignDropdownOptions.js": {
+   "disposition": "port-concept",
+   "phases": [
+    "16"
+   ],
+   "reason": "campaign map + descr_strat - the flagship phase",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/components/map/campaignEditorSync.test.mjs": {
+   "disposition": "port-concept",
+   "phases": [
+    "16"
+   ],
+   "reason": "campaign map + descr_strat - the flagship phase",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/components/map/campaignHistoryBudget.js": {
+   "disposition": "port-concept",
+   "phases": [
+    "16"
+   ],
+   "reason": "campaign map + descr_strat - the flagship phase",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/components/map/campaignHistoryMove.js": {
+   "disposition": "port-concept",
+   "phases": [
+    "16"
+   ],
+   "reason": "campaign map + descr_strat - the flagship phase",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/components/map/campaignPaintQueue.js": {
+   "disposition": "port-concept",
+   "phases": [
+    "16"
+   ],
+   "reason": "campaign map + descr_strat - the flagship phase",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/components/map/campaignPaintingLifecycle.test.mjs": {
+   "disposition": "port-concept",
+   "phases": [
+    "16"
+   ],
+   "reason": "campaign map + descr_strat - the flagship phase",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/components/map/campaignRecoveryController.test.mjs": {
+   "disposition": "port-concept",
+   "phases": [
+    "16"
+   ],
+   "reason": "campaign map + descr_strat - the flagship phase",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/components/map/campaignRecoveryInputs.js": {
+   "disposition": "port-concept",
+   "phases": [
+    "16"
+   ],
+   "reason": "campaign map + descr_strat - the flagship phase",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/components/map/campaignRecoveryStore.js": {
+   "disposition": "port-concept",
+   "phases": [
+    "16"
+   ],
+   "reason": "campaign map + descr_strat - the flagship phase",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/components/map/campaignSavePersistence.js": {
+   "disposition": "port-concept",
+   "phases": [
+    "16"
+   ],
+   "reason": "campaign map + descr_strat - the flagship phase",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/components/map/campaignSourcePaths.js": {
+   "disposition": "port-concept",
+   "phases": [
+    "16"
+   ],
+   "reason": "campaign map + descr_strat - the flagship phase",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/components/map/campaignStorageRecords.js": {
+   "disposition": "port-concept",
+   "phases": [
+    "16"
+   ],
+   "reason": "campaign map + descr_strat - the flagship phase",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/components/map/campaignUndoHistory.js": {
+   "disposition": "port-concept",
+   "phases": [
+    "16"
+   ],
+   "reason": "campaign map + descr_strat - the flagship phase",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/components/map/campaignUndoLabel.js": {
+   "disposition": "port-concept",
+   "phases": [
+    "16"
+   ],
+   "reason": "campaign map + descr_strat - the flagship phase",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/components/map/campaignUndoLayers.js": {
+   "disposition": "port-concept",
+   "phases": [
+    "16"
+   ],
+   "reason": "campaign map + descr_strat - the flagship phase",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/components/map/campaignUndoStorage.js": {
+   "disposition": "port-concept",
+   "phases": [
+    "16"
+   ],
+   "reason": "campaign map + descr_strat - the flagship phase",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/components/map/characterPortraits.js": {
+   "disposition": "port-concept",
+   "phases": [
+    "16"
+   ],
+   "reason": "campaign map + descr_strat - the flagship phase",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/components/map/clientStateRules.js": {
+   "disposition": "port-concept",
+   "phases": [
+    "16"
+   ],
+   "reason": "campaign map + descr_strat - the flagship phase",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": "ported 2026-11-16 as unittransfer/diplocheck.py and the validator's strat.diplomacy_* / standing_range / subject_chain rules (tests/test_diplocheck); his 'missing reverse declaration' left out, since one allied_to or at_war_with line sets both sides"
+  },
+  "src/components/map/clientStateRules.test.mjs": {
+   "disposition": "port-concept",
+   "phases": [
+    "16"
+   ],
+   "reason": "campaign map + descr_strat - the flagship phase",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/components/map/diplomacyRelationRules.js": {
+   "disposition": "port-concept",
+   "phases": [
+    "16"
+   ],
+   "reason": "campaign map + descr_strat - the flagship phase",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": "ported 2026-11-16 as unittransfer/diplocheck.py and the validator's strat.diplomacy_* / standing_range / subject_chain rules (tests/test_diplocheck); his 'missing reverse declaration' left out, since one allied_to or at_war_with line sets both sides"
+  },
+  "src/components/map/diplomacyRelationRules.test.mjs": {
+   "disposition": "port-concept",
+   "phases": [
+    "16"
+   ],
+   "reason": "campaign map + descr_strat - the flagship phase",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": "ported 2026-11-16 as unittransfer/diplocheck.py and the validator's strat.diplomacy_* / standing_range / subject_chain rules (tests/test_diplocheck); his 'missing reverse declaration' left out, since one allied_to or at_war_with line sets both sides"
+  },
+  "src/components/map/diplomacyRelationships.js": {
+   "disposition": "port-concept",
+   "phases": [
+    "16"
+   ],
+   "reason": "campaign map + descr_strat - the flagship phase",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/components/map/diplomacyRelationships.test.mjs": {
+   "disposition": "port-concept",
+   "phases": [
+    "16"
+   ],
+   "reason": "campaign map + descr_strat - the flagship phase",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/components/map/diplomacyStandings.js": {
+   "disposition": "port-concept",
+   "phases": [
+    "16"
+   ],
+   "reason": "campaign map + descr_strat - the flagship phase",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/components/map/diplomacyTools.test.mjs": {
+   "disposition": "port-concept",
+   "phases": [
+    "16"
+   ],
+   "reason": "campaign map + descr_strat - the flagship phase",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/components/map/factionDiplomacyMetadata.js": {
+   "disposition": "port-concept",
+   "phases": [
+    "16"
+   ],
+   "reason": "campaign map + descr_strat - the flagship phase",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/components/map/familyCharacterAge.js": {
+   "disposition": "port-concept",
+   "phases": [
+    "16"
+   ],
+   "reason": "campaign map + descr_strat - the flagship phase",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/components/map/familyGraphLayout.js": {
+   "disposition": "port-concept",
+   "phases": [
+    "16"
+   ],
+   "reason": "campaign map + descr_strat - the flagship phase",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/components/map/familyGraphOps.js": {
+   "disposition": "port-concept",
+   "phases": [
+    "16"
+   ],
+   "reason": "campaign map + descr_strat - the flagship phase",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/components/map/familyMarriageRules.js": {
+   "disposition": "port-concept",
+   "phases": [
+    "16"
+   ],
+   "reason": "campaign map + descr_strat - the flagship phase",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/components/map/familyMemberOps.js": {
+   "disposition": "port-concept",
+   "phases": [
+    "16"
+   ],
+   "reason": "campaign map + descr_strat - the flagship phase",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/components/map/familyPortraitCharacters.js": {
+   "disposition": "port-concept",
+   "phases": [
+    "16"
+   ],
+   "reason": "campaign map + descr_strat - the flagship phase",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/components/map/familyRuleValidation.js": {
+   "disposition": "port-concept",
+   "phases": [
+    "16"
+   ],
+   "reason": "campaign map + descr_strat - the flagship phase",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/components/map/familyRules.js": {
+   "disposition": "port-concept",
+   "phases": [
+    "16"
+   ],
+   "reason": "campaign map + descr_strat - the flagship phase",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/components/map/familyTreeLogic.js": {
+   "disposition": "port-concept",
+   "phases": [
+    "16"
+   ],
+   "reason": "campaign map + descr_strat - the flagship phase",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/components/map/filterDiplomacyRows.js": {
+   "disposition": "port-concept",
+   "phases": [
+    "16"
+   ],
+   "reason": "campaign map + descr_strat - the flagship phase",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/components/map/mapLayerPreviewEncoder.js": {
+   "disposition": "port-concept",
+   "phases": [
+    "16"
+   ],
+   "reason": "campaign map + descr_strat - the flagship phase",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/components/map/observePaintCanvasSize.js": {
+   "disposition": "port-concept",
+   "phases": [
+    "16"
+   ],
+   "reason": "campaign map + descr_strat - the flagship phase",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/components/map/patchStratDiplomacy.js": {
+   "disposition": "port-concept",
+   "phases": [
+    "16"
+   ],
+   "reason": "campaign map + descr_strat - the flagship phase",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/components/map/protectorateRelationships.test.mjs": {
+   "disposition": "port-concept",
+   "phases": [
+    "16"
+   ],
+   "reason": "campaign map + descr_strat - the flagship phase",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/components/map/readCampaignDetails.js": {
+   "disposition": "port-concept",
+   "phases": [
+    "16"
+   ],
+   "reason": "campaign map + descr_strat - the flagship phase",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/components/map/rivers/deleteFlaggedOutlets.js": {
+   "disposition": "port-concept",
+   "phases": [
+    "16"
+   ],
+   "reason": "campaign map + descr_strat - the flagship phase",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/components/map/rivers/riverAnalysis.js": {
+   "disposition": "port-concept",
+   "phases": [
+    "16"
+   ],
+   "reason": "campaign map + descr_strat - the flagship phase",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/components/map/rivers/riverCycles.js": {
+   "disposition": "port-concept",
+   "phases": [
+    "16"
+   ],
+   "reason": "campaign map + descr_strat - the flagship phase",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/components/map/rivers/riverDiagonals.js": {
+   "disposition": "port-concept",
+   "phases": [
+    "16"
+   ],
+   "reason": "campaign map + descr_strat - the flagship phase",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/components/map/rivers/riverEndpointPath.js": {
+   "disposition": "port-concept",
+   "phases": [
+    "16"
+   ],
+   "reason": "campaign map + descr_strat - the flagship phase",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/components/map/rivers/riverFinalCleanup.js": {
+   "disposition": "port-concept",
+   "phases": [
+    "16"
+   ],
+   "reason": "campaign map + descr_strat - the flagship phase",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/components/map/rivers/riverGrid.js": {
+   "disposition": "port-concept",
+   "phases": [
+    "16"
+   ],
+   "reason": "campaign map + descr_strat - the flagship phase",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/components/map/rivers/riverIssueEdits.js": {
+   "disposition": "port-concept",
+   "phases": [
+    "16"
+   ],
+   "reason": "campaign map + descr_strat - the flagship phase",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/components/map/rivers/riverLoopCorridor.js": {
+   "disposition": "port-concept",
+   "phases": [
+    "16"
+   ],
+   "reason": "campaign map + descr_strat - the flagship phase",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/components/map/rivers/riverLoopFallback.js": {
+   "disposition": "port-concept",
+   "phases": [
+    "16"
+   ],
+   "reason": "campaign map + descr_strat - the flagship phase",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/components/map/rivers/riverLoopLocations.js": {
+   "disposition": "port-concept",
+   "phases": [
+    "16"
+   ],
+   "reason": "campaign map + descr_strat - the flagship phase",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/components/map/rivers/riverRepair.js": {
+   "disposition": "port-concept",
+   "phases": [
+    "16"
+   ],
+   "reason": "campaign map + descr_strat - the flagship phase",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/components/map/rivers/riverSources.js": {
+   "disposition": "port-concept",
+   "phases": [
+    "16"
+   ],
+   "reason": "campaign map + descr_strat - the flagship phase",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/components/map/rivers/riverThin.js": {
+   "disposition": "port-concept",
+   "phases": [
+    "16"
+   ],
+   "reason": "campaign map + descr_strat - the flagship phase",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/components/map/rivers/riverWater.js": {
+   "disposition": "port-concept",
+   "phases": [
+    "16"
+   ],
+   "reason": "campaign map + descr_strat - the flagship phase",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/components/map/seedCampaignCharacterNames.js": {
+   "disposition": "port-concept",
+   "phases": [
+    "16"
+   ],
+   "reason": "campaign map + descr_strat - the flagship phase",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/components/map/settlementBuildings.js": {
+   "disposition": "port-concept",
+   "phases": [
+    "16"
+   ],
+   "reason": "campaign map + descr_strat - the flagship phase",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/components/map/settlementMapDetails.js": {
+   "disposition": "port-concept",
+   "phases": [
+    "16"
+   ],
+   "reason": "campaign map + descr_strat - the flagship phase",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/components/map/settlementMechanics.js": {
+   "disposition": "port-concept",
+   "phases": [
+    "16"
+   ],
+   "reason": "campaign map + descr_strat - the flagship phase",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/components/map/settlementOwnershipTransfers.js": {
+   "disposition": "port-concept",
+   "phases": [
+    "16"
+   ],
+   "reason": "campaign map + descr_strat - the flagship phase",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/components/map/settlementSearchIndex.js": {
+   "disposition": "port-concept",
+   "phases": [
+    "16"
+   ],
+   "reason": "campaign map + descr_strat - the flagship phase",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/components/map/settlementSearchIndex.test.mjs": {
+   "disposition": "port-concept",
+   "phases": [
+    "16"
+   ],
+   "reason": "campaign map + descr_strat - the flagship phase",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/components/map/settlementSearchPerformance.test.mjs": {
+   "disposition": "port-concept",
+   "phases": [
+    "16"
+   ],
+   "reason": "campaign map + descr_strat - the flagship phase",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/components/map/settlementSearchWindow.js": {
+   "disposition": "port-concept",
+   "phases": [
+    "16"
+   ],
+   "reason": "campaign map + descr_strat - the flagship phase",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/components/map/settlementValidation.js": {
+   "disposition": "port-concept",
+   "phases": [
+    "16"
+   ],
+   "reason": "campaign map + descr_strat - the flagship phase",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/components/map/sharedCampaignScript.js": {
+   "disposition": "port-concept",
+   "phases": [
+    "16"
+   ],
+   "reason": "campaign map + descr_strat - the flagship phase",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/components/map/sharedCharacterNames.test.mjs": {
+   "disposition": "port-concept",
+   "phases": [
+    "16"
+   ],
+   "reason": "campaign map + descr_strat - the flagship phase",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/components/map/useCampaignDiplomacy.js": {
+   "disposition": "port-concept",
+   "phases": [
+    "16"
+   ],
+   "reason": "campaign map + descr_strat - the flagship phase",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/components/map/useCampaignPaintBitmaps.js": {
+   "disposition": "port-concept",
+   "phases": [
+    "16"
+   ],
+   "reason": "campaign map + descr_strat - the flagship phase",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/components/map/useCampaignRecovery.js": {
+   "disposition": "port-concept",
+   "phases": [
+    "16"
+   ],
+   "reason": "campaign map + descr_strat - the flagship phase",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/components/map/useCampaignUndoHistory.js": {
+   "disposition": "port-concept",
+   "phases": [
+    "16"
+   ],
+   "reason": "campaign map + descr_strat - the flagship phase",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/components/map/useFamilyMemberEditor.js": {
+   "disposition": "port-concept",
+   "phases": [
+    "16"
+   ],
+   "reason": "campaign map + descr_strat - the flagship phase",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/components/map/useFamilyRules.js": {
+   "disposition": "port-concept",
+   "phases": [
+    "16"
+   ],
+   "reason": "campaign map + descr_strat - the flagship phase",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/components/map/useSettlementChanges.js": {
+   "disposition": "port-concept",
+   "phases": [
+    "16"
+   ],
+   "reason": "campaign map + descr_strat - the flagship phase",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/components/map/useSettlementSearch.js": {
+   "disposition": "port-concept",
+   "phases": [
+    "16"
+   ],
+   "reason": "campaign map + descr_strat - the flagship phase",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/components/map/useSettlementValidation.js": {
+   "disposition": "port-concept",
+   "phases": [
+    "16"
+   ],
+   "reason": "campaign map + descr_strat - the flagship phase",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/components/map/useSharedCampaignReferences.js": {
+   "disposition": "port-concept",
+   "phases": [
+    "16"
+   ],
+   "reason": "campaign map + descr_strat - the flagship phase",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/components/map/useSharedCampaignScript.js": {
+   "disposition": "port-concept",
+   "phases": [
+    "16"
+   ],
+   "reason": "campaign map + descr_strat - the flagship phase",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/components/map/useSharedCharacterNames.js": {
+   "disposition": "port-concept",
+   "phases": [
+    "16"
+   ],
+   "reason": "campaign map + descr_strat - the flagship phase",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/components/map/useSharedFactionColors.js": {
+   "disposition": "port-concept",
+   "phases": [
+    "16"
+   ],
+   "reason": "campaign map + descr_strat - the flagship phase",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/components/map/useTransparentMapBitmap.js": {
+   "disposition": "port-concept",
+   "phases": [
+    "16"
+   ],
+   "reason": "campaign map + descr_strat - the flagship phase",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/components/map/validateCampaignDiplomacy.js": {
+   "disposition": "port-concept",
+   "phases": [
+    "16"
+   ],
+   "reason": "campaign map + descr_strat - the flagship phase",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": "ported 2026-11-16 as unittransfer/diplocheck.py and the validator's strat.diplomacy_* / standing_range / subject_chain rules (tests/test_diplocheck); his 'missing reverse declaration' left out, since one allied_to or at_war_with line sets both sides"
+  },
+  "src/components/minorfiles/FactionNamesCheck.jsx": {
+   "disposition": "port-concept",
+   "phases": [
+    "10"
+   ],
+   "reason": "rebel factions / religions / resources / character names",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/components/minorfiles/MissingFactionNamesRow.jsx": {
+   "disposition": "port-concept",
+   "phases": [
+    "10"
+   ],
+   "reason": "rebel factions / religions / resources / character names",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/components/newmap/OsmOverlaySources.jsx": {
+   "disposition": "out-of-scope",
+   "phases": [],
+   "reason": "V2 out of scope - future expansion only",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/components/newmap/RiverBulkOutletDelete.jsx": {
+   "disposition": "out-of-scope",
+   "phases": [],
+   "reason": "V2 out of scope - future expansion only",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/components/newmap/RiverEndpointPicker.jsx": {
+   "disposition": "out-of-scope",
+   "phases": [],
+   "reason": "V2 out of scope - future expansion only",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/components/newmap/RiverEndpointPrompt.jsx": {
+   "disposition": "out-of-scope",
+   "phases": [],
+   "reason": "V2 out of scope - future expansion only",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/components/newmap/RiverIssueActions.jsx": {
+   "disposition": "out-of-scope",
+   "phases": [],
+   "reason": "V2 out of scope - future expansion only",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/components/newmap/RiverIssueBrowser.jsx": {
+   "disposition": "out-of-scope",
+   "phases": [],
+   "reason": "V2 out of scope - future expansion only",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/components/newmap/RiverIssueFocus.jsx": {
+   "disposition": "out-of-scope",
+   "phases": [],
+   "reason": "V2 out of scope - future expansion only",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/components/newmap/RiverValidationResult.jsx": {
+   "disposition": "out-of-scope",
+   "phases": [],
+   "reason": "V2 out of scope - future expansion only",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/components/newmap/hydrorivers/HydroRegionImport.jsx": {
+   "disposition": "out-of-scope",
+   "phases": [],
+   "reason": "V2 out of scope - future expansion only",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/components/newmap/hydrorivers/HydroRiverPreview.jsx": {
+   "disposition": "out-of-scope",
+   "phases": [],
+   "reason": "V2 out of scope - future expansion only",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/components/newmap/hydrorivers/HydroRiverRulesNotice.jsx": {
+   "disposition": "out-of-scope",
+   "phases": [],
+   "reason": "V2 out of scope - future expansion only",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/components/newmap/hydrorivers/HydroRiversPanel.jsx": {
+   "disposition": "out-of-scope",
+   "phases": [],
+   "reason": "V2 out of scope - future expansion only",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/components/newmap/hydrorivers/dbfReader.js": {
+   "disposition": "out-of-scope",
+   "phases": [],
+   "reason": "V2 out of scope - future expansion only",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/components/newmap/hydrorivers/hydroWorker.js": {
+   "disposition": "out-of-scope",
+   "phases": [],
+   "reason": "V2 out of scope - future expansion only",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/components/newmap/hydrorivers/importData.js": {
+   "disposition": "out-of-scope",
+   "phases": [],
+   "reason": "V2 out of scope - future expansion only",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/components/newmap/hydrorivers/mergeDraft.js": {
+   "disposition": "out-of-scope",
+   "phases": [],
+   "reason": "V2 out of scope - future expansion only",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/components/newmap/hydrorivers/network.js": {
+   "disposition": "out-of-scope",
+   "phases": [],
+   "reason": "V2 out of scope - future expansion only",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/components/newmap/hydrorivers/pixelGeometry.js": {
+   "disposition": "out-of-scope",
+   "phases": [],
+   "reason": "V2 out of scope - future expansion only",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/components/newmap/hydrorivers/rasterize.js": {
+   "disposition": "out-of-scope",
+   "phases": [],
+   "reason": "V2 out of scope - future expansion only",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/components/newmap/hydrorivers/regions.js": {
+   "disposition": "out-of-scope",
+   "phases": [],
+   "reason": "V2 out of scope - future expansion only",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/components/newmap/hydrorivers/shpReader.js": {
+   "disposition": "out-of-scope",
+   "phases": [],
+   "reason": "V2 out of scope - future expansion only",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/components/newmap/hydrorivers/useHydroRivers.js": {
+   "disposition": "out-of-scope",
+   "phases": [],
+   "reason": "V2 out of scope - future expansion only",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/components/newmap/osmpacks/OsmPackClassList.jsx": {
+   "disposition": "out-of-scope",
+   "phases": [],
+   "reason": "V2 out of scope - future expansion only",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/components/newmap/osmpacks/OsmPackClassRow.jsx": {
+   "disposition": "out-of-scope",
+   "phases": [],
+   "reason": "V2 out of scope - future expansion only",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/components/newmap/osmpacks/OsmPackImportControls.jsx": {
+   "disposition": "out-of-scope",
+   "phases": [],
+   "reason": "V2 out of scope - future expansion only",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/components/newmap/osmpacks/OsmPackSources.jsx": {
+   "disposition": "out-of-scope",
+   "phases": [],
+   "reason": "V2 out of scope - future expansion only",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/components/newmap/osmpacks/OsmRegionDownloads.jsx": {
+   "disposition": "out-of-scope",
+   "phases": [],
+   "reason": "V2 out of scope - future expansion only",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/components/newmap/osmpacks/OsmRegionalPacks.jsx": {
+   "disposition": "out-of-scope",
+   "phases": [],
+   "reason": "V2 out of scope - future expansion only",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/components/newmap/osmpacks/osmPackDbf.js": {
+   "disposition": "out-of-scope",
+   "phases": [],
+   "reason": "V2 out of scope - future expansion only",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/components/newmap/osmpacks/osmPackDefaults.js": {
+   "disposition": "out-of-scope",
+   "phases": [],
+   "reason": "V2 out of scope - future expansion only",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/components/newmap/osmpacks/osmPackGeometry.js": {
+   "disposition": "out-of-scope",
+   "phases": [],
+   "reason": "V2 out of scope - future expansion only",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/components/newmap/osmpacks/osmPackImport.js": {
+   "disposition": "out-of-scope",
+   "phases": [],
+   "reason": "V2 out of scope - future expansion only",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/components/newmap/osmpacks/osmPackImport.test.mjs": {
+   "disposition": "out-of-scope",
+   "phases": [],
+   "reason": "V2 out of scope - future expansion only",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/components/newmap/osmpacks/osmPackRaster.js": {
+   "disposition": "out-of-scope",
+   "phases": [],
+   "reason": "V2 out of scope - future expansion only",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/components/newmap/osmpacks/osmPackShapefile.js": {
+   "disposition": "out-of-scope",
+   "phases": [],
+   "reason": "V2 out of scope - future expansion only",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/components/newmap/osmpacks/osmPackStore.js": {
+   "disposition": "out-of-scope",
+   "phases": [],
+   "reason": "V2 out of scope - future expansion only",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/components/newmap/osmpacks/osmPackWorker.js": {
+   "disposition": "out-of-scope",
+   "phases": [],
+   "reason": "V2 out of scope - future expansion only",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/components/newmap/osmpacks/useGeofabrikRegions.js": {
+   "disposition": "out-of-scope",
+   "phases": [],
+   "reason": "V2 out of scope - future expansion only",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/components/newmap/osmpacks/useOsmPackApply.js": {
+   "disposition": "out-of-scope",
+   "phases": [],
+   "reason": "V2 out of scope - future expansion only",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/components/newmap/osmpacks/useOsmPackWorker.js": {
+   "disposition": "out-of-scope",
+   "phases": [],
+   "reason": "V2 out of scope - future expansion only",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/components/newmap/osmpacks/useOsmRegionalPacks.js": {
+   "disposition": "out-of-scope",
+   "phases": [],
+   "reason": "V2 out of scope - future expansion only",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/components/newmap/parseBboxFile.js": {
+   "disposition": "out-of-scope",
+   "phases": [],
+   "reason": "V2 out of scope - future expansion only",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/components/newmap/riverRepairWorker.js": {
+   "disposition": "out-of-scope",
+   "phases": [],
+   "reason": "V2 out of scope - future expansion only",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/components/newmap/useRiverIssueEditor.js": {
+   "disposition": "out-of-scope",
+   "phases": [],
+   "reason": "V2 out of scope - future expansion only",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/components/newmap/useRiverValidator.js": {
+   "disposition": "out-of-scope",
+   "phases": [],
+   "reason": "V2 out of scope - future expansion only",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/components/shared/EditorSidebarToggle.jsx": {
+   "disposition": "audit",
+   "phases": [
+    "4"
+   ],
+   "reason": "shared UI patterns - Code View may reuse",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/components/shared/FileDependencyStatus.jsx": {
+   "disposition": "audit",
+   "phases": [
+    "4"
+   ],
+   "reason": "shared UI patterns - Code View may reuse",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/components/units/armory/ArmoryPartList.jsx": {
+   "disposition": "audit",
+   "phases": [
+    "13"
+   ],
+   "reason": "their EDU fields/dropdowns vs ours - adopt fields, never their hardcoded vocab",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/components/units/armory/ArmoryPartTransform.jsx": {
+   "disposition": "audit",
+   "phases": [
+    "13"
+   ],
+   "reason": "their EDU fields/dropdowns vs ours - adopt fields, never their hardcoded vocab",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/components/units/armory/ArmorySources.jsx": {
+   "disposition": "audit",
+   "phases": [
+    "13"
+   ],
+   "reason": "their EDU fields/dropdowns vs ours - adopt fields, never their hardcoded vocab",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/components/units/armory/ArmoryTab.jsx": {
+   "disposition": "audit",
+   "phases": [
+    "13"
+   ],
+   "reason": "their EDU fields/dropdowns vs ours - adopt fields, never their hardcoded vocab",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/components/units/armory/armoryExport.js": {
+   "disposition": "audit",
+   "phases": [
+    "13"
+   ],
+   "reason": "their EDU fields/dropdowns vs ours - adopt fields, never their hardcoded vocab",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/components/units/armory/armoryGeometry.js": {
+   "disposition": "audit",
+   "phases": [
+    "13"
+   ],
+   "reason": "their EDU fields/dropdowns vs ours - adopt fields, never their hardcoded vocab",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/components/units/armory/armoryModelIO.js": {
+   "disposition": "audit",
+   "phases": [
+    "13"
+   ],
+   "reason": "their EDU fields/dropdowns vs ours - adopt fields, never their hardcoded vocab",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/components/units/armory/useArmoryWorkbench.js": {
+   "disposition": "audit",
+   "phases": [
+    "13"
+   ],
+   "reason": "their EDU fields/dropdowns vs ours - adopt fields, never their hardcoded vocab",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/components/units/eduOwnershipPatch.js": {
+   "disposition": "port-concept",
+   "phases": [
+    "13"
+   ],
+   "reason": "their EDU fields/dropdowns vs ours - adopt fields, never their hardcoded vocab",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": "ported 2026-11-16: factionclone's EDU job joins `era <n>` lines as well as `ownership` (on DaC, a clone of poland gained 120 era lines it used to miss)"
+  },
+  "src/components/units/eduSourceEdits.js": {
+   "disposition": "audit",
+   "phases": [
+    "13"
+   ],
+   "reason": "their EDU fields/dropdowns vs ours - adopt fields, never their hardcoded vocab",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/components/units/sharedEduUnits.test.mjs": {
+   "disposition": "audit",
+   "phases": [
+    "13"
+   ],
+   "reason": "their EDU fields/dropdowns vs ours - adopt fields, never their hardcoded vocab",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/components/units/sharedUnitDescriptions.js": {
+   "disposition": "audit",
+   "phases": [
+    "13"
+   ],
+   "reason": "their EDU fields/dropdowns vs ours - adopt fields, never their hardcoded vocab",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/components/units/unitDescriptionsCodec.js": {
+   "disposition": "audit",
+   "phases": [
+    "13"
+   ],
+   "reason": "their EDU fields/dropdowns vs ours - adopt fields, never their hardcoded vocab",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/components/units/useSharedEduUnits.js": {
+   "disposition": "audit",
+   "phases": [
+    "13"
+   ],
+   "reason": "their EDU fields/dropdowns vs ours - adopt fields, never their hardcoded vocab",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/components/units/useSharedUnitDescriptions.js": {
+   "disposition": "audit",
+   "phases": [
+    "13"
+   ],
+   "reason": "their EDU fields/dropdowns vs ours - adopt fields, never their hardcoded vocab",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/components/units/verifyEduOwnershipInheritance.js": {
+   "disposition": "port-concept",
+   "phases": [
+    "13"
+   ],
+   "reason": "their EDU fields/dropdowns vs ours - adopt fields, never their hardcoded vocab",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": "ported 2026-11-16: factionclone's EDU job joins `era <n>` lines as well as `ownership` (on DaC, a clone of poland gained 120 era lines it used to miss)"
+  },
+  "src/hooks/useSharedDictionary.js": {
+   "disposition": "skip",
+   "phases": [],
+   "reason": "React app shell - our shell is web/index.html",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/hooks/useSharedExportFiles.js": {
+   "disposition": "skip",
+   "phases": [],
+   "reason": "React app shell - our shell is web/index.html",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/hooks/useSharedModFile.js": {
+   "disposition": "skip",
+   "phases": [],
+   "reason": "React app shell - our shell is web/index.html",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/lib/casAnimationReader.js": {
+   "disposition": "audit",
+   "phases": [],
+   "reason": "library code - classify properly when its phase arrives",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/lib/casBinaryReader.js": {
+   "disposition": "audit",
+   "phases": [],
+   "reason": "library code - classify properly when its phase arrives",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/lib/casSkeleton.js": {
+   "disposition": "audit",
+   "phases": [],
+   "reason": "library code - classify properly when its phase arrives",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/lib/characterNames.js": {
+   "disposition": "audit",
+   "phases": [],
+   "reason": "library code - classify properly when its phase arrives",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/lib/descrNamesCodec.js": {
+   "disposition": "audit",
+   "phases": [],
+   "reason": "library code - classify properly when its phase arrives",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/lib/editorStorage.js": {
+   "disposition": "audit",
+   "phases": [],
+   "reason": "library code - classify properly when its phase arrives",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/lib/importReport.js": {
+   "disposition": "audit",
+   "phases": [],
+   "reason": "library code - classify properly when its phase arrives",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/lib/lineDiff.js": {
+   "disposition": "audit",
+   "phases": [],
+   "reason": "library code - classify properly when its phase arrives",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/lib/modFileRegistry.js": {
+   "disposition": "audit",
+   "phases": [],
+   "reason": "library code - classify properly when its phase arrives",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/lib/nativeModelRig.js": {
+   "disposition": "audit",
+   "phases": [],
+   "reason": "library code - classify properly when its phase arrives",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/lib/nativeSkinning.js": {
+   "disposition": "audit",
+   "phases": [],
+   "reason": "library code - classify properly when its phase arrives",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/lib/resizePixelMap.js": {
+   "disposition": "audit",
+   "phases": [],
+   "reason": "library code - classify properly when its phase arrives",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/lib/sharedDictionary.js": {
+   "disposition": "audit",
+   "phases": [],
+   "reason": "library code - classify properly when its phase arrives",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/lib/sharedModFiles.js": {
+   "disposition": "audit",
+   "phases": [],
+   "reason": "library code - classify properly when its phase arrives",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/lib/sharedModFiles.test.mjs": {
+   "disposition": "audit",
+   "phases": [],
+   "reason": "library code - classify properly when its phase arrives",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/lib/skeletonWorldMatrices.js": {
+   "disposition": "audit",
+   "phases": [],
+   "reason": "library code - classify properly when its phase arrives",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/lib/stringsTxtFile.js": {
+   "disposition": "audit",
+   "phases": [],
+   "reason": "library code - classify properly when its phase arrives",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "src/lib/unpackedAnimationReader.js": {
+   "disposition": "audit",
+   "phases": [],
+   "reason": "library code - classify properly when its phase arrives",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "tests/README.md": {
+   "disposition": "skip",
+   "phases": [],
+   "reason": "his own Node test harness",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "tests/editor-loading-smoke.mjs": {
+   "disposition": "skip",
+   "phases": [],
+   "reason": "his own Node test harness",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "tests/edu-source-preservation.mjs": {
+   "disposition": "skip",
+   "phases": [],
+   "reason": "his own Node test harness",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "tests/shared-file-loading.mjs": {
+   "disposition": "skip",
+   "phases": [],
+   "reason": "his own Node test harness",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
+  },
+  "tests/strings-bin-formats.mjs": {
+   "disposition": "skip",
+   "phases": [],
+   "reason": "his own Node test harness",
+   "status": "triaged",
+   "first_seen": "09ab33e",
+   "notes": ""
   }
  }
 }

@@ -14375,5 +14375,17 @@
  "eng.luaapi.a_run_is_going": "Ya se está ejecutando otro script. Espera a que termine.",
  "settings.lua_script_run_in": "📜 Script de Lua {script} ejecutado en {dest}",
  "settings.lua_scripts": "Scripts de Lua",
- "scripts.lua_guide": "Guía: cómo escribir un script"
+ "scripts.lua_guide": "Guía: cómo escribir un script",
+ "eng.diplocheck.client_off": "client_of necesita `client_status_enable true` en descr_ex.txt. Sin esa opción, {f} y su señor empiezan solo como aliados.",
+ "eng.diplocheck.many_overlords": "Para {s} se ha declarado el estado de vasallo más de una vez ({rows}); una facción solo puede ser cliente o protectorado de un único señor.",
+ "eng.diplocheck.nested_subject": "El señor de {s}, {o}, también es vasallo, y M2EX no admite vasallos de vasallos.",
+ "eng.diplocheck.relation_self": "{f} tiene la relación {how} consigo mismo, y el juego la omite.",
+ "eng.diplocheck.standing_range": "La valoración de {f} hacia {t} es {v}; su valor va de -1 a 1.",
+ "eng.diplocheck.standing_self": "Se asigna a {f} una valoración hacia sí mismo, pero el juego la omite.",
+ "eng.diplocheck.standing_twice": "La valoración de {f} hacia {t} se establece en {v1} en la línea {l1} y aquí en {v2}; prevalece el valor posterior.",
+ "eng.diplocheck.subject_at_war": "{s} es vasallo de {o}, pero también está en guerra con {o}.",
+ "eng.diplocheck.subject_needs_m2ex": "{how} solo se lee con M2EX, y este mod no está marcado para ejecutarse con M2EX. El juego original no puede leer esta línea.",
+ "eng.diplocheck.unknown_faction": "`{name}` en esta línea de {kind} no es una facción declarada en descr_sm_factions.txt, así que el juego la omite y registra un error de script.",
+ "eng.diplocheck.unknown_relation": "`{how}` no es una relación que lea el juego. El juego lee allied_to y at_war_with y, con M2EX, protectorate_of y client_of.",
+ "eng.diplocheck.war_and_alliance": "{a} y {b} están declarados como {r1} en la línea {l1} y como {r2} en la línea {l2}; prevalece la declaración posterior, así que se aplica {last}."
 }

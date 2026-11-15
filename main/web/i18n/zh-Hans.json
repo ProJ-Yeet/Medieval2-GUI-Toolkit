@@ -13224,5 +13224,17 @@
  "scripts.lua_applied": "更改已写入。日志记录 {id}（{s} 秒）；撤销可还原整个运行过程。",
  "settings.lua_script_run_in": "📜 在 {dest} 中运行的 Lua 脚本 {script}",
  "settings.lua_scripts": "Lua 脚本",
- "scripts.lua_guide": "指南：如何编写脚本"
+ "scripts.lua_guide": "指南：如何编写脚本",
+ "eng.diplocheck.client_off": "client_of 需要在 descr_ex.txt 中设置 `client_status_enable true`。否则，{f} 和其宗主开局时都只是盟友。",
+ "eng.diplocheck.many_overlords": "{s} 被重复声明为附庸（{rows}）；一个派系只能是一个宗主的附庸或保护国。",
+ "eng.diplocheck.nested_subject": "{s} 的宗主 {o} 自身也是附庸，而 M2EX 不允许附庸再有附庸。",
+ "eng.diplocheck.relation_self": "{f} 与自身的关系为 {how}，游戏会忽略此项。",
+ "eng.diplocheck.standing_range": "{f} 对 {t} 的外交关系值为 {v}，取值范围是 -1 到 1。",
+ "eng.diplocheck.standing_self": "为 {f} 设置了对自身的关系值，游戏会忽略此项。",
+ "eng.diplocheck.standing_twice": "{f} 对 {t} 的关系值在第 {l1} 行设为 {v1}，此处又设为 {v2}，后面的设置生效。",
+ "eng.diplocheck.subject_at_war": "{s} 是 {o} 的附庸，同时也与 {o} 处于战争状态。",
+ "eng.diplocheck.subject_needs_m2ex": "{how} 仅由 M2EX 读取，但此模组未标记为使用 M2EX 运行。原版游戏无法读取此行。",
+ "eng.diplocheck.unknown_faction": "`{name}` 在此 {kind} 行中不是 descr_sm_factions.txt 声明的派系，因此游戏会跳过它并记录脚本错误。",
+ "eng.diplocheck.unknown_relation": "`{how}` 不是游戏识别的关系。游戏识别 allied_to 和 at_war_with，在 M2EX 中还识别 protectorate_of 和 client_of。",
+ "eng.diplocheck.war_and_alliance": "{a} 和 {b} 在第 {l1} 行被声明为 {r1}，又在第 {l2} 行被声明为 {r2}；以后面的声明为准，即 {last}。"
 }

@@ -14619,5 +14619,17 @@
  "eng.luarun.cannot_hand_a_to_a_script": "nie można przekazać skryptowi wartości {name__}",
  "eng.luarun.lua_scripts_need_the_lupa_package": "Skrypty Lua wymagają pakietu lupa (pip install lupa)",
  "eng.luarun.the_script_ran_out_of_memory": "skryptowi zabrakło pamięci (limit {x} MB)",
- "eng.luarun.time_limit_reached_time_limit_g": "osiągnięto limit czasu ({time_limit:g} s)"
+ "eng.luarun.time_limit_reached_time_limit_g": "osiągnięto limit czasu ({time_limit:g} s)",
+ "eng.diplocheck.client_off": "client_of wymaga `client_status_enable true` w descr_ex.txt. Bez tego {f} i jego zwierzchnik rozpoczynają grę jako sojusznicy.",
+ "eng.diplocheck.many_overlords": "Dla {s} status wasala zadeklarowano więcej niż raz ({rows}); frakcja może być klientem lub protektoratem tylko jednego zwierzchnika.",
+ "eng.diplocheck.nested_subject": "Zwierzchnik {s}, czyli {o}, sam podlega innemu władcy, a M2EX nie dopuszcza wasala podlegającego innemu wasalowi.",
+ "eng.diplocheck.relation_self": "{f} ma relację {how} z samym sobą, a gra pomija taki wpis.",
+ "eng.diplocheck.standing_range": "Poziom relacji {f} z {t} wynosi {v}; jego zakres to od -1 do 1.",
+ "eng.diplocheck.standing_self": "Dla {f} ustawiono poziom relacji z samym sobą, ale gra pomija taki wpis.",
+ "eng.diplocheck.standing_twice": "Poziom relacji {f} z {t} ustawiono na {v1} w wierszu {l1}, a tutaj na {v2}; obowiązuje późniejsza wartość.",
+ "eng.diplocheck.subject_at_war": "{s} jest wasalem {o}, a jednocześnie prowadzi z {o} wojnę.",
+ "eng.diplocheck.subject_needs_m2ex": "{how} odczytuje tylko M2EX, a ten mod nie jest oznaczony jako działający z M2EX. Podstawowa wersja gry nie potrafi odczytać tego wiersza.",
+ "eng.diplocheck.unknown_faction": "`{name}` w tym wierszu {kind} nie jest frakcją zadeklarowaną w descr_sm_factions.txt, więc gra pomija ten wpis i zapisuje błąd skryptu.",
+ "eng.diplocheck.unknown_relation": "`{how}` nie jest relacją odczytywaną przez grę. Gra odczytuje allied_to i at_war_with, a w M2EX także protectorate_of i client_of.",
+ "eng.diplocheck.war_and_alliance": "{a} i {b} są zadeklarowane jako {r1} w wierszu {l1} oraz jako {r2} w wierszu {l2}; obowiązuje późniejszy wpis, czyli {last}."
 }

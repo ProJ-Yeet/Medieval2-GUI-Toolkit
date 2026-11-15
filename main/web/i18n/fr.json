@@ -14015,5 +14015,17 @@
  "eng.luaapi.a_run_is_going": "Un autre script est en cours d'exécution. Attendez qu'il se termine.",
  "settings.lua_script_run_in": "📜 Script Lua {script} exécuté dans {dest}",
  "settings.lua_scripts": "Scripts Lua",
- "scripts.lua_guide": "Guide : comment écrire un script"
+ "scripts.lua_guide": "Guide : comment écrire un script",
+ "eng.diplocheck.client_off": "client_of nécessite `client_status_enable true` dans descr_ex.txt. Sans cette option, {f} et son suzerain commencent uniquement comme alliés.",
+ "eng.diplocheck.many_overlords": "{s} est déclaré vassal plus d'une fois ({rows}) ; une faction ne peut être que le client ou le protectorat d'un seul suzerain.",
+ "eng.diplocheck.nested_subject": "Le suzerain de {s}, {o}, est lui-même un vassal, et M2EX n'autorise pas les vassaux de vassaux.",
+ "eng.diplocheck.relation_self": "{f} a la relation {how} avec lui-même, ce que le jeu ignore.",
+ "eng.diplocheck.standing_range": "La valeur diplomatique de {f} envers {t} est {v} ; elle va de -1 à 1.",
+ "eng.diplocheck.standing_self": "Le jeu ignore la valeur diplomatique attribuée à {f} envers elle-même.",
+ "eng.diplocheck.standing_twice": "La valeur diplomatique de {f} envers {t} est définie à {v1} à la ligne {l1}, puis à {v2} ici ; la valeur la plus récente l'emporte.",
+ "eng.diplocheck.subject_at_war": "{s} est le vassal de {o}, mais est aussi en guerre avec {o}.",
+ "eng.diplocheck.subject_needs_m2ex": "`{how}` n'est lu que par M2EX, et ce mod n'est pas indiqué comme fonctionnant avec M2EX. Le jeu d'origine ne peut pas lire cette ligne.",
+ "eng.diplocheck.unknown_faction": "`{name}` sur cette ligne de {kind} n'est pas une faction déclarée dans descr_sm_factions.txt. Le jeu l'ignore et consigne une erreur de script.",
+ "eng.diplocheck.unknown_relation": "`{how}` n'est pas une relation reconnue par le jeu. Celui-ci reconnaît allied_to et at_war_with, ainsi que protectorate_of et client_of sous M2EX.",
+ "eng.diplocheck.war_and_alliance": "{a} et {b} sont déclarés {r1} à la ligne {l1}, puis {r2} à la ligne {l2} ; la dernière déclaration l'emporte, donc {last} s'applique."
 }

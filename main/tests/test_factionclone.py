@@ -155,11 +155,13 @@ for rel, edit in written.items():
         for old, mew in zip(b[i1:i2], a[j1:j2]):
             # drop the keyword before reading the list, or the first faction
             # comes back as "ownership         sicily"
-            value = mew.split(";")[0].split(None, 1)[1]
+            # (an EDU `era 0 poland` line has its number to drop as well)
+            drop = 2 if mew.split(None, 1)[0].lower() == "era" else 1
+            value = mew.split(";")[0].split(None, drop)[drop]
             names = [t.strip().lower() for t in value.split(",")]
             # the cloner's own rule: the tight `a,b` form only when the line
             # itself demonstrates it, since a one-name line has no style to copy
-            value_before = old.split(";")[0].split(None, 1)[1]
+            value_before = old.split(";")[0].split(None, drop)[drop]
             sep = "," if ("," in value_before and ", " not in value_before) else ", "
             if mew != old.rstrip() + sep + NEW \
                     or names[-1] != NEW or DONOR not in names:
@@ -239,6 +241,15 @@ for body, why in (
 # the donor's slot must never be confused with a longer one containing it
 check("a slot is matched whole, so `sicily` never matches `sicily_clone`",
       fc.clone_list_lines("ownership sicily_clone\n", "sicily", "x", "ownership")[1] == 0)
+edu = ("type x\nownership        sicily, milan\nera 0            sicily, milan\n"
+       "era 1\t\tsicily\nera 2            milan\n")
+got, n = fc.clone_list_lines(edu, "sicily", "naples", ("ownership", "era"))
+check("the EDU's `era <n>` lines are joined as `ownership` is, and an era the "
+      "donor is not in is left alone (Mylae's era fix)",
+      n == 3 and "era 0            sicily, milan, naples\n" in got
+      and "era 1\t\tsicily, naples\n" in got and "era 2            milan\n" in got)
+check("`era` with no number is not an era line",
+      fc.clone_list_lines("era sicily\n", "sicily", "x", ("ownership", "era"))[1] == 0)
 check("...but it IS matched inside a text key, where `_` separates words",
       fc.clone_expanded("{EMT_SICILY_SPY}\tSpy\n", "sicily", "x")[1] == 1)
 

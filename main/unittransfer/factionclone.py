@@ -37,7 +37,8 @@ is why this is a cloner per shape and not one search-and-replace:
 * ``descr_model_strat.txt`` - one ``texture <faction>, <path>`` line per faction
   per agent model, so each of the donor's is duplicated.
 * ``export_descr_unit.txt`` - ``ownership`` lines, appended to, which is what
-  gives the clone the donor's entire unit roster.
+  gives the clone the donor's entire unit roster, and the ``era 0/1/2`` lines
+  beside them, which give it the same units in a custom battle.
 * ``battle_models.modeldb`` - texture records, which are length-prefixed and
   counted, so :func:`unittransfer.modeldb.add_texture_factions` does it: it
   already clones a donor record and fixes the group's count, and it is the same
@@ -270,16 +271,26 @@ def clone_braced(text: str, src: str, new: str) -> Tuple[str, int]:
     return "".join(out), done
 
 
-def clone_list_lines(text: str, src: str, new: str, kw: str) -> Tuple[str, int]:
+#: A list keyword that carries a number before its factions: the EDU's
+#: ``era 0 poland, hungary``. Mylae's M2TW Editor found a clone missing from
+#: these (``verifyEduOwnershipInheritance.js``, 2026-11-05); without them the
+#: clone has no units in a custom battle.
+_NUMBERED_KW = {"era": r"era[ \t]+\d+"}
+
+
+def clone_list_lines(text: str, src: str, new: str, kw) -> Tuple[str, int]:
     """A keyword whose value is a comma list of factions - append the clone.
 
     ``descr_character.txt``'s ``faction venice, sicily, milan`` and the EDU's
     ``ownership`` are the same shape and the same rule: the block underneath is
     shared by everyone named on the line, so the clone joins the line rather
     than getting a block of its own. A line that already names the clone is left
-    alone, which is what makes a re-run safe.
+    alone, which is what makes a re-run safe. ``kw`` is one keyword or a tuple
+    of them; the EDU's ``era <n>`` lines are joined the same way.
     """
-    pat = re.compile(r"^([ \t]*" + re.escape(kw) + r"[ \t]+)([^\n;]*)(;[^\n]*)?$",
+    kws = (kw,) if isinstance(kw, str) else tuple(kw)
+    alt = "|".join(_NUMBERED_KW.get(k.lower(), re.escape(k)) for k in kws)
+    pat = re.compile(r"^([ \t]*(?:" + alt + r")[ \t]+)([^\n;]*)(;[^\n]*)?$",
                      re.M | re.I)
     done = 0
 
@@ -589,8 +600,10 @@ JOBS: Tuple[Job, ...] = (
     Job("text/expanded.txt", "Faction name and event text", "expanded",
         encoding="utf-16",
         note="the shown name and the ~30 EMT_* keys that go with it"),
-    Job("export_descr_unit.txt", "Unit roster ownership", "list", kw="ownership",
-        note="every unit the donor may recruit, the clone may recruit"),
+    Job("export_descr_unit.txt", "Unit roster ownership", "list",
+        kw=("ownership", "era"),
+        note="every unit the donor may recruit, the clone may recruit, and in "
+             "the same custom battle eras"),
     Job("unit_models/battle_models.modeldb", "Battle model skins", "modeldb",
         note="a texture record per model, cloned from the donor's"),
     Job("export_descr_buildings.txt", "Recruitment and construction", "braced_list",

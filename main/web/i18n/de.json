@@ -13914,5 +13914,17 @@
  "eng.luaapi.a_run_is_going": "Ein anderes Skript wird gerade ausgeführt. Warte, bis es beendet ist.",
  "settings.lua_script_run_in": "📜 Lua-Skript {script} in {dest} ausgeführt",
  "settings.lua_scripts": "Lua-Skripte",
- "scripts.lua_guide": "Anleitung: So schreibt man ein Skript"
+ "scripts.lua_guide": "Anleitung: So schreibt man ein Skript",
+ "eng.diplocheck.client_off": "client_of benötigt `client_status_enable true` in descr_ex.txt. Ohne diese Einstellung beginnen {f} und sein Lehnsherr nur als Verbündete.",
+ "eng.diplocheck.many_overlords": "Für {s} wurde der Vasallenstatus mehr als einmal festgelegt ({rows}); eine Fraktion kann nur Vasall oder Protektorat eines einzigen Lehnsherrn sein.",
+ "eng.diplocheck.nested_subject": "Der Lehnsherr von {s}, {o}, ist selbst Vasall. M2EX erlaubt keine Vasallen mit eigenen Vasallen.",
+ "eng.diplocheck.relation_self": "{f} hat die Beziehung {how} zu sich selbst. Das Spiel überspringt diesen Eintrag.",
+ "eng.diplocheck.standing_range": "Der Beziehungswert von {f} gegenüber {t} beträgt {v}; er reicht von -1 bis 1.",
+ "eng.diplocheck.standing_self": "Für {f} ist ein Beziehungswert gegenüber sich selbst festgelegt, den das Spiel überspringt.",
+ "eng.diplocheck.standing_twice": "{f}s Beziehungswert gegenüber {t} ist in Zeile {l1} auf {v1} und hier auf {v2} gesetzt; der spätere Wert gilt.",
+ "eng.diplocheck.subject_at_war": "{s} ist Vasall von {o}, befindet sich aber auch mit {o} im Krieg.",
+ "eng.diplocheck.subject_needs_m2ex": "{how} wird nur von M2EX gelesen. Dieser Mod ist nicht dafür gekennzeichnet, mit M2EX zu laufen, und das Grundspiel kann diese Zeile nicht lesen.",
+ "eng.diplocheck.unknown_faction": "`{name}` in dieser {kind}-Zeile ist keine Fraktion, die descr_sm_factions.txt deklariert. Das Spiel überspringt den Eintrag und protokolliert einen Skriptfehler.",
+ "eng.diplocheck.unknown_relation": "`{how}` ist keine Beziehung, die das Spiel kennt. Es erkennt allied_to und at_war_with sowie unter M2EX protectorate_of und client_of.",
+ "eng.diplocheck.war_and_alliance": "Für {a} und {b} sind in Zeile {l1} {r1} und in Zeile {l2} {r2} deklariert. Der spätere Eintrag gilt, also gilt {last}."
 }

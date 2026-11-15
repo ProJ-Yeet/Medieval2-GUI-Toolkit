@@ -14731,5 +14731,17 @@
  "eng.luarun.cannot_hand_a_to_a_script": "нельзя передать скрипту значение {name__}",
  "eng.luarun.lua_scripts_need_the_lupa_package": "Для Lua-скриптов нужен пакет lupa (pip install lupa)",
  "eng.luarun.the_script_ran_out_of_memory": "скрипту не хватило памяти (лимит {x} МБ)",
- "eng.luarun.time_limit_reached_time_limit_g": "достигнут лимит времени ({time_limit:g} с)"
+ "eng.luarun.time_limit_reached_time_limit_g": "достигнут лимит времени ({time_limit:g} с)",
+ "eng.diplocheck.client_off": "Для client_of требуется `client_status_enable true` в descr_ex.txt. Без этого {f} и его сюзерен начинают кампанию только как союзники.",
+ "eng.diplocheck.many_overlords": "Для фракции {s} статус вассала указан более одного раза ({rows}); фракция может быть клиентом или протекторатом только одного сюзерена.",
+ "eng.diplocheck.nested_subject": "Сюзерен {s}, {o}, сам является вассалом, а M2EX не допускает вассалов у вассалов.",
+ "eng.diplocheck.relation_self": "Для {f} задано отношение {how} к самой себе, которое игра пропускает.",
+ "eng.diplocheck.standing_range": "Значение дипломатического отношения фракции {f} к {t} равно {v}; диапазон значений: от -1 до 1.",
+ "eng.diplocheck.standing_self": "Для {f} задано значение дипломатического отношения к самой себе, но игра пропускает эту запись.",
+ "eng.diplocheck.standing_twice": "Значение отношения {f} к {t} задано как {v1} в строке {l1} и как {v2} здесь; действует более позднее значение.",
+ "eng.diplocheck.subject_at_war": "Фракция {s} является вассалом {o}, но при этом находится в состоянии войны с {o}.",
+ "eng.diplocheck.subject_needs_m2ex": "Отношение {how} читается только M2EX, а этот мод не помечен как работающий с M2EX. Обычная версия игры не может прочитать эту строку.",
+ "eng.diplocheck.unknown_faction": "`{name}` в этой строке {kind} не входит в список фракций из descr_sm_factions.txt, поэтому игра пропускает его и записывает ошибку скрипта.",
+ "eng.diplocheck.unknown_relation": "`{how}` не относится к числу отношений, которые читает игра. Игра читает allied_to и at_war_with, а в M2EX также protectorate_of и client_of.",
+ "eng.diplocheck.war_and_alliance": "{a} и {b} объявлены как {r1} в строке {l1} и как {r2} в строке {l2}; действует более поздняя запись, то есть {last}."
 }

@@ -1337,6 +1337,60 @@ def _r_faction_order(ck: Check) -> Iterable[Finding]:
             file=ck.strat_rel, line=n.start + 1, what=n.name)
 
 
+def _diplomacy(ck: Check, code: str) -> Iterable[Finding]:
+    """One code's share of :func:`diplocheck.check`, run once per Check."""
+    from . import diplocheck, factions as facfile, modflags
+    if ck.strat is None:
+        return
+    got = getattr(ck, "_diplomacy_issues", None)
+    if got is None:
+        try:
+            rf = facfile.parse_file(facfile.path_for(ck.mod))
+            known = {r.name.split(",")[0].strip().lower() for r in rf.records} or None
+        except (OSError, ValueError):
+            known = None    # the names go unchecked, as an empty vocab does
+        got = diplocheck.check(ck.strat, known, modflags.is_m2ex(ck.mod),
+                               diplocheck.clients_enabled(ck.mod))
+        ck._diplomacy_issues = got
+    for i in got:
+        if i.code == code:
+            yield Finding(code, i.severity, i.message, file=ck.strat_rel,
+                          line=i.line, what=i.what)
+
+
+_MYLAE_DIPLO = "Mylae's validateCampaignDiplomacy and diplomacyRelationRules"
+
+
+@rule("strat.diplomacy_faction", "A diplomacy line naming a faction the game "
+      "does not know", "warn", _MYLAE_DIPLO + ", asked of descr_sm_factions.txt")
+def _r_diplomacy_faction(ck: Check) -> Iterable[Finding]:
+    return _diplomacy(ck, "strat.diplomacy_faction")
+
+
+@rule("strat.diplomacy_word", "A relation the game cannot read", "fatal",
+      "descr_strat.txt reads allied_to and at_war_with; M2EX adds "
+      "protectorate_of and client_of")
+def _r_diplomacy_word(ck: Check) -> Iterable[Finding]:
+    return _diplomacy(ck, "strat.diplomacy_word")
+
+
+@rule("strat.diplomacy_contradiction", "Diplomacy that says two things at once",
+      "warn", _MYLAE_DIPLO)
+def _r_diplomacy_contradiction(ck: Check) -> Iterable[Finding]:
+    return _diplomacy(ck, "strat.diplomacy_contradiction")
+
+
+@rule("strat.standing_range", "A standing outside -1 to 1", "warn", _MYLAE_DIPLO)
+def _r_standing_range(ck: Check) -> Iterable[Finding]:
+    return _diplomacy(ck, "strat.standing_range")
+
+
+@rule("strat.subject_chain", "A protectorate or client M2EX cannot have",
+      "warn", "Mylae's diplomacyRelationRules and clientStateRules")
+def _r_subject_chain(ck: Check) -> Iterable[Finding]:
+    return _diplomacy(ck, "strat.subject_chain")
+
+
 def _resource_rows(ck: Check) -> List[Tuple[campstrat.Node, int, int]]:
     """``(node, x, image_y)`` for every resource line that has coordinates."""
     if ck.strat is None:

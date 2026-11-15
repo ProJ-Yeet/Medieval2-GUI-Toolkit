@@ -13364,5 +13364,17 @@
  "eng.luaapi.a_run_is_going": "Başka bir script çalışıyor. Bitmesini bekleyin.",
  "settings.lua_script_run_in": "📜 {dest} içinde çalıştırılan Lua script {script}",
  "settings.lua_scripts": "Lua scriptleri",
- "scripts.lua_guide": "Rehber: script nasıl yazılır"
+ "scripts.lua_guide": "Rehber: script nasıl yazılır",
+ "eng.diplocheck.client_off": "client_of için descr_ex.txt içinde `client_status_enable true` gerekir. Bu yoksa {f} ve üst yöneticisi oyuna yalnızca müttefik olarak başlar.",
+ "eng.diplocheck.many_overlords": "{s} birden fazla kez vasal olarak tanımlanmış ({rows}); bir fraksiyon yalnızca tek bir üst devletin vasalı veya himayesi olabilir.",
+ "eng.diplocheck.nested_subject": "{s} fraksiyonunun üst yöneticisi {o} da başka bir fraksiyona bağlıdır; M2EX, bir vasalın başka bir vasalının olmasına izin vermez.",
+ "eng.diplocheck.relation_self": "{f}, kendisiyle {how} ilişkisinde tanımlanmış; oyun bu kaydı yok sayar.",
+ "eng.diplocheck.standing_range": "{f} fraksiyonunun {t} ile ilişkisi {v} olarak ayarlanmış; değer -1 ile 1 arasındadır.",
+ "eng.diplocheck.standing_self": "{f} fraksiyonu için kendisiyle ilişki değeri belirlenmiş; oyun bu kaydı yok sayar.",
+ "eng.diplocheck.standing_twice": "{f} fraksiyonunun {t} ile ilişki değeri {l1}. satırda {v1}, burada ise {v2} olarak ayarlanmış; sonraki değer geçerli olur.",
+ "eng.diplocheck.subject_at_war": "{s}, {o} fraksiyonunun vasalıdır ve aynı zamanda {o} ile savaş halindedir.",
+ "eng.diplocheck.subject_needs_m2ex": "{how} yalnızca M2EX tarafından okunur ve bu modun M2EX ile çalıştığı belirtilmemiştir. Oyunun standart sürümü bu satırı okuyamaz.",
+ "eng.diplocheck.unknown_faction": "`{name}` bu {kind} satırında, descr_sm_factions.txt içinde tanımlanmış bir fraksiyon değildir; bu yüzden oyun satırı atlar ve bir script hatası kaydeder.",
+ "eng.diplocheck.unknown_relation": "`{how}` oyunun okuduğu bir ilişki değildir. Oyun allied_to ve at_war_with değerlerini, M2EX'te ise protectorate_of ve client_of değerlerini okur.",
+ "eng.diplocheck.war_and_alliance": "{a} ve {b}, {l1}. satırda {r1}, {l2}. satırda ise {r2} olarak tanımlanmış; son tanım geçerli olduğundan sonuç {last} olur."
 }
