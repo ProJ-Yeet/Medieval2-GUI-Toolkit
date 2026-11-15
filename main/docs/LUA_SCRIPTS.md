@@ -48,6 +48,9 @@ Everything is in one table, `toolkit`. `lua_cli.py api` prints the full list.
 | `toolkit.unit(type)` | one unit by its `type` line, or `nil` |
 | `toolkit.models()` / `toolkit.model(name)` | battle_models.modeldb entries |
 | `toolkit.mounts()` | each mount and its model |
+| `toolkit.factions()` | every faction slot with its shown name and culture |
+| `toolkit.buildings()` / `toolkit.building(name)` | building lines, their levels, values, capabilities and recruit pools |
+| `toolkit.edit_building(line, level, changes)` | a level's settlement, `requires`, values (`scalars`), upgrades or capability lines |
 | `toolkit.edit_unit(type, fields, options)` | change EDU fields; `options` can rename the unit, change its dictionary, or its shown name and descriptions |
 | `toolkit.delete_unit(type, options)` | delete a unit and the lines elsewhere that name it |
 | `toolkit.edit_model(name, changes)` | the entry as text, a new name, or a texture for every faction |
@@ -63,6 +66,23 @@ list (joined with `", "`), and `false` removes the field.
 
 What a script reads is a read-only copy. Change the mod through the
 `toolkit.edit_*` calls; a read after an edit sees it.
+
+A building level's capability lines are changed by listing operations, each
+naming a line from a read by its `line`; lines not listed stay as they are:
+
+```lua
+local b = toolkit.building("barracks")
+local lv = b.blocks[1]
+toolkit.edit_building(b.name, lv.name, { capabilities = {
+  { line = lv.capabilities[1].line, delete = true },                       -- take one out
+  { line = lv.capabilities[2].line, args = '"Peasants"  1  0.5  4  0' },   -- change one
+  { keyword = "recruit_pool", args = '"Militia"  1  0.5  2  0',            -- add one
+    requires = "factions { england, }" },
+} })
+```
+
+An edit moves the EDB's line numbers, so read the building again before the
+next edit to it.
 
 ## What a script cannot do
 

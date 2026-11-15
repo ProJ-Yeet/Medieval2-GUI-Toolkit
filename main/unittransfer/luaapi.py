@@ -62,6 +62,13 @@ API: List[Fn] = [
     Fn("model", [("name", "string", "the entry name, any case")], "toolkit.Model?",
        "One modeldb entry by name, or nil."),
     Fn("mounts", [], "table<string, string>", "Each mount in descr_mount.txt and the model it uses."),
+    Fn("factions", [], "{slot: string, name: string, culture: string}[]",
+       "Every faction slot in descr_sm_factions.txt, in file order, with its shown name "
+       "(text/expanded.txt) and culture."),
+    Fn("buildings", [], "toolkit.Building[]",
+       "Every building line in export_descr_buildings.txt, in file order."),
+    Fn("building", [("name", "string", "the building line's name")], "toolkit.Building?",
+       "One building line, or nil."),
     Fn("edit_unit",
        [("type", "string", "the unit's `type` line"),
         ("fields", "table<string, string|number|string[]|false>",
@@ -87,6 +94,14 @@ API: List[Fn] = [
     Fn("clone_model",
        [("source", "string", "the entry to copy"), ("name", "string", "the new entry's name")],
        "", "Add a modeldb entry copied from an existing one.", "edit"),
+    Fn("edit_building",
+       [("line", "string", "the building line"), ("level", "string", "the level in it"),
+        ("changes", "{settlement?: string, requires?: string, scalars?: table<string, string|number>, "
+         "upgrades?: string[], capabilities?: toolkit.CapabilityOp[], "
+         "faction_capabilities?: toolkit.CapabilityOp[]}",
+         "what to change; capabilities not listed stay as they are")],
+       "", "Change one building level: its header, its values, its upgrades or its capability lines. "
+           "Line numbers change after an edit, so read the building again before the next one.", "edit"),
 ]
 
 CLASSES = {
@@ -111,6 +126,28 @@ CLASSES = {
         ("animations", "{mount: string, primary: string, secondary: string, "
                        "primary_weapons: string[], secondary_weapons: string[]}[]"),
         ("raw", "string"),
+    ],
+    "toolkit.Building": [
+        ("name", "string"), ("convert_to", "string"), ("religion", "string"),
+        ("levels", "string[]", "the level names in upgrade order"),
+        ("blocks", "toolkit.Level[]", "each level's block"),
+    ],
+    "toolkit.Level": [
+        ("name", "string"), ("settlement", "string", "city, castle or empty for both"),
+        ("requires", "string"), ("scalars", "table<string, string>", "cost, construction..."),
+        ("upgrades", "string[]"),
+        ("capabilities", "toolkit.Capability[]"), ("faction_capabilities", "toolkit.Capability[]"),
+        ("recruits", "{unit: string, initial: string, per_turn: string, maximum: string, "
+                     "experience: string, requires: string}[]"),
+    ],
+    "toolkit.Capability": [
+        ("keyword", "string"), ("args", "string"), ("requires", "string"),
+        ("line", "integer", "its line in the EDB, which names it in a CapabilityOp"),
+    ],
+    "toolkit.CapabilityOp": [
+        ("line", "integer?", "an existing line (from a read); leave out for a new one"),
+        ("keyword", "string?"), ("args", "string?"), ("requires", "string?"),
+        ("delete", "boolean?", "take the line out"),
     ],
 }
 
@@ -230,6 +267,26 @@ def model_view(e) -> dict:
     }
 
 
+def _cap(c) -> dict:
+    return {"keyword": c.keyword, "args": c.args, "requires": c.requires, "line": c.line}
+
+
+def building_view(b) -> dict:
+    return {
+        "name": b.name, "convert_to": b.convert_to, "religion": b.religion,
+        "levels": list(b.levels),
+        "blocks": [{
+            "name": k.name, "settlement": k.settlement, "requires": k.requires,
+            "scalars": dict(k.scalars), "upgrades": list(k.upgrades),
+            "capabilities": [_cap(c) for c in k.capabilities],
+            "faction_capabilities": [_cap(c) for c in k.faction_capabilities],
+            "recruits": [{"unit": p.unit, "initial": p.initial, "per_turn": p.per_turn,
+                          "maximum": p.maximum, "experience": p.experience,
+                          "requires": p.requires} for p in k.recruits],
+        } for k in b.blocks],
+    }
+
+
 # ---------------------------------------------------------------------------
 # a run
 
@@ -303,6 +360,26 @@ class Run:
     def _mounts(self):
         return {str(k): str(v) for k, v in (self.mod.mounts or {}).items()}
 
+    def _factions(self):
+        from . import factions
+        names, cultures = self.mod.faction_names or {}, self.mod.faction_cultures or {}
+        return [{"slot": s, "name": str(names.get(s, "")), "culture": str(cultures.get(s, ""))}
+                for s in factions.faction_slots(self.mod)]
+
+    def _edb(self):
+        if not Path(self.mod.edb_path).is_file():
+            return None
+        return self.mod.edb
+
+    def _buildings(self):
+        edb = self._edb()
+        return [building_view(b) for b in edb.buildings] if edb else []
+
+    def _building(self, name):
+        edb = self._edb()
+        b = edb.get(str(name)) if edb else None
+        return building_view(b) if b else None
+
     # -- edits ---------------------------------------------------------------
     def _modeldb_stamp(self):
         out = []
@@ -320,14 +397,14 @@ class Run:
                 out.append((str(p), -1, -1))
         return out
 
-    def _apply(self, plan, what: str) -> None:
+    def _apply(self, plan, what: str, applier: Callable = None) -> None:
         if plan.errors:
             raise Refused(f"{what}: " + "; ".join(plan.errors))
-        # apply_edit forgets every cached read; the parsed modeldb is most of the
+        # an apply forgets every cached read; the parsed modeldb is most of the
         # cost of the next edit (0.9 s on DaC's 1,678 entries), so when its file
         # was not written it is handed back
         cached, stamp = self.mod.__dict__.get("modeldb"), self._modeldb_stamp()
-        rec = edit.apply_edit(plan)
+        rec = (applier or edit.apply_edit)(plan)
         if cached is not None and "modeldb" not in self.mod.__dict__ and self._modeldb_stamp() == stamp:
             self.mod.__dict__["modeldb"] = cached
         self.records.append(rec)
@@ -392,15 +469,71 @@ class Run:
         self._apply(edit.plan_bmdb(self.mod, edit.EditRequest(unit="", new_models=[nm])),
                     f"clone model '{src}' as '{name}'")
 
+    def edit_building(self, line, level, changes=None) -> None:
+        line, level, changes = str(line), str(level), dict(changes or {})
+        edb = self._edb()
+        if edb is None:
+            raise Refused(f"{self.mod.name} has no data/export_descr_buildings.txt")
+        bl = edb.get(line)
+        if bl is None:
+            raise Refused(f"no building line '{line}' in {self.mod.name}")
+        if bl.level(level) is None:
+            raise Refused(f"building line '{line}' has no level '{level}'")
+        known = {"settlement", "requires", "scalars", "upgrades", "capabilities", "faction_capabilities"}
+        unknown = set(changes) - known
+        if unknown:
+            raise Refused(f"edit_building: unknown change(s) {', '.join(sorted(unknown))}")
+        lv = {"name": level}
+        for k in ("settlement", "requires"):
+            if k in changes:
+                lv[k] = str(changes[k])
+        if "scalars" in changes:
+            lv["scalars"] = {str(k): _text_value(v) for k, v in (changes["scalars"] or {}).items()}
+        if "upgrades" in changes:
+            lv["upgrades"] = [str(u) for u in (changes["upgrades"] or [])]
+        for k in ("capabilities", "faction_capabilities"):
+            if k in changes:
+                ops = []
+                for op in changes[k] or []:
+                    if not isinstance(op, dict):
+                        raise Refused(f"edit_building: each of {k} is a table")
+                    o = {"keyword": str(op.get("keyword", "")), "args": str(op.get("args", "")),
+                         "requires": str(op.get("requires", "")), "delete": bool(op.get("delete", False))}
+                    if op.get("line") is not None:
+                        cur = next((c for c in (bl.level(level).faction_capabilities if k.startswith("faction")
+                                                else bl.level(level).capabilities)
+                                    if c.line == int(op["line"])), None)
+                        if cur is None:
+                            raise Refused(f"{line}/{level}: no {k[:-3]}y on line {op['line']} "
+                                          "(read the building again after an edit)")
+                        o["line"] = cur.line
+                        for f in ("keyword", "args", "requires"):  # unchanged unless given
+                            if f not in op:
+                                o[f] = getattr(cur, f)
+                    else:
+                        o["line"] = None
+                    ops.append(o)
+                lv[k] = ops
+        from . import buildings
+        plan = buildings.plan_edit(self.mod, {"line": line, "levels": [lv]})
+        if plan.errors:
+            raise Refused(f"edit building '{line}/{level}': " + "; ".join(plan.errors))
+        if not plan.edb_text and not plan.loc_text:
+            self.edits.append(f"edit building '{line}/{level}' (nothing to change)")
+            return
+        self._apply(plan, f"edit building '{line}/{level}'", buildings.apply_edit)
+
     # -- the Lua side --------------------------------------------------------
     def table(self, session: luarun.Session):
         """The ``toolkit`` table: every API function, each converting its
         arguments from Lua and its result to frozen Lua data."""
         impl: Dict[str, Callable] = {
             "units": self._units, "unit": self._unit, "models": self._models,
-            "model": self._model, "mounts": self._mounts, "edit_unit": self.edit_unit,
-            "delete_unit": self.delete_unit, "edit_model": self.edit_model,
-            "clone_model": self.clone_model,
+            "model": self._model, "mounts": self._mounts, "factions": self._factions,
+            "buildings": self._buildings, "building": self._building,
+            "edit_unit": self.edit_unit, "delete_unit": self.delete_unit,
+            "edit_model": self.edit_model, "clone_model": self.clone_model,
+            "edit_building": self.edit_building,
         }
 
         def wrap(fn):

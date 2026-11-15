@@ -1368,10 +1368,19 @@ phases until 80% usage limit is reached"):
   `--time-limit`, `undo`, `api`, `annotations`), exit codes as written. A mod by
   folder or by name under `med2_root/mods`. It ships (`INCLUDE_FILES`,
   `update_worker.COMPONENTS`).
-* **122 in part**: `toolkit.units()`, `unit()`, `models()`, `model()`,
-  `mounts()`, `toolkit.mod`, `args`, declared once in `luaapi.API` /
-  `CLASSES`. **Left:** factions and cultures, buildings and levels, a string by
-  key (they go with 126's edits).
+* **122 done but strings**: `toolkit.units()`, `unit()`, `models()`, `model()`,
+  `mounts()`, `factions()` (slot, shown name, culture: `faction_names` is
+  every `expanded.txt` key, so the slots come from `factions.faction_slots`),
+  `buildings()`, `building()`, `toolkit.mod`, `args`, declared once in
+  `luaapi.API` / `CLASSES`. **Left:** a string by key. Found on the way: a
+  frozen view is an empty proxy, so the raw `next` saw nothing (`next(t) ==
+  nil` read every table as empty); the sandbox's `next` reads through it.
+* **126, buildings first: done.** `toolkit.edit_building(line, level,
+  changes)` through `buildings.plan_edit` / `apply_edit`: settlement,
+  `requires`, scalars, upgrades, and capability and faction-capability lines
+  as the Buildings screen's operations (an existing line by its `line`, a new
+  one without, `delete`). Left in 126: strings, settlements and strat
+  objects, faction clones, traits and ancillaries, mercenary pools, sheets.
 * **123 done** for `edit_unit` (fields, `false` removes, rename, dictionary,
   shown name and descriptions), `delete_unit`, `edit_model` (raw, rename, a
   texture for every faction) and `clone_model`, through `edit.plan_edit` /

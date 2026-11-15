@@ -114,12 +114,15 @@ env.print = function(...) host_print(tostr_all(...)) end
 -- read-only views: a frozen table answers reads, #, pairs and ipairs, and
 -- refuses every write with the same sentence
 local READONLY = "this table is the mod as read; change it through toolkit.edit_* functions"
+local behind = setmetatable({}, { __mode = "k" })   -- frozen view -> its data
 local function freeze(t)
   if type(t) ~= "table" or getmetatable(t) ~= nil then return t end
   for k, v in next, t do
     if type(v) == "table" then t[k] = freeze(v) end
   end
-  return setmetatable({}, {
+  local view = {}
+  behind[view] = t
+  return setmetatable(view, {
     __index = t,
     __newindex = function() error(READONLY, 2) end,
     __len = function() return #t end,
@@ -127,6 +130,8 @@ local function freeze(t)
     __metatable = "read-only",
   })
 end
+-- next (and so `next(t) == nil`, the usual "is it empty") reads through a view
+env.next = function(t, k) return next(behind[t] or t, k) end
 
 -- a deep copy through pairs, so frozen views come back to Python as data
 local function thaw(v, seen)

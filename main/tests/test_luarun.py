@@ -79,6 +79,8 @@ print("4. frozen tables")
 s.set_global("t", s.to_lua({"a": 1, "b": [1, 2, {"c": "d"}], "n": None}))
 check("reads, # and ipairs", s.run(
     "local m=0 for _ in ipairs(t.b) do m=m+1 end return #t.b .. m .. t.b[3].c").value == "33d")
+check("next reads through a frozen view", s.run(
+    "return next(t) ~= nil and next(t.b) == 1 and next(s_empty or {}) == nil").value is True)
 check("pairs sees the fields, not the None", s.run(
     "local n=0 for k in pairs(t) do n=n+1 end return n").value == 2)
 e = fails(s, "t.a = 2")

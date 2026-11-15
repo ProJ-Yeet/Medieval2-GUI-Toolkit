@@ -38,7 +38,8 @@ def check(label, cond):
 MODS = _realmod.mods(required=False)
 DAC = MODS / "Divide_and_Conquer_EUR" if MODS else None
 REL = ("export_descr_unit.txt", "text/export_units.txt", "unit_models/battle_models.modeldb",
-       "descr_mount.txt")
+       "descr_mount.txt", "export_descr_buildings.txt", "text/export_buildings.txt", "text/expanded.txt",
+       "descr_sm_factions.txt")
 if not luarun.available() or not DAC or not (DAC / "data" / REL[0]).is_file():
     print("needs lupa and Divide_and_Conquer_EUR; skipped")
     sys.exit(0)
@@ -221,7 +222,48 @@ p = cli_run("run", "nope.lua", "--mod", str(mod.root))
 check("a missing script exits 3", p.returncode == 3)
 check("still every byte as it was", shas(mod) == before)
 
-print("8. the examples in docs/lua_examples, previewed")
+print("8. buildings and factions")
+edb = mod.edb
+bl = next(b for b in edb.buildings if any(k.recruits and "cost" in k.scalars for k in b.blocks))
+blk = next(k for k in bl.blocks if k.recruits and "cost" in k.scalars)
+pool = next(c for c in blk.capabilities if c.keyword == "recruit_pool")
+s = script("bld.lua", f"""
+local b = toolkit.building({bl.name!r})
+local fs = toolkit.factions()
+print(#toolkit.buildings(), b.name, #b.blocks, next(fs) ~= nil and fs[1].slot ~= "" and fs[1].culture ~= "")
+local lv
+for _, k in ipairs(b.blocks) do if k.name == {blk.name!r} then lv = k end end
+print(lv.scalars.cost, #lv.recruits > 0)
+toolkit.edit_building(b.name, lv.name, {{ scalars = {{ cost = 1234 }} }})
+-- read again: the line numbers moved, and the cost is the new one
+b = toolkit.building({bl.name!r})
+for _, k in ipairs(b.blocks) do if k.name == {blk.name!r} then lv = k end end
+local cap
+for _, c in ipairs(lv.capabilities) do if c.keyword == "recruit_pool" then cap = c break end end
+toolkit.edit_building(b.name, lv.name, {{ capabilities = {{
+  {{ line = cap.line, delete = true }},
+  {{ keyword = "recruit_pool", args = '"' .. {u0.type!r} .. '"  1  0.5  2  0', requires = "factions {{ england, }}" }},
+}} }})
+b = toolkit.building({bl.name!r})
+for _, k in ipairs(b.blocks) do if k.name == {blk.name!r} then lv = k end end
+print(lv.scalars.cost)
+""")
+rep = luaapi.run(mod, s)
+check(f"runs ({rep.error})", rep.ok)
+check(f"buildings, the line, its levels, factions ({rep.printed[:1]})",
+      rep.printed[:1] == [f"{len(edb.buildings)}\t{bl.name}\t{len(bl.blocks)}\ttrue"])
+check("a level's cost and pools", len(rep.printed) > 1 and rep.printed[1] == f"{blk.scalars['cost']}\ttrue")
+check("the cost edit is read back", rep.printed[-1:] == ["1234"])
+d = next((f.diff for f in rep.files if f.rel == "data/export_descr_buildings.txt"), "")
+check("the EDB diff: the cost, the pool out, the new pool in",
+      "1234" in d and ("-" + "") in d and f'recruit_pool "{u0.type}"' in d and "factions { england, }" in d)
+check("one file changed", [f.rel for f in rep.files] == ["data/export_descr_buildings.txt"])
+check("the preview left every byte", shas(mod) == before)
+s = script("bld_bad.lua", f'toolkit.edit_building({bl.name!r}, "no_such_level", {{ scalars = {{ cost = 1 }} }})')
+rep = luaapi.run(mod, s)
+check("a missing level is refused", not rep.ok and rep.error_kind == "refused")
+
+print("9. the examples in docs/lua_examples, previewed")
 ex = ROOT / "docs" / "lua_examples"
 inf = next(u for u in units if u.category == "infantry" and u.ownership)
 rep = luaapi.run(mod, ex / "raise_morale.lua", args={"faction": inf.ownership[0], "by": "2"})
