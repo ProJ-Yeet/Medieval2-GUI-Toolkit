@@ -3430,7 +3430,21 @@ body.look-editing :is(button,label,legend,h1,h2,h3,.trsechead,.mftab):hover{outl
   .sxwrap{display:flex;flex-direction:column;gap:8px}
   .sxlua{display:flex;flex-direction:column;gap:8px}
   .sxluatext{width:100%;min-height:320px;font-family:Consolas,monospace;font-size:13px;tab-size:2}
-  .sxlua .CodeMirror{height:360px;border:1px solid var(--line,#444);font-size:13px}
+  .sxlua .CodeMirror{height:360px;border:1px solid var(--edge);font-size:13px;font-family:Consolas,monospace}
+  /* 125: CodeMirror's "toolkit" theme, in the page's own colours */
+  .cm-s-toolkit.CodeMirror{background:var(--panel2);color:var(--ink)}
+  .cm-s-toolkit .CodeMirror-gutters{background:var(--panel);border-right:1px solid var(--edge)}
+  .cm-s-toolkit .CodeMirror-linenumber{color:var(--dim)}
+  .cm-s-toolkit .CodeMirror-cursor{border-left:1px solid var(--ink)}
+  .cm-s-toolkit div.CodeMirror-selected,.cm-s-toolkit.CodeMirror-focused div.CodeMirror-selected{background:rgba(91,141,239,.28)}
+  .cm-s-toolkit .CodeMirror-activeline-background{background:rgba(255,255,255,.04)}
+  .cm-s-toolkit .cm-keyword{color:#c792ea} .cm-s-toolkit .cm-builtin{color:var(--accent2)}
+  .cm-s-toolkit .cm-string,.cm-s-toolkit .cm-string-2{color:var(--good)} .cm-s-toolkit .cm-number{color:#f78c6c}
+  .cm-s-toolkit .cm-comment{color:var(--dim);font-style:italic} .cm-s-toolkit .cm-variable,.cm-s-toolkit .cm-variable-2{color:var(--ink)}
+  .cm-s-toolkit .cm-operator{color:#89ddff} .cm-s-toolkit .cm-bracket{color:var(--dim)}
+  .cm-s-toolkit .CodeMirror-matchingbracket{color:var(--accent)!important;text-decoration:underline}
+  .CodeMirror-hints{background:var(--panel);border:1px solid var(--edge);font-family:Consolas,monospace;font-size:12px;z-index:50}
+  .CodeMirror-hint{color:var(--ink)} li.CodeMirror-hint-active{background:var(--accent2);color:#fff}
   .sxluarep pre,.sxldiff{font-family:Consolas,monospace;font-size:12px;white-space:pre-wrap;max-height:420px;overflow:auto}
   .sxladd{background:rgba(60,160,80,.18)} .sxldel{background:rgba(200,70,70,.18)} .sxlhunk{color:var(--accent,#c9a227)}
   .sxluaapi div{margin:2px 0}

@@ -1460,10 +1460,11 @@ up the remaining lua phases"):
   each file's diff in colour). `/api/lua/scripts`, `/api/lua/save`,
   `/api/lua/run` over `luaapi.script_list`, `save_script` and `app_run` (one
   run at a time; scripts in `config/lua_scripts`, a name kept inside it). The
-  Log has a *Lua scripts* tab and its own row label. **CodeMirror is not in
-  yet:** downloading it needs the user's yes; the tab mounts CodeMirror 5 with
-  Lua highlighting and `toolkit.` completion (Ctrl+Space) when the page has
-  it, and is a plain text box until then. The examples come from
+  Log has a *Lua scripts* tab and its own row label. **CodeMirror 5.65.18** (MIT, the user's yes,
+  2026-11-15) is in `web/vendor/codemirror/` (205 KB, served at `/vendor/`),
+  loaded the first time the tab opens: Lua highlighting in the page's colours
+  (a `toolkit` theme), bracket matching, `toolkit.` completion on the dot or
+  Ctrl+Space; the plain text box stays if it cannot load. The examples come from
   `docs/lua_examples`, which the release zip does not carry yet, so a release
   shows saved scripts only until that is decided.
 * **127**: `test_luaapi` 114/114 (strings, the campaign, faction clones,

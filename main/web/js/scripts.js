@@ -53,7 +53,8 @@ async function sxLuaLoad(){
 // the editor's text, name and args back into state before the page is redrawn
 function sxLuaKeep(){
   const L = state.sx && state.sx.lua; if(!L) return;
-  if(L.cm) L.text = L.cm.getValue();
+  // the editor's text into the box under it too, so a second read finds it
+  if(L.cm){ L.cm.save(); L.text = L.cm.getValue(); }
   else { const t = document.getElementById('sxLuaText'); if(t) L.text = t.value; }
   const n = document.getElementById('sxLuaName'); if(n) L.name = n.value;
   const a = document.getElementById('sxLuaArgs'); if(a) L.args = a.value;
@@ -95,12 +96,38 @@ function sxLuaReport(r){
     ${(r.files || []).map(f => `<details><summary>${esc(f.rel)} <span class="count">${esc(f.status)} +${f.added} -${f.removed}</span></summary>
       <div class="sxldiff">${f.diff.split('\n').map(line).join('')}</div></details>`).join('')}</section>`;
 }
-// CodeMirror 5 with its Lua mode, when the page has it; a plain text box otherwise
+// CodeMirror 5 (web/vendor/codemirror, MIT), loaded the first time the tab
+// opens; until it has loaded, or if it cannot, the plain text box stays
+const SX_CM_FILES = ['codemirror.min.css', 'show-hint.min.css', 'codemirror.min.js', 'lua.min.js',
+  'show-hint.min.js', 'matchbrackets.min.js'];
+let sxCmLoading = null;
+function sxCmLoad(){
+  if(window.CodeMirror && CodeMirror.showHint) return Promise.resolve();
+  if(sxCmLoading) return sxCmLoading;
+  const one = f => new Promise((ok, bad) => {
+    const css = f.endsWith('.css'), el = document.createElement(css ? 'link' : 'script');
+    if(css){ el.rel = 'stylesheet'; el.href = 'vendor/codemirror/' + f; }
+    else { el.src = 'vendor/codemirror/' + f; el.async = false; }
+    el.onload = ok; el.onerror = bad; document.head.appendChild(el);
+  });
+  // the editor first, then what hangs on it, in order
+  sxCmLoading = SX_CM_FILES.reduce((p, f) => p.then(() => one(f)), Promise.resolve())
+    .catch(() => { sxCmLoading = null; });
+  return sxCmLoading;
+}
 function sxLuaMount(){
   const L = state.sx.lua, ta = document.getElementById('sxLuaText');
-  if(!ta || !window.CodeMirror) return;
+  if(!ta) return;
+  if(!(window.CodeMirror && CodeMirror.showHint)){
+    sxCmLoad().then(() => { if(window.CodeMirror && state.sx && state.sx.lua === L && !L.cm) sxLuaMount(); });
+    return;
+  }
   L.cm = CodeMirror.fromTextArea(ta, {mode: 'lua', lineNumbers: true, indentUnit: 2, tabSize: 2,
-    extraKeys: {'Ctrl-Space': cm => cm.showHint && cm.showHint({hint: sxLuaHint, completeSingle: false})}});
+    matchBrackets: true, theme: 'toolkit',
+    extraKeys: {'Ctrl-Space': cm => cm.showHint({hint: sxLuaHint, completeSingle: false}),
+                Tab: cm => cm.execCommand(cm.somethingSelected() ? 'indentMore' : 'insertSoftTab')}});
+  // toolkit. opens the completion list by itself
+  L.cm.on('inputRead', (cm, ch) => { if(ch.text[0] === '.') cm.showHint({hint: sxLuaHint, completeSingle: false}); });
 }
 function sxLuaHint(cm){
   const cur = cm.getCursor(), line = cm.getLine(cur.line).slice(0, cur.ch);

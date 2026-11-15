@@ -120,7 +120,9 @@ hundred units needs a longer `--time-limit`.
 
 With *Opt into beta features* ticked in Settings, the Scripts screen has a
 **Lua** tab: write or open a script (your saved ones, or the examples), give
-it arguments one `key=value` a line, then **Dry run** or **Apply**. It is the
+it arguments one `key=value` a line, then **Dry run** or **Apply**. The editor
+highlights Lua, and typing `toolkit.` (or Ctrl+Space) lists what a script
+can call. It is the
 same run as `lua_cli.py`'s, with the same report, and an applied run is one
 entry in the Log. Scripts saved there live in the toolkit's
 `config/lua_scripts` folder.

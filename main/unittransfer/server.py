@@ -2059,6 +2059,9 @@ class Handler(BaseHTTPRequestHandler):
                 if not re.fullmatch(r"[A-Za-z]{2,3}(-[A-Za-z0-9]{2,8})*", tag or ""):
                     return self._err(400, "bad language tag")
                 blob = json.dumps(i18n.words_to_translate(tag), ensure_ascii=False, indent=1).encode("utf-8")
+            if u.path.startswith("/vendor/"):
+                # 125: third-party files the page loads on demand (CodeMirror 5)
+                return self._web_asset(u.path)
                 return self._send(200, blob, "application/json; charset=utf-8",
                                   {"Content-Disposition": f'attachment; filename="{tag}.json"'})
             if u.path == "/i18n/catalogue.js":
