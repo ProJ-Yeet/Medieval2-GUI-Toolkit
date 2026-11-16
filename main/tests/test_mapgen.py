@@ -347,6 +347,47 @@ check("and one Undo takes the rivers away again",
       read(root / "data" / campmap.BASE_REL / "map_features.tga")[0]
       .convert("RGB").getbbox() is None)
 
+# ---- 4a) the rivers from a HydroRIVERS file instead (Mylae's import) ----------
+print("\n4a) rivers from a HydroRIVERS shapefile")
+from tests import _shp
+
+
+def lonlat(points):
+    return [[(lon, lat) for lat, lon in geo(points)]]
+
+
+hydro = Path(_tmp.mkdtemp("ut_mg_hydro_")) / "HydroRIVERS_v10_eu"
+_shp.write(hydro, [
+    {"HYRIV_ID": 1, "NEXT_DOWN": 0, "ORD_STRA": 3,
+     "parts": lonlat([(8, 10), (20, 12), (40, 12), (47, 25), (47, 36)])},
+    # stored backwards, mouth first: it has to be turned to end on the trunk
+    {"HYRIV_ID": 2, "NEXT_DOWN": 1, "ORD_STRA": 2, "parts": lonlat([(30, 11), (30, 5)])},
+    {"HYRIV_ID": 3, "NEXT_DOWN": 0, "ORD_STRA": 1,
+     "parts": lonlat([(10, 26), (15, 18), (15, 8.5)])},
+])
+p = mapgen.plan(Mod(root), campmap.CampaignMap(Mod(root)),
+                {"kind": "features", "hydro_path": str(hydro.with_suffix(".shp")), "order": 2})
+d = p.payload()
+check(f"the plan draws from the file and says so: {d['changes'][:1]} {d['errors']}",
+      d["ok"] and "HydroRIVERS order 2" in d["changes"][0])
+out = mapgen.apply(p)
+rep = mapcheck.run(Mod(root), use_baseline=False)
+bad = [(f.code, f.message[:60]) for f in rep.findings
+       if f.code.startswith("river.") or f.code == "marker.feature"]
+check(f"the validator has nothing to say about them: {bad}", not bad)
+fp = read(root / "data" / campmap.BASE_REL / "map_features.tga")[0].convert("RGB").load()
+sources = [(x, y) for y in range(H) for x in range(W) if fp[x, y] == SRC]
+check(f"the trunk (cut in two by a settlement, as 4 says) and the tributary, "
+      f"the order-1 river left out: {sources}",
+      len(sources) == 3 and not riv(10, 26) and not riv(15, 18))
+check("the tributary's source is at its head, not where it meets the trunk",
+      (30, 5) in sources or (30, 6) in sources)
+transfer.undo(out["id"])
+p = mapgen.plan(Mod(root), campmap.CampaignMap(Mod(root)),
+                {"kind": "features", "hydro_path": str(hydro.parent / "nothing.zip")})
+check(f"a file that is not there is refused, not guessed: {p.payload()['errors'][:1]}",
+      not p.payload()["ok"])
+
 # ---- 4b) only inside a rectangle ---------------------------------------------
 print("\n4b) every generator kept inside a rectangle of tiles")
 hfile = root / "data" / campmap.BASE_REL / "map_heights.tga"

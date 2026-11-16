@@ -47,7 +47,7 @@ function mgnOpen(){
                        ground: {bands: null}, climates: {mapping: null, fill: ''},
                        landuse: {tags: {}}, landcover: {mapping: null},
                        koppen: {mapping: null, source: ''},
-                       features: {detail: 'major', mode: 'replace'}},
+                       features: {detail: 'major', mode: 'replace', source: 'osm', order: 4}},
                  //: one rectangle for every generator, image tiles inclusive
                  rect: {on: false, l: 0, t: 0, r: 0, b: 0, feather: 8, note: ''},
                  plan: {}, busy: ''};
@@ -87,6 +87,29 @@ async function mgnLoad(){
     if(!k.opt.koppen.source) k.opt.koppen.source = r.koppen_file_ok || !r.koppen_wms ? 'file' : 'wms';
   }catch(e){ k.err = errText(e); }
   finally{ k.loading = false; }
+}
+
+/* Mylae's HydroRIVERS import: the rivers from the regional file the user
+   downloads from hydrosheds.org. The toolkit never downloads it; the box takes
+   the ZIP as it comes, and its path is set on change, not on every key. */
+function mgnHydroHtml(f){
+  const links = `<a href="https://www.hydrosheds.org/products/hydrorivers" target="_blank" rel="noopener">hydrosheds.org</a>`;
+  return `<div class="brow" style="flex-wrap:wrap;gap:6px;margin-top:6px">
+      <label class="mszbox" style="flex:1;min-width:240px">${tt('mapgen.hydro_file')}
+        <input value="${esc(f.hydro_path || '')}" onchange="mgnSet('features','hydro_path',this.value.trim())"></label>
+      <button onclick="mgnHydroBrowse()">${tt('mapgen.hydro_browse')}</button>
+      <label class="mszbox">${tt('mapgen.hydro_order')}
+        <input type="number" min="1" max="10" step="1" style="width:56px" value="${esc(f.order || 4)}"
+          onchange="mgnSet('features','order',this.value)"></label>
+    </div>
+    <div class="count">${tt('mapgen.hydro_note')} ${links}</div>`;
+}
+async function mgnHydroBrowse(){
+  let r;
+  try{ r = await api.post('/api/browse_file', {title: tt('mapgen.hydro_file'),
+         filter: 'HydroRIVERS|*.zip;*.shp'}); }
+  catch(e){ toast(errText(e), 6000); return; }
+  if(r && r.path) mgnSet('features', 'hydro_path', r.path);
 }
 
 function mgnSet(kind, field, value){
@@ -150,7 +173,11 @@ function mgnBody(kind){
     body.mapping = {};
     for(const [g, v] of Object.entries(k.opt.climates.mapping)) body.mapping[g] = v || '-';
   }
-  if(kind === 'features') Object.assign(body, k.opt.features);
+  if(kind === 'features'){
+    Object.assign(body, k.opt.features);
+    // the file is only sent while the rivers are to come from it
+    if(k.opt.features.source !== 'hydro') delete body.hydro_path;
+  }
   if(kind === 'adjust') Object.assign(body, k.opt.adjust);
   if(kind === 'climates' && k.opt.climates.fill) body.fill = k.opt.climates.fill;
   if(kind === 'landuse') body.tags = Object.assign({}, k.opt.landuse.tags);
@@ -323,7 +350,10 @@ function mgnHtml(){
   const features = `<div class="brow" style="flex-wrap:wrap;gap:6px">
       <label class="mszbox">${tt('mapgen.rivers',{sel:sel('features', 'detail', [['major', tt('mapgen.rivers_only')], ['medium', tt('mapgen.rivers_and_canals')], ['all', tt('mapgen.rivers_canals_and_streams')]])})}</label>
       <label class="mszbox">${tt('mapgen.the_old_ones',{sel:sel('features', 'mode', [['replace', tt('mapgen.cleared_first')], ['add', tt('mapgen.kept_and_joined')]])})}</label>
-    </div>`;
+      <label class="mszbox">${tt('mapgen.hydro_source',{sel:sel('features', 'source', [['osm', tt('mapgen.hydro_from_osm')], ['hydro', tt('mapgen.hydro_from_file')]])})}</label>
+    </div>${o.features.source === 'hydro' ? mgnHydroHtml(o.features)
+      : !d.network ? `<div class="bnote">${tt('mapgen.uses_the_internet_and_the_real')}
+          <button onclick="openSettings()">${tt('mapgen.settings')}</button></div>` : ''}`;
   const q = k.rect;
   const side = {l: tt('mapgen.rect_left'), t: tt('mapgen.rect_top'),
                 r: tt('mapgen.rect_right'), b: tt('mapgen.rect_bottom')};
@@ -349,5 +379,5 @@ function mgnHtml(){
     ${mgnCard('landcover', landcover, true)}
     ${mgnCard('climates', climates, false)}
     ${mgnCard('koppen', koppen, o.koppen.source === 'wms')}
-    ${mgnCard('features', features, true)}`;
+    ${mgnCard('features', features, false)}`;
 }

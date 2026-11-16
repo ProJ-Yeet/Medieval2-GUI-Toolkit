@@ -58,6 +58,7 @@ river at the edge joins it as a tributary.
 from __future__ import annotations
 
 import io
+import zipfile
 import math
 import time
 from dataclasses import dataclass, field
@@ -878,7 +879,32 @@ def _plan_features(p: GenPlan, cm, body: dict) -> None:
     detail = str(body.get("detail") or "major")
     if detail not in RIVER_DETAIL:
         raise GenError(_i18n.msg("eng.mapgen.detail_is_one_of", "detail is one of {RIVER_DETAIL}", RIVER_DETAIL=', '.join(RIVER_DETAIL)))
-    got = _osm_features(box, detail)
+    hydro = str(body.get("hydro_path") or "").strip()
+    if hydro:
+        # Mylae's HydroRIVERS import (hydrorivers.py): the rivers from the
+        # file the user downloaded; cliffs and volcanoes still from OSM, when
+        # it is on
+        from . import hydrorivers
+        try:
+            order = int(body.get("order") or 4)
+        except (TypeError, ValueError):
+            raise GenError(_i18n.msg("eng.mapgen.hydro_order", "the river order is a whole number from 1 to 10"))
+        if not 1 <= order <= 10:
+            raise GenError(_i18n.msg("eng.mapgen.hydro_order", "the river order is a whole number from 1 to 10"))
+        try:
+            reaches = hydrorivers.read(hydro, box)
+        except (OSError, zipfile.BadZipFile, hydrorivers.HydroError) as exc:
+            raise GenError(str(exc))
+        try:
+            got = _osm_features(box, detail)
+        except osmmap.OsmOff:
+            got = {"rivers": {}, "cliffs": {}, "volcanoes": []}
+            p.warnings.append(_i18n.msg("eng.mapgen.hydro_no_osm", "OpenStreetMap is off, so no cliffs or volcanoes were drawn; the rivers come from the HydroRIVERS file alone"))
+        got["rivers"] = hydrorivers.rivers(reaches, order)
+        source = _i18n.msg("eng.mapgen.hydro_source", "HydroRIVERS order {order} and up ({n} reach(es) in the box)", order=order, n=len(got["rivers"]))
+    else:
+        got = _osm_features(box, detail)
+        source = None
     w, h = cm.terrain.width, cm.terrain.height
     proj = osmmap.Projection(box, w, h)
     img, info, rel = _layer(cm, "features")
@@ -935,8 +961,10 @@ def _plan_features(p: GenPlan, cm, body: dict) -> None:
     _put(p, cm, "features", out, info, rel)
     p.changes.append(
         f"{rel}: {drawn} river course(s), {tiles:,} tiles, one source each, from "
-        f"OSM's {RIVER_DETAIL[detail].replace('|', ', ')} ({len(got['rivers'])} "
-        f"way(s) under the box, {where}); {cliffs:,} cliff tile(s); {volc} volcano(es)")
+        + (source if source else
+           f"OSM's {RIVER_DETAIL[detail].replace('|', ', ')} ({len(got['rivers'])} "
+           f"way(s) under the box, {where})")
+        + f"; {cliffs:,} cliff tile(s); {volc} volcano(es)")
     p.changes.append("drawn in cardinal steps, a tributary ending where it meets "
                      "its trunk, cut at every settlement and port, never "
                      "closing a loop" + ("; the old rivers, cliffs and volcanoes "

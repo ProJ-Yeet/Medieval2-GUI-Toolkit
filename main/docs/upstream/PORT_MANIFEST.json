@@ -4754,116 +4754,116 @@
    "notes": ""
   },
   "src/components/newmap/hydrorivers/HydroRegionImport.jsx": {
-   "disposition": "out-of-scope",
+   "disposition": "skip",
    "phases": [],
    "reason": "V2 out of scope - future expansion only",
    "status": "triaged",
    "first_seen": "09ab33e",
-   "notes": ""
+   "notes": "not ported: his worker, rasteriser, merge and panels; our river drawer and plan/write/Undo do that part"
   },
   "src/components/newmap/hydrorivers/HydroRiverPreview.jsx": {
-   "disposition": "out-of-scope",
+   "disposition": "skip",
    "phases": [],
    "reason": "V2 out of scope - future expansion only",
    "status": "triaged",
    "first_seen": "09ab33e",
-   "notes": ""
+   "notes": "not ported: his worker, rasteriser, merge and panels; our river drawer and plan/write/Undo do that part"
   },
   "src/components/newmap/hydrorivers/HydroRiverRulesNotice.jsx": {
-   "disposition": "out-of-scope",
+   "disposition": "skip",
    "phases": [],
    "reason": "V2 out of scope - future expansion only",
    "status": "triaged",
    "first_seen": "09ab33e",
-   "notes": ""
+   "notes": "not ported: his worker, rasteriser, merge and panels; our river drawer and plan/write/Undo do that part"
   },
   "src/components/newmap/hydrorivers/HydroRiversPanel.jsx": {
-   "disposition": "out-of-scope",
+   "disposition": "skip",
    "phases": [],
    "reason": "V2 out of scope - future expansion only",
    "status": "triaged",
    "first_seen": "09ab33e",
-   "notes": ""
+   "notes": "not ported: his worker, rasteriser, merge and panels; our river drawer and plan/write/Undo do that part"
   },
   "src/components/newmap/hydrorivers/dbfReader.js": {
-   "disposition": "out-of-scope",
+   "disposition": "port-concept",
    "phases": [],
    "reason": "V2 out of scope - future expansion only",
    "status": "triaged",
    "first_seen": "09ab33e",
-   "notes": ""
+   "notes": "ported 2026-11-16 as unittransfer/hydrorivers.py (streamed .shp/.dbf from the ZIP or loose, order selection, downstream orientation) feeding mapgen.draw_features; Features card 'Rivers from: a HydroRIVERS file' (tests/test_hydrorivers 11, test_mapgen 4a)"
   },
   "src/components/newmap/hydrorivers/hydroWorker.js": {
-   "disposition": "out-of-scope",
+   "disposition": "skip",
    "phases": [],
    "reason": "V2 out of scope - future expansion only",
    "status": "triaged",
    "first_seen": "09ab33e",
-   "notes": ""
+   "notes": "not ported: his worker, rasteriser, merge and panels; our river drawer and plan/write/Undo do that part"
   },
   "src/components/newmap/hydrorivers/importData.js": {
-   "disposition": "out-of-scope",
+   "disposition": "port-concept",
    "phases": [],
    "reason": "V2 out of scope - future expansion only",
    "status": "triaged",
    "first_seen": "09ab33e",
-   "notes": ""
+   "notes": "ported 2026-11-16 as unittransfer/hydrorivers.py (streamed .shp/.dbf from the ZIP or loose, order selection, downstream orientation) feeding mapgen.draw_features; Features card 'Rivers from: a HydroRIVERS file' (tests/test_hydrorivers 11, test_mapgen 4a)"
   },
   "src/components/newmap/hydrorivers/mergeDraft.js": {
-   "disposition": "out-of-scope",
+   "disposition": "skip",
    "phases": [],
    "reason": "V2 out of scope - future expansion only",
    "status": "triaged",
    "first_seen": "09ab33e",
-   "notes": ""
+   "notes": "not ported: his worker, rasteriser, merge and panels; our river drawer and plan/write/Undo do that part"
   },
   "src/components/newmap/hydrorivers/network.js": {
-   "disposition": "out-of-scope",
+   "disposition": "port-concept",
    "phases": [],
    "reason": "V2 out of scope - future expansion only",
    "status": "triaged",
    "first_seen": "09ab33e",
-   "notes": ""
+   "notes": "ported 2026-11-16 as unittransfer/hydrorivers.py (streamed .shp/.dbf from the ZIP or loose, order selection, downstream orientation) feeding mapgen.draw_features; Features card 'Rivers from: a HydroRIVERS file' (tests/test_hydrorivers 11, test_mapgen 4a)"
   },
   "src/components/newmap/hydrorivers/pixelGeometry.js": {
-   "disposition": "out-of-scope",
+   "disposition": "skip",
    "phases": [],
    "reason": "V2 out of scope - future expansion only",
    "status": "triaged",
    "first_seen": "09ab33e",
-   "notes": ""
+   "notes": "not ported: his worker, rasteriser, merge and panels; our river drawer and plan/write/Undo do that part"
   },
   "src/components/newmap/hydrorivers/rasterize.js": {
-   "disposition": "out-of-scope",
+   "disposition": "skip",
    "phases": [],
    "reason": "V2 out of scope - future expansion only",
    "status": "triaged",
    "first_seen": "09ab33e",
-   "notes": ""
+   "notes": "not ported: his worker, rasteriser, merge and panels; our river drawer and plan/write/Undo do that part"
   },
   "src/components/newmap/hydrorivers/regions.js": {
-   "disposition": "out-of-scope",
+   "disposition": "skip",
    "phases": [],
    "reason": "V2 out of scope - future expansion only",
    "status": "triaged",
    "first_seen": "09ab33e",
-   "notes": ""
+   "notes": "not ported: his worker, rasteriser, merge and panels; our river drawer and plan/write/Undo do that part"
   },
   "src/components/newmap/hydrorivers/shpReader.js": {
-   "disposition": "out-of-scope",
+   "disposition": "port-concept",
    "phases": [],
    "reason": "V2 out of scope - future expansion only",
    "status": "triaged",
    "first_seen": "09ab33e",
-   "notes": ""
+   "notes": "ported 2026-11-16 as unittransfer/hydrorivers.py (streamed .shp/.dbf from the ZIP or loose, order selection, downstream orientation) feeding mapgen.draw_features; Features card 'Rivers from: a HydroRIVERS file' (tests/test_hydrorivers 11, test_mapgen 4a)"
   },
   "src/components/newmap/hydrorivers/useHydroRivers.js": {
-   "disposition": "out-of-scope",
+   "disposition": "skip",
    "phases": [],
    "reason": "V2 out of scope - future expansion only",
    "status": "triaged",
    "first_seen": "09ab33e",
-   "notes": ""
+   "notes": "not ported: his worker, rasteriser, merge and panels; our river drawer and plan/write/Undo do that part"
   },
   "src/components/newmap/osmpacks/OsmPackClassList.jsx": {
    "disposition": "out-of-scope",
