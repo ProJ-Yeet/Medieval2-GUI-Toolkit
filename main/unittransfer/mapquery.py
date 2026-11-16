@@ -312,12 +312,14 @@ class WinCondition:
     short_take: int = 0
     short_outlive: List[str] = field(default_factory=list)
 
-    def mentions(self, region: str) -> List[str]:
-        low = region.lower()
+    def mentions(self, region: str, settlement: str = "") -> List[str]:
+        """A hold line names a province or its settlement (the Kingdoms
+        campaigns write ``hold_regions London Perth``); either counts."""
+        low = {region.lower(), settlement.lower()} - {""}
         out = []
-        if any(r.lower() == low for r in self.hold):
+        if any(r.lower() in low for r in self.hold):
             out.append("long campaign")
-        if any(r.lower() == low for r in self.short_hold):
+        if any(r.lower() in low for r in self.short_hold):
             out.append("short campaign")
         return out
 
@@ -771,9 +773,13 @@ class Facts:
                 rf = self.by_name.get(name.lower())
                 if rf is not None:
                     rf.merc_pools.append(pool.name)
+        # a hold line names a province or its settlement, each maybe followed
+        # by the turns it must be held (`hold_regions Cairo 30`)
+        by_settlement = {rf.settlement.lower(): rf for rf in self.by_name.values()
+                         if rf.settlement}
         for w in self.wins:
             for name in set(w.hold) | set(w.short_hold):
-                rf = self.by_name.get(name.lower())
+                rf = self.by_name.get(name.lower()) or by_settlement.get(name.lower())
                 if rf is not None and w.faction not in rf.win_for:
                     rf.win_for.append(w.faction)
 
@@ -979,7 +985,7 @@ _filter(Filter(
 def _win_why(facts: "Facts", rf: RegionFacts, faction: str) -> str:
     for w in facts.wins:
         if _same(w.faction, faction):
-            where = w.mentions(rf.name)
+            where = w.mentions(rf.name, rf.settlement)
             return (f"{facts.faction_label(faction)} must hold it to win "
                     f"({', '.join(where)})" if where else
                     f"named in {facts.faction_label(faction)}'s win conditions")

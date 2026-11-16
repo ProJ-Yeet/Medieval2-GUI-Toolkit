@@ -246,6 +246,12 @@ class Vocabulary:
         self.regions = sorted(getattr(rf, "name", key) for key, rf
                               in by_name.items())
         self.region_lower = {r.lower() for r in self.regions}
+        # a hold line may name the settlement instead: the Kingdoms campaigns
+        # write `hold_regions London Perth`, and the game takes either
+        self.settlement_of = {key: str(getattr(rf, "settlement", "") or "")
+                              for key, rf in by_name.items()
+                              if getattr(rf, "settlement", "")}
+        self.settlement_lower = {s.lower() for s in self.settlement_of.values()}
         self.labels = {}
         for name in self.regions:
             rf = by_name.get(name.lower())
@@ -269,10 +275,23 @@ def check_record(voc: Vocabulary, faction: str,
         out.append(finding("win.faction", True,
                            _i18n.msg("eng.winconds.has_no_faction_block_in_this", "{faction} has no faction block in this campaign, so nothing can win with it", faction=faction)))
     for slot in ("hold", "short_hold"):
+        # `hold_regions Cairo 30 Constantinople 10`: a name is a province or
+        # its settlement, and a number after it is the turns it must be held
+        prev_name = False
         for region in values.get(slot) or []:
-            if voc.regions and region.lower() not in voc.region_lower:
+            if re.fullmatch(r"\d+", region):
+                if not prev_name:
+                    out.append(finding("win.turns", True, _i18n.msg(
+                        "eng.winconds.hold_turns_without_name",
+                        "{n} on the {x} campaign's hold_regions line is a number of turns, and no province or settlement comes before it",
+                        n=region, x='short' if slot.startswith('short') else 'long')))
+                prev_name = False
+                continue
+            prev_name = True
+            low = region.lower()
+            if voc.regions and low not in voc.region_lower and low not in voc.settlement_lower:
                 out.append(finding("win.region", True,
-                                   _i18n.msg("eng.winconds.is_not_a_province_this_map", "{region} is not a province this map declares, and the {x} campaign asks for it to be held", region=region, x='short' if slot.startswith('short') else 'long')))
+                                   _i18n.msg("eng.winconds.is_not_a_province_this_map", "{region} is not a province or settlement this map declares, and the {x} campaign asks for it to be held", region=region, x='short' if slot.startswith('short') else 'long')))
     for slot in COUNTS:
         got = values.get(slot)
         if got in (None, "", 0):
@@ -499,7 +518,11 @@ def _edit_splice(wf: WinFile, p: WinPlan, rec: WinRecord,
     head_slot = kept_short[0] if kept_short else ""
     for slot in SLOTS:
         at = rec.lines.get(slot)
-        keeps = slot in LONG and _said(values, slot) or slot in kept_short
+        # an empty `hold_regions` the record already has and this edit did not
+        # touch stays: Americas' Spain writes one, and a save of its take
+        # count must not take it away
+        unchanged = at is not None and values.get(slot) == rec.values.get(slot)
+        keeps = slot in LONG and (_said(values, slot) or unchanged) or slot in kept_short
         head = slot == head_slot
         if at is None:
             if not keeps:
@@ -727,6 +750,14 @@ def _plan_fill(p: WinPlan, wf: WinFile, voc: Vocabulary, facts, body: dict) -> W
     long_x, short_x = mults
     p.faction = "*"
     held = holdings(facts)
+    # write the capital the way the file already names what it holds: the
+    # Kingdoms campaigns name settlements (`hold_regions London Perth`)
+    names = [t.lower() for r in wf.records for s in ("hold", "short_hold")
+             for t in r.get(s) if not t.isdigit()]
+    by_town = sum(n in voc.settlement_lower and n not in voc.region_lower for n in names)
+    by_province = sum(n in voc.region_lower for n in names)
+    if by_town > by_province:
+        held = {f: [voc.settlement_of.get(r.lower(), r) for r in rs] for f, rs in held.items()}
     before = wf
     skipped: List[str] = []
     for name in [r.faction for r in before.records]:

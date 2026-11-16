@@ -165,7 +165,7 @@ RELATION_HEAD = "faction_relationships \t"
 #: already there (16j-1); the last two make and unmake a faction's whole
 #: campaign entry (16j-2).
 WHAT = ("globals", "rosters", "standings", "relationships", "faction",
-        "create", "delete")
+        "create", "delete", "standings_all")
 
 #: The newline a preview's lines are joined with. The preview is text for a
 #: browser to show, never bytes for the file - what goes to disk is joined with
@@ -1049,6 +1049,7 @@ KINDS = ("faction", "settlement", "building", "character", "character_record",
 #: may not change the shape of the tree at all.
 OWNS = {"globals": {}, "rosters": {}, "faction": {},
         "standings": {"faction_standings": None},
+        "standings_all": {"faction_standings": None},
         "relationships": {"faction_relationships": None},
         # a new faction is one block, a place in a roster and however many
         # diplomacy lines its opinions need, so those three counts are the ones
@@ -1325,6 +1326,67 @@ def _row_splice(sf: StratFile, p: CampPlan, kind: str,
                     {start: rows} if rows else {})
 
 
+def _standings_all(sf: StratFile, p: CampPlan, voc: Vocabulary, body: dict):
+    """Every faction's standings from Mylae's rule - :mod:`standcalc`.
+
+    Each faction's row goes through :func:`standings_rows` and
+    :func:`_row_splice`, the single-faction save, one after another; the spans
+    the guard walks are then read off the two files, and every line inside
+    them has to be a faction_standings line or blank.
+    """
+    from . import standcalc
+    mode = str(body.get("mode") or "recalculate")
+    if mode not in standcalc.MODES:
+        p.errors.append(_i18n.msg("eng.stratcamp.standings_mode", "no such way to update standings: {mode}", mode=repr(mode)))
+        return list(sf.lines)
+    weights = {}
+    for key in standcalc.WEIGHTS:
+        got = (body.get("weights") or {}).get(key)
+        if got in (None, ""):
+            continue
+        try:
+            weights[key] = int(got)
+        except (TypeError, ValueError):
+            p.errors.append(_i18n.msg("eng.stratcamp.standings_weight", "a weight is a whole number of hundredths, and {x} is not", x=repr(got)))
+            return list(sf.lines)
+    names = [n.name for n in sf.of_kind("faction")]
+    meta = standcalc.faction_meta(p.mod)
+    gaps = [n for n in names if n.lower() != standcalc.REBELS and not all(meta.get(n.lower(), ("", "")))]
+    if gaps:
+        p.warnings.append(_i18n.msg("eng.stratcamp.standings_no_meta", "no religion or culture known for {names}, so those points are skipped for them", names=", ".join(gaps[:8]) + (" ..." if len(gaps) > 8 else "")))
+    want = standcalc.compute(names, meta, standcalc.relations(sf),
+                             {n: standings_of(sf, n) for n in names}, mode, weights)
+    # every row in one splice: rows of different factions never share a line,
+    # so each is worked out against the file as read
+    drop: set = set()
+    inserts: Dict[int, List[str]] = {}
+    for name in names:
+        had = standings_of(sf, name)
+        if name not in want or want[name] == had:
+            continue
+        rows = standings_rows(sf, name, want[name])
+        start, end = row_span(rows_of(sf, "faction_standings", name))
+        if start < 0:
+            inserts.setdefault(_section_end(sf, "faction_standings"), []).extend(rows)
+        else:
+            drop.update(range(start, end + 1))
+            if rows:
+                inserts[start] = rows
+        moved = sum(1 for t, v in want[name].items() if had.get(t) != v)
+        p.changes.append(f"{name}: {moved} standing(s) changed, {len(want[name])} in all")
+    work = campstrat.parse_strat(serialise(sf, assemble(sf.lines, {}, drop, inserts)))
+    p.spans = [(i1, i2 - 1, j2 - j1) for _t, i1, i2, j1, j2 in diff_runs(sf.lines, work.lines)]
+    for _t, i1, i2, j1, j2 in diff_runs(sf.lines, work.lines):
+        for line in sf.lines[i1:i2] + work.lines[j1:j2]:
+            s = line.strip()
+            if s and not s.lower().startswith("faction_standings"):
+                p.errors.append(_i18n.msg("eng.stratcamp.standings_all_strayed", "this would change a line that is not a standing: {line}", line=repr(s[:60])))
+                return list(sf.lines)
+    for name in names:
+        p.findings += check_standings(voc, name, standings_of(work, name))
+    return list(work.lines)
+
+
 def _faction_splice(sf: StratFile, p: CampPlan, node: Node, body: dict):
     """A faction block's own scalars and flags, and nothing below them."""
     scalars = dict(body.get("scalars") or {})
@@ -1466,6 +1528,11 @@ def plan_campaign(mod, facts, body: dict) -> CampPlan:
         p.findings = check_standings(voc, p.faction, cells)
         lines = _row_splice(sf, p, "faction_standings",
                             standings_rows(sf, p.faction, cells))
+    elif what == "standings_all":
+        lines = _standings_all(sf, p, voc, body)
+        if p.errors:
+            return p
+        before, after = {}, {}
     elif what == "relationships":
         cells = {str(k): str(v).lower()
                  for k, v in (body.get("relationships") or {}).items()
@@ -1523,7 +1590,8 @@ def plan_campaign(mod, facts, body: dict) -> CampPlan:
     p.findings += check_order(done)
     p.errors += [f["message"] for f in p.findings if f["fatal"]]
     p.warnings += [f["message"] for f in p.findings if not f["fatal"]]
-    p.changes = _describe(before, after)
+    if what != "standings_all":         # that one said its own changes
+        p.changes = _describe(before, after)
     p.spans = [(a + 1, b + 1, n) for a, b, n in p.spans]
     p.text = "" if text == sf.serialise() else text
     if not p.text and not p.errors:

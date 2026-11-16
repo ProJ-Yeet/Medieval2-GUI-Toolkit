@@ -440,6 +440,7 @@ function cjWriteHead(body){
     case 'globals': return tt('stratcamp.write_header_in',p);
     case 'rosters': return tt('stratcamp.write_lists_in',p);
     case 'standings': return tt('stratcamp.write_standings_for_in',p);
+    case 'standings_all': return tt('stratcamp.write_standings_all_in',p);
     case 'create': return tt('stratcamp.write_new_faction_in',p);
     case 'relationships': return tt('stratcamp.write_relationships_for_in',p);
     case 'delete': return tt('stratcamp.write_delete_in',p);
@@ -891,7 +892,44 @@ function cjDiplomacyHtml(){
       <button class="primary" onclick="cjSave()">${tt('stratcamp.save_the_standings')}</button>
       <button onclick="cjSaveRelations()">${tt('stratcamp.save_the_relationships')}</button>
     </div>
+    ${cjAutoStandHtml()}
   </div>`;
+}
+
+/* Mylae's "Update standings from faction relationships" (diplomacyStandings.js):
+   every faction pair's standing from religion, culture and the relationships
+   above, one plan, one confirm, one Undo. Typing only stores the number, so the
+   box being typed in is never repainted. */
+function cjAutoStandHtml(){
+  const k = state.cj;
+  const a = k.autoStand || (k.autoStand = {mode: 'recalculate',
+    religion: 15, culture: 10, ally: 20, war: -50});
+  const num = (key, label) => `<div class="cmfield"><label>${label}</label>
+    <input type="number" step="1" value="${esc(a[key])}"
+      oninput="state.cj.autoStand.${key} = this.value"></div>`;
+  return `<div class="cjplan">
+    <div class="cshead"><b>${tt('stratcamp.autostand_title')}</b></div>
+    <div class="count">${tt('stratcamp.autostand_note')}</div>
+    <div class="csrow2">
+      ${num('religion', tt('stratcamp.autostand_religion'))}
+      ${num('culture', tt('stratcamp.autostand_culture'))}
+    </div>
+    <div class="csrow2">
+      ${num('ally', tt('stratcamp.autostand_ally'))}
+      ${num('war', tt('stratcamp.autostand_war'))}
+    </div>
+    <div class="cmfield"><select onchange="state.cj.autoStand.mode = this.value">
+      <option value="recalculate"${a.mode === 'recalculate' ? ' selected' : ''}>${tt('stratcamp.autostand_recalculate')}</option>
+      <option value="add"${a.mode === 'add' ? ' selected' : ''}>${tt('stratcamp.autostand_add')}</option>
+    </select></div>
+    <div class="csbtns"><button onclick="cjAutoStand()">${tt('stratcamp.autostand_button')}</button></div>
+  </div>`;
+}
+
+function cjAutoStand(){
+  const a = state.cj.autoStand;
+  cjSave({what: 'standings_all', mode: a.mode, faction: '',
+          weights: {religion: a.religion, culture: a.culture, ally: a.ally, war: a.war}});
 }
 
 /* A whole new faction.

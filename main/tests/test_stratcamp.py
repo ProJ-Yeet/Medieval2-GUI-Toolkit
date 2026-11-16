@@ -487,6 +487,22 @@ errs = stratcamp._guard(sf2, campstrat.parse_strat(joined(*moved)), "rosters",
 check("a faction block that ends up after the diplomacy section is refused",
       any("after the diplomacy section" in e for e in errs))
 
+# Mylae's standings rule over every faction at once (standcalc). The toy mod
+# has no descr_sm_factions.txt, so no religion or culture is known: England's
+# -0.2 toward France recalculates to 0, its -1.0 toward the rebels is kept,
+# and France gets no new cell at 0
+p = plan(what="standings_all")
+back = campstrat.parse_strat(p.text) if p.text else None
+check(f"standings_all: one line rewritten, the rebels' cell kept: {p.changes or p.errors}",
+      not p.errors and back is not None
+      and stratcamp.standings_of(back, "england") == {"france": 0.0, "slave": -1.0}
+      and not stratcamp.standings_of(back, "france")
+      and sum(a != b for a, b in zip(sf.lines, back.lines)) == 1)
+check("standings_all: added on top of what is there with no points, nothing changes",
+      not plan(what="standings_all", mode="add").text)
+check("standings_all: an unknown mode is refused",
+      bool(plan(what="standings_all", mode="guess").errors))
+
 print("\n4b) a whole faction, made and unmade (16j-2)")
 
 p = plan(what="create", faction="burgundy", donor="france",
@@ -608,6 +624,8 @@ class _WinFacts(_Facts):
     class _Region:
         def __init__(self, name):
             self.name, self.shown = name, name
+            # London_Province's settlement is London, as the fact table says
+            self.settlement = name.split("_Province")[0]
 
     def __init__(self, mod, regions, strat, campaign="test_campaign"):
         _Facts.__init__(self, mod, campaign=campaign)
@@ -625,6 +643,17 @@ wvoc = winconds.Vocabulary(_WinFacts(
 check("a province the map does not declare is fatal",
       "win.region" in {f["code"] for f in winconds.check_record(
           wvoc, "england", {"hold": ["Atlantis_Province"]}) if f["fatal"]})
+check("a hold line may name the settlement and the turns to hold it, as the "
+      "Kingdoms campaigns write it (hold_regions Cairo 30 Constantinople 10)",
+      not [f for f in winconds.check_record(
+          wvoc, "england", {"hold": ["London", "30", "Caen_Province", "10"],
+                            "take": 3}) if f["fatal"]])
+check("a number with no name before it is fatal",
+      "win.turns" in {f["code"] for f in winconds.check_record(
+          wvoc, "england", {"hold": ["30", "London"]}) if f["fatal"]})
+check("and a name that is neither still is",
+      "win.region" in {f["code"] for f in winconds.check_record(
+          wvoc, "england", {"hold": ["Atlantis", "5"]}) if f["fatal"]})
 check("a count that is not a number is fatal",
       "win.count" in {f["code"] for f in winconds.check_record(
           wvoc, "england", {"take": "loads"}) if f["fatal"]})

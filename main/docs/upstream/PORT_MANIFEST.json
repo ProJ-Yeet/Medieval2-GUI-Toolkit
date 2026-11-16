@@ -3527,7 +3527,7 @@
    "reason": "campaign map + descr_strat - the flagship phase",
    "status": "triaged",
    "first_seen": "09ab33e",
-   "notes": ""
+   "notes": "ported 2026-11-16 as unittransfer/standcalc.py and stratcamp's standings_all save (Diplomacy tab, Update every faction's standings); protectorate/client count as allied, rebels kept, zero pairs with no cell not written, weights editable"
   },
   "src/components/map/DiplomacyTargets.jsx": {
    "disposition": "port-concept",
@@ -4077,7 +4077,7 @@
    "reason": "campaign map + descr_strat - the flagship phase",
    "status": "triaged",
    "first_seen": "09ab33e",
-   "notes": ""
+   "notes": "ported 2026-11-16 as unittransfer/standcalc.py and stratcamp's standings_all save (Diplomacy tab, Update every faction's standings); protectorate/client count as allied, rebels kept, zero pairs with no cell not written, weights editable"
   },
   "src/components/map/diplomacyTools.test.mjs": {
    "disposition": "port-concept",
