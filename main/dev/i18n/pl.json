@@ -3593,7 +3593,7 @@
   "many": "<span class=\"count\">Tekstury z {folder}: {count}, {scale} pikseli na kafelek · wyświetlono każdy kafelek lądu</span>{gaps}",
   "other": "<span class=\"count\">Tekstury z {folder}: {count}, {scale} pikseli na kafelek · wyświetlono każdy kafelek lądu</span>{gaps}"
  },
- "campmap.the_41_rules_their_severity_the": "41 reguł, ich waga, stan odniesienia i automatyczne poprawki",
+ "campmap.the_41_rules_their_severity_the": "46 reguł, ich waga, stan odniesienia i automatyczne poprawki",
  "campmap.the_campaign_map_as_a_surface": "Mapa kampanii jako powierzchnia. Przeciągnij, aby obrócić; przeciągnij prawym przyciskiem, aby przesunąć; użyj kółka, aby przybliżyć lub oddalić.",
  "campmap.the_campaigns_own_settings": "Ustawienia samej kampanii",
  "campmap.the_campaigns_scripted_events_and_its": "Wydarzenia skryptowe kampanii i jej warunki zwycięstwa",
@@ -5944,7 +5944,6 @@
  "eng.edit.bmdb_mode_edits_no_unit_so": "„{name}”: tryb bmdb nie edytuje jednostki, więc nic nie zostało skierowane na nowy wpis. Ustaw „{assign_to}” w edytorze jednostek.",
  "eng.edit.cannot_apply": "nie można zastosować: {why}",
  "eng.edit.cannot_be_removed_a_unit_block": "Nie można usunąć „{key}” — ten element definiuje blok jednostki (zamiast tego zmień jego nazwę lub go edytuj)",
- "eng.edit.clone_has_no_attachment": "„{clone}” nie ma rekordu tekstury elementu dołączonego, więc arkusz zostanie skopiowany, ale nic nie będzie na niego wskazywać. Sklonuj wpis, który ma taki rekord",
  "eng.edit.could_not_delete_data": "nie mogłem usunąć data/{rel}: {exc}",
  "eng.edit.data_already_exists_and_will_be": "data/{rel} już istnieje i zostanie nadpisany (najpierw powstanie kopia zapasowa, więc Cofnij przywróci poprzedni plik).",
  "eng.edit.data_already_exists_and_will_be_2": "data/{new} już istnieje i zostanie nadpisany (najpierw powstanie kopia zapasowa, więc Cofnij przywróci poprzedni plik).",

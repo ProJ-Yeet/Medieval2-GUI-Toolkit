@@ -3289,7 +3289,7 @@
   "many": "<span class=\"count\">{count} textures depuis {folder}, {scale} pixels par tuile · toutes les tuiles terrestres affichées</span>{gaps}",
   "other": "<span class=\"count\">{count} textures depuis {folder}, {scale} pixels par tuile · toutes les tuiles terrestres affichées</span>{gaps}"
  },
- "campmap.the_41_rules_their_severity_the": "Les 41 règles, leur gravité, l’état de référence et les corrections automatiques",
+ "campmap.the_41_rules_their_severity_the": "Les 46 règles, leur gravité, l’état de référence et les corrections automatiques",
  "campmap.the_campaign_map_as_a_surface": "La carte de campagne en relief. Faites glisser pour tourner, avec le bouton droit pour déplacer la vue ; faites défiler pour zoomer.",
  "campmap.the_campaigns_own_settings": "Paramètres propres à la campagne",
  "campmap.the_campaigns_scripted_events_and_its": "Événements scriptés et conditions de victoire de la campagne",
@@ -5550,7 +5550,6 @@
  "eng.edit.bmdb_mode_edits_no_unit_so": "'{name}' : le mode bmdb ne modifie aucune unité ; aucune n’a donc été dirigée vers la nouvelle entrée. Définissez '{assign_to}' dans l’éditeur d’unités.",
  "eng.edit.cannot_apply": "application impossible : {why}",
  "eng.edit.cannot_be_removed_a_unit_block": "'{key}' ne peut pas être supprimé : il définit un bloc d’unité (renommez-le ou modifiez-le plutôt)",
- "eng.edit.clone_has_no_attachment": "'{clone}' n’a aucun enregistrement de texture d’élément attaché ; sa planche est donc copiée sans aucune référence vers elle. Clonez une entrée qui en possède un",
  "eng.edit.could_not_delete_data": "suppression de data/{rel} impossible : {exc}",
  "eng.edit.data_already_exists_and_will_be": "data/{rel} existe déjà et sera écrasé (après sauvegarde, afin qu’Annuler le restaure).",
  "eng.edit.data_already_exists_and_will_be_2": "data/{new} existe déjà et sera écrasé (après sauvegarde, afin qu’Annuler le restaure).",

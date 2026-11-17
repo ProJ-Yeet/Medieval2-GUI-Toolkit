@@ -990,16 +990,20 @@ def cultures_of(mod) -> List[str]:
     # a Kingdoms campaign or the base game: the folders are inside its packs
     from . import gamepack
     prefix = gamepack.own_prefix(mod)
-    if not prefix:
-        return []
     found = set()
-    for pk in gamepack.packs(mod.root):
-        for key in pk.entries:
-            if key.startswith(prefix + "ui/"):
-                parts = key[len(prefix) + 3:].split("/")
-                if len(parts) > 2 and parts[1] == "buildings":
-                    found.add(parts[0])
-    return sorted(found)
+    if prefix:
+        for pk in gamepack.packs(mod.root):
+            for key in pk.entries:
+                if key.startswith(prefix + "ui/"):
+                    parts = key[len(prefix) + 3:].split("/")
+                    if len(parts) > 2 and parts[1] == "buildings":
+                        found.add(parts[0])
+    if found:
+        return sorted(found)
+    # a mod with none of its own draws every building from the base game's
+    # folders, so those are its cultures (kirsi_biggermap_medieval2)
+    game = game_ui(mod)
+    return list(game.cultures) if game else []
 
 
 def faction_cultures(mod) -> Dict[str, str]:

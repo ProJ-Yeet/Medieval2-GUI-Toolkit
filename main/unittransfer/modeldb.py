@@ -1530,3 +1530,65 @@ def rename_entry_raw(raw: str, new_name: str) -> str:
     n = int(m.group(1))
     after = rest[m.end() + n:]
     return f"{lead}{len(new_name)} {new_name}{after}"
+
+
+def standard_layout(raw: str, nl: str = "\r\n", pad: bool = False) -> str:
+    """A one-line entry laid out one value per line, as mods' own entries are.
+
+    The base game's modeldb, and so every campaign read from its packs, holds
+    all its entries on one line; copied as it is, an entry lands as a single
+    9000-character line among neatly laid ones. Every token is kept verbatim,
+    only the whitespace between them changes. An entry that already has line
+    breaks, or the padded first entry, is returned untouched.
+    """
+    if pad or "\n" in raw.strip():
+        return raw
+    r = _Reader(raw)
+
+    def s() -> str:          # a length-prefixed name, as written
+        r._skip_ws()
+        at = r.i
+        r.get_string()
+        return raw[at:r.i]
+
+    def t() -> str:          # one bare number, as written
+        r._skip_ws()
+        return r.token()
+
+    def n(line: List[str]) -> int:
+        tok = t()
+        line.append(tok)
+        return int(tok)
+
+    out: List[str] = [s()]
+    head = [t()]
+    lods = n(head)
+    out.append(" ".join(head))
+    out += [f"{s()} {t()}" for _ in range(lods)]
+    for what in ("main", "attachment"):
+        cnt = [t()]
+        out.append(cnt[0])
+        for _ in range(int(cnt[0])):
+            out += [s(), s()]
+            if what == "main":
+                out += [s(), s()]
+            else:
+                nrm = s()
+                r._skip_ws()
+                at = r.i
+                r.get_attach_sprite()
+                spr = raw[at:r.i]
+                out.append(f"{nrm} {spr}" if spr == "0" else nrm)
+                if spr != "0":
+                    out.append(spr)
+    mounts = int(t())
+    out.append(str(mounts))
+    for _ in range(mounts):
+        out += [s(), f"{s()} {s()}"]
+        for _w in range(2):
+            cnt = int(t())
+            out.append(str(cnt))
+            out += [s() for _ in range(cnt)]
+    torch = [t() for _ in range(7)]
+    out[-1] += " " + " ".join(torch)
+    return nl + nl.join(out)

@@ -3036,7 +3036,7 @@
   "many": "<span class=\"count\">{count} texturas de {folder}, {scale} píxeles por casilla · todas las casillas de tierra dibujadas</span>{gaps}",
   "other": "<span class=\"count\">{count} texturas de {folder}, {scale} píxeles por casilla · todas las casillas de tierra dibujadas</span>{gaps}"
  },
- "campmap.the_41_rules_their_severity_the": "Las 41 reglas, su gravedad, la línea base y las correcciones automáticas",
+ "campmap.the_41_rules_their_severity_the": "Las 46 reglas, su gravedad, la línea base y las correcciones automáticas",
  "campmap.the_campaign_map_as_a_surface": "El mapa de campaña como superficie. Arrastrar para girar, arrastrar con el botón derecho para desplazar, usar la rueda para ampliar.",
  "campmap.the_campaigns_own_settings": "La configuración propia de la campaña",
  "campmap.the_campaigns_scripted_events_and_its": "Los eventos con script de la campaña y sus condiciones de victoria",
@@ -11419,7 +11419,6 @@
   "many": "{count} de objetos",
   "other": "{count} objetos"
  },
- "eng.edit.clone_has_no_attachment": "'{clone}' no tiene registro de textura de elemento acoplado, así que la hoja del elemento acoplado se copia pero nada la usa: clone una entrada que lo tenga",
  "eng.armunit.no_clone": "elija una entrada de la que tomar los esqueletos, o una plantilla de función",
  "eng.armunit.no_unit": "elija una unidad de {mod}",
  "eng.armunit.no_new_type": "dé a la nueva unidad un nombre de tipo",

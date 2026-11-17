@@ -335,6 +335,11 @@ Other transfer options:
 * **Guided unit designer (beta).** A unit's stats worked out from who the men
   are and what they carry, handed to the Unit Editor, New unit, Unit sheets or
   the campaign's mercenary pools. See [UNIT_DESIGNER.md](main/docs/UNIT_DESIGNER.md).
+* **Lua scripts (beta).** The Scripts screen's Lua tab runs a Lua 5.4 script
+  over the mod's units, model entries, mounts, factions, buildings, mercenary
+  pools, traits and ancillaries, in a sandbox. Every run is previewed and
+  undone first; Apply makes it one Undo in My Changes. The guide is
+  `main/lua/guide.html`, with ten examples in `main/lua/examples`.
 * **Code View.** The raw game file beside the form in every editor, with
   hover-to-highlight both ways and live two-way editing. Can hide comment-only
   lines and restore them exactly. The text only scrolls when you click a box,

@@ -3847,6 +3847,7 @@ def _apply_writes(plan: TransferPlan, tid: str, backup_root: Path, manifest: Dic
         for i, raw in patched.items():
             db.entries[i].raw = raw
         appended = []
+        nl = "\r\n" if "\r\n" in "".join(e.raw for e in db.entries[:50]) else "\n"
         for final_name, entry in plan.add_entries:
             raw = (modeldb.rename_entry_raw(entry.raw, final_name)
                    if final_name != entry.name else entry.raw)
@@ -3859,6 +3860,9 @@ def _apply_writes(plan: TransferPlan, tid: str, backup_root: Path, manifest: Dic
                 raw = modeldb.add_texture_factions(
                     raw, plan.texture_factions, prefer=plan.texture_donor or None,
                     pad=entry.first_entry_pad)
+            # the base game's entries are all on one line; lay it out as the
+            # destination's own are
+            raw = modeldb.standard_layout(raw, nl, pad=entry.first_entry_pad)
             new_entry = modeldb.ModelEntry(
                 name=final_name, scale=entry.scale, lods=entry.lods,
                 main_textures=entry.main_textures, attach_textures=entry.attach_textures,

@@ -3105,7 +3105,7 @@
  "campmap.textures_out_of_all_drawn": {
   "other": "<span class=\"count\">来自 {folder} 的 {count} 张贴图，每个图块 {scale} 像素 · 已绘制所有陆地图块</span>{gaps}"
  },
- "campmap.the_41_rules_their_severity_the": "41 条规则、严重程度、基线和自动修复",
+ "campmap.the_41_rules_their_severity_the": "46 条规则、严重程度、基线和自动修复",
  "campmap.the_campaign_map_as_a_surface": "以曲面显示战役地图。拖动旋转，右键拖动平移，滚动缩放。",
  "campmap.the_campaigns_own_settings": "战役自身的设置",
  "campmap.the_campaigns_scripted_events_and_its": "战役的脚本事件和胜利条件",
@@ -5248,7 +5248,6 @@
  "eng.edit.bmdb_mode_edits_no_unit_so": "'{name}'：bmdb 模式不编辑部队，因此没有内容指向新条目；请在部队编辑器中设置 '{assign_to}'。",
  "eng.edit.cannot_apply": "无法应用：{why}",
  "eng.edit.cannot_be_removed_a_unit_block": "无法移除 '{key}'；它定义了部队块（请改为重命名或编辑）",
- "eng.edit.clone_has_no_attachment": "'{clone}' 没有附件贴图记录，因此虽复制了附件贴图，却没有内容指向它；请克隆有此记录的条目",
  "eng.edit.could_not_delete_data": "无法删除 data/{rel}：{exc}",
  "eng.edit.data_already_exists_and_will_be": "data/{rel} 已存在，将被覆盖（操作前会备份，可用撤消恢复）。",
  "eng.edit.data_already_exists_and_will_be_2": "data/{new} 已存在，将被覆盖（操作前会备份，可用撤消恢复）。",

@@ -2940,7 +2940,7 @@
   "one": "<span class=\"count\">{count}, {folder}'den doku, {scale} piksel ve karo · her arazi karo çizilmiş</span>{gaps}",
   "other": "<span class=\"count\">{count}, {folder}'den doku, {scale} piksel ve karo · her arazi karo çizilmiş</span>{gaps}"
  },
- "campmap.the_41_rules_their_severity_the": "41 kural, önem dereceleri, temel ve otomatik düzeltmeler",
+ "campmap.the_41_rules_their_severity_the": "46 kural, önem dereceleri, temel ve otomatik düzeltmeler",
  "campmap.the_campaign_map_as_a_surface": "Bir yüzey olarak kampanya haritası. Döndürmek için sürükleyin, kaydırmak için sağa sürükleyin, yakınlaştırmak için kaydırın.",
  "campmap.the_campaigns_own_settings": "Kampanyanın kendi ayarları",
  "campmap.the_campaigns_scripted_events_and_its": "Kampanyanın script ile tanımlanan olayları ve kazanma koşulları",
@@ -5153,7 +5153,6 @@
  "eng.edit.bmdb_mode_edits_no_unit_so": "' {name} ': bmdb modu hiçbir birim düzenlemesi yapmaz, bu nedenle birim düzenleyicisinde yeni girdi - ayarlanan ' {assign_to} 'ye yönelik hiçbir şey belirtilmedi.",
  "eng.edit.cannot_apply": "uygulanamaz: {why}",
  "eng.edit.cannot_be_removed_a_unit_block": "' {key} ' kaldırılamaz - bir birim blok onun tarafından tanımlanır (bunun yerine yeniden adlandırın veya düzenleyin)",
- "eng.edit.clone_has_no_attachment": "'{clone}' eklenti doku kaydına sahip değil, bu nedenle eklenti sayfası kopyalanıyor ancak hiçbir şey buna işaret etmiyor: klonlamak ve bir tane olana girdi",
  "eng.edit.could_not_delete_data": "veriler silinemedi/ {rel} : {exc}",
  "eng.edit.data_already_exists_and_will_be": "data/ {rel} zaten mevcut ve üzerine yazılacak (önce yedeklenir, böylece Geri Al onu geri yükler).",
  "eng.edit.data_already_exists_and_will_be_2": "data/ {new} zaten mevcut ve üzerine yazılacak (önce yedeklenir, böylece Geri Al onu geri yükler).",

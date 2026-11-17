@@ -2854,7 +2854,7 @@
   "one": "<span class=\"count\">{count} Textur aus {folder}, {scale} Pixel pro Kachel · jede Landkachel gezeichnet</span>{gaps}",
   "other": "<span class=\"count\">{count} Texturen aus {folder}, {scale} Pixel pro Kachel · jede Landkachel gezeichnet</span>{gaps}"
  },
- "campmap.the_41_rules_their_severity_the": "Die 41 Regeln, ihr Schweregrad, die Basislinie und die automatischen Korrekturen",
+ "campmap.the_41_rules_their_severity_the": "Die 46 Regeln, ihr Schweregrad, die Basislinie und die automatischen Korrekturen",
  "campmap.the_campaign_map_as_a_surface": "Die Kampagnenkarte als Oberfläche. Ziehen zum Drehen, mit rechts ziehen zum Verschieben, Scrollen zum Zoomen.",
  "campmap.the_campaigns_own_settings": "Die eigenen Einstellungen der Kampagne",
  "campmap.the_campaigns_scripted_events_and_its": "Die geskripteten Ereignisse der Kampagne und ihre Siegbedingungen",
@@ -10965,7 +10965,6 @@
   "other": "{count} Objekte"
  },
  "armory.norm_skip_note": "Neben jedes Sheet wird eine flache Map geschrieben, die das Blender-Kit verwendet.",
- "eng.edit.clone_has_no_attachment": "'{clone}' hat keinen Attachment-Texturdatensatz; das Attachment-Sheet wird kopiert, aber nichts verweist darauf: klonen Sie einen Eintrag, der einen hat",
  "eng.armunit.no_bake": "zuerst das Modell backen: {folder} enthält keine {stem}.mesh",
  "eng.armunit.no_clone": "einen Eintrag wählen, von dem die Skelette kommen, oder eine Rollenvorlage",
  "eng.armunit.no_unit": "eine Einheit von {mod} wählen",
