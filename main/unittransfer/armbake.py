@@ -37,6 +37,7 @@ import io
 import math
 import re
 import struct
+import tempfile
 from array import array
 from pathlib import Path
 from typing import Callable, Dict, List, Optional, Sequence, Tuple
@@ -1496,21 +1497,37 @@ def normal_pixels(rgba: np.ndarray, setting: dict) -> np.ndarray:
     return out
 
 
+def _dxt5(level: Image.Image, stem: Path, sprites) -> bytes:
+    """One image as a single-level DXT5 ``.dds``: nvcompress when bundled, else Pillow."""
+    if sprites.NVCOMPRESS.is_file():
+        tga, dds = stem.with_suffix(".tga"), stem.with_suffix(".dds")
+        level.convert("RGBA").save(tga, "TGA")
+        sprites._run_nvcompress(tga, dds, mipmaps=False)
+        return dds.read_bytes()
+    buf = io.BytesIO()
+    level.save(buf, "DDS", pixel_format="DXT5")
+    return buf.getvalue()
+
+
 def dds_with_mipmaps(im: Image.Image, normal: bool = False) -> bytes:
     """A DXT5 ``.dds`` with its whole mipmap chain down to 1x1, each level
     made from the full image. Measured on 800 of Heirs of Elendil's unit
-    sheets: 797 carry a full chain (11 levels at 1024, 12 at 2048)."""
+    sheets: 797 carry a full chain (11 levels at 1024, 12 at 2048).
+
+    Each level is encoded by the bundled nvcompress, which searches every 4x4
+    block's colours; Pillow's quick encoder (the fallback when it is missing)
+    broke red paint on black cloth into ragged steps with dark specks in game."""
+    from . import sprites
     levels = []
     cur = im
-    while True:
-        buf = io.BytesIO()
-        cur.save(buf, "DDS", pixel_format="DXT5")
-        levels.append(buf.getvalue())
-        if cur.width == 1 and cur.height == 1:
-            break
-        size = (max(1, cur.width // 2), max(1, cur.height // 2))
-        cur = (Image.merge("RGBA", tuple(band.resize(size, Image.LANCZOS) for band in im.split()))
-               if normal else im.resize(size, Image.LANCZOS))
+    with tempfile.TemporaryDirectory(prefix="ut_dxt_") as tmp:
+        while True:
+            levels.append(_dxt5(cur, Path(tmp) / str(len(levels)), sprites))
+            if cur.width == 1 and cur.height == 1:
+                break
+            size = (max(1, cur.width // 2), max(1, cur.height // 2))
+            cur = (Image.merge("RGBA", tuple(band.resize(size, Image.LANCZOS) for band in im.split()))
+                   if normal else im.resize(size, Image.LANCZOS))
     head = bytearray(levels[0][:128])
     flags, = struct.unpack_from("<I", head, 8)
     struct.pack_into("<I", head, 8, flags | 0x20000)            # DDSD_MIPMAPCOUNT
