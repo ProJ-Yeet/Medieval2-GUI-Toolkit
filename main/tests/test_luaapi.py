@@ -183,11 +183,11 @@ luaapi.undo(rep.log_id)
 check("Undo puts every byte back", shas(mod) == before)
 
 print("7. the CLI")
-cli = [sys.executable, str(ROOT / "lua_cli.py")]
+cli = [sys.executable, str(ROOT / "unittransfer" / "lua_cli.py")]
 env_cfg = ("import sys; sys.argv[0]='lua_cli.py'; from unittransfer import config; from pathlib import Path; "
            f"c=Path({str(cfg)!r}); config.CONFIG_DIR=c; config.BACKUP_DIR=c/'backups'; "
            "config.SETTINGS_PATH=c/'settings.json'; config.LOG_PATH=c/'transfers.json'; "
-           "import lua_cli; sys.exit(lua_cli.main(sys.argv[1:]))")
+           "from unittransfer import lua_cli; sys.exit(lua_cli.main(sys.argv[1:]))")
 
 
 def cli_run(*a):
@@ -355,8 +355,8 @@ check("its effects replaced", rep.printed[1:2] == ["1\tCommand\t2"])
 check("one file changed", [f.rel for f in rep.files] == ["data/export_descr_ancillaries.txt"])
 check("the preview left every byte", shas(mod) == before)
 
-print("13. the examples in lua/examples, previewed")
-ex = ROOT / "lua" / "examples"
+print("13. the examples in web/lua/examples, previewed")
+ex = ROOT / "web" / "lua" / "examples"
 inf = next(u for u in units if u.category == "infantry" and u.ownership)
 rep = luaapi.run(mod, ex / "raise_morale.lua", args={"faction": inf.ownership[0], "by": "2"})
 check(f"raise_morale ({rep.error}{rep.printed[-1:] if rep.printed else ''})",
@@ -511,7 +511,7 @@ out = luaapi.app_run(mod, "bad", "error('stop here')")
 check("a script error comes back with its line", not out["ok"] and "bad.lua:1" in out["error"])
 check("the previews left every byte", shas(mod) == before)
 
-print("20. every example in lua/examples, previewed on the DaC copy")
+print("20. every example in web/lua/examples, previewed on the DaC copy")
 inf_faction = inf.ownership[0]
 rec_unit = next(r["unit"] for r in __import__("unittransfer.edb_balance", fromlist=["x"]).recruitments(
     __import__("unittransfer.edb_balance", fromlist=["x"]).fresh_edb(mod)))
@@ -537,9 +537,9 @@ for name, (a, says, writes) in sorted(EXAMPLE_ARGS.items()):
 check("the examples' previews left every byte", shas(mod) == before)
 
 print("21. the guide: every function and record, an edit refused inside pcall")
-guide = (ROOT / "lua" / "guide.html").read_text(encoding="utf-8")
+guide = (ROOT / "web" / "lua" / "guide.html").read_text(encoding="utf-8")
 missing = [f.name for f in luaapi.API if f'id="fn-{f.name}"' not in guide]
-check(f"lua/guide.html has an entry for every function ({missing})", not missing)
+check(f"web/lua/guide.html has an entry for every function ({missing})", not missing)
 records = {"toolkit.Unit": "cls-unit", "toolkit.Model": "cls-model", "toolkit.Building": "cls-building",
            "toolkit.Recruit": "cls-recruit", "toolkit.MercPool": "cls-merc", "toolkit.Trait": "cls-trait",
            "toolkit.Ancillary": "cls-ancillary", "toolkit.Trigger": "cls-trigger",

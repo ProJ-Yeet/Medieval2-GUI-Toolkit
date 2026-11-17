@@ -1,26 +1,33 @@
 """Run a Lua script against a mod from the command line (major VI).
 
 Usage:
-  python lua_cli.py run <script.lua> --mod <mod folder or saved mod name> [--set key=value ...]
-  python lua_cli.py run <script.lua> --mod ... --apply      # write it: one Log entry, one Undo
-  python lua_cli.py run <script.lua> --mod ... --diff       # every changed line, not a summary
-  python lua_cli.py undo <log id>                            # take a run back
-  python lua_cli.py api                                      # what a script can call
-  python lua_cli.py annotations <folder>                     # completion in VS Code
+  python unittransfer/lua_cli.py run <script.lua> --mod <mod folder or saved mod name> [--set key=value ...]
+  python unittransfer/lua_cli.py run <script.lua> --mod ... --apply      # write it: one Log entry, one Undo
+  python unittransfer/lua_cli.py run <script.lua> --mod ... --diff       # every changed line, not a summary
+  python unittransfer/lua_cli.py undo <log id>                            # take a run back
+  python unittransfer/lua_cli.py api                                      # what a script can call
+  python unittransfer/lua_cli.py annotations <folder>                     # completion in VS Code
 
 Without --apply a run is a preview: the script's edits are made, compared and
 undone, and the report shows exactly what --apply would change.
 
 Exit codes: 0 done, 1 the script failed, 2 an edit was refused, 3 bad arguments.
 
-The guide, from a first script to every function: lua/guide.html. Examples:
-lua/examples/.
+The guide, from a first script to every function: web/lua/guide.html. Examples:
+web/lua/examples/.
+
+It lives in unittransfer/ rather than beside app.py because the updater an
+installed toolkit already has only accepts the top-level names it knew when it
+was released; a new one there makes every update refuse the whole package.
 """
 from __future__ import annotations
 
 import argparse
 import sys
 from pathlib import Path
+
+if __package__ in (None, ""):        # run as a file: the toolkit folder holds unittransfer
+    sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from unittransfer import config, luaapi, luarun
 from unittransfer.mod import Mod
@@ -78,7 +85,7 @@ def cmd_run(a) -> int:
         if a.diff and fc.diff:
             print(fc.diff)
     if rep.applied:
-        print(f"\nwritten, Log entry {rep.log_id}; to take it back: python lua_cli.py undo {rep.log_id}")
+        print(f"\nwritten, Log entry {rep.log_id}; to take it back: python unittransfer/lua_cli.py undo {rep.log_id}")
     else:
         print("\npreview: every file is back as it was; run again with --apply to write it")
     print(f"({rep.seconds:.1f} s)")
@@ -108,9 +115,9 @@ def cmd_annotations(a) -> int:
 
 
 def main(argv=None) -> int:
-    ap = argparse.ArgumentParser(prog="lua_cli.py",
+    ap = argparse.ArgumentParser(prog="unittransfer/lua_cli.py",
                                  description="Run a Lua script against a Medieval II mod.",
-                                 epilog="The guide: lua/guide.html. Examples: lua/examples/.")
+                                 epilog="The guide: web/lua/guide.html. Examples: web/lua/examples/.")
     sub = ap.add_subparsers(dest="cmd", required=True)
     r = sub.add_parser("run", help="run a script (a preview unless --apply)")
     r.add_argument("script")

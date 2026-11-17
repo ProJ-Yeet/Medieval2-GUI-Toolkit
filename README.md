@@ -339,7 +339,7 @@ Other transfer options:
   over the mod's units, model entries, mounts, factions, buildings, mercenary
   pools, traits and ancillaries, in a sandbox. Every run is previewed and
   undone first; Apply makes it one Undo in My Changes. The guide is
-  `main/lua/guide.html`, with ten examples in `main/lua/examples`.
+  `main/web/lua/guide.html`, with ten examples in `main/web/lua/examples`.
 * **Code View.** The raw game file beside the form in every editor, with
   hover-to-highlight both ways and live two-way editing. Can hide comment-only
   lines and restore them exactly. The text only scrolls when you click a box,

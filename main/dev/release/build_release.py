@@ -8,7 +8,7 @@ The point is that the person you send it to installs nothing. The zip carries
 Python's official *embeddable* distribution with Pillow already in it, so they
 unzip and double-click `Launch-Medieval2-GUI-Toolkit.bat`.
 
-Only the bare minimum ships: `app.py`, `transfer_cli.py`, `lua_cli.py`, `Full Cleaner.bat`,
+Only the bare minimum ships: `app.py`, `transfer_cli.py`, `Full Cleaner.bat`,
 `unittransfer/`, `web/`, the launcher, `Install-Dependencies.bat` and a README.
 Never `config/` (personal settings, backups and the transfer log), `.cache/`,
 `tests/`, `graphify-out/` or `__pycache__` - shipping `config/` would hand over
@@ -45,16 +45,16 @@ EMBED_URL = (f"https://www.python.org/ftp/python/{PY_VERSION}/"
 #: Full Cleaner.bat is not run by the tool any more - unittransfer/cleaner.py
 #: deletes export_units.txt.strings.bin itself instead. It still ships so anyone
 #: who wants the full sweep can copy it into a mod and run it by hand.
-INCLUDE_FILES = ("app.py", "transfer_cli.py", "lua_cli.py", "Full Cleaner.bat")
+#: lua_cli.py ships inside unittransfer/ and the Lua guide and examples inside
+#: web/lua/: see UPDATABLE_TOP_LEVEL for why nothing new goes at the top.
+INCLUDE_FILES = ("app.py", "transfer_cli.py", "Full Cleaner.bat")
 #: vendor/ carries nvcompress.exe + its DLLs (NVIDIA Texture Tools 2.0), which
 #: Sprites mode shells out to for TGA -> DXT5. ~1MB, and without it the convert
 #: step can't run at all - so it ships rather than being a manual download.
 #: It used to be `tools/`, which also held seven scripts no release has any use
 #: for and which went out in every zip because they happened to sit next to the
 #: binary. The developer scripts are under dev/ now and nothing here reaches them.
-#: lua/ is the Lua scripts' guide (guide.html, opened from the Scripts screen's
-#: Lua tab or by double-click) and the example scripts the tab offers.
-INCLUDE_DIRS = ("unittransfer", "web", "vendor", "lua")
+INCLUDE_DIRS = ("unittransfer", "web", "vendor")
 #: Nothing optional ships beside the app any more. Until Phase 98f the vanilla
 #: building art went in as `vanilla_ui/` (35 MB, a rule of its own after four
 #: releases forgot it); it is now read out of the player's own game, from its
@@ -273,6 +273,25 @@ def assert_clean(stage: Path) -> None:
                          + "\n  ".join(bad[:20])
                          + (f"\n  …and {len(bad) - 20} more" if len(bad) > 20 else ""))
     log("verified: no config/, logs or caches in the package")
+    new = sorted(p.name for p in stage.iterdir() if p.name not in UPDATABLE_TOP_LEVEL)
+    if new:
+        raise SystemExit(
+            "refusing to package - an installed toolkit's updater rejects the whole update "
+            "for a top-level name it does not know:\n  " + "\n  ".join(new)
+            + "\nPut it inside unittransfer/, web/ or vendor/ instead.")
+    log("verified: every top-level name is one installed updaters accept")
+
+
+#: The top-level names the oldest updater in the field (v2.4.12's
+#: update_worker.COMPONENTS, plus its manifest) accepts. An update is checked by
+#: the toolkit already installed, not by the new one, so a name added here only
+#: reaches users once every install's own list has it: v2.4.13's first zip added
+#: lua/ and lua_cli.py at the top and every v2.4.12 install refused it. Never
+#: widen this; ship new things inside an existing folder.
+UPDATABLE_TOP_LEVEL = frozenset({
+    "app.py", "transfer_cli.py", "Full Cleaner.bat", "Launch-Medieval2-GUI-Toolkit.bat",
+    "Install-Dependencies.bat", "Troubleshoot.bat", "README.txt", "LICENSE", "NOTICE",
+    "unittransfer", "web", "vendor", "runtime", "release-manifest.json"})
 
 
 PORTABLE_BAT = r"""@echo off

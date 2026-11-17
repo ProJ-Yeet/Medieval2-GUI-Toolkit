@@ -2055,8 +2055,8 @@ class Handler(BaseHTTPRequestHandler):
                 # 125: third-party files the page loads on demand (CodeMirror 5)
                 return self._web_asset(u.path)
             if u.path == "/lua/guide.html":
-                # 125: the Lua scripts guide, which also opens on its own from lua/
-                page = WEB_DIR.parent / "lua" / "guide.html"
+                # 125: the Lua scripts guide, which also opens on its own from web/lua/
+                page = WEB_DIR / "lua" / "guide.html"
                 if not page.is_file():
                     return self._err(404, "no lua/guide.html")
                 return self._send(200, page.read_bytes(), "text/html; charset=utf-8",

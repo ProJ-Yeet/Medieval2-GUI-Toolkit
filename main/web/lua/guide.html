@@ -142,18 +142,18 @@ call</em> list under the editor has the same names with one line each.</p></div>
 <h2 id="cli">Running from a command line</h2>
 <p>Everything the Lua tab does also works from a command prompt, which is handy for scripts you run
 often or from a batch file. Open a command prompt in the toolkit's folder (in Explorer, type
-<code>cmd</code> in the address bar and press Enter) and run <code>lua_cli.py</code> with the toolkit's
+<code>cmd</code> in the address bar and press Enter) and run <code>unittransfer\lua_cli.py</code> with the toolkit's
 Python:</p>
 <table>
 <tr><th>Your toolkit</th><th>Start each command with</th></tr>
-<tr><td>The release zip (it has a <code>runtime</code> folder)</td><td><code>runtime\python.exe lua_cli.py</code></td></tr>
-<tr><td>Installed with Install-Dependencies.bat, or from source</td><td><code>py lua_cli.py</code></td></tr>
+<tr><td>The release zip (it has a <code>runtime</code> folder)</td><td><code>runtime\python.exe unittransfer\lua_cli.py</code></td></tr>
+<tr><td>Installed with Install-Dependencies.bat, or from source</td><td><code>py unittransfer\lua_cli.py</code></td></tr>
 </table>
-<pre><code>runtime\python.exe lua_cli.py run lua\examples\list_units.lua --mod Divide_and_Conquer_EUR --set faction=england
-runtime\python.exe lua_cli.py run my_script.lua --mod "C:\Games\Medieval II\mods\My_Mod" --apply
-runtime\python.exe lua_cli.py undo 20261115-101500-ab12cd
-runtime\python.exe lua_cli.py api
-runtime\python.exe lua_cli.py annotations my_scripts</code></pre>
+<pre><code>runtime\python.exe unittransfer\lua_cli.py run web\lua\examples\list_units.lua --mod Divide_and_Conquer_EUR --set faction=england
+runtime\python.exe unittransfer\lua_cli.py run my_script.lua --mod "C:\Games\Medieval II\mods\My_Mod" --apply
+runtime\python.exe unittransfer\lua_cli.py undo 20261115-101500-ab12cd
+runtime\python.exe unittransfer\lua_cli.py api
+runtime\python.exe unittransfer\lua_cli.py annotations my_scripts</code></pre>
 <table>
 <tr><th>Command</th><th>What it does</th></tr>
 <tr><td><code>run &lt;script&gt; --mod &lt;mod&gt;</code></td><td>A dry run. <code>--mod</code> is a mod's folder (one with a <code>data</code> folder in it), or the name of a mod in the game's <code>mods</code> folder that the toolkit is set up with.</td></tr>
@@ -175,7 +175,7 @@ made at once, so the next line of the script sees it. When the script ends:</p>
 <li><strong>Dry run</strong> compares every touched file with how it was, puts every file back byte for
 byte (and checks that it did), and shows you the comparison. The Log keeps nothing.</li>
 <li><strong>Apply</strong> keeps the files as the script left them and folds all its edits into one Log
-entry. The Log's <strong>Undo</strong> on that entry, or <code>lua_cli.py undo &lt;id&gt;</code>, puts back
+entry. The Log's <strong>Undo</strong> on that entry, or <code>unittransfer\lua_cli.py undo &lt;id&gt;</code>, puts back
 every file the run touched.</li>
 </ul>
 <div class="box warn">
@@ -331,7 +331,7 @@ than keeping an old copy, especially where line numbers are involved (buildings,
 (and folders under it: <code>require "lib.util"</code> is <code>lib/util.lua</code>).</p>
 
 <h2 id="examples">The example scripts</h2>
-<p>They are in the toolkit's <code>lua\examples</code> folder and in the Lua tab's <em>Examples</em> list.
+<p>They are in the toolkit's <code>web\lua\examples</code> folder and in the Lua tab's <em>Examples</em> list.
 Each starts with comments that say what it does and which arguments it takes. Give arguments one per line in the Lua tab's <em>Arguments</em> box
 (<code>faction=england</code>), or as <code>--set faction=england</code> on the command line. Run them as dry runs first;
 read them to learn.</p>
@@ -625,7 +625,7 @@ and <code>coroutine</code> are there, with integers kept apart from decimals (<c
 <em>Lua</em> extension (by sumneko) completes and checks them too:</p>
 <ol class="steps">
 <li>Make a folder for your scripts.</li>
-<li>Run <code>runtime\python.exe lua_cli.py annotations "C:\path\to\that\folder"</code>. It writes
+<li>Run <code>runtime\python.exe unittransfer\lua_cli.py annotations "C:\path\to\that\folder"</code>. It writes
 <code>toolkit.lua</code> (a description of every function, never run) and <code>.luarc.json</code>.</li>
 <li>Open the folder in VS Code. Typing <code>toolkit.</code> lists every function with its parameters, and
 a misspelt field is underlined.</li>

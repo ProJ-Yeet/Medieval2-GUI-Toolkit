@@ -13,7 +13,7 @@ see the ones before it: a run applies its changes one by one as the script
 makes them (the reads after a change see it), then folds the records those
 applies wrote into ONE record (:func:`_fold`) whose manifest holds, per file,
 the state from before the run. The Log's Undo, in the app or
-``lua_cli.py undo``, takes the whole run back. A change the editors refuse,
+``unittransfer/lua_cli.py undo``, takes the whole run back. A change the editors refuse,
 or any error in the script, undoes what the run had already applied and
 writes nothing.
 
@@ -23,7 +23,7 @@ the record, so the report shows exactly what an applied run would change. The
 mod is touched while that happens; when it ends every file is byte-identical
 to before (checked) and the Log holds nothing from it.
 
-**The API is declared once** (:data:`API`): the Lua table, ``lua_cli.py api``
+**The API is declared once** (:data:`API`): the Lua table, ``unittransfer/lua_cli.py api``
 and the annotation file are all made from that list.
 """
 from __future__ import annotations
@@ -334,7 +334,7 @@ CLASSES = {
 
 
 def api_text() -> str:
-    """The API as plain text, for ``lua_cli.py api``."""
+    """The API as plain text, for ``unittransfer/lua_cli.py api``."""
     out = []
     for f in API:
         sig = ", ".join(p[0] for p in f.params)
@@ -353,8 +353,8 @@ def annotations() -> str:
     """A LuaLS annotation file for the API, so VS Code (or any editor running
     the Lua language server) completes and checks ``toolkit`` and ``args``."""
     out = ["---@meta",
-           "-- The Medieval II GUI Toolkit's Lua API (lua_cli.py). Made by",
-           "-- `python lua_cli.py annotations <folder>`; do not edit by hand.", ""]
+           "-- The Medieval II GUI Toolkit's Lua API (unittransfer/lua_cli.py). Made by",
+           "-- `python unittransfer/lua_cli.py annotations <folder>`; do not edit by hand.", ""]
     for cls, flds in CLASSES.items():
         out.append(f"---@class {cls}")
         for fl in flds:
@@ -1521,7 +1521,7 @@ def _script_name(name: str) -> str:
 def script_list() -> dict:
     """The saved scripts, the shipped examples and the API, for the tab."""
     mine = sorted(scripts_dir().glob("*.lua")) if scripts_dir().is_dir() else []
-    ex_dir = Path(config.PROJECT_ROOT) / "lua" / "examples"
+    ex_dir = Path(config.PROJECT_ROOT) / "web" / "lua" / "examples"
     examples = sorted(ex_dir.glob("*.lua")) if ex_dir.is_dir() else []
     return {
         "available": luarun.available(),

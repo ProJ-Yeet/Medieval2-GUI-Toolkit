@@ -19,9 +19,9 @@ A portable install of v2.4.12 fetches this one by itself at the next start.
     edit or a script error undoes the run.
   * Scripts run in a sandbox: no file or system access, and time and
     memory limits.
-  * The guide (`lua/guide.html`, also the tab's Guide link) goes from a
+  * The guide (`web/lua/guide.html`, also the tab's Guide link) goes from a
     first script to every function and field, and ten commented examples
-    sit in `lua/examples`. `lua_cli.py` runs the same scripts from a
+    sit in `web/lua/examples`. `unittransfer/lua_cli.py` runs the same scripts from a
     command line.
 * **Campaign Map (beta)**, five tools ported from Mylae's M2TW Editor:
   * **Rivers from a HydroRIVERS file** you download from hydrosheds.org,
