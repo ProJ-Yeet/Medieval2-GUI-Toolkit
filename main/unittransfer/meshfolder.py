@@ -108,7 +108,7 @@ class FolderSource:
             dirs[:] = sorted(d for d in dirs if not d.startswith(".")) if depth < MAX_DEPTH else []
             for n in sorted(names):
                 low = n.lower()
-                if (low.endswith((".mesh", ".modeldb", "bmdb.txt"))
+                if (low.endswith((".mesh", ".modeldb", "bmdb.txt", ".spr"))
                         or low.endswith(loosemesh.TEXTURE_SUFFIXES)):
                     out.append(Path(dirpath) / n)
             if len(out) > MAX_FILES:

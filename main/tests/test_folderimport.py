@@ -247,6 +247,23 @@ check("and the copied files are gone", not (data / REAPER / "orc.mesh").exists()
       and not (data / "unit_models/_units/plain/plain.mesh").exists())
 check("and the unit wears its old model", Mod(root).edu.by_type()["alpha unit"].soldier_model == "shared")
 
+# ---------------------------------------------------------------------------
+print("\nA sprite the export carries")
+top2 = Path(_tmp.mkdtemp(prefix="ut_fiexp_"))
+SPRY = "unit_models/_units/spry"
+for rel, body in (("spry/spry.mesh", "mesh of spry"), ("spry/textures/spryskin.texture", "spry skin"),
+                  ("spry/unit_sprites/x_sprite.spr", "the sprite"),
+                  ("spry/spry_bmdb.txt", entry_text("spry", f"{SPRY}/spry.mesh", f"{SPRY}/textures/spryskin.texture"))):
+    (top2 / rel).parent.mkdir(parents=True, exist_ok=True)
+    (top2 / rel).write_bytes(body.encode())
+mod = Mod(root)
+spr = [f for f in folderimport.scan(mod, str(top2))["models"][0]["files"] if f["rel"].endswith(".spr")]
+check("the .spr in the folder is found and offered", spr and spr[0]["src"] and spr[0]["state"] == "new")
+out = folderimport.apply_import(mod, {"path": str(top2), "models": [{"id": "spry/spry.mesh"}]})
+check("and copied where the entry names it", (data / "unit_sprites/x_sprite.spr").read_bytes() == b"the sprite")
+undo(out["record"]["id"])
+check("Undo takes it out again", not (data / "unit_sprites/x_sprite.spr").exists())
+
 meshfolder._OPEN.clear()
 print(f"\n{sum(ok)}/{len(ok)} passed")
 sys.exit(0 if all(ok) else 1)
