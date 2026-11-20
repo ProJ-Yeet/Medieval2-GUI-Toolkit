@@ -10,7 +10,6 @@
 5. a real bake (only with KEYFORCE_REAL=<export folder>): Blender runs,
    one PNG per colour texture lands in <folder>/Pre-rendered
 """
-import filecmp
 import json
 import re
 import struct
@@ -86,8 +85,11 @@ with tempfile.TemporaryDirectory() as t:
 print("4. the shipped add-on")
 source = Path(r"C:\Users\projy\OneDrive - pcampus.edu.np\Models\EUR\Units\Keyforce\Scripts\keyforce_tools.py")
 if source.is_file():
-    check("vendor/keyforce/keyforce_tools.py is the Keyforce source", filecmp.cmp(
-        source, keyforce.VENDOR / "keyforce_tools.py", shallow=False))
+    # line endings aside: a git checkout may turn LF into CRLF
+    def lines(p):
+        return p.read_bytes().splitlines()
+    check("vendor/keyforce/keyforce_tools.py is the Keyforce source",
+          lines(source) == lines(keyforce.VENDOR / "keyforce_tools.py"))
 else:
     print("  (the Keyforce source is not on this machine: skipped)")
 check("the job script is there", keyforce.JOB_SCRIPT.is_file())
