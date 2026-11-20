@@ -51,7 +51,9 @@ LISTS = re.compile(r"(^|_)(notes?|errors?|warnings?|warns|problems?|findings?|is
                    r"reasons?|refus\w*|skip\w*|hints?|why)$", re.I)
 KEYS = {"error", "message", "why", "note", "detail", "hint", "summary", "reason", "warning"}
 LOGGERS = {"log", "logger", "logging", "_log", "LOG"}
-SKIP_MODULES = {"i18n.py", "__init__.py"}
+#: lua_cli.py is a command line, like transfer_cli.py outside the package: its
+#: messages go to a terminal, not the page, and stay English.
+SKIP_MODULES = {"i18n.py", "__init__.py", "lua_cli.py"}
 
 
 def _name(func: ast.AST) -> Tuple[str, str]:
