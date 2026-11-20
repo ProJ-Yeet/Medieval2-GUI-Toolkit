@@ -160,6 +160,7 @@ finishes; the schedule holds only what is left.
 | 99p | SimpleBake's two ideas for the packer | v2.4.9 |
 | 120-127 | Major VI: Lua scripts over the toolkit's data, from a command line and the Scripts screen's Lua tab | uncut (beta) |
 | 118 | Armory Studio: pre-render lighting, a lit colour texture per PBR colour texture | uncut |
+| 119 | Keyforce Tools (the user's Blender add-on) ported: its Cycles bake of a TpacTool export, run from the toolkit in a hidden Blender | done 2026-11-14, in v2.4.14 (119a-d) |
 
 Nothing below Phase 16 gates anything still to be built - the dependency rules
 that mattered while V2 was being built are recorded in the archive. What *does*
@@ -945,9 +946,114 @@ rows, which became Phases 56-73 and 25-27. Their write-ups are in
 `ROADMAP_ARCHIVE.md`, with how the ratings were reconciled with the 2026-09-05
 triage board.
 
+## Phase 119 - Keyforce Tools ported, through a hidden Blender
+
+The user's Keyforce Tools add-on (Blender 5.2; source, docs and tuning
+history in `Keyforce\` beside the EUR unit exports: `README.md`, `STATE.md`,
+`ROADMAP.md`, `CONVENTIONS.md`) imports TpacTool gallery exports (FBX +
+`_d`/`_s`/`_n` DDS) and bakes one lit colour texture per source texture
+with Cycles. That look was tuned for weeks against the user's SimpleBake
+references and approved, so **locked (the user, 2026-11-14):** the toolkit
+runs the add-on's own code in a hidden Blender, unchanged, rather than a
+rewrite; the Blender-free bakes stay `armlit` (project objects) and
+`pbrbake` (texture files). The UI lives in Armory Studio's Pre-render panel.
+"Bake" here is the pre-rendered texture, never an atlas (the export packs
+those).
+
+* **119a - Import + Automatic Bake of an export folder. Done 2026-11-14,
+  in v2.4.14.** `vendor/keyforce/keyforce_tools.py` (the add-on, v1.17.1,
+  byte for byte), `vendor/keyforce/kf_job.py` (runs in Blender: import, World
+  = Match Material Preview, the recommended settings, the add-on's bake,
+  `progress.json` / `result.json`), `unittransfer/keyforce.py` (finds Blender:
+  the `blender_path` setting, else the newest under Program Files; one hidden,
+  below-normal Blender per job with `CREATE_NO_WINDOW`; status; stop),
+  `/api/armory/keyforce/{start,status,stop,blender}`, Pre-render panel > *Bake
+  a TpacTool export (Blender)...* (`kf*` in `armlit.js`: folder, LOD, size,
+  progress bar, Stop). Output: `<folder>/Pre-rendered/<source texture>.png`,
+  as the add-on writes it. Verified: Uruk at 1024 through `keyforce.start`,
+  8 textures in 186 s on the GTX 1650, every one within 1/255 of the add-on's
+  own v1.16.0 bakes (`Keyforce\Uruk\Bake check 2026-11-14 v1.16.0\png`),
+  alpha identical; again on 2026-11-20 on Black Numenor (bracer_b, chest_b and
+  gloves at LOD0, 1024): `keyforce.start` against the add-on's own Automatic
+  Bake (v1.17.1, through its operators), all three within 1/255, alpha
+  identical; `tests/test_keyforce.py` 13/13 (15/15 with
+  `KEYFORCE_REAL=<export folder>`, a real bake; run on Rohan); the dialog
+  in the app found Blender 5.2, showed progress and stopped a bake.
+  Not yet: strings in languages other than English; Stop reports
+  "Blender stopped (exit code 1)" rather than a plain "stopped".
+* **119b - Manual Bake settings. Done 2026-11-14, in v2.4.14.** The dialog's
+  *Manual Bake settings* fold: Lighting (World, Ambient, World on metal,
+  Surround lights, Suns on cloth & leather, Light tilt, Key light, Direction,
+  Height, Softness, Shadows, Light floor), Quality (Samples, Margin, Denoise,
+  Bounce light, Scene colour management), Dedupe & Spread (Match, Precision,
+  Tolerance, Move UVs into 0-1), *Reset to recommended*. Schema
+  `keyforce.ADVANCED` (angles in degrees); only keys the add-on's Automatic
+  Bake sets (`RECOMMENDED_KEYS`), and `test_keyforce` checks every default
+  against the vendored add-on's own. Blender clamps every value again to the
+  add-on's property limits (`vendor/keyforce/kf_settings.py`, shared by both
+  job scripts). Verified: an override (World City, Tilt 0, 8 samples) changes
+  the bake (mean 2.1/255 on the Uruk helmet); unknown keys are dropped; the
+  fold drawn in the app (15 sliders, 3 choices, 5 boxes, all labelled).
+* **119c - Baked textures onto the export. Done 2026-11-14, in v2.4.14.**
+  *Write a .glb* (on by default): after the bake the meshes wear the baked
+  colour and the `_m2_norm` normal (the add-on's `apply_baked`) and go out,
+  with their armature, as `<out>/<folder name>.glb`. Verified: Rohan, the
+  `.glb` wears all 12 baked textures; Uruk's helmet `.glb` read by
+  `armory.read_external` with its baked texture and its skin (2 bones).
+* **119d - The Armory's own objects through Cycles. Done 2026-11-14,
+  in v2.4.14.** Pre-render panel > *Bake in Blender (Cycles)*:
+  `keyforce.start_objects` takes `armlit.gather`'s jobs (pulled out of
+  `armlit.bake_objects`, unchanged; `test_armlit` passes), writes per colour
+  texture the mesh arrays and the maps under the add-on's names (`c<k>`,
+  `_s`, `_n` for a Bannerlord map, else `_m2_norm`; a file Blender reads goes
+  as it is, a game `.texture` decoded; a two-channel normal not in a `.dds`
+  gets its blue back), and `vendor/keyforce/kf_objects.py` builds one mesh
+  per object (game y up -> z up, custom normals) with the add-on's material
+  and bakes it. The result lands in `sheets/lit/<name>_cycles_<tag>.png` at
+  the source's size with its `_norm.png`, and the objects wear it as
+  `armLitRun` does (`armLitApply`, shared). Uses the export dialog's Manual
+  Bake settings. Verified: the Uruk helmet as an Armory object (its `.glb`
+  over the original `_d/_s/_n` DDS), 22 s, mean 62.8 against 69.1 of the
+  add-on's own bake of the export (same layout; not identical: the Armory's
+  mesh, baked at 1024 then compared at 512). Found on the way: with the
+  toolkit's decoding of a BC5 `_n.dds` (blue empty) it baked 3x too dark;
+  hence Blender reads the `.dds` itself. Not yet: an object on two sheets is
+  skipped as in `armlit`; the game's own `.texture` normal sheets are read as
+  `_m2_norm` on the strength of the add-on's convention, not checked in game.
+  Tests for 119a-d: `tests/test_keyforce.py` 25/25 without Blender, 30/30
+  with `KEYFORCE_REAL=<export folder>` (real bakes: the export with a `.glb`,
+  a project object through Blender), run on Uruk.
+* **Not ported:** UV Stacker and UV Fold & Snap are hand work in Blender's
+  UV editor, one island at a time; they stay in the add-on.
+* **Keeping in step:** the add-on's source is the truth. When it changes,
+  copy it over `vendor/keyforce/keyforce_tools.py`; `test_keyforce` fails
+  while the two differ (on a machine that has the source). The source is
+  `Keyforce\Scripts\keyforce_tools.py` since 2026-11-15; the test looked at
+  the old path and skipped until 2026-11-20, when the vendored v1.16.0 was
+  brought up to v1.17.1 (only the UV tools changed; the bake is the same).
+
 ## Phase 118 - pre-render lighting, what is left
 
-Built 2026-11-12 (`ROADMAP_ARCHIVE.md`). Still to do:
+Built 2026-11-12 (`ROADMAP_ARCHIVE.md`).
+
+**Texture files alone, 2026-11-14, in v2.4.14** (the user: a general baker
+"that can bake any pbr material", "should not require blender", textures
+only first, the mesh version later). `unittransfer/pbrbake.py`,
+`POST /api/armory/pbr_bake`, Pre-render panel > *Bake texture files...*
+(`armlit.js`, `pbr*`). Any one map of a set finds the rest by name: colour,
+metallic, roughness or gloss, normal (`_normal_gl` / `_normal_dx` read their
+own way), AO, opacity, emission, or packed Bannerlord `_s`, ORM/ARM,
+metallicRoughness, HDRP mask map. Lit as a flat surface: ambient, its
+reflection (metal takes its colour), a key light; no cast shadows. Live
+preview at 512, Bake writes `<name>_lit.png` beside the colour map. Tests:
+`tests/test_pbrbake.py` 40/40; `test_armlit`, `test_armory_lit_ui.js`,
+`test_i18n` 45/45. Tried on three Gondor `_d/_s/_n` sets (about 1.3 s each):
+metal shaded, engravings read. Not yet: the dialog looked at in the app;
+strings in languages other than English; very glossy rims can clip white
+(lower *Shine*). Next, by the user's order: the same from a mesh plus its
+textures, with shadows (the Armory's own bake does that for project objects).
+
+Still to do:
 
 * Try it on a real PBR asset with `_s` and `_n` maps, at 2048 and 4096, and
   look at the result in the game. If bumps read pressed in, the default of

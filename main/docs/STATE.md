@@ -1,5 +1,5 @@
 # STATE - Medieval 2 GUI Toolkit
-_Updated: 2026-11-20 - **v2.4.14 cut**, on the user's word ("also subrelease"): one fix since v2.4.13, the model-folder import copies the .spr sprites an entry names (a01951ad). Releasing stays on request only._
+_Updated: 2026-11-20 - **v2.4.14 cut**, on the user's word ("also subrelease"): the model-folder import copies the .spr sprites an entry names (a01951ad), and the PBR bakes built 2026-11-14 and committed today: `pbrbake.py` (texture files, no Blender, Phase 118) and Keyforce Tools' Cycles bake through a hidden Blender (Phase 119a-d, the vendored add-on now v1.17.1; matches the add-on's own Automatic Bake within 1/255 on Black Numenor). Releasing stays on request only._
 
 ## Next up
 **Next: major V, the translations**, per `ROADMAP.md`. Major VI (Lua scripts, 120-127) is built, uncut, 2026-11-15: `lua_cli.py`, `luarun.py`, `luaapi.py`, every editor's data, the Scripts screen's Lua tab behind *Opt into beta features*. The tab's editor is CodeMirror 5 (`web/vendor/codemirror`). The guide (`lua/guide.html`) and ten example scripts (`lua/examples`) ship in the zip. Nothing of VI is left.
@@ -16,7 +16,7 @@ _Updated: 2026-11-20 - **v2.4.14 cut**, on the user's word ("also subrelease"): 
 
 **In progress 2026-11-08:** guided unit builder integration (102-108, in order, each depending on the one before): 102-106 complete/uncut (the data contract `docs/UNIT_BUILDER_CONTRACT.md`, the calculator and `docs/BUILDER_RULES.md`, the Designer tab in the Unit Editor, portable projects, and since 2026-11-10 Apply to a unit through the Unit Editor and New unit); 107-108 planned, 107 (mercenary pools) next. Source notes in `upstream/SSR_UNIT_BUILDER.md`; checkpoints in `CODEX_HANDOFF.md`.
 
-**Cut v2.4.14, 2026-11-20**, on the user's word ("also subrelease"), so the Black Numenor Keyforce import zip's sprites come across: the model-folder import now copies the .spr files an entry names (a01951ad). Built from a clean worktree of the commit, as v2.4.13 was, so the uncommitted Keyforce/pbrbake/armlit work stayed out of the zip. Releasing stays on request only.
+**Cut v2.4.14, 2026-11-20**, on the user's word ("also subrelease"), so the Black Numenor Keyforce import zip's sprites come across: the model-folder import now copies the .spr files an entry names (a01951ad). With it, on the user's word ("commit those into the release"), the PBR bakes left uncommitted since 2026-11-14: `pbrbake.py` and Phase 119a-d (`keyforce.py`, `vendor/keyforce/`), checked first on Black Numenor (bracer_b, chest_b, gloves at 1024: within 1/255 of the add-on's own Automatic Bake, alpha identical). Built from a clean worktree of the commit, as v2.4.13 was, so nothing uncommitted got into the zip. Releasing stays on request only.
 
 **Cut v2.4.13, 2026-11-17**, on the user's word ("subrelease it too"), after a user's report that bringing building lines into kirsi_biggermap_medieval2 refused it for having no export_buildings.txt (fixed on master in ee9278d0). All of master since v2.4.12, built from a clean worktree of the commit so the uncommitted Keyforce/pbrbake work stayed out of the zip. Releasing stays on request only.
 

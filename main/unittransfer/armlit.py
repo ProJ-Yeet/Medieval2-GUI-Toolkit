@@ -290,15 +290,12 @@ def _source_obj(o: dict) -> dict:
     return o
 
 
-def bake_objects(project: dict, obj_ids, mod_of, settings: Optional[dict] = None,
-                 image_of=armbake.default_image_of, out_dir: Optional[Path] = None) -> dict:
-    """Bake the named objects; one lit PNG per colour texture they wear.
-
-    ``{"baked": [{"source", "path", "objects", "spec", "normal"}],
-    "skipped": [{"id", "why"}]}``. An object drawing on two sheets at once is
-    skipped (``two_sheets``), one with no texture too (``no_texture``).
-    """
-    st = settings_of(settings)
+def gather(project: dict, obj_ids, mod_of, image_of=armbake.default_image_of):
+    """The named objects, one job per colour texture they wear: ``(jobs,
+    skipped, sheets)``. A job holds the texture's ``path``, its ``normal``
+    map, the ``objects`` on it and their triangles: ``pos`` / ``nrm`` / ``uv``
+    (texels, x right, y down) per vertex, ``tris``, ``island`` and ``obj``.
+    Shared by :func:`bake_objects` and :mod:`keyforce`'s Cycles bake."""
     want = {int(i) for i in obj_ids or []}
     objs = [_source_obj(o) for o in project.get("objects") or [] if o.get("id") in want]
     assets = armory.project_assets(project)
@@ -355,6 +352,19 @@ def bake_objects(project: dict, obj_ids, mod_of, settings: Optional[dict] = None
             job["island"] += [number] * len(tl)
             job["obj"] += [len(job["objects"])] * len(tl)
             job["n"] += len(verts)
+    return jobs, skipped, sheets
+
+
+def bake_objects(project: dict, obj_ids, mod_of, settings: Optional[dict] = None,
+                 image_of=armbake.default_image_of, out_dir: Optional[Path] = None) -> dict:
+    """Bake the named objects; one lit PNG per colour texture they wear.
+
+    ``{"baked": [{"source", "path", "objects", "spec", "normal"}],
+    "skipped": [{"id", "why"}]}``. An object drawing on two sheets at once is
+    skipped (``two_sheets``), one with no texture too (``no_texture``).
+    """
+    st = settings_of(settings)
+    jobs, skipped, sheets = gather(project, obj_ids, mod_of, image_of)
     out_dir = Path(out_dir) if out_dir else armory.SHEETS_DIR / "lit"
     baked = []
     for job in jobs.values():

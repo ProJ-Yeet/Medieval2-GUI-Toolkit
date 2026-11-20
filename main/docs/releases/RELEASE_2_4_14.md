@@ -1,9 +1,29 @@
 # v2.4.14
 
-**Model folders bring their unit sprites.** One fix since v2.4.13, for
-importing a folder of models into a mod.
+**PBR bakes in Armory Studio, and model folders bring their unit sprites.**
+Two new ways to turn a PBR texture set into one lit colour texture, and a fix
+for importing a folder of models into a mod.
 
 A portable install of v2.4.13 fetches this one by itself at the next start.
+
+## New
+
+* **Armory Studio (beta)**, in the Pre-render panel:
+  * **Bake texture files...** bakes any PBR set into one lit colour texture
+    from the textures alone, with no mesh and no Blender. Pick any one map
+    and the rest of the set is found by name: colour, metallic, roughness or
+    gloss, normal (OpenGL or DirectX), AO, opacity, emission, or a packed
+    Bannerlord `_s`, ORM/ARM or mask map. A live preview, then
+    `<name>_lit.png` beside the colour map.
+  * **Bake a TpacTool export (Blender)...** runs the Keyforce Tools add-on's
+    own Cycles bake in a hidden Blender 5.2: every `*_lod<N>.fbx` of a
+    gallery export with its `_d`, `_s` and `_n` maps, one lit colour texture
+    per source texture in the folder's `Pre-rendered` subfolder, with a
+    progress bar and Stop. The add-on's Manual Bake settings are in a fold,
+    and *Write a .glb* gives the export wearing its baked textures, ready
+    to import.
+  * **Bake in Blender (Cycles)** does the same for the Armory's own
+    objects.
 
 ## Fixed
 

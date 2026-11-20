@@ -105,7 +105,321 @@ function armLitHtml(){
     <div class="armpropsrow"><span class="count">${ttN('armory.opt_scope', objs.length)}</span><span style="flex:1"></span>
       ${lit.length ? `<button class="mini" onclick="armLitRemove()" title="${esc(tt('armory.lit_remove_title'))}">${tt('armory.lit_remove')}</button>` : ''}
       <button class="primary" id="armLitGo" onclick="armLitRun()"${objs.length && !l.busy ? '' : ' disabled'}>${l.busy ? tt('armory.working') : tt('armory.lit_bake')}</button></div>
+    <div class="armpropsrow"><span class="count" id="armLitCycles" role="status">${l.cycles ? `${l.cycles.pct}% <progress max="100" value="${l.cycles.pct}"></progress> ${esc(l.cycles.status || '')}` : ''}</span>
+      <span style="flex:1"></span>
+      ${l.cycles && l.cycles.job ? `<button class="mini" onclick="armLitCyclesStop()">${tt('armory.kf_stop')}</button>` : ''}
+      <button class="mini" onclick="armLitCycles()" title="${esc(tt('armory.lit_cycles_title'))}"${objs.length && !l.busy ? '' : ' disabled'}>${tt('armory.lit_cycles')}</button></div>
+    <div class="armpropsrow"><span style="flex:1"></span>
+      <button class="mini" onclick="pbrOpen()" title="${esc(tt('armory.pbr_open_title'))}">${tt('armory.pbr_open')}</button>
+      <button class="mini" onclick="kfOpen()" title="${esc(tt('armory.kf_open_title'))}">${tt('armory.kf_open')}</button></div>
   </div>`;
+}
+
+/* --- a TpacTool export through Blender (keyforce.py) -------------------------
+   Keyforce Tools' own Cycles bake, in a hidden Blender: an export folder, its
+   LOD and a size in, one <source texture>.png per colour texture out, in
+   <folder>/Pre-rendered. The dialog polls the job once a second. */
+
+let KF = null;               // {root, lod, size, adv, glb, job, st: last status, blender, schema, open, timer}
+
+// keyforce.ADVANCED's keys: what each is called and what it does
+const KF_LABELS = {
+  world: ['armory.kf_s_world', 'armory.kf_s_world_title'],
+  bake_ambient: ['armory.kf_s_ambient', 'armory.kf_s_ambient_title'],
+  bake_world: ['armory.kf_s_world_metal', 'armory.kf_s_world_metal_title'],
+  bake_surround: ['armory.kf_s_surround', 'armory.kf_s_surround_title'],
+  bake_surround_diffuse: ['armory.kf_s_surround_diffuse', 'armory.kf_s_surround_diffuse_title'],
+  bake_tilt: ['armory.kf_s_tilt', 'armory.kf_s_tilt_title'],
+  bake_key: ['armory.kf_s_key', 'armory.kf_s_key_title'],
+  bake_azimuth: ['armory.lit_direction', 'armory.kf_s_azimuth_title'],
+  bake_elevation: ['armory.lit_height', 'armory.lit_height_title'],
+  bake_soft: ['armory.lit_softness', 'armory.kf_s_soft_title'],
+  bake_shadows: ['armory.lit_shadows', 'armory.kf_s_shadows_title'],
+  bake_floor: ['armory.kf_s_floor', 'armory.kf_s_floor_title'],
+  bake_samples: ['armory.kf_s_samples', 'armory.kf_s_samples_title'],
+  bake_margin: ['armory.kf_s_margin', 'armory.kf_s_margin_title'],
+  bake_denoise: ['armory.kf_s_denoise', 'armory.kf_s_denoise_title'],
+  bake_indirect: ['armory.kf_s_indirect', 'armory.kf_s_indirect_title'],
+  bake_view: ['armory.kf_s_view', 'armory.kf_s_view_title'],
+  match: ['armory.kf_s_match', 'armory.kf_s_match_title'],
+  precision: ['armory.kf_s_precision', 'armory.kf_s_precision_title'],
+  tolerance: ['armory.kf_s_tolerance', 'armory.kf_s_tolerance_title'],
+  into_tile: ['armory.kf_s_into_tile', 'armory.kf_s_into_tile_title']};
+const KF_GROUPS = {light: 'armory.kf_g_light', quality: 'armory.kf_g_quality', parts: 'armory.kf_g_parts'};
+const KF_CHOICES = {PREVIEW: 'armory.kf_c_preview', CITY: 'armory.kf_c_city', COURTYARD: 'armory.kf_c_courtyard',
+  FOREST: 'armory.kf_c_forest', INTERIOR: 'armory.kf_c_interior', NIGHT: 'armory.kf_c_night',
+  STUDIO: 'armory.kf_c_studio', SUNRISE: 'armory.kf_c_sunrise', SUNSET: 'armory.kf_c_sunset',
+  UV: 'armory.kf_c_uv', SHAPE: 'armory.kf_c_shape', EXACT: 'armory.kf_c_exact'};
+
+function kfOpts(){
+  const s = (state.settings || {}).keyforce_bake;
+  return Object.assign({lod: 0, size: 2048, adv: {}, glb: true}, s && typeof s === 'object' ? s : {});
+}
+async function kfOpen(){
+  const o = kfOpts();
+  KF = {root: o.root || '', lod: o.lod, size: o.size, adv: Object.assign({}, o.adv), glb: o.glb !== false,
+        job: null, st: null, blender: null, schema: [], open: false, timer: 0};
+  document.getElementById('modal').className = 'modal wide';
+  document.getElementById('overlay').classList.add('open');
+  kfRender();
+  let r;
+  try{ r = await api.post('/api/armory/keyforce/blender', {}); }catch(e){ r = {path: ''}; }
+  if(!KF) return;
+  KF.blender = r.path || '';
+  KF.schema = r.settings || [];
+  kfRender();
+}
+function kfKeep(){
+  state.settings = state.settings || {};
+  state.settings.keyforce_bake = {root: KF.root, lod: KF.lod, size: KF.size, adv: KF.adv, glb: KF.glb};
+  api.post('/api/settings', {keyforce_bake: state.settings.keyforce_bake}).catch(() => {});
+}
+async function kfBrowse(){
+  let r;
+  try{ r = await api.post('/api/browse_folder', {title: tt('armory.kf_pick_title'), dir: KF.root}); }
+  catch(e){ toast(errText(e), 6000); return; }
+  if(!KF || !r || !r.path) return;
+  KF.root = r.path;
+  kfKeep();
+  kfRender();
+}
+async function kfStart(){
+  if(!KF || KF.job || !KF.root) return;
+  kfKeep();
+  let r;
+  try{ r = await api.post('/api/armory/keyforce/start', {root: KF.root, lod: KF.lod, size: KF.size,
+                                                          settings: KF.adv, glb: KF.glb}); }
+  catch(e){ r = {error: '' + e}; }
+  if(!KF) return;
+  if(r.error){ toast(r.error, 8000); return; }
+  KF.job = r.job;
+  KF.st = {running: true, fraction: 0, status: '', out: r.out};
+  kfRender();
+  kfPoll();
+}
+async function kfPoll(){
+  if(!KF || !KF.job) return;
+  let r;
+  try{ r = await api.post('/api/armory/keyforce/status', {job: KF.job}); }catch(e){ r = {error: '' + e, done: true}; }
+  if(!KF) return;
+  KF.st = r;
+  if(r.done || r.error) KF.job = null;
+  else KF.timer = setTimeout(kfPoll, 1000);
+  kfRender();
+}
+async function kfStop(){
+  if(!KF || !KF.job) return;
+  try{ await api.post('/api/armory/keyforce/stop', {job: KF.job}); }catch(e){}
+}
+function kfClose(){
+  if(KF) clearTimeout(KF.timer);
+  KF = null;
+  closeModal();
+}
+// Manual Bake's settings, folded away; an untouched one is the add-on's recommended value
+function kfSetAdv(k, v){
+  KF.adv[k] = v;
+  kfKeep();
+  const out = document.getElementById('kfVal_' + k);
+  if(out) out.textContent = v;
+}
+function kfAdvanced(busy){
+  if(!KF.schema.length) return '';
+  const head = `<div class="armpropsrow"><button class="mini" onclick="KF.open = !KF.open; kfRender()">${KF.open ? '▾' : '▸'} ${tt('armory.kf_advanced')}</button>
+      <span style="flex:1"></span>${KF.open && Object.keys(KF.adv).length && !busy ? `<button class="mini" onclick="KF.adv = {}; kfKeep(); kfRender()">${tt('armory.kf_reset')}</button>` : ''}</div>`;
+  if(!KF.open) return head;
+  const dis = busy ? ' disabled' : '';
+  const field = f => {
+    const [label, title] = KF_LABELS[f.key] || [f.key, ''];
+    const v = f.key in KF.adv ? KF.adv[f.key] : f.default;
+    const t = esc(title ? tt(title) : '');
+    if(f.kind === 'bool') return `<label class="armcheck" title="${t}"><input type="checkbox"${v ? ' checked' : ''}${dis}
+        onchange="kfSetAdv('${f.key}', this.checked)"> ${tt(label)}</label>`;
+    if(f.kind === 'enum') return `<label title="${t}">${tt(label)} <select${dis} onchange="kfSetAdv('${f.key}', this.value)">
+        ${f.low.map(c => `<option value="${c}"${c === v ? ' selected' : ''}>${KF_CHOICES[c] ? tt(KF_CHOICES[c]) : c}</option>`).join('')}</select></label>`;
+    return `<label class="armrange" title="${t}"><span>${tt(label)} <span class="count" id="kfVal_${f.key}">${v}</span></span>
+        <input type="range" min="${f.low}" max="${f.high}" step="${f.step}" value="${v}"${dis}
+        oninput="kfSetAdv('${f.key}', +this.value)"></label>`;
+  };
+  return head + Object.keys(KF_GROUPS).map(g => `<div class="armsect">${tt(KF_GROUPS[g])}</div>
+      <div class="armpropsrow" style="flex-wrap:wrap">${KF.schema.filter(f => f.group === g).map(field).join('')}</div>`).join('');
+}
+function kfRender(){
+  if(!KF) return;
+  const st = KF.st, busy = !!KF.job;
+  const pct = st ? Math.round((st.fraction || 0) * 100) : 0;
+  let out = '';
+  if(busy) out = `<div class="count" role="status">${pct}% <progress max="100" value="${pct}"></progress> ${esc(st.status || '')}</div>`;
+  else if(st && st.error) out = `<div class="count w-bad">${esc(st.error)}</div>${st.log ? `<pre class="count">${esc(st.log)}</pre>` : ''}`;
+  else if(st && st.done) out = `<div class="count w-good">${ttN('armory.kf_done', (st.results || []).length, {folder: esc(st.out || '')})}</div>
+      ${(st.results || []).map(x => `<div class="count">${esc(x.path.split(/[\\/]/).pop())}</div>`).join('')}
+      ${st.glb ? `<div class="count">${tt('armory.kf_glb_done', {path: esc(st.glb)})}</div>` : ''}
+      ${st.missing ? `<div class="count w-bad">${ttN('armory.kf_missing', st.missing)}</div>` : ''}`;
+  const blender = KF.blender === null ? tt('armory.kf_looking')
+    : KF.blender ? tt('armory.kf_blender', {path: esc(KF.blender)}) : `<span class="w-bad">${tt('armory.kf_no_blender')}</span>`;
+  document.getElementById('modal').innerHTML = `<h2>${tt('armory.kf_title')}</h2>
+    <div class="mbody">
+      <div class="count armnote">${tt('armory.kf_intro')}</div>
+      <div class="count armnote">${blender}</div>
+      <div class="armpropsrow"><span class="count" style="flex:1">${KF.root ? esc(KF.root) : tt('armory.kf_no_folder')}</span>
+        <button onclick="kfBrowse()"${busy ? ' disabled' : ''}>${tt('armory.kf_folder')}</button></div>
+      <div class="armpropsrow">
+        <label>${tt('armory.kf_lod')} <input type="number" min="0" max="9" value="${KF.lod}" style="width:4em"${busy ? ' disabled' : ''}
+          onchange="KF.lod = Math.max(0, Math.min(9, +this.value || 0))"></label>
+        <label>${tt('armory.kf_size')} <select${busy ? ' disabled' : ''} onchange="KF.size = +this.value">
+          ${[512, 1024, 2048, 4096].map(s => `<option value="${s}"${s === KF.size ? ' selected' : ''}>${s}</option>`).join('')}</select></label>
+        <label class="armcheck" title="${esc(tt('armory.kf_glb_title'))}"><input type="checkbox"${KF.glb ? ' checked' : ''}${busy ? ' disabled' : ''}
+          onchange="KF.glb = this.checked; kfKeep()"> ${tt('armory.kf_glb')}</label></div>
+      ${kfAdvanced(busy)}
+      ${out}
+    </div>
+    <div class="foot"><span style="flex:1"></span>
+      ${busy ? `<button onclick="kfStop()">${tt('armory.kf_stop')}</button>` : `<button onclick="kfClose()">${tt('common.close')}</button>`}
+      <button class="primary" onclick="kfStart()"${KF.root && KF.blender && !busy ? '' : ' disabled'}>${busy ? tt('armory.working') : tt('armory.lit_bake')}</button></div>`;
+}
+
+/* --- texture files alone (pbrbake.py) ----------------------------------------
+   Any PBR texture set, no mesh and no object: the surface is lit as if flat,
+   through its own maps. Picked files, a live preview, then Bake writes
+   <name>_lit.png beside each set's colour map. */
+
+const PBR_DEFAULT = {ambient: 0.7, key: true, direction: 30, height: 45, softness: 0.3,
+                     strength: 0.8, shine: 1.0, ao: 1.0, flip_green: false};
+const PBR_RANGES = {ambient: [0, 2, 0.01], strength: [0, 3, 0.01], direction: [-180, 180, 1],
+                    height: [5, 90, 1], softness: [0, 1, 0.01], shine: [0, 2, 0.01], ao: [0, 1, 0.01]};
+// pbrbake.KINDS: what each kind of map is called
+const PBR_KINDS = {colour: 'armory.pbr_kind_colour', normal: 'armory.pbr_kind_normal', metal: 'armory.pbr_kind_metal',
+  rough: 'armory.pbr_kind_rough', gloss: 'armory.pbr_kind_gloss', spec: 'armory.pbr_kind_spec',
+  orm: 'armory.pbr_kind_orm', mr: 'armory.pbr_kind_mr', mask: 'armory.pbr_kind_mask', ao: 'armory.pbr_kind_ao',
+  opacity: 'armory.pbr_kind_opacity', emit: 'armory.pbr_kind_emit'};
+let PBR = null;              // {paths, sets: preview answer, busy, timer}
+
+function pbrOpts(){
+  const s = (state.settings || {}).pbr_bake;
+  return Object.assign({}, PBR_DEFAULT, s && typeof s === 'object' ? s : {});
+}
+function pbrOpen(){
+  PBR = {paths: [], sets: [], skipped: [], busy: false, timer: 0};
+  document.getElementById('modal').className = 'modal wide';
+  document.getElementById('overlay').classList.add('open');
+  pbrRender();
+}
+async function pbrAdd(){
+  let r;
+  try{ r = await api.post('/api/browse_file', {title: tt('armory.pbr_pick_title'),
+         filter: 'Images|*.png;*.tga;*.dds;*.jpg;*.jpeg;*.tif;*.tiff;*.bmp;*.texture'}); }
+  catch(e){ toast(errText(e), 6000); return; }
+  if(!PBR || !r || !r.path) return;
+  if(!PBR.paths.includes(r.path)) PBR.paths.push(r.path);
+  pbrPreview();
+}
+function pbrSet(k, v, quiet){
+  const o = pbrOpts();
+  o[k] = v;
+  state.settings = state.settings || {};
+  state.settings.pbr_bake = o;
+  if(!quiet) api.post('/api/settings', {pbr_bake: o}).catch(() => {});
+  const out = document.getElementById('pbrVal_' + k);
+  if(out) out.textContent = v;
+  clearTimeout(PBR && PBR.timer);
+  if(PBR) PBR.timer = setTimeout(pbrPreview, quiet ? 250 : 0);
+}
+async function pbrPreview(){
+  if(!PBR || !PBR.paths.length){ pbrRender(); return; }
+  const ask = PBR.paths.slice();
+  let r;
+  try{ r = await api.post('/api/armory/pbr_bake', {paths: ask, settings: pbrOpts(), preview: true}); }
+  catch(e){ r = {error: '' + e}; }
+  if(!PBR || ask.join('|') !== PBR.paths.join('|')) return;
+  if(r.error){ toast(r.error, 6000); return; }
+  PBR.sets = r.baked || [];
+  PBR.skipped = r.skipped || [];
+  pbrRender();
+}
+async function pbrBake(){
+  if(!PBR || PBR.busy || !PBR.paths.length) return;
+  PBR.busy = true;
+  pbrRender();
+  let r;
+  try{ r = await api.post('/api/armory/pbr_bake', {paths: PBR.paths, settings: pbrOpts()}); }
+  catch(e){ r = {error: '' + e}; }
+  if(!PBR) return;
+  PBR.busy = false;
+  pbrRender();
+  if(r.error){ toast(r.error, 6000); return; }
+  const done = r.baked || [];
+  toast(done.length ? ttN('armory.pbr_done', done.length, {paths: done.map(b => b.path).join(', ')})
+                    : tt('armory.pbr_none'), 8000);
+}
+function pbrRender(){
+  if(!PBR) return;
+  const o = pbrOpts();
+  const range = (k, label, title) => { const r = PBR_RANGES[k]; return `<label class="armrange" title="${esc(title || '')}">
+      <span>${label} <span class="count" id="pbrVal_${k}">${o[k]}</span></span>
+      <input type="range" min="${r[0]}" max="${r[1]}" step="${r[2]}" value="${o[k]}"
+        oninput="pbrSet('${k}', +this.value, true)" onchange="pbrSet('${k}', +this.value)"></label>`; };
+  const box = (k, label, title) => `<label class="armcheck" title="${esc(title || '')}"><input type="checkbox"${o[k] ? ' checked' : ''}
+      onchange="pbrSet('${k}', this.checked); pbrRender()"> ${label}</label>`;
+  const sets = PBR.sets.map(s => `<div class="armpropsrow" style="align-items:flex-start;gap:10px">
+      <img src="${s.image}" style="width:160px;height:160px;object-fit:contain;background:#0003">
+      <div><b>${esc(s.source.split(/[\\/]/).pop())}</b>
+        ${Object.entries(s.maps).map(([k, p]) => `<div class="count">${esc(PBR_KINDS[k] ? tt(PBR_KINDS[k]) : k)}: ${esc(p.split(/[\\/]/).pop())}</div>`).join('')}</div></div>`).join('');
+  const skipped = PBR.skipped.map(s => `<div class="count w-bad">${esc(s.path.split(/[\\/]/).pop())}: ${
+      esc(s.why === 'no_colour' ? tt('armory.pbr_no_colour') : s.why)}</div>`).join('');
+  document.getElementById('modal').innerHTML = `<h2>${tt('armory.pbr_title')}</h2>
+    <div class="mbody">
+      <div class="count armnote">${tt('armory.pbr_intro')}</div>
+      <div class="armpropsrow">${range('ambient', tt('armory.lit_ambient'), tt('armory.lit_ambient_title'))}
+        ${range('ao', tt('armory.pbr_ao'), tt('armory.pbr_ao_title'))}
+        ${range('shine', tt('armory.pbr_shine'), tt('armory.pbr_shine_title'))}</div>
+      <div class="armpropsrow">${box('key', tt('armory.lit_key'), tt('armory.lit_key_title'))}</div>
+      ${o.key ? `<div class="armpropsrow">${range('direction', tt('armory.lit_direction'), tt('armory.pbr_direction_title'))}
+        ${range('height', tt('armory.lit_height'), tt('armory.lit_height_title'))}</div>
+      <div class="armpropsrow">${range('strength', tt('armory.strength'))}
+        ${range('softness', tt('armory.lit_softness'), tt('armory.lit_softness_title'))}</div>` : ''}
+      <div class="armpropsrow">${box('flip_green', tt('armory.lit_flip_green'), tt('armory.pbr_flip_green_title'))}</div>
+      ${sets || `<div class="count">${tt('armory.pbr_empty')}</div>`}${skipped}
+    </div>
+    <div class="foot"><button onclick="pbrAdd()">${tt('armory.pbr_add')}</button>
+      ${PBR.paths.length ? `<button onclick="PBR.paths=[];PBR.sets=[];PBR.skipped=[];pbrRender()">${tt('armory.pbr_clear')}</button>` : ''}
+      <span style="flex:1"></span>
+      <button onclick="PBR=null;closeModal()">${tt('common.close')}</button>
+      <button class="primary" onclick="pbrBake()"${PBR.paths.length && !PBR.busy ? '' : ' disabled'}>${PBR.busy ? tt('armory.working') : tt('armory.lit_bake')}</button></div>`;
+}
+
+// the same through Keyforce Tools' Cycles bake, in a hidden Blender (keyforce.py),
+// with the Manual Bake settings of the export dialog; the objects wear what it
+// writes exactly as they wear armLitRun's
+async function armLitCycles(){
+  const l = armLit(), objs = armLitTargets();
+  if(!objs.length || l.busy) return;
+  const st = {cycles: true, settings: kfOpts().adv || {}};
+  l.busy = true;
+  l.cycles = {pct: 0, status: ''};
+  armPaintObjects();
+  let r;
+  try{
+    r = await api.post('/api/armory/keyforce/objects', {project: armProj(), ids: objs.map(o => o.id), settings: st.settings});
+    if(r.error) throw new Error(r.error);
+    l.cycles.job = r.job;
+    for(;;){
+      await new Promise(res => setTimeout(res, 1000));
+      r = await api.post('/api/armory/keyforce/status', {job: l.cycles.job});
+      if(r.error || r.done) break;
+      l.cycles.pct = Math.round((r.fraction || 0) * 100);
+      l.cycles.status = r.status || '';
+      const el = typeof document !== 'undefined' && document.getElementById('armLitCycles');
+      if(el){ el.textContent = l.cycles.pct + '% ' + l.cycles.status; }
+    }
+    if(r.error) throw new Error(r.error);
+  }catch(e){ l.busy = false; l.cycles = null; toast(errText(e), 8000); armPaintObjects(); return; }
+  l.busy = false;
+  l.cycles = null;
+  armLitApply(r, st);
+}
+async function armLitCyclesStop(){
+  const l = armLit();
+  if(l.cycles && l.cycles.job) try{ await api.post('/api/armory/keyforce/stop', {job: l.cycles.job}); }catch(e){}
 }
 
 async function armLitRun(){
@@ -119,6 +433,12 @@ async function armLitRun(){
     if(r.error) throw new Error(r.error);
   }catch(e){ l.busy = false; toast(errText(e), 6000); armPaintObjects(); return; }
   l.busy = false;
+  armLitApply(r, st);
+}
+
+// a bake's answer worn: each object on its lit texture, what was skipped said
+function armLitApply(r, st){
+  const l = armLit();
   let n = 0;
   for(const b of r.baked || []){
     ARM.sheetAllowed.add(b.path);
