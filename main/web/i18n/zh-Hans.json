@@ -13534,5 +13534,8 @@
  "cards.gen_bone_turn": "旋转 (R)",
  "cards.gen_bone_turn_title": "用鼠标绕所选骨骼的控制柄旋转，可沿视线方向旋转，也可按 X、Y 或 Z 绕对应轴旋转。单击或按 Enter 确认，按 Esc 或单击鼠标右键可还原。",
  "cards.gen_bone_reset": "重置骨骼",
- "cards.gen_peek_hint": "点击列表中的一支部队即可在此查看，拖动可旋转它，双击它或按“使用此部队”即可生成其卡片。"
+ "cards.gen_peek_hint": "点击列表中的一支部队即可在此查看，拖动可旋转它，双击它或按“使用此部队”即可生成其卡片。",
+ "cards.gen_ug": "盔甲升级",
+ "cards.gen_ug_base": "士兵模型",
+ "cards.gen_ug_level": "等级 {level}"
 }

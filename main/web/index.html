@@ -3891,6 +3891,8 @@ body.look-editing :is(button,label,legend,h1,h2,h3,.trsechead,.mftab):hover{outl
   .cgsec[open]>summary{margin-bottom:4px}
   .cgsecbody{display:flex;flex-direction:column;gap:4px;min-width:0;padding-bottom:4px}
   .cgctl .armexplist{min-width:0;max-height:55vh;flex:none}
+  .cgunitcards{max-height:60vh;overflow-y:auto;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));padding-right:4px}
+  .cgunitcards .card{cursor:pointer}
   .cgctl .armexplist>*{flex:none}
   .cgctl .armexprowbtn{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:left}
   .cgctl .armexprow{flex-wrap:wrap;min-width:0}
@@ -3898,13 +3900,14 @@ body.look-editing :is(button,label,legend,h1,h2,h3,.trsechead,.mftab):hover{outl
   .cgrange input{min-width:0}
   .cgout{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:12px;align-items:stretch;min-width:0;overflow:auto}
   .cghd{display:flex;flex-direction:column;gap:4px;min-width:0}
-  .cghd canvas{display:block;width:100%;height:auto;max-height:calc(var(--cgh,80vh) - 30px);object-fit:contain;
+  .cghd canvas{display:block;width:100%;height:100%;
     background:repeating-conic-gradient(#2a2f37 0 25%,#323844 0 50%) 0 0/16px 16px;border:1px solid var(--edge)}
   .cgcard{display:flex;flex-direction:column;gap:6px;align-items:stretch;min-width:0;overflow-y:auto;overflow-x:hidden;padding-right:4px}
   .cgcard>canvas{align-self:flex-start}
-  .cgobjlist{max-height:none;overflow:visible}
+  .cgcard>*{flex:none}
+  .cgobjlist{max-height:none;overflow:visible;flex:none;min-height:0;height:auto}
   /* 99m-99n: the HD view takes the mouse, the rig's handles drawn over it */
-  .cghdview{position:relative}
+  .cghdview{position:relative;height:calc(var(--cgh,80vh) - 30px);min-height:240px}
   .cghdview #cgHd{outline:none;touch-action:none}
   .cghdview #cgHd:focus-visible{box-shadow:0 0 0 2px var(--accent2)}
   .cghd #cgHdUi{position:absolute;pointer-events:none;background:none;border:none;max-height:none}

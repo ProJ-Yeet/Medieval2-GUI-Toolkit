@@ -14343,5 +14343,8 @@
  "cards.gen_bone_turn": "Pivoter (R)",
  "cards.gen_bone_turn_title": "Faites pivoter l’os sélectionné autour de sa poignée avec la souris, autour de l’axe de visée, ou autour de l’axe X, Y ou Z. Un clic ou Entrée valide la rotation ; Échap ou un clic droit la rétablit.",
  "cards.gen_bone_reset": "Réinitialiser l’os",
- "cards.gen_peek_hint": "Cliquez sur une unité dans la liste pour l’afficher ici, faites-la glisser pour la faire pivoter, puis double-cliquez dessus ou cliquez sur « Utiliser cette unité » pour créer sa carte."
+ "cards.gen_peek_hint": "Cliquez sur une unité dans la liste pour l’afficher ici, faites-la glisser pour la faire pivoter, puis double-cliquez dessus ou cliquez sur « Utiliser cette unité » pour créer sa carte.",
+ "cards.gen_ug": "Amélioration d’armure",
+ "cards.gen_ug_base": "Modèle de soldat",
+ "cards.gen_ug_level": "Niveau {level}"
 }

@@ -13683,5 +13683,8 @@
  "cards.gen_bone_move_title": "Seçili kemiği fareyle taşı. X, Y veya Z tuşu kemiği Blender'ın ilgili eksenine sabitler (Z yukarı). Tıklama veya Enter işlemi uygular; Esc veya sağ tıklama kemiği eski konumuna getirir.",
  "cards.gen_bone_turn": "Döndür (R)",
  "cards.gen_bone_turn_title": "Seçili kemiği fareyle tutamacı etrafında, görüş doğrultusunda döndür veya X, Y ya da Z ile ilgili eksen etrafında döndür. Tıklama veya Enter işlemi uygular; Esc veya sağ tıklama kemiği eski konumuna getirir.",
- "cards.gen_bone_reset": "Kemiği sıfırla"
+ "cards.gen_bone_reset": "Kemiği sıfırla",
+ "cards.gen_ug": "Zırh yükseltmesi",
+ "cards.gen_ug_base": "Asker modeli",
+ "cards.gen_ug_level": "Seviye {level}"
 }

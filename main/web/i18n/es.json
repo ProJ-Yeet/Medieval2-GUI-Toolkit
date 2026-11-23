@@ -14700,5 +14700,8 @@
  "cards.gen_bone_turn": "Rotar (R)",
  "cards.gen_bone_turn_title": "Rota el hueso seleccionado alrededor de su controlador con el ratón, en torno a la línea de visión, o con X, Y o Z alrededor de ese eje. Un clic o Enter lo confirma, y Esc o un clic derecho lo restaura.",
  "cards.gen_bone_reset": "Restablecer hueso",
- "cards.gen_peek_hint": "Haz clic en una unidad de la lista para verla aquí, arrástrala para girarla y haz doble clic en ella o pulsa «Usar esta unidad» para crear su tarjeta."
+ "cards.gen_peek_hint": "Haz clic en una unidad de la lista para verla aquí, arrástrala para girarla y haz doble clic en ella o pulsa «Usar esta unidad» para crear su tarjeta.",
+ "cards.gen_ug": "Mejora de armadura",
+ "cards.gen_ug_base": "Modelo de soldado",
+ "cards.gen_ug_level": "Nivel {level}"
 }

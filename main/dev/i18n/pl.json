@@ -14956,5 +14956,8 @@
  "cards.gen_bone_turn": "Obróć (R)",
  "cards.gen_bone_turn_title": "Obróć zaznaczoną kość wokół jej uchwytu za pomocą myszy, względem linii widzenia albo wokół osi X, Y lub Z. Kliknięcie lub Enter zatwierdza zmianę, Esc lub kliknięcie prawym przyciskiem myszy ją cofa.",
  "cards.gen_bone_reset": "Resetuj kość",
- "cards.gen_peek_hint": "Kliknij jednostkę na liście, aby zobaczyć ją tutaj, przeciągnij, aby ją obrócić, a następnie kliknij ją dwukrotnie lub naciśnij „Użyj tej jednostki”, aby utworzyć jej kartę."
+ "cards.gen_peek_hint": "Kliknij jednostkę na liście, aby zobaczyć ją tutaj, przeciągnij, aby ją obrócić, a następnie kliknij ją dwukrotnie lub naciśnij „Użyj tej jednostki”, aby utworzyć jej kartę.",
+ "cards.gen_ug": "Ulepszenie pancerza",
+ "cards.gen_ug_base": "Model żołnierza",
+ "cards.gen_ug_level": "Poziom {level}"
 }

@@ -1152,15 +1152,15 @@ cg().off = [3]; const offFalls = ids();
 cg().oneEach = false; const all = ids();
 cg().off = []; cg().pick = {}; cg().oneEach = true;
 let changed = 0; for(let i = 0; i < 20; i++){ const before = ids(); cgRandom(); if(ids() !== before) changed++; }
-// a card camera seeing [-1,1] of a model twice as tall
-const I = [1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1];
+// 2026-11-24: the HD view's own camera: it turns about a fixed point, the
+// wheel zooms it, and the card's frame is drawn where the card's camera sees
 armMul = (a, b) => { const o = new Array(16).fill(0); for(let c = 0; c < 4; c++) for(let r = 0; r < 4; r++) for(let k = 0; k < 4; k++) o[c*4+r] += a[k*4+r]*b[c*4+k]; return o; };
-cgBounds = () => [[-0.5, -2, 0], [0.5, 2, 0]];
-const cam = {proj: I.slice(), view: I.slice(), pre: I.slice(), width: 2, height: 2};
-const wide = cgWide(cam, [], 100, 100);
-const corner = p => { const q = cgNdc(wide.camera, p); return [(q[0]+1)*wide.w/2, (1-q[1])*wide.h/2]; };
-console.log(JSON.stringify({first, picked, offFalls, all, changed, w: wide.w, h: wide.h, cut: wide.cut, tl: corner([1, 1, 0]), br: corner([-1, -1, 0]),
-  scale: wide.camera.width / wide.w * 100 / cam.width}));
+v3LookAt = eye => [1,0,0,0, 0,1,0,0, 0,0,1,0, -eye[0],-eye[1],-eye[2],1];
+CG_WORK.fit = {center: [0, 0, 0], full: 4}; cg().cam.yaw = 0; cg().cam.pitch = 0;
+const card = {target: [0, 1, 0], width: 1, height: 1.5, pre: null};
+const seen = cgViewCamera(card, 200, 400), cutA = seen.cut;
+CG_WORK.view.zoom = 2; const cutB = cgViewCamera(card, 200, 400).cut, pivot = CG_WORK.view.pivot;
+console.log(JSON.stringify({first, picked, offFalls, all, changed, cutA, cutB, pivot}));
 """)
     (tmp / "probe5b.js").write_text(probe, encoding="utf-8")
     out = subprocess.run([node, str(tmp / "probe5b.js")], capture_output=True, text=True, timeout=60)
@@ -1171,14 +1171,12 @@ console.log(JSON.stringify({first, picked, offFalls, all, changed, w: wide.w, h:
     check(f"one switched off falls back to the first again ({got.get('offFalls')})", got.get("offFalls") == "1,4")
     check(f"without One of each part every object left on is drawn ({got.get('all')})", got.get("all") == "1,2,4")
     check(f"Randomize variation draws another head every time ({got.get('changed')} of 20)", got.get("changed") == 20)
-    cut = got.get("cut") or {}
-    check(f"the HD view grows to the whole model ({got.get('w')}x{got.get('h')}, the card at {cut})",
-          got.get("h", 0) > 200 and cut.get("w") == 100 and cut.get("h") == 100 and cut.get("y", 0) > 50)
-    tl, br = got.get("tl") or [0, 0], got.get("br") or [0, 0]
-    check(f"and the card's own picture lands exactly on its frame inside it ({tl}, {br})",
-          abs(tl[0] - cut.get("x", -9)) < 1e-6 and abs(tl[1] - cut.get("y", -9)) < 1e-6
-          and abs(br[0] - cut.get("x", 0) - 100) < 1e-6 and abs(br[1] - cut.get("y", 0) - 100) < 1e-6)
-    check(f"at the card's own pixels per unit ({got.get('scale')})", abs((got.get("scale") or 0) - 1) < 1e-9)
+    A, B = got.get("cutA") or {}, got.get("cutB") or {}
+    near = lambda x, y: abs((x or 0) - y) < 1e-6
+    check(f"the card's frame sits where its camera looks, at its size, in the HD view ({A})",
+          near(A.get("x"), 100 - 1 / 2.2 * 200 / 2) and near(A.get("y"), 200 - 400 / 4.4 - 1.5 * 400 / 4.4 / 2) and near(A.get("h"), 1.5 * 400 / 4.4))
+    check(f"the wheel zooms the view itself: the model and the frame grow about the fixed point ({B}, pivot {got.get('pivot')})",
+          near(B.get("h"), 2 * A.get("h", 0)) and near(B.get("y") + B.get("h", 0) / 2, 200 - 2 * 400 / 4.4) and got.get("pivot") == [0, 0, 0])
 
 # ---------------------------------------------------------------------------
 print("\nThe card maker's IK rig and pose library (99n)")

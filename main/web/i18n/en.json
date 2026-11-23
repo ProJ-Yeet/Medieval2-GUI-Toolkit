@@ -13003,5 +13003,8 @@
 "cards.gen_bone_move_title": "Move the selected bone with the mouse. X, Y or Z holds it to Blender's axis (Z up), a click or Enter keeps it, Esc or a right click puts it back.",
 "cards.gen_bone_turn": "Rotate (R)",
 "cards.gen_bone_turn_title": "Rotate the selected bone round its handle with the mouse, about the line of sight, or with X, Y or Z about that axis. A click or Enter keeps it, Esc or a right click puts it back.",
-"cards.gen_bone_reset": "Reset bone"
+"cards.gen_bone_reset": "Reset bone",
+"cards.gen_ug": "Armour upgrade",
+"cards.gen_ug_base": "Soldier model",
+"cards.gen_ug_level": "Level {level}"
 }

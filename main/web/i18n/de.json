@@ -14230,5 +14230,8 @@
  "cards.gen_bone_turn": "Drehen (R)",
  "cards.gen_bone_turn_title": "Drehe den ausgewählten Knochen mit der Maus um seinen Griff, entlang der Blickrichtung oder mit X, Y oder Z um die jeweilige Achse. Ein Klick oder Enter übernimmt die Änderung, Esc oder ein Rechtsklick setzt sie zurück.",
  "cards.gen_bone_reset": "Knochen zurücksetzen",
- "cards.gen_peek_hint": "Klicke auf eine Einheit in der Liste, um sie hier anzuzeigen. Ziehe sie, um sie zu drehen, und doppelklicke darauf oder drücke auf „Diese Einheit verwenden“, um ihre Karte zu erstellen."
+ "cards.gen_peek_hint": "Klicke auf eine Einheit in der Liste, um sie hier anzuzeigen. Ziehe sie, um sie zu drehen, und doppelklicke darauf oder drücke auf „Diese Einheit verwenden“, um ihre Karte zu erstellen.",
+ "cards.gen_ug": "Rüstungsaufrüstung",
+ "cards.gen_ug_base": "Soldatenmodell",
+ "cards.gen_ug_level": "Stufe {level}"
 }

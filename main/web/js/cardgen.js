@@ -91,17 +91,18 @@ function cgUnitAnimOut(){
   ARM.anim = CG_UNIT.held.anim; CG_UNIT.held = null;
 }
 function cgSource(src){
-  state.cgSrc = src;
+  state.cgSrc = src; CG_WORK.view = null;
   if(src === 'armory') cgUnitAnimOut();
   CG_WORK.fit = null;
   renderCardGen();
 }
-async function cgUnitLoad(type){
+/* model: one of the unit's armour_ug_models, its soldier model when none is given */
+async function cgUnitLoad(type, model){
   const mod = state.src, units = (CG_UNIT.units || {}).list || [];
   const u = units.find(x => x.type === type);
   if(!u) return;
-  const entry = (u.soldier || '').toLowerCase(), c = cg();
-  CG_UNIT.unit = type; CG_UNIT.entry = entry; CG_UNIT.mod = mod; CG_UNIT.objects = []; CG_UNIT.picking = false;
+  const entry = (model || u.soldier || '').toLowerCase(), c = cg();
+  CG_UNIT.unit = type; CG_UNIT.entry = entry; CG_UNIT.mod = mod; CG_UNIT.objects = []; CG_UNIT.picking = false; CG_WORK.view = null;
   c.unit = type; c.name = type.replace(/[^A-Za-z0-9_\-]/g, '_'); c.saved = null; c.givePlan = null; c.err = ''; c.off = []; c.pick = {};
   CG_WORK.boneSel = '';
   cgPaint();
@@ -135,7 +136,7 @@ function cgUnitPickHtml(){
       ${sel('faction', tt('armory.exp_all_factions'), uniq(L.flatMap(u => u.factions || [])))}
       ${sel('category', tt('armory.exp_all_categories'), uniq(L.map(u => u.category)))}
       ${sel('cls', tt('armory.exp_all_classes'), uniq(L.map(u => u['class'])))}</div>
-    <div class="armexplist" id="cgUnitRows"></div>`;
+    <div class="grid cgunitcards" id="cgUnitRows"></div>`;
 }
 function cgUnitRows(){
   const el = document.getElementById('cgUnitRows');
@@ -144,9 +145,11 @@ function cgUnitRows(){
   const rows = ((CG_UNIT.units || {}).list || []).filter(u => (!q || u.type.toLowerCase().includes(q) || (u.soldier || '').toLowerCase().includes(q))
     && (!f.faction || (u.factions || []).includes(f.faction)) && (!f.category || u.category === f.category) && (!f.cls || u['class'] === f.cls));
   const peek = (CG_UNIT.peek || {}).type;
+  // 2026-11-24: the unit editor's own cards, picture and all
   el.innerHTML = rows.slice(0, 400).map(u => { const t = esc(JSON.stringify(u.type));
-    return `<button class="armexprowbtn${u.type === peek ? ' on' : ''}" onclick="cgUnitPeek(${t})" ondblclick="cgUnitLoad(${t})">
-      <b>${esc(u.type)}</b> <span class="count">${esc(u.category)} · ${esc(u['class'])} · ${esc(u.soldier || '')}</span></button>`; }).join('')
+    return `<div class="card${u.type === peek ? ' sel' : ''}" onclick="cgUnitPeek(${t})" ondblclick="cgUnitLoad(${t})" title="${esc(u.type)}">
+      <img loading="lazy" onerror="iconRetry(this)" src="${iconUrl(state.src, u.type, 'card')}" alt="">
+      <div class="meta"><div class="nm">${esc(u.type)}</div><div class="sub">${esc(u.category)} · ${esc(u['class'])}</div><div class="sub">${esc(u.soldier || '')}</div></div></div>`; }).join('')
     || `<div class="count">${tt('armory.nothing_matches')}</div>`;
 }
 const cgPicking = () => cgSrc() === 'unit' && (CG_UNIT.picking || !CG_UNIT.unit);
@@ -194,7 +197,7 @@ function cgPeekPaint(){
   if(!b) return;
   const [lo, hi] = b, target = [-(lo[0] + hi[0]) / 2, (lo[1] + hi[1]) / 2, (lo[2] + hi[2]) / 2];
   const size = Math.max(hi[1] - lo[1], (hi[0] - lo[0]) * h / w, (hi[2] - lo[2]) * h / w) * 0.62 / 0.42;
-  const dist = Math.max(0.05, size * 1.1);
+  const dist = Math.max(0.05, size * 1.1 / (pk.zoom || 1));
   const eye = [target[0] + dist * Math.cos(pk.pitch) * Math.sin(pk.yaw), target[1] + dist * Math.sin(pk.pitch), target[2] + dist * Math.cos(pk.pitch) * Math.cos(pk.yaw)];
   const cam = {proj: v3Perspective(0.75, w / h, dist / 100, dist * 10), view: v3LookAt(eye, target, [0, 1, 0])};
   if(!armRender(pk.objects, w, h, cam, {plain: true, bg: [0.21, 0.24, 0.28]})) return;
@@ -213,12 +216,13 @@ function cgPeekWire(canvas){
     const pk = CG_UNIT.peek;
     if(!last || !pk) return;
     // Armory Studio's turn: a drag right swings the eye left round the model
-    pk.yaw -= (e.clientX - last[0]) * 0.01;
-    pk.pitch = Math.max(-1.4, Math.min(1.4, pk.pitch + (e.clientY - last[1]) * 0.01));
+    pk.yaw -= (e.clientX - last[0]) * 0.0035;
+    pk.pitch = Math.max(-1.4, Math.min(1.4, pk.pitch + (e.clientY - last[1]) * 0.0035));
     last = [e.clientX, e.clientY]; cgPeekPaint();
   });
   canvas.addEventListener('pointerup', () => { last = null; });
   canvas.addEventListener('contextmenu', e => e.preventDefault());
+  canvas.addEventListener('wheel', e => { const pk = CG_UNIT.peek; if(!pk) return; e.preventDefault(); pk.zoom = Math.max(0.3, Math.min(8, (pk.zoom || 1) * Math.exp(-e.deltaY * 0.0015))); cgPeekPaint(); }, {passive: false});
 }
 function cgSourceHtml(){
   const src = cgSrc();
@@ -229,10 +233,24 @@ function cgSourceHtml(){
   if(src === 'unit'){
     html += `<div class="armexprow"><b>${CG_UNIT.unit ? esc(CG_UNIT.unit) : `<span class="count">${tt('armory.exp_unit_none')}</span>`}</b>
         ${CG_UNIT.entry ? `<span class="count">${esc(CG_UNIT.entry)}</span>` : ''}
-        ${CG_UNIT.unit ? `<button class="mini${CG_UNIT.picking ? ' on' : ''}" onclick="cgUnitChange()">${tt('armory.exp_unit_change')}</button>` : ''}</div>`;
+        ${CG_UNIT.unit ? `<button class="mini${CG_UNIT.picking ? ' on' : ''}" onclick="cgUnitChange()">${tt('armory.exp_unit_change')}</button>` : ''}</div>
+      ${cgUgHtml()}`;
     if(cgPicking()) html += cgUnitPickHtml();
   }else html += `<div class="count">${tt('cards.gen_src_armory_note')}</div>`;
   return cgSec('source', tt('cards.gen_source_legend'), html);
+}
+/* 2026-11-24: which of the unit's armour upgrade models the card is of. */
+function cgUgHtml(){
+  const u = ((CG_UNIT.units || {}).list || []).find(x => x.type === CG_UNIT.unit);
+  if(!u || CG_UNIT.picking) return '';
+  // armour_ug_models lists a model per upgrade level from 0; the soldier model
+  // is offered too when that list leaves it out
+  const ug = (u.ug || []).map(m => m.toLowerCase()), soldier = (u.soldier || '').toLowerCase();
+  const models = [...(soldier && !ug.includes(soldier) ? [[soldier, tt('cards.gen_ug_base')]] : []), ...ug.map((m,i) => [m, tt('cards.gen_ug_level',{level:i})])];
+  if(models.length < 2) return '';
+  const t = esc(JSON.stringify(u.type));
+  return `<label>${tt('cards.gen_ug')} <select onchange="cgUnitLoad(${t},this.value)">${models.map(([m,label]) =>
+    `<option value="${esc(m)}"${m === CG_UNIT.entry ? ' selected' : ''}>${esc(label)} · ${esc(m)}</option>`).join('')}</select></label>`;
 }
 function cgUnitChange(){
   CG_UNIT.picking = !CG_UNIT.picking;
@@ -276,7 +294,7 @@ function cgCheckHtml(group,key,label){
 }
 function cgRange(group,key,label,min,max,step){
   const value = cg()[group][key];
-  return `<label class="cgrange"><span>${tt(label)}</span><input type="range" min="${min}" max="${max}" step="${step}" value="${value}" data-cg-group="${group}" data-cg-key="${key}" oninput="cgSet('${group}','${key}',+this.value,false)"><span id="cgv_${group}_${key}">${value}</span></label>`;
+  return `<label class="cgrange"><span>${tt(label)}</span><input type="range" min="${min}" max="${max}" step="${step}" value="${value}" data-cg-group="${group}" data-cg-key="${key}" oninput="cgSet('${group}','${key}',+this.value,false)"><span id="cgv_${group}_${key}">${Math.round(value*100)/100}</span></label>`;
 }
 function cgSizeHtml(){
   const c = cg(), sizes = CG_WORK.sizes || {};
@@ -442,7 +460,7 @@ function cgRandom(){
 function cgPlacementReset(){ const c = cg(); return !c.cam.pan && [...c.xf.t,...c.xf.r].every(v => !v); }
 function cgSet(group,key,value,redraw){
   const c = cg(); (group ? c[group] : c)[key] = value;
-  const out = document.getElementById('cgv_' + group + '_' + key); if(out) out.textContent = value;
+  const out = document.getElementById('cgv_' + group + '_' + key); if(out) out.textContent = typeof value === 'number' ? Math.round(value*100)/100 : value;
   if(!group && ['size','w','h','mult','oneEach'].includes(key) || group === 'fit') cgFitChanged();
   if(group === 'fit' && key === 'part') CG_WORK.fit = null;
   if(group === 'rig' && key === 'type') cgFitChanged();
@@ -510,7 +528,8 @@ function cgCamera(objects,w,h){
   if(!CG_WORK.fit){
     const fraction = {whole:1,knees:0.78,thighs:0.64,waist:0.5}[c.fit.part] || 1;
     const height = Math.max(0.1,hi[1]-lo[1]);
-    CG_WORK.fit = {height:Math.max(height*fraction*1.12,(hi[0]-lo[0])*h/w*1.12),target:[-center[0],hi[1]-height*fraction/2,center[2]]};
+    CG_WORK.fit = {height:Math.max(height*fraction*1.12,(hi[0]-lo[0])*h/w*1.12),target:[-center[0],hi[1]-height*fraction/2,center[2]],
+      center:[-center[0],center[1],center[2]],full:Math.max(height,hi[0]-lo[0],hi[2]-lo[2])};
   }
   const fit = CG_WORK.fit, height = fit.height * c.cam.scale, width = height*w/h;
   const target = [...fit.target]; target[0] += c.cam.pan; target[1] += c.cam.height;
@@ -519,42 +538,87 @@ function cgCamera(objects,w,h){
   const proj = [2/width,0,0,0,0,2/height,0,0,0,0,-0.01,0,0,0,0,1];
   return {proj,view:v3LookAt(eye,target,[0,1,0]),eye,pre,height,width,target};
 }
-function cgNdc(camera,p){
-  const world = cgMatrixPoint(camera.pre,p); world[0] = -world[0];
-  return cgMatrixPoint(armMul(camera.proj,camera.view),world);
-}
-/* The card's camera widened to take in the whole model, and a margin, with
-   the card's own pixels (cut) unchanged inside it. */
-function cgWide(camera,objects,cw,ch){
-  const [lo,hi] = cgBounds(objects);
-  let x0 = -1, x1 = 1, y0 = -1, y1 = 1;
-  for(let i=0;i<8;i++){
-    const q = cgNdc(camera,[i & 1 ? hi[0] : lo[0],i & 2 ? hi[1] : lo[1],i & 4 ? hi[2] : lo[2]]);
-    x0 = Math.min(x0,q[0]); x1 = Math.max(x1,q[0]); y0 = Math.min(y0,q[1]); y1 = Math.max(y1,q[1]);
-  }
-  const margin = Math.round(Math.max(cw,ch)*0.05);
-  const room = (n,size) => Math.max(0,Math.min(size*1.5,Math.floor((4096-size)/2),Math.ceil(n*size/2)+margin));
-  const L = room(-1-x0,cw), R = room(x1-1,cw), B = room(-1-y0,ch), T = room(y1-1,ch);
-  const hx = 1+(L+R)/cw, hy = 1+(T+B)/ch, cx = (R-L)/cw, cy = (T-B)/ch, P = camera.proj.slice();
-  P[0] /= hx; P[12] = (P[12]-cx)/hx; P[5] /= hy; P[13] = (P[13]-cy)/hy;
-  return {camera:{...camera,proj:P,width:camera.width*hx,height:camera.height*hy},w:cw+L+R,h:ch+T+B,cut:{x:L,y:T,w:cw,h:ch}};
-}
 function cgLight(camera){
   const c = cg(), l = c.light, az = (Number(l.azimuth)+Number(c.cam.yaw))*Math.PI/180, el = l.elevation*Math.PI/180;
   const dir = [Math.sin(az)*Math.cos(el),Math.sin(el),Math.cos(az)*Math.cos(el)];
   return {...l,point:l.type === 'point',dir,pos:camera.target.map((v,i) => v+dir[i]*4)};
 }
-async function cgDraw(){
-  if(!cgHere()) return;
-  const token = ++CG_WORK.draw, hd = document.getElementById('cgHd'), card = document.getElementById('cgCard');
-  if(!hd || !card) return;
-  const c = cg(), objects = cgObjects(), [cw,ch] = CG_WORK.hdSize || [hd.width,hd.height];
+/* 2026-11-23: the HD view is a viewport of its own, as Armory Studio's is: it
+   turns about a fixed point (the model's middle, set when the model is
+   shown), the wheel zooms it, a pan moves it, and the card's frame is drawn
+   where the card's camera sees. It is drawn plain, at the screen's own size,
+   every frame; the card (the HD render, its outline and finish) is made a
+   moment after the last change (cgCardDraw), so a drag stays smooth. */
+function cgViewState(){ return CG_WORK.view = CG_WORK.view || {zoom:1,pivot:null,full:0}; }
+function cgViewReset(){ CG_WORK.view = null; cgViewAsk(); }
+function cgViewCamera(card,w,h){
+  const c = cg(), v = cgViewState(), fit = CG_WORK.fit;
+  // first shown: the whole model and the card's frame in view
+  if(!v.pivot){ v.pivot = fit.center.slice(); v.full = Math.max(fit.full,2*(Math.abs(card.target[1]-fit.center[1])+card.height/2),card.width*h/w); }
+  const yaw = c.cam.yaw*Math.PI/180, pitch = c.cam.pitch*Math.PI/180;
+  const height = v.full*1.1/v.zoom, width = height*w/h;
+  const target = v.pivot.slice(), dist = 10;
+  const eye = [target[0]+dist*Math.cos(pitch)*Math.sin(yaw),target[1]+dist*Math.sin(pitch),target[2]+dist*Math.cos(pitch)*Math.cos(yaw)];
+  const proj = [2/width,0,0,0,0,2/height,0,0,0,0,-0.01,0,0,0,0,1], view = v3LookAt(eye,target,[0,1,0]);
+  // the card's frame: its camera looks the same way, so its middle and size are enough
+  const q = cgMatrixPoint(armMul(proj,view),card.target), cx = (q[0]+1)*w/2, cy = (1-q[1])*h/2;
+  const fw = card.width/width*w, fh = card.height/height*h;
+  return {camera:{proj,view,eye,pre:card.pre,height,width,target},cut:{x:cx-fw/2,y:cy-fh/2,w:fw,h:fh}};
+}
+/* A pan moves the point the view turns about (Blender's Shift + middle drag). */
+function cgViewPan(dx,dy){
+  const v = cgViewState(), cam = CG_WORK.camera, hd = document.getElementById('cgHd');
+  if(!v.pivot || !cam || !hd) return;
+  const yaw = cg().cam.yaw*Math.PI/180, pitch = cg().cam.pitch*Math.PI/180;
+  const right = [Math.cos(yaw),0,-Math.sin(yaw)], up = [-Math.sin(pitch)*Math.sin(yaw),Math.cos(pitch),-Math.sin(pitch)*Math.cos(yaw)];
+  const sx = -dx*cam.width/hd.width, sy = dy*cam.height/hd.height;
+  v.pivot = v.pivot.map((x,k) => x+right[k]*sx+up[k]*sy);
+  cgViewAsk();
+}
+function cgViewAsk(){
+  if(CG_WORK.viewAsked) return;
+  CG_WORK.viewAsked = true;
+  const go = () => { CG_WORK.viewAsked = false; cgView(); };
+  // requestAnimationFrame never fires in a hidden tab
+  if(document.hidden) setTimeout(go,0); else requestAnimationFrame(go);
+}
+function cgView(){
+  const hd = document.getElementById('cgHd');
+  if(!hd || !cgHere()) return;
+  const box = hd.getBoundingClientRect(), ratio = Math.min(2,devicePixelRatio || 1);
+  const w = Math.max(64,Math.round(box.width*ratio)), h = Math.max(64,Math.round(box.height*ratio));
+  if(hd.width !== w || hd.height !== h){ hd.width = w; hd.height = h; }
+  const c = cg(), objects = cgObjects(), [cw,ch] = CG_WORK.hdSize || [480,640];
   try{
-    armAnimPose(objects);
-    // 2026-11-23: the HD view shows the whole unit, the card's frame within it
-    const wide = cgWide(cgCamera(objects,cw,ch),objects,cw,ch), camera = wide.camera, w = wide.w, h = wide.h, cut = wide.cut;
-    CG_WORK.camera = camera; CG_WORK.cut = cut;
-    if(hd.width !== w || hd.height !== h){ hd.width = w; hd.height = h; }
+    if(CG_WORK.posed !== CG_WORK.poseGen){ armAnimPose(objects); CG_WORK.posed = CG_WORK.poseGen; }
+    const card = cgCamera(objects,cw,ch), seen = cgViewCamera(card,w,h);
+    CG_WORK.camera = seen.camera; CG_WORK.cut = seen.cut; CG_WORK.cardCam = card;
+    if(!armRender(objects,w,h,seen.camera,{plain:true,card:true,pre:card.pre,light:cgLight(card),bg:[0.2,0.22,0.26]})) return;
+    const ctx = hd.getContext('2d'); ctx.drawImage(ARM.glCanvas,0,0,w,h,0,0,w,h);
+    cgOverlay();
+  }catch(e){ c.err = errText(e); const error = document.getElementById('cgError'); if(error) error.textContent = c.err; }
+}
+/* Something changed: the view now, the card once the changes stop. */
+function cgDraw(){
+  if(!cgHere()) return;
+  CG_WORK.poseGen = (CG_WORK.poseGen || 0)+1;
+  cgMoved();
+}
+/* Only the camera moved: nothing to pose again. */
+function cgMoved(){
+  cgViewAsk();
+  clearTimeout(CG_WORK.cardTimer);
+  CG_WORK.cardTimer = setTimeout(() => { cgCardDraw(); },180);
+}
+async function cgCardDraw(){
+  if(!cgHere()) return;
+  const token = ++CG_WORK.draw, card = document.getElementById('cgCard');
+  if(!card) return;
+  const c = cg(), objects = cgObjects(), [w,h] = CG_WORK.hdSize || [480,640];
+  const hd = CG_WORK.hdCanvas && CG_WORK.hdCanvas.width === w && CG_WORK.hdCanvas.height === h ? CG_WORK.hdCanvas : (CG_WORK.hdCanvas = cgCanvas(w,h));
+  try{
+    armAnimPose(objects); CG_WORK.posed = CG_WORK.poseGen;
+    const camera = cgCamera(objects,w,h);
     const options = {plain:true,card:true,pre:camera.pre,light:cgLight(camera),bg:[0,0,0]};
     if(!armRender(objects,w,h,camera,options)) return;
     const ctx = hd.getContext('2d',{willReadFrequently:true}); ctx.clearRect(0,0,w,h); ctx.drawImage(ARM.glCanvas,0,0,w,h,0,0,w,h);
@@ -566,18 +630,17 @@ async function cgDraw(){
     let alpha = new Uint8Array(w*h);
     for(let i=0;i<alpha.length;i++) alpha[i] = mask[i*4] > 0 ? 1 : 0;
     // smaller than a card pixel's worth of the HD render is a speck, not the model
-    alpha = cgDespeck(alpha,w,h,Math.max(4,Math.round((cw/card.width)*(ch/card.height))));
+    alpha = cgDespeck(alpha,w,h,Math.max(4,Math.round((w/card.width)*(h/card.height))));
     for(let i=0;i<alpha.length;i++) image.data[i*4+3] = alpha[i] ? mask[i*4] : 0;
     if(c.paint.on) cgPaintPixels(image.data,w,h,c.paint.strength);
     ctx.putImageData(image,0,0);
     if(c.post.outline > 0){
-      const grown = cgDilate(alpha,w,h,c.post.outline*cw/card.width), outline = ctx.createImageData(w,h);
+      const grown = cgDilate(alpha,w,h,c.post.outline*w/card.width), outline = ctx.createImageData(w,h);
       for(let i=0;i<grown.length;i++) outline.data[i*4+3] = grown[i] ? 255 : 0;
       maskCtx.putImageData(outline,0,0); maskCtx.drawImage(hd,0,0); ctx.clearRect(0,0,w,h); ctx.drawImage(maskCanvas,0,0);
     }
-    cgOverlay();
     const reduced = cgCanvas(card.width,card.height), small = reduced.getContext('2d',{willReadFrequently:true});
-    small.filter = c.post.blur ? ['blur(',c.post.blur,'px)'].join('') : 'none'; small.drawImage(hd,cut.x,cut.y,cut.w,cut.h,0,0,card.width,card.height); small.filter = 'none';
+    small.filter = c.post.blur ? ['blur(',c.post.blur,'px)'].join('') : 'none'; small.drawImage(hd,0,0,card.width,card.height); small.filter = 'none';
     const pixels = small.getImageData(0,0,card.width,card.height); cgFinish(pixels.data,card.width,card.height,c.post); small.putImageData(pixels,0,0);
     const ground = await cgGroundImage(c.ground.kind), frame = cgIsInfo() && c.gframe ? await cgArt('PORTRAIT_FRAME') : null;
     if(token !== CG_WORK.draw || !cgHere() || document.getElementById('cgCard') !== card) return;
@@ -697,12 +760,12 @@ function cgSavedHtml(){
 async function cgSave(hd){
   const c = cg(), name = c.name.trim(), mod = state.src;
   if(!name){ toast(tt('cards.gen_name_first')); return; }
-  let canvas = document.getElementById(hd ? 'cgHd' : 'cgCard'); if(!canvas) return;
+  if(!document.getElementById('cgCard')) return;
   try{
-    await cgDraw();
-    // the HD view is wider than the card: its saved picture is the card's part of it
-    const cut = CG_WORK.cut;
-    if(hd && cut){ const src = canvas; canvas = cgCanvas(cut.w,cut.h); canvas.getContext('2d').drawImage(src,cut.x,cut.y,cut.w,cut.h,0,0,cut.w,cut.h); }
+    // the card made now, and its HD render (not the view) saved for Save HD
+    clearTimeout(CG_WORK.cardTimer); await cgCardDraw();
+    const canvas = hd ? CG_WORK.hdCanvas : document.getElementById('cgCard');
+    if(!canvas) return;
     const kind = hd ? 'hd' : cgIsInfo() ? 'info' : c.size === 'custom' ? 'custom' : 'card';
     const r = await api.post('/api/armory/cards/save',{name,kind,size:[canvas.width,canvas.height],png:canvas.toDataURL('image/png')});
     if(r.error) throw new Error(r.error);
@@ -808,7 +871,7 @@ function cgWire(){
   const hd = document.getElementById('cgHd'); if(!hd) return;
   if(CG_WORK.resize) CG_WORK.resize.disconnect();
   if(typeof ResizeObserver === 'function'){
-    CG_WORK.resize = new ResizeObserver(() => { if(cgHere() && document.getElementById('cgHd') === hd) cgOverlay(); });
+    CG_WORK.resize = new ResizeObserver(() => { if(cgHere() && document.getElementById('cgHd') === hd) cgViewAsk(); });
     CG_WORK.resize.observe(hd);
   }
   let drag = null, last = [0,0];
@@ -816,8 +879,10 @@ function cgWire(){
   hd.addEventListener('contextmenu',e => { e.preventDefault(); });
   hd.addEventListener('auxclick',e => { if(e.button === 1) e.preventDefault(); });
   hd.addEventListener('wheel',e => {
-    e.preventDefault(); cg().cam.scale = Math.max(0.2,Math.min(6,cg().cam.scale*Math.exp(e.deltaY*0.001)));
-    cgSyncCamera(); cgDraw();
+    e.preventDefault();
+    // the wheel zooms the view; with Ctrl it zooms the card's own camera
+    if(e.ctrlKey){ cg().cam.scale = Math.max(0.2,Math.min(6,cg().cam.scale*Math.exp(e.deltaY*0.001))); cgSyncCamera(); cgMoved(); return; }
+    const v = cgViewState(); v.zoom = Math.max(0.3,Math.min(12,v.zoom*Math.exp(-e.deltaY*0.0015))); cgViewAsk();
   },{passive:false});
   hd.addEventListener('pointerdown',e => {
     hd.focus(); last = cgPointerPoint(e);
@@ -860,10 +925,11 @@ function cgWire(){
     if(drag.click && Math.hypot(e.clientX-drag.click[0],e.clientY-drag.click[1]) > 3) drag.moved = true;
     if(drag.kind === 'camera'){
       if(e.ctrlKey) c.cam.scale = Math.max(0.2,Math.min(6,c.cam.scale*Math.exp(dy*0.005)));
-      else if(e.shiftKey || drag.pan){ c.cam.pan -= dx*CG_WORK.camera.width/hd.width; c.cam.height += dy*CG_WORK.camera.height/hd.height; }
+      // a pan moves the view, not the card; the card's frame goes with the model
+      else if(e.shiftKey || drag.pan){ cgViewPan(dx,dy); return; }
       // Armory Studio's turn: a drag right swings the eye left round the model
-      else{ c.cam.yaw -= dx*0.3; c.cam.pitch = Math.max(-60,Math.min(80,c.cam.pitch+dy*0.3)); }
-      cgSyncCamera(); cgDraw();
+      else{ c.cam.yaw -= dx*0.2; c.cam.pitch = Math.max(-60,Math.min(80,c.cam.pitch+dy*0.2)); }
+      cgSyncCamera(); cgMoved();
     }else if(drag.kind === 'rig'){
       const name = drag.handle.name;
       if(name === 'IK Head'){
@@ -873,6 +939,7 @@ function cgWire(){
       cgBoneRefresh(); cgDraw();
     }
   });
+  hd.addEventListener('dblclick',e => { if(e.button === 0 && !cgHit(e)) cgViewReset(); });
   hd.addEventListener('pointerup',e => {
     const d = drag; drag = null;
     if(hd.hasPointerCapture(e.pointerId)) hd.releasePointerCapture(e.pointerId);
