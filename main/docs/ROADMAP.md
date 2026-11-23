@@ -1032,6 +1032,56 @@ those).
   the old path and skipped until 2026-11-20, when the vendored v1.16.0 was
   brought up to v1.17.1 (only the UV tools changed; the bake is the same).
 
+## Phase 128 - weapon-bone animations and skeleton kitbashing, what is left
+
+Asked 2026-11-23 for a modder's Star Wars mod: lightsaber blades that vanish
+in idle and walk, by animating `bone_weapon01` in the weapon animation
+`descr_skeleton.txt` names. GOAT 1.1 cannot: its .ms3d to .cas step
+(`ms3dJointSection.makecasBoneSection`) stops at the first bone whose name has
+"weapon" or "shield" in it (a `break`, case-sensitive), and `animextract` then
+writes the original parent table over fewer node records. Then the user asked
+for kitbashing: a skeleton built from slots of other skeletons, with bones
+forced to match, slots removed, and a preview.
+
+Built, uncommitted on 2026-11-24 (worktree `epic-lichterman-dabf16`):
+
+* **128a, the converter.** `unittransfer/animconvert.py`, a command line
+  (`python -m unittransfer.animconvert to-cas | to-ms3d | hide | info`):
+  .ms3d to .cas keeping every bone, weapon and shield bones included, with the
+  original .cas as `--template`; `--keep` and `--all-bones` for bones the
+  template has not got; `hide` moves a bone 100 m at every key, since a .cas
+  has no scale track. `casanim.write_anim` now writes the header's size field
+  (byte 42). `tests/test_animconvert.py` 35/35: DaC's walk, weapon pose and
+  ram, vanilla's packed weapon animations, out to .ms3d and back.
+* **128b, the kit engine.** `unittransfer/animkit.py`: a new skeleton, a copy
+  of a base, slots taken from any skeleton, slot and mod, matched by name plus
+  a bone map, slots cleared (never `default`), one job and one Undo, kept
+  rebuildable. `POST /api/model/skeleton/kit_plan | kit_preview | kit_apply`,
+  `GET /api/model/slot_names`. `tests/test_animkit.py` 31/31 on small packs
+  cut from DaC and vanilla.
+* **128c, the panel.** Model viewer > Animation > *Kitbash a new skeleton
+  from ...* (`v3anim.js`, `v3AnimKit*`): name, the changes with Preview and
+  remove, an add row (slot, mod or clear, skeleton, its slot, bone map),
+  Check and Write. Looked at in the app on DaC's `orc_band`: MTW2_Mace's walk
+  and lotr_troll's run (mapped `bone_E_platform=bone_pelvis`) previewed and
+  planned; Write not pressed. Strings in all seven started languages.
+
+Still to do:
+
+* **128d, .dae input** to the converter. It needs one animation exported to
+  .dae by the modder's tool to fix the axes (Y or Z up, and which X mirror).
+* **128e, in the game.** A hidden weapon bone (`hide` on a weapon .cas) and a
+  kitbashed skeleton played by a unit. Vanilla's crossbow moves weapon bones by
+  position keys, so they should play; not yet seen.
+* **128f, the converter in the app.** An .ms3d dropped on a slot saved into
+  the pack (through `animslot`), and a *Hide this bone* button beside the
+  weapon skeletons.
+* **128g, the kit, next steps.** Point a model entry at the new skeleton from
+  the panel, as the port does; add to an existing kit skeleton instead of only
+  making new ones; pick the bone map from the two bone lists instead of typing
+  it; edit a slot's impact frame and turn limits.
+* Commit 128a-c to master with the full suite run.
+
 ## Phase 118 - pre-render lighting, what is left
 
 Built 2026-11-12 (`ROADMAP_ARCHIVE.md`).

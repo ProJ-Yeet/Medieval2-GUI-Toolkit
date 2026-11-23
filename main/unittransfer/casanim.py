@@ -484,8 +484,16 @@ def write_anim(a: Animation) -> bytes:
     out += [array("f", t.rot).tobytes() for t in a.tracks]
     out += [array("f", t.pos).tobytes() for t in a.tracks]
     out.append(array("f", [v for t in a.tracks for v in t.pivot]).tobytes())
-    out.append(a.tail if a.tail is not None else _EMPTY_CHUNKS)
-    return b"".join(out)
+    body = bytearray(b"".join(out))
+    # the header's size field: the bytes from it to the end of the pivots,
+    # which is what every loose file of both mods says; a file with more or
+    # fewer keys or bones than it was read with needs it written again
+    struct.pack_into("<I", body, SIZE_AT, len(body) - SIZE_AT)
+    return bytes(body) + (a.tail if a.tail is not None else _EMPTY_CHUNKS)
+
+
+#: where the header keeps the size of the node table, keys and pivots
+SIZE_AT = 42
 
 
 #: A chunk list for a file made from nothing, the shape every soldier's ends

@@ -780,6 +780,7 @@ from . import (bmdb, buildings, cards, cleaner, codeview, config, dupes, edit,
 from . import mapgen, mapnew, mapresize, modfork, vanilla, gamelog, modreport, rehearse, voices, emblem, mapdraw, artbrowse, unittypical, bannermaker, artrecolour, stratfamily, scripts
 from . import armory, armbake, armlib, armunit, folderimport, loosemesh, meshfolder, modeldb, modeltext
 from . import report, vegtext, culturechange, campscript
+from . import animkit
 from . import engines as engines_mod
 from . import menusheets
 from . import stratscene
@@ -3003,6 +3004,11 @@ class Handler(BaseHTTPRequestHandler):
                 packs, whose = animpack.packs_for(self.registry.get((q.get("mod") or [""])[0]).data)
                 return self._json({"packs": whose, "names": packs.skeleton_names()
                                    if packs is not None and packs.skels is not None else []})
+            if u.path == "/api/model/slot_names":
+                # every action slot a skeleton has, named, for the kitbash panel
+                from . import skelslots
+                return self._json({"slots": [{"slot": i, "label": skelslots.label(i)}
+                                             for i in range(animpack.SKELETON_SLOTS)]})
             return self._err(404, "not found")
         except ModDataError as e:
             # A file this mod needs is missing or will not parse. The sentence is
@@ -3762,6 +3768,10 @@ class Handler(BaseHTTPRequestHandler):
                 # 86: an edit saved into the pack, another mod's animation put
                 # in a slot, and a skeleton ported on its own
                 return self._json(self._anim_pack(u.path.rsplit("/", 1)[-1], body))
+            if u.path in ("/api/model/skeleton/kit_plan", "/api/model/skeleton/kit_preview",
+                          "/api/model/skeleton/kit_apply"):
+                # a new skeleton kitbashed from a base, other skeletons' slots and cleared slots
+                return self._json(self._anim_kit(u.path.rsplit("/", 1)[-1], body))
             if u.path == "/api/packs/duplicates/apply":
                 # 101h: the chosen copies and merged paths, one logged job
                 try:
@@ -4817,6 +4827,52 @@ class Handler(BaseHTTPRequestHandler):
         try:
             out.update(animslot.apply(plan))
         except (animslot.SlotError, animpack.PackError, OSError) as e:
+            return {"error": str(e), "plan": plan.payload()}
+        self.registry.invalidate(body["mod"])
+        return out
+
+    def _anim_kit(self, action, body):
+        """:mod:`unittransfer.animkit`: a new skeleton made from ``base``,
+        ``changes`` (``[{slot, clear, source, skeleton, source_slot,
+        bone_map}]``) made to it. ``kit_preview`` plays one change as the game
+        would get it, with ``weapons`` hung on the hands; ``kit_plan`` writes
+        nothing; ``kit_apply`` is one logged, undoable job."""
+        try:
+            mod = self.registry.get(body["mod"])
+        except (KeyError, OSError) as e:
+            return {"error": str(e)}
+        raw = body.get("changes") if action != "kit_preview" else [body.get("change") or {}]
+        try:
+            changes = [animkit.Change.from_dict(c) for c in (raw or []) if isinstance(c, dict)]
+            sources = {}
+            for c in changes:
+                if c.source and c.source not in sources:
+                    try:
+                        sources[c.source] = self.registry.get(c.source)
+                    except (KeyError, OSError):
+                        pass
+            base = str(body.get("base") or "")
+            if action == "kit_preview":
+                if not changes:
+                    return {"error": _i18n.msg("eng.server.no_kit_change_to_preview", "no change to preview")}
+                anim = animkit.preview(mod, base, changes[0], sources)
+                weapons = [w for w in (body.get("weapons") or []) if isinstance(w, str) and w]
+                added = animview.add_weapons(mod.data, anim, weapons, changes[0].slot) if weapons else []
+                out = animedit.view(anim)
+                out["weapons"] = added
+                return out
+            plan = animkit.plan_kit(mod, base, str(body.get("name") or ""), changes, sources,
+                                    keep_rebuildable=bool(body.get("keep_rebuildable", True)))
+        except (animkit.KitError, animslot.SlotError, animpack.PackError, casanim.AnimError) as e:
+            return {"error": str(e)}
+        out = {"plan": plan.payload()}
+        if not plan.ok:
+            out["error"] = "; ".join(plan.payload()["errors"]) or "nothing planned"
+        if action == "kit_plan" or not plan.ok:
+            return out
+        try:
+            out.update(animkit.apply_kit(plan))
+        except (animkit.KitError, animpack.PackError, OSError) as e:
             return {"error": str(e), "plan": plan.payload()}
         self.registry.invalidate(body["mod"])
         return out
