@@ -411,6 +411,7 @@ const armFootShut = () => !!(state.settings || {}).armory_foot_shut;
 function armFootToggle(){
   state.settings.armory_foot_shut = !armFootShut();
   api.post('/api/settings', {armory_foot_shut: state.settings.armory_foot_shut}).catch(() => {});
+  armGripsApply();
   armPaintSliders();
   armFrame();
 }

@@ -113,8 +113,8 @@ function armPaintObjects(){
       <span style="flex:1"></span>
       <button class="mini" onclick="armFoldAll(false)" title="${esc(tt('armory.expand_all'))}">⊞</button>
       <button class="mini" onclick="armFoldAll(true)" title="${esc(tt('armory.collapse_all'))}">⊟</button>
-      <button class="mini${gal ? '' : ' on'}" onclick="armObjSetting('armory_obj_view','list')" title="${esc(tt('armory.as_list'))}">☰</button>
-      <button class="mini${gal ? ' on' : ''}" onclick="armObjSetting('armory_obj_view','gallery')" title="${esc(tt('armory.as_gallery'))}">▦</button>
+      <button class="mini${gal ? '' : ' on'}" onclick="armObjSetting('armory_obj_view','list')">${tt('armory.as_list')}</button>
+      <button class="mini${gal ? ' on' : ''}" onclick="armObjSetting('armory_obj_view','gallery')">${tt('armory.as_gallery')}</button>
     </div>
     ${ARM.optOpen && p.objects.length ? `<div class="armoptbox" id="armOptBox"></div>` : ''}
     ${p.objects.length && typeof armLit === 'function' && armLit().open ? armLitHtml() : ''}

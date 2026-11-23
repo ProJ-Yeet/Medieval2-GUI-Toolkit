@@ -32,6 +32,7 @@ function armAnimPaint(){
   const a = armAnim(), p = armProj();
   const entries = armAnimEntries();
   const tp = `<button class="mini${a.tpose ? ' on' : ''}" onclick="armTpose()" title="${esc(tt('armory.tpose_title'))}">${tt('armory.tpose')}</button>`;
+  el.style.height = a.open && armSize('anim_h') ? armSize('anim_h') + 'px' : '';
   if(!a.open){
     el.innerHTML = `<div class="armhead"><button class="armfold" onclick="armAnimFold()">▸ ${tt('armory.animations')}</button><span style="flex:1"></span>${tp}</div>`;
     return;
@@ -52,7 +53,8 @@ function armAnimPaint(){
       return;
     }
   }
-  el.innerHTML = `<div class="armhead"><button class="armfold" onclick="armAnimFold()">▾ ${tt('armory.animations')}</button>
+  el.innerHTML = `<div class="armanimgrip"></div>
+    <div class="armhead"><button class="armfold" onclick="armAnimFold()">▾ ${tt('armory.animations')}</button>
       <span style="flex:1"></span>${tp}</div>
     <label class="count">${tt('armory.skeleton_of')}<select onchange="armAnimFrom(this.value)">
       <option value="">${tt('armory.pick_model_entry')}</option>${entries.map(e => { const k = armAssetKey(e);
@@ -72,6 +74,14 @@ function armAnimPaint(){
         <button class="mini" onclick="armAnimRest()" title="${esc(tt('armory.rest_title'))}">${tt('armory.rest')}</button></div>
       <div class="count" id="armAnimNote">${armAnimNote()}</div>${armAnimScaleHtml()}` : ''}
     ${a.err ? `<div class="w-bad">${esc(a.err)}</div>` : ''}`;
+  // the top edge is the grip: the window sits on the view's bottom corner
+  const grip = el.querySelector('.armanimgrip');
+  let h = 0;
+  armGripDrag(grip, 'y', () => el.getBoundingClientRect().height, (h0, d) => {
+    h = Math.round(Math.max(80, Math.min(h0 - d, host.clientHeight - 16)));
+    el.style.height = h + 'px';
+  }, () => { if(h) armSizeSave('anim_h', h); });
+  grip.ondblclick = () => { armSizeSave('anim_h', 0); el.style.height = ''; };
 }
 function armAnimFold(){ const a = armAnim(); a.open = !a.open; armAnimPaint(); }
 

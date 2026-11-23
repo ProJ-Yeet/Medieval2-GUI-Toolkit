@@ -234,15 +234,19 @@ async function renderArmory(){
   }
   main.innerHTML = bmdbTabsHtml(tt('armory.tab_note')) + `<div class="armgrid${armSideShut('left') ? ' lshut' : ''}${armSideShut('right') ? ' rshut' : ''}" id="armGrid">
     <aside class="armleft" id="armLeft"></aside>
+    <div class="armgrip armgripv" id="armGripL"></div>
     <section class="armmid">
       <div class="armbar" id="armBar"></div>
       <div class="armview" id="armView"></div>
+      <div class="armgrip armgriph" id="armGripF"></div>
       <div class="armfoot" id="armFoot"></div>
     </section>
+    <div class="armgrip armgripv" id="armGripR"></div>
     <aside class="armright" id="armRight"></aside>
   </div>
   <button class="armfullexit" onclick="armFullView(false)" title="${esc(tt('armory.full_view_exit_title'))}">✕ ${tt('armory.full_view_exit')}</button>`;
   document.body.classList.remove('armfull');
+  armGripsInstall();
   armMountView();
   armPaintAssets();
   armPaintObjects();
@@ -345,6 +349,79 @@ function armSideToggle(side){
   if(g){ g.classList.toggle('lshut', armSideShut('left')); g.classList.toggle('rshut', armSideShut('right')); }
   if(side === 'left') armPaintAssets(); else armPaintObjects();
   armFrame();
+}
+/* 2026-11-23: the bars between the panels drag. Left and right set the
+   side columns' widths, the one under the view the tools' height, and the
+   animations window grows from its top edge; each is a setting.
+   Double-click a bar to give it back its default. */
+const armSize = k => +((state.settings || {})['armory_' + k]) || 0;
+function armSizeSave(k, px){
+  state.settings['armory_' + k] = px;
+  api.post('/api/settings', {['armory_' + k]: px}).catch(() => {});
+}
+function armGripDrag(bar, axis, start, move, done){
+  bar.onpointerdown = ev => {
+    if(ev.button) return;
+    ev.preventDefault();
+    const s0 = axis === 'x' ? ev.clientX : ev.clientY, v0 = start();
+    try{ bar.setPointerCapture(ev.pointerId); }catch(e){}
+    bar.classList.add('drag');
+    document.body.classList.add('splitting');
+    document.body.style.cursor = axis === 'x' ? 'col-resize' : 'row-resize';
+    const mv = e => { move(v0, (axis === 'x' ? e.clientX : e.clientY) - s0); armFrame(); };
+    const up = () => {
+      bar.removeEventListener('pointermove', mv);
+      bar.removeEventListener('pointerup', up);
+      bar.removeEventListener('pointercancel', up);
+      bar.classList.remove('drag');
+      document.body.classList.remove('splitting');
+      document.body.style.cursor = '';
+      done();
+    };
+    bar.addEventListener('pointermove', mv);
+    bar.addEventListener('pointerup', up);
+    bar.addEventListener('pointercancel', up);
+  };
+}
+function armGripsApply(){
+  const g = document.getElementById('armGrid');
+  if(g){
+    g.style.setProperty('--armL', (armSize('left_w') || 300) + 'px');
+    g.style.setProperty('--armR', (armSize('right_w') || 300) + 'px');
+  }
+  const f = document.getElementById('armFoot'), fg = document.getElementById('armGripF');
+  const shut = typeof armFootShut === 'function' && armFootShut();
+  if(f) f.style.height = !shut && armSize('foot_h') ? armSize('foot_h') + 'px' : '';
+  if(fg) fg.style.display = shut ? 'none' : '';
+}
+function armGripsInstall(){
+  const g = document.getElementById('armGrid');
+  if(!g) return;
+  armGripsApply();
+  const side = (id, k, sign) => {
+    const bar = document.getElementById(id), pane = document.getElementById(k === 'left_w' ? 'armLeft' : 'armRight');
+    if(!bar || !pane) return;
+    let w = 0;
+    armGripDrag(bar, 'x', () => pane.getBoundingClientRect().width, (w0, d) => {
+      const other = document.getElementById(k === 'left_w' ? 'armRight' : 'armLeft');
+      const room = g.clientWidth - (other ? other.getBoundingClientRect().width : 0) - 340;
+      w = Math.round(Math.max(180, Math.min(w0 + sign * d, Math.max(180, room))));
+      g.style.setProperty(k === 'left_w' ? '--armL' : '--armR', w + 'px');
+    }, () => { if(w) armSizeSave(k, w); });
+    bar.ondblclick = () => { armSizeSave(k, 0); armGripsApply(); armFrame(); };
+  };
+  side('armGripL', 'left_w', 1);
+  side('armGripR', 'right_w', -1);
+  const fb = document.getElementById('armGripF'), foot = document.getElementById('armFoot');
+  if(fb && foot){
+    let h = 0;
+    armGripDrag(fb, 'y', () => foot.getBoundingClientRect().height, (h0, d) => {
+      const mid = foot.parentNode.getBoundingClientRect().height;
+      h = Math.round(Math.max(40, Math.min(h0 - d, mid - 200)));
+      foot.style.height = h + 'px';
+    }, () => { if(h) armSizeSave('foot_h', h); });
+    fb.ondblclick = () => { armSizeSave('foot_h', 0); armGripsApply(); armFrame(); };
+  }
 }
 function armStripHtml(side, label, n){
   return `<button class="armstrip" onclick="armSideToggle('${side}')" title="${esc(tt('armory.panel_open'))}">

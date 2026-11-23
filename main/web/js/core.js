@@ -1103,7 +1103,7 @@ const RSZ_GRIP=20;
    outlive the thing it was measured on. `.modal` passes the same test the sweep
    looks for and is deliberately left to `rszModal`, which sizes it in both
    directions rather than one. */
-const RSZ_SKIP=/\.wpop\b|^\.modal\b/;
+const RSZ_SKIP=/\.wpop\b|^\.modal\b|\.armanimwin\b/;   // Armory's animations window has its own top-edge grip
 
 //: Built once by `rszInit`, from the stylesheet. Empty until then.
 let rszSel='';
