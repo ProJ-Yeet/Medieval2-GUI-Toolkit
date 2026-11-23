@@ -101,42 +101,23 @@ function armNormRow(s, set){
     <label class="armcheck"><input type="checkbox"${s.invert ? ' checked' : ''} onchange="${set}('invert', this.checked)"> ${tt('armory.norm_invert')}</label>`;
 }
 
-function armNormalsHtml(){
+/* The bake step's sliders for the chosen normal-map mode (the mode picker is
+   the bake step's own); 2026-11-23 they left the objects panel for here. */
+function armNormalsBodyHtml(){
   const nm = armNormals();
   const p = armProj();
-  let body = '';
-  if(nm.mode === 'generic'){
-    body = `<div class="armpropsrow armnormrow">${armNormRow(Object.assign({}, ARM_NORM_GENERIC, nm.generic || {}), 'armNormGeneric')}</div>`;
-  }else if(nm.mode === 'specialized'){
+  if(nm.mode === 'generic')
+    return `<div class="armpropsrow armnormrow">${armNormRow(Object.assign({}, ARM_NORM_GENERIC, nm.generic || {}), 'armNormGeneric')}</div>`;
+  if(nm.mode === 'specialized'){
     const used = new Set(p.objects.map(o => o.material || 'other'));
-    body = Object.keys(ARM_NORM_MATERIALS).filter(m => used.has(m)).map(m => {
+    return Object.keys(ARM_NORM_MATERIALS).filter(m => used.has(m)).map(m => {
       const s = Object.assign({}, ARM_NORM_MATERIALS[m], (nm.materials || {})[m] || {});
       return `<div class="armnormmat"><b>${esc(armMatLabel(m))}</b>
         <span class="count">${ttN('armory.norm_objects', p.objects.filter(o => (o.material || 'other') === m).length)}</span>
         <div class="armpropsrow armnormrow">${armNormRow(s, `armNormMat.bind(null,'${m}')`)}</div></div>`;
     }).join('') + `<div class="count armnote">${tt('armory.norm_specialized_note')}</div>`;
-  }else if(nm.mode === 'source'){
-    body = `<div class="count armnote">${tt('armory.norm_source_note')}</div>`;
-  }else{
-    body = `<div class="count armnote">${tt('armory.norm_skip_note')}</div>`;
   }
-  if(state.armExp && typeof armExpNormWarnHtml === 'function') body += armExpNormWarnHtml();
-  return `<div class="armsect">${tt('armory.normal_maps')}</div>
-    <div class="armpropsrow"><select onchange="armNormMode(this.value)">${ARM_NORM_MODES.map(m =>
-      `<option value="${m}"${nm.mode === m ? ' selected' : ''}>${esc(armNormModeLabel(m))}</option>`).join('')}</select>
-      ${nm.mode !== 'skip' && nm.mode !== 'source' ? `<label class="armcheck"><input type="checkbox"${nm.preview !== false ? ' checked' : ''} onchange="armNormPreview(this.checked)"> ${tt('armory.norm_preview')}</label>` : ''}</div>
-    ${body}`;
-}
-
-/* An object's own setting, in its properties: Specialized only. */
-function armNormalObjHtml(o){
-  const nm = armNormals();
-  if(nm.mode !== 'specialized') return '';
-  const s = armNormalSetting(o);
-  return `<div class="armsect">${tt('armory.normal_map')}</div>
-    <div class="armpropsrow"><label class="armcheck"><input type="checkbox"${o.normal ? ' checked' : ''} onchange="armNormOwn(${o.id}, this.checked)"> ${tt('armory.norm_own')}</label>
-      ${o.normal ? '' : `<span class="count">${tt('armory.norm_from_material', {material: armMatLabel(o.material || 'other')})}</span>`}</div>
-    ${o.normal ? `<div class="armpropsrow armnormrow">${armNormRow(s, `armNormObj.bind(null,${o.id})`)}</div>` : ''}`;
+  return `<div class="count armnote">${tt(nm.mode === 'source' ? 'armory.norm_source_note' : 'armory.norm_skip_note')}</div>`;
 }
 
 function armNormChanged(live){
@@ -144,8 +125,8 @@ function armNormChanged(live){
   armFrame();
   if(live){ clearTimeout(ARM.normTimer); ARM.normTimer = setTimeout(() => { armSave(); }, 300); return; }
   armSave(); armPaintObjects();
+  if(state.armExp && document.getElementById('armExpBody') && typeof armExportPaint === 'function') armExportPaint();
 }
-function armNormMode(m){ const nm = armNormals(); nm.mode = m; nm.picked = true; if(state.armExp) state.armExp.normFell = false; armNormChanged(); }
 function armNormPreview(on){ armNormals().preview = on; armNormChanged(); }
 function armNormGeneric(k, v, live){ const nm = armNormals(); (nm.generic = nm.generic || {})[k] = v; armNormChanged(live); }
 function armNormMat(m, k, v, live){
@@ -153,10 +134,3 @@ function armNormMat(m, k, v, live){
   (nm.materials[m] = nm.materials[m] || {})[k] = v;
   armNormChanged(live);
 }
-function armNormOwn(id, on){
-  const o = armObj(id); if(!o) return;
-  if(on){ const s = armNormalSetting(o); o.normal = {strength: s.strength, blur: s.blur, invert: s.invert}; }
-  else delete o.normal;
-  armNormChanged();
-}
-function armNormObj(id, k, v, live){ const o = armObj(id); if(!o || !o.normal) return; o.normal[k] = v; armNormChanged(live); }

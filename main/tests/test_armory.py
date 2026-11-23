@@ -1001,6 +1001,10 @@ if horse is not None and AMER is not None and AMER.is_dir():
           "pike" in temps["pike"]["fields"].get("attributes", "") and "phalanx" in temps["pike"]["fields"].get("formation", "")
           and any("pike" in s.lower() for s in temps["pike"]["skeletons"]))
     check(f"cavalry rides ({temps['cavalry']['fields'].get('mount')})", temps["cavalry"]["fields"].get("mount"))
+    # 2026-11-23: each role names its units, for step 4's "skeletons from" list
+    mem = temps["pike"].get("members") or []
+    check(f"a role lists its units with their soldier entries ({len(mem)} pike units)",
+          len(mem) == temps["pike"]["units"] and all(m.get("type") and m.get("soldier") for m in mem))
 
     bake_dir = str(tmp / "out")
     base = {"bake_folder": bake_dir, "stem": "horse_95i"}
@@ -1117,7 +1121,12 @@ const d = new Uint8ClampedArray([100, 150, 200, 255]);
 cgFinish(d, 1, 1, {exposure: 0, brightness: 0, contrast: 1, gamma: 1, saturation: 1, hue: 0, sharpen: 0});
 const e = new Uint8ClampedArray([100, 150, 200, 255]);
 cgFinish(e, 1, 1, {exposure: 0, brightness: 0, contrast: 1, gamma: 1, saturation: 0, hue: 0, sharpen: 0});
-console.log(JSON.stringify({n, same: Array.from(d), grey: Array.from(e)}));
+// 2026-11-23: a lone speck in the mask (a stray skinned triangle) is dropped, the body kept
+const sp = new Uint8Array(20 * 20); for(let y = 5; y < 15; y++) for(let x = 5; x < 15; x++) sp[y * 20 + x] = 1;
+sp[1 * 20 + 1] = 1; sp[18 * 20 + 17] = 1; sp[18 * 20 + 18] = 1;
+const kept = cgDespeck(sp, 20, 20, 8); let body = 0, specks = kept[1 * 20 + 1] + kept[18 * 20 + 17] + kept[18 * 20 + 18];
+for(const v of kept) body += v;
+console.log(JSON.stringify({n, same: Array.from(d), grey: Array.from(e), body, specks}));
 """)
     (tmp / "probe5.js").write_text(probe, encoding="utf-8")
     out = subprocess.run([node, str(tmp / "probe5.js")], capture_output=True, text=True, timeout=60)
@@ -1127,6 +1136,8 @@ console.log(JSON.stringify({n, same: Array.from(d), grey: Array.from(e)}));
           got.get("same") and max(abs(a - b) for a, b in zip(got["same"], [100, 150, 200, 255])) <= 1)
     grey = got.get("grey") or [0, 1, 2]
     check(f"and saturation 0 makes it grey ({grey})", max(grey[:3]) - min(grey[:3]) <= 1)
+    check(f"specks in the silhouette are dropped before the outline grows them into dots (kept {got.get('body')}, specks {got.get('specks')})",
+          got.get("body") == 100 and got.get("specks") == 0)
 
 # ---------------------------------------------------------------------------
 print("\nThe card maker's IK rig and pose library (99n)")
@@ -1270,6 +1281,18 @@ try:
     armory.folder_models(str(fold / "a_body.obj")); check("a file is refused as a folder", False)
 except armory.ArmoryError:
     check("a file is refused as a folder", True)
+
+# 2026-11-23: Edit texture opens the sheet in an image editor found on the
+# machine (Photoshop, then GIMP, Krita, Affinity Photo, Paint.NET) before the
+# system's viewer
+ed = tmp / "editors"
+gimp = ed / "Program Files" / "GIMP 2" / "bin" / "gimp-2.10.exe"
+gimp.parent.mkdir(parents=True, exist_ok=True); gimp.write_bytes(b"")
+check("no editor in a bare folder", armory.find_image_editor([tmp / "nothing_here"]) == "")
+check("GIMP is found under Program Files", armory.find_image_editor([ed / "Program Files"]) == str(gimp))
+ps = ed / "Program Files" / "Adobe" / "Adobe Photoshop 2025" / "Photoshop.exe"
+ps.parent.mkdir(parents=True, exist_ok=True); ps.write_bytes(b"")
+check("Photoshop comes before GIMP", armory.find_image_editor([ed / "Program Files"]) == str(ps))
 
 print("\nA real mod")
 game = _realmod.game(required=False)

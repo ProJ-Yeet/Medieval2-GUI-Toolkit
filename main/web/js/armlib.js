@@ -72,7 +72,9 @@ function armLibPaint(){
       <label>${tt('armory.lib_group_by')}<select onchange="state.armLibUi.by=this.value;armLibRows()">${ARM_LIB_GROUPS.map(g =>
         `<option value="${g}"${ui.by === g ? ' selected' : ''}>${esc(armLibGroupLabel(g))}</option>`).join('')}</select></label>
       <input id="armLibQ" placeholder="${esc(tt('armory.find'))}" value="${esc(ui.q)}" oninput="state.armLibUi.q=this.value;armLibRows()">
-      <span class="count">${ttN('armory.lib_count', lib.items.length)}</span></div>
+      <span class="count">${ttN('armory.lib_count', lib.items.length)}</span><span style="flex:1"></span>
+      <button class="mini${armImpGallery() ? '' : ' on'}" onclick="armLibView('list')">${tt('armory.as_list')}</button>
+      <button class="mini${armImpGallery() ? ' on' : ''}" onclick="armLibView('gallery')">${tt('armory.as_gallery')}</button></div>
     <div class="armexprow"><b>${tt('armory.lib_collections')}</b>${chips(lib.collections, 'collections')}
       <button class="mini" onclick="armLibNew('collections')">${tt('armory.new_collection')}</button></div>
     <div class="armexprow"><b>${tt('armory.lib_categories')}</b>${chips(lib.categories, 'categories')}
@@ -98,15 +100,33 @@ function armLibRows(){
     }
   }
   const order = [...groups.keys()].sort((a, b) => a === null ? 1 : b === null ? -1 : String(a).localeCompare(String(b)));
+  const tiles = armImpGallery();
   el.innerHTML = order.map(k => {
     const items = groups.get(k);
     const label = k === null ? tt('armory.lib_ungrouped') : k === '' ? tt('armory.lib_all') : k;
     const fkey = ui.by + ':' + k;
     const folded = ui.folded.includes(fkey);
+    const open = items.find(it => it.id === ui.open);
     return `<div class="armlibgroup"><button class="armfold" onclick="armLibFold('${esc(fkey).replace(/'/g, '&#39;')}')">${folded ? '▸' : '▾'} ${esc(label)}</button>
       <span class="count">${items.length}</span>
-      ${folded ? '' : items.map(armLibRowHtml).join('')}</div>`;
+      ${folded ? '' : tiles ? `<div class="galgrid">${items.map(armLibTileHtml).join('')}</div>${open ? armLibRowHtml(open) : ''}`
+        : items.map(armLibRowHtml).join('')}</div>`;
   }).join('') || `<div class="empty armempty">${tt('armory.lib_none_match')}</div>`;
+  el.classList.toggle('armimpgal', tiles);
+  // 2026-11-23: the tiles drawn in 3D, as the Import dialog's library tab draws them
+  if(tiles && typeof galMount === 'function') galMount(el, (name, t) => armLibDetails(+t.dataset.k));
+}
+function armLibView(v){
+  state.settings.armory_import_view2 = v;
+  api.post('/api/settings', {armory_import_view2: v}).catch(() => {});
+  armLibPaint();
+}
+/* A library item as a gallery tile: a click opens its details under the row of tiles. */
+function armLibTileHtml(it){
+  const mod = it.kind === 'external' ? GAL_EXT : it.mod, name = it.kind === 'external' ? it.path : it.entry;
+  return `<div class="gtile armimptile${state.armLibUi.open === it.id ? ' picked' : ''}" data-mod="${esc(mod)}" data-name="${esc(name)}"
+      data-k="${it.id}" title="${esc(it.path || it.entry || '')}"><canvas></canvas><span class="gname"><b>${esc(it.name)}</b> ${esc(armLibCode(it))}</span>
+    <button class="mini armimplook" onclick="event.preventDefault();event.stopPropagation();armLibLook(${it.id})" title="${esc(tt('armory.look_closer_title'))}">🔍</button></div>`;
 }
 function armLibFold(k){
   const f = state.armLibUi.folded, i = f.indexOf(k);

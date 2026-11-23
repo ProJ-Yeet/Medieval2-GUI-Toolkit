@@ -846,10 +846,42 @@ def sheet_copy(src: Path) -> Path:
     return out
 
 
+# 2026-11-23: an image editor found on the machine comes before the system's
+# viewer (which on Windows is Photos, and cannot paint). In this order.
+_EDITOR_GLOBS = (
+    "Adobe/Adobe Photoshop*/Photoshop.exe",
+    "GIMP*/bin/gimp-[0-9]*.exe",
+    "Krita*/bin/krita.exe",
+    "Affinity/Photo*/Photo.exe",
+    "paint.net/paintdotnet.exe",
+)
+
+
+def find_image_editor(roots: list[Path] | None = None) -> str:
+    """The first image editor installed under ``roots`` (Program Files and the
+    user's own Programs folder by default), or ``""``."""
+    if roots is None:
+        roots = [Path(os.environ[k]) for k in ("ProgramFiles", "ProgramW6432", "ProgramFiles(x86)")
+                 if os.environ.get(k)]
+        if os.environ.get("LOCALAPPDATA"):
+            roots.append(Path(os.environ["LOCALAPPDATA"]) / "Programs")
+    for pattern in _EDITOR_GLOBS:
+        for root in roots:
+            try:
+                hits = sorted(root.glob(pattern), reverse=True)    # the newest version first
+            except OSError:
+                continue
+            for hit in hits:
+                if hit.is_file():
+                    return str(hit)
+    return ""
+
+
 def open_in_editor(path: Path, program: str = "") -> None:
-    """``path`` in the program the user set, else the system's own for PNG."""
+    """``path`` in the program the user set, else an image editor found on
+    the machine, else the system's own for PNG."""
     import subprocess
-    program = (program or "").strip().strip('"')
+    program = (program or "").strip().strip('"') or (find_image_editor() if os.name == "nt" else "")
     if program:
         if not Path(program).is_file():
             raise ArmoryError(_i18n.msg("eng.armory.no_such_program", "{path} is not a program", path=program))

@@ -228,6 +228,7 @@ async function armEnsureLoaded(){
 
 async function renderArmory(){
   count.textContent = '';
+  if(typeof cgUnitAnimOut === 'function') cgUnitAnimOut();
   if(!ARM.loaded){
     await armEnsureLoaded();
     if(stale('armory')) return;
@@ -272,7 +273,7 @@ function armPaintBar(){
     <span class="armshade" id="armShade">${typeof armShadeHtml === 'function' ? armShadeHtml() : ''}</span>
     <button class="mini" onclick="armFullView()" title="${esc(tt('armory.full_view_title'))}">⛶ ${tt('armory.full_view')}</button>
     <button class="mini" onclick="armTexOpen()" title="${esc(tt('armory.textures_title'))}">🖼 ${tt('armory.textures')}</button>
-    <button class="mini" onclick="armUvOpen()" title="${esc(tt('armory.uv_edit_title'))}">${tt('armory.uv_edit')}</button>
+    <button class="mini${ARM.uvEd ? ' on' : ''}" onclick="armUvToggle()" title="${esc(tt('armory.uv_edit_title'))}">${tt('armory.uv_edit')}</button>
     <button class="mini" onclick="armFrameAll()" title="${esc(tt('armory.frame_all_title'))}">${tt('armory.frame_all')}</button>
     <button class="mini primary" onclick="armSessSaveCurrent()">${tt('common.save')}</button>
     <button class="mini" onclick="armSessOpen()" title="${esc(tt('armory.sess_button_title'))}">${tt('armory.sess_button')}</button>
@@ -1151,7 +1152,8 @@ function armRender(objs, w, h, cam, opts){
   }
   gl.colorMask(true, true, true, true);
   gl.disable(gl.BLEND); gl.depthMask(true);
-  if(wire && typeof armWireDraw === 'function') armWireDraw(objs, cam, top);
+  // 2026-11-23: Solid + wire draws the wires over the shaded model
+  if((wire || (live3d && ARM.shade === 'both')) && typeof armWireDraw === 'function') armWireDraw(objs, cam, top);
   gl.disable(gl.SCISSOR_TEST);
   return true;
 }

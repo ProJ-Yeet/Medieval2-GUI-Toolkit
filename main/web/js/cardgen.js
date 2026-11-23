@@ -8,14 +8,19 @@ const CG_FINISH_KEYS = {blur:'cards.gen_blur',exposure:'cards.gen_exposure',brig
 /* Armory unit-card and information-picture maker. */
 
 const CG_WORK = {sizes: null, mod: null, library: null, rigs: {}, art: new Map(), serial: 0, draw: 0, handles: []};
-function cg(){
+/* 2026-11-23: two sources, each with its own settings. An existing unit of
+   the mod, the default: its soldier model loaded here alone, posed by its own
+   animations. Or Armory Studio's model, reached from Armory Studio, whose
+   settings travel with the Armory project (armsess.js, state.cg). */
+const cgSrc = () => state.cgSrc === 'armory' ? 'armory' : 'unit';
+function cg(src){
   const defaults = {size:'card',mult:1,w:48,h:64,ss:10,oneEach:true,pose:'guard',name:'',unit:'',
     cam:{yaw:20,pitch:4,scale:1.2,height:0,pan:0},xf:{t:[0,0,0],r:[0,0,0]},
     rig:{type:'auto',basis:{},handles:true,cat:'',pick:'',part:'whole'},
     light:{type:'sun',azimuth:35,elevation:40,amount:0.95,level:1,ambient:0.38},
     post:{blur:0.5,exposure:0,brightness:0,contrast:1,gamma:1,saturation:1,hue:0,sharpen:0.2,outline:0.3},
     fit:{part:'thighs',auto:true},ground:{kind:'none',colour:'#5d4d36',pic:''},gframe:false,paint:{on:false,strength:1}};
-  const c = state.cg = state.cg || {};
+  const c = (src || cgSrc()) === 'armory' ? (state.cg = state.cg || {}) : (state.cgUnit = state.cgUnit || {});
   for(const [key,value] of Object.entries(defaults)){
     if(c[key] == null) c[key] = value;
     else if(value && typeof value === 'object' && !Array.isArray(value)) for(const [n,v] of Object.entries(value)) if(c[key][n] == null) c[key][n] = v;
@@ -25,7 +30,7 @@ function cg(){
 function cgHere(){ return state.mode === 'cards' && cardsSubNow() === 'generate'; }
 function cgObjects(){
   const seen = new Set();
-  return armProj().objects.filter(o => {
+  return (cgSrc() === 'unit' ? CG_UNIT.objects : armProj().objects).filter(o => {
     if(o.hidden || armCollHidden(o)) return false;
     // one of each part per model: a horse's Body is not the rider's
     const key = (((o.src || [])[0] || {}).asset || '') + '|' + String(o.name || '').toLowerCase();
@@ -56,8 +61,102 @@ function cgRigPose(anim){
   if(!rig || !anim) return null;
   return crPoseOn(rig,crSolve(rig,cg().rig.basis,cgRigType()),anim);
 }
+/* The unit source's own model and animation state. ARM.anim is Armory's; while
+   a unit is shown here it is held aside (CG_UNIT.held) and given back when
+   Armory Studio, or its model here, is shown again. */
+const CG_UNIT = {objects: [], unit: '', entry: '', mod: '', held: null, anim: null, units: null, q: ''};
+function cgUnitAnimIn(){
+  if(CG_UNIT.held) return;
+  CG_UNIT.held = {anim: ARM.anim};
+  ARM.anim = CG_UNIT.anim;
+  armAnim();
+  CG_UNIT.anim = ARM.anim;
+}
+function cgUnitAnimOut(){
+  if(!CG_UNIT.held) return;
+  CG_UNIT.anim = ARM.anim;
+  ARM.anim = CG_UNIT.held.anim; CG_UNIT.held = null;
+}
+function cgSource(src){
+  state.cgSrc = src;
+  if(src === 'armory') cgUnitAnimOut();
+  CG_WORK.fit = null;
+  renderCardGen();
+}
+async function cgUnitLoad(type){
+  const mod = state.src, units = (CG_UNIT.units || {}).list || [];
+  const u = units.find(x => x.type === type);
+  if(!u) return;
+  const entry = (u.soldier || '').toLowerCase(), c = cg();
+  CG_UNIT.unit = type; CG_UNIT.entry = entry; CG_UNIT.mod = mod; CG_UNIT.objects = []; CG_UNIT.picking = false;
+  c.unit = type; c.name = type.replace(/[^A-Za-z0-9_\-]/g, '_'); c.saved = null; c.givePlan = null; c.err = '';
+  cgPaint();
+  const a = {kind: 'entry', mod, entry}, key = armAssetKey(a);
+  const live = await armLoadAsset(a);
+  if(CG_UNIT.unit !== type) return;
+  if(!live || !live.view){ c.err = (live && live.err) || tt('cards.gen_unit_unreadable', {entry}); cgPaint(); return; }
+  CG_UNIT.objects = live.view.objects.map((ob, i) => ({id: -1 - i, src: [{asset: key, group: ob.index}], name: ob.name, mesh: ob.mesh,
+    flag: ob.flag, t: [0, 0, 0], r: [0, 0, 0], s: [1, 1, 1]}));
+  // its own animations, in the held-aside state
+  cgUnitAnimIn();
+  ARM.anim = null; const an = armAnim(); CG_UNIT.anim = an; an.fromMod = mod;
+  try{ an.list = await api.get(`/api/model/anims?mod=${enc(mod)}&entry=${enc(entry)}`); }catch(e){ an.list = {error: errText(e)}; }
+  if(ARM.anim !== an) return;
+  const set = (an.list.sets || [])[0];
+  an.skel = set ? (set.primary || set.secondary || '') : Object.keys(an.list.skeletons || {})[0] || '';
+  an.set = set || null;
+  CG_WORK.fit = null;
+  await cgPreparePose();
+  cgPaint();
+}
+/* The unit picker: a search and the unit editor's faction, category and
+   class filters, its rows repainted alone. */
+function cgUnitPickHtml(){
+  const L = (CG_UNIT.units || {}).list || [], f = CG_UNIT.f = CG_UNIT.f || {q: '', faction: '', category: '', cls: ''};
+  const uniq = list => [...new Set(list.filter(Boolean))].sort((x, y) => x.localeCompare(y));
+  const sel = (k, label, list) => `<select onchange="CG_UNIT.f.${k}=this.value;cgUnitRows()"><option value="">${label}</option>
+    ${list.map(v => `<option${f[k] === v ? ' selected' : ''}>${esc(v)}</option>`).join('')}</select>`;
+  setTimeout(cgUnitRows, 0);
+  return `<div class="armexprow"><input placeholder="${ttA('armory.find')}" value="${esc(f.q)}" oninput="CG_UNIT.f.q=this.value;cgUnitRows()">
+      ${sel('faction', tt('armory.exp_all_factions'), uniq(L.flatMap(u => u.factions || [])))}
+      ${sel('category', tt('armory.exp_all_categories'), uniq(L.map(u => u.category)))}
+      ${sel('cls', tt('armory.exp_all_classes'), uniq(L.map(u => u['class'])))}</div>
+    <div class="armexplist" id="cgUnitRows"></div>`;
+}
+function cgUnitRows(){
+  const el = document.getElementById('cgUnitRows');
+  if(!el) return;
+  const f = CG_UNIT.f, q = (f.q || '').trim().toLowerCase();
+  const rows = ((CG_UNIT.units || {}).list || []).filter(u => (!q || u.type.toLowerCase().includes(q) || (u.soldier || '').toLowerCase().includes(q))
+    && (!f.faction || (u.factions || []).includes(f.faction)) && (!f.category || u.category === f.category) && (!f.cls || u['class'] === f.cls));
+  el.innerHTML = rows.slice(0, 400).map(u => `<button class="armexprowbtn${u.type === CG_UNIT.unit ? ' on' : ''}" onclick="cgUnitLoad(${esc(JSON.stringify(u.type))})">
+      <b>${esc(u.type)}</b> <span class="count">${esc(u.category)} · ${esc(u['class'])} · ${esc(u.soldier || '')}</span></button>`).join('')
+    || `<div class="count">${tt('armory.nothing_matches')}</div>`;
+}
+function cgSourceHtml(){
+  const src = cgSrc();
+  let html = `<fieldset><legend>${tt('cards.gen_source_legend')}</legend><div class="armexprow">
+      <button class="mini${src === 'unit' ? ' on' : ''}" onclick="cgSource('unit')">${tt('cards.gen_src_unit')}</button>
+      <button class="mini${src === 'armory' ? ' on' : ''}" onclick="cgSource('armory')">${tt('cards.gen_src_armory')}</button>
+      ${src === 'armory' ? `<span style="flex:1"></span><button class="mini" onclick="setAppMode('armory')">${tt('cards.gen_back_armory')}</button>` : ''}</div>`;
+  if(src === 'unit'){
+    html += `<div class="armexprow"><b>${CG_UNIT.unit ? esc(CG_UNIT.unit) : `<span class="count">${tt('armory.exp_unit_none')}</span>`}</b>
+        ${CG_UNIT.entry ? `<span class="count">${esc(CG_UNIT.entry)}</span>` : ''}
+        ${CG_UNIT.unit ? `<button class="mini${CG_UNIT.picking ? ' on' : ''}" onclick="CG_UNIT.picking=!CG_UNIT.picking;cgPaint()">${tt('armory.exp_unit_change')}</button>` : ''}</div>`;
+    if(CG_UNIT.picking || !CG_UNIT.unit) html += cgUnitPickHtml();
+  }else html += `<div class="count">${tt('cards.gen_src_armory_note')}</div>`;
+  return html + `</fieldset>`;
+}
 async function renderCardGen(){
   const serial = ++CG_WORK.serial, mod = state.src;
+  if(cgSrc() === 'unit'){
+    if(CG_UNIT.mod && CG_UNIT.mod !== mod){ CG_UNIT.objects = []; CG_UNIT.unit = ''; CG_UNIT.entry = ''; CG_UNIT.anim = null; }
+    if(!CG_UNIT.units || CG_UNIT.units.mod !== mod){
+      try{ CG_UNIT.units = {mod, list: (await api.get('/api/armory/templates?mod=' + enc(mod))).units || []}; }
+      catch(e){ CG_UNIT.units = {mod, list: []}; }
+    }
+    if(CG_UNIT.unit) cgUnitAnimIn();
+  }else cgUnitAnimOut();
   if(cgHere()) main.innerHTML = bmdbTabsHtml(tt('cards.data_ui_units_data_ui_unit')) + cardsSubTabsHtml() + `<div class="armempty">${tt('armory.reading')}</div>`;
   try{
     await armEnsureLoaded(); await ARM.loading;
@@ -70,7 +169,7 @@ async function renderCardGen(){
     await Promise.all(reads);
     if(serial !== CG_WORK.serial || !cgHere() || state.src !== mod) return;
     if(cg().fit.auto) CG_WORK.fit = null;
-    if(cgObjects().length) await cgPreparePose();
+    if(cgObjects().length && (cgSrc() === 'armory' || ARM.anim && ARM.anim.list)) await cgPreparePose();
     if(serial !== CG_WORK.serial || !cgHere() || state.src !== mod) return;
     cgPaint();
   }catch(e){ if(cgHere() && serial === CG_WORK.serial){ cg().err = errText(e); cgPaint(); } }
@@ -98,10 +197,10 @@ function cgSizeHtml(){
     <label>${tt('cards.gen_render_at')} ${cgSelectHtml('','ss',[10,15,20,25,30,35,40].map(n => [n,String(n) + '×']))}</label></fieldset>`;
 }
 function cgPoseHtml(){
-  const c = cg(), a = armAnim(), entries = armAnimEntries(), skels = a.list && a.list.skeletons || {};
+  const c = cg(), a = armAnim(), entries = cgSrc() === 'unit' ? [] : armAnimEntries(), skels = a.list && a.list.skeletons || {};
   const actions = (skels[a.skel.toLowerCase()] || {}).actions || [];
   return `<fieldset><legend>${tt('cards.gen_pose')}</legend>${cgSelectHtml('','pose',['tpose','guard','brace','draw','riding','march','anim','rig'].map(x => [x,tt(CG_POSE_KEYS[x])]))}
-    <select onchange="cgEntry(this.value)"><option value="">${tt('cards.gen_pick_entry')}</option>${entries.map(e => `<option value="${esc(armAssetKey(e))}"${(armProj().anim || {}).asset === armAssetKey(e) ? ' selected' : ''}>${esc(armAssetLabel(e))}</option>`).join('')}</select>
+    ${cgSrc() === 'unit' ? '' : `<select onchange="cgEntry(this.value)"><option value="">${tt('cards.gen_pick_entry')}</option>`}${entries.map(e => `<option value="${esc(armAssetKey(e))}"${(armProj().anim || {}).asset === armAssetKey(e) ? ' selected' : ''}>${esc(armAssetLabel(e))}</option>`).join('')}${cgSrc() === 'unit' ? '' : '</select>'}
     ${Object.keys(skels).length ? `<select onchange="cgSkeleton(this.value)">${Object.keys(skels).map(s => `<option value="${esc(s)}"${s === a.skel.toLowerCase() ? ' selected' : ''}>${esc(s)}</option>`).join('')}</select>` : ''}
     ${c.pose === 'anim' ? `<select onchange="cgAction(this.value)">${actions.filter(x => x.playable).map(x => { const key = x.slot != null ? String(x.slot) : 'a:' + x.action; return `<option value="${esc(key)}"${a.key === key ? ' selected' : ''}>${esc(x.action)}</option>`; }).join('')}</select><input type="range" min="0" max="1000" value="${armAnimFrac()}" oninput="cgScrub(+this.value)">` : ''}
     <div class="count">${esc(c.poseNote || '')}</div><div class="count">${esc(c.poseNote2 || '')}</div>
@@ -122,7 +221,11 @@ function cgCameraHtml(){
   return `<fieldset><legend>${tt('cards.gen_camera')}</legend>${[['yaw','cards.gen_turn',-180,180,1],['pitch','cards.gen_tilt',-30,45,1],['scale','cards.gen_ortho_scale',0.4,3,0.05],['height','cards.gen_height',-1.5,1.5,0.02]].map(x => cgRange('cam',...x)).join('')}
     <label title="${ttA('cards.gen_framing_hint')}">${tt('cards.gen_framing')} ${cgSelectHtml('fit','part',['whole','knees','thighs','waist'].map(x => [x,tt(CG_FRAME_KEYS[x])]))}</label>
     ${cgCheckHtml('fit','auto','cards.gen_fit_auto')}
-    <button class="mini" id="cgReset" ${cgPlacementReset() ? 'disabled' : ''} onclick="cg().xf={t:[0,0,0],r:[0,0,0]};cg().cam.pan=0;cgPaint()">${tt('cards.gen_place_reset')}</button><p class="count">${tt('cards.gen_view_hint')}</p></fieldset>`;
+    <button class="mini" id="cgReset" ${cgPlacementReset() ? 'disabled' : ''} onclick="cg().xf={t:[0,0,0],r:[0,0,0]};cg().cam.pan=0;cgPaint()">${tt('cards.gen_place_reset')}</button>
+    <span class="armnav" title="${esc(tt('armory.nav_title'))}">${tt('armory.nav')}
+      <button class="mini${armNav() === 'simple' ? ' on' : ''}" onclick="armNavSet('simple');cgPaint()">${tt('armory.nav_simple')}</button>
+      <button class="mini${armNav() === 'blender' ? ' on' : ''}" onclick="armNavSet('blender');cgPaint()">${tt('armory.nav_blender')}</button></span>
+    <p class="count">${tt(armNav() === 'simple' ? 'cards.gen_view_hint_simple' : 'cards.gen_view_hint')}</p></fieldset>`;
 }
 function cgGroundHtml(){
   const c = cg();
@@ -146,9 +249,14 @@ function cgPaint(){
   if(!cgHere()) return;
   const c = cg(), objects = cgObjects();
   const nav = bmdbTabsHtml(tt('cards.data_ui_units_data_ui_unit')) + cardsSubTabsHtml();
-  if(!objects.length){ main.innerHTML = nav + `<div class="armempty">${tt('cards.gen_no_model')}<br><button class="btn" onclick="setAppMode('armory')">${tt('core.armory_studio')}</button></div>`; return; }
+  if(!objects.length){
+    main.innerHTML = nav + `<div class="cggrid"><div class="cgctl">${cgSourceHtml()}<div class="armexperr" id="cgError">${esc(c.err || '')}</div></div>
+      <div class="armempty">${cgSrc() === 'unit' ? (CG_UNIT.unit ? tt('armory.reading') : tt('cards.gen_pick_unit_first'))
+        : `${tt('cards.gen_no_model')}<br><button class="btn" onclick="setAppMode('armory')">${tt('core.armory_studio')}</button>`}</div></div>`;
+    return;
+  }
   const [w,h] = cgDimensions(), ss = Math.min(Number(c.ss),4096/Math.max(w,h)), hw = Math.min(4096,Math.round(w*ss)), hh = Math.min(4096,Math.round(h*ss));
-  main.innerHTML = nav + `<div class="cggrid"><div class="cgctl"><div class="count">${ttN('cards.gen_source',objects.length)}</div>
+  main.innerHTML = nav + `<div class="cggrid"><div class="cgctl">${cgSourceHtml()}<div class="count">${cgSrc() === 'unit' ? ttN('cards.gen_source_unit',objects.length,{entry:esc(CG_UNIT.entry)}) : ttN('cards.gen_source',objects.length)}</div>
     ${cgCheckHtml('','oneEach','cards.gen_one_each')}${cgSizeHtml()}${cgPoseHtml()}${cgCameraHtml()}${cgGroundHtml()}${cgLightHtml()}${cgFinishHtml()}
     <fieldset><legend>${tt('cards.gen_name')}</legend><input value="${esc(c.name)}" placeholder="${ttA('cards.gen_name_hint')}" oninput="cg().name=this.value">
     <div class="armexprow"><button class="primary" onclick="cgSave(false)">${tt('cards.gen_save')}</button><button onclick="cgSave(true)">${tt('cards.gen_save_hd')}</button></div>
@@ -177,8 +285,8 @@ async function cgPreparePose(){
   const c = cg(), a = armAnim(); c.poseNote = ''; c.poseNote2 = '';
   if(c.pose === 'tpose'){ armAnimRest(); a.playing = false; return; }
   // a rider and his horse both loaded: Riding is the rider's action, on the horse
-  if(c.pose === 'riding'){ const rider = await armAnimRider(); if(rider && (armProj().anim || {}).asset !== armAssetKey(rider)) await armAnimFrom(armAssetKey(rider)); }
-  if(!a.list){ const entry = armAnimEntries()[0]; if(entry) await armAnimFrom(armAssetKey(entry)); }
+  if(cgSrc() === 'armory' && c.pose === 'riding'){ const rider = await armAnimRider(); if(rider && (armProj().anim || {}).asset !== armAssetKey(rider)) await armAnimFrom(armAssetKey(rider)); }
+  if(cgSrc() === 'armory' && !a.list){ const entry = armAnimEntries()[0]; if(entry) await armAnimFrom(armAssetKey(entry)); }
   if(!a.list){ c.poseNote = tt('cards.gen_no_entry'); return; }
   const skels = a.list.skeletons || {};
   const presets = {guard:[['stand_a_idle','stand_idle','idle'],0.3],brace:[['ready','ready_hf_idle_1'],0.3],draw:[['attack_missile_hold','attack_missile_ready'],0.5],riding:[['stand_a_idle','ready'],0.3],march:[['walk','march'],0.25]};
@@ -257,8 +365,12 @@ async function cgDraw(){
     armRender(objects,w,h,camera,{...options,mask:true});
     const maskCanvas = cgCanvas(w,h), maskCtx = maskCanvas.getContext('2d',{willReadFrequently:true});
     maskCtx.drawImage(ARM.glCanvas,0,0,w,h,0,0,w,h);
-    const mask = maskCtx.getImageData(0,0,w,h).data, alpha = new Uint8Array(w*h);
-    for(let i=0;i<alpha.length;i++){ alpha[i] = mask[i*4] > 0 ? 1 : 0; image.data[i*4+3] = mask[i*4]; }
+    const mask = maskCtx.getImageData(0,0,w,h).data;
+    let alpha = new Uint8Array(w*h);
+    for(let i=0;i<alpha.length;i++) alpha[i] = mask[i*4] > 0 ? 1 : 0;
+    // smaller than a card pixel's worth of the HD render is a speck, not the model
+    alpha = cgDespeck(alpha,w,h,Math.max(4,Math.round((w/card.width)*(h/card.height))));
+    for(let i=0;i<alpha.length;i++) image.data[i*4+3] = alpha[i] ? mask[i*4] : 0;
     if(c.paint.on) cgPaintPixels(image.data,w,h,c.paint.strength);
     ctx.putImageData(image,0,0);
     if(c.post.outline > 0){
@@ -282,6 +394,26 @@ async function cgDraw(){
     if(frame) cgFrame(dst,frame,card.width,card.height);
     const error = document.getElementById('cgError'); if(error) error.textContent = c.err || (CG_WORK.artMissing ? tt('cards.gen_art_missing') : '');
   }catch(e){ c.err = errText(e); const error = document.getElementById('cgError'); if(error) error.textContent = c.err; }
+}
+/* 2026-11-23: the silhouette less any patch of it smaller than minArea pixels.
+   A stray triangle a few pixels across (a vertex the pose flings away) was
+   grown by the outline into the black dots seen across a card. */
+function cgDespeck(mask,w,h,minArea){
+  const out = new Uint8Array(mask), seen = new Uint8Array(w*h), stack = [], patch = [];
+  for(let s=0;s<w*h;s++){
+    if(!out[s] || seen[s]) continue;
+    stack.length = 0; patch.length = 0; stack.push(s); seen[s] = 1;
+    while(stack.length){
+      const i = stack.pop(); patch.push(i);
+      const x = i % w, y = (i - x) / w;
+      if(x > 0 && out[i-1] && !seen[i-1]){ seen[i-1] = 1; stack.push(i-1); }
+      if(x < w-1 && out[i+1] && !seen[i+1]){ seen[i+1] = 1; stack.push(i+1); }
+      if(y > 0 && out[i-w] && !seen[i-w]){ seen[i-w] = 1; stack.push(i-w); }
+      if(y < h-1 && out[i+w] && !seen[i+w]){ seen[i+w] = 1; stack.push(i+w); }
+    }
+    if(patch.length < minArea) for(const i of patch) out[i] = 0;
+  }
+  return out;
 }
 // A square maximum filter with two sliding windows, so large HD outlines stay linear.
 function cgDilate(mask,w,h,radius){
@@ -474,7 +606,7 @@ function cgWire(){
   let drag = null, operation = null, last = [0,0];
   const cancel = () => { if(operation){ cg().xf = operation.start; operation = null; cgSyncCamera(); cgDraw(); } };
   const accept = () => { operation = null; cgSyncCamera(); };
-  hd.addEventListener('contextmenu',e => { e.preventDefault(); cancel(); });
+  hd.addEventListener('contextmenu',e => { e.preventDefault(); if(armNav() !== 'simple') cancel(); });
   hd.addEventListener('auxclick',e => { if(e.button === 1) e.preventDefault(); });
   hd.addEventListener('wheel',e => {
     e.preventDefault(); cg().cam.scale = Math.max(0.2,Math.min(6,cg().cam.scale*Math.exp(e.deltaY*0.001)));
@@ -484,10 +616,15 @@ function cgWire(){
     hd.focus(); last = cgPointerPoint(e);
     if(e.button === 2){ e.preventDefault(); cancel(); return; }
     if(operation && e.button === 0){ accept(); return; }
+    // 2026-11-23: Simple (Armory's setting): a left drag off the rig's handles
+    // turns the view, a right drag moves it; Blender's middle button as before
+    const simple = armNav() === 'simple';
     if(e.button === 1 || e.altKey && e.button === 0){ e.preventDefault(); drag = {kind:'camera'}; }
+    else if(simple && e.button === 2 && !operation){ e.preventDefault(); drag = {kind:'camera',pan:true}; }
     else if(e.button === 0){
       const hit = cgHit(e);
       if(hit) drag = {kind:'rig',handle:hit};
+      else if(simple) drag = {kind:'camera'};
     }
     if(drag) hd.setPointerCapture(e.pointerId);
   });
@@ -508,7 +645,7 @@ function cgWire(){
     if(!drag){ const hit = cgHit(e), name = hit ? hit.name : ''; if(CG_WORK.hover !== name){ CG_WORK.hover=name; cgOverlay(); } return; }
     if(drag.kind === 'camera'){
       if(e.ctrlKey) c.cam.scale = Math.max(0.2,Math.min(6,c.cam.scale*Math.exp(dy*0.005)));
-      else if(e.shiftKey){ c.cam.pan -= dx*CG_WORK.camera.width/hd.width; c.cam.height += dy*CG_WORK.camera.height/hd.height; }
+      else if(e.shiftKey || drag.pan){ c.cam.pan -= dx*CG_WORK.camera.width/hd.width; c.cam.height += dy*CG_WORK.camera.height/hd.height; }
       else{ c.cam.yaw += dx*0.3; c.cam.pitch = Math.max(-60,Math.min(80,c.cam.pitch+dy*0.3)); }
       cgSyncCamera();
     }else{

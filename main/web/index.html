@@ -3591,7 +3591,7 @@ body.look-editing :is(button,label,legend,h1,h2,h3,.trsechead,.mftab):hover{outl
   .strmore{padding:10px 0;display:flex;gap:10px;align-items:center}
 
   /* 95e on: Armory Studio, the kitbash workbench (armory.js) */
-  .armgrid{display:grid;grid-template-columns:var(--armL,300px) 6px 1fr 6px var(--armR,300px);gap:2px;
+  .armgrid{display:grid;grid-template-columns:min(var(--armL,300px),30%) 6px minmax(0,1fr) 6px min(var(--armR,300px),30%);gap:2px;
     height:calc(100vh - 150px);min-height:420px;margin-top:8px}
   body.topshut .armgrid{height:calc(100vh - 14px);margin-top:4px}
   /* 100i: full view */
@@ -3604,9 +3604,16 @@ body.look-editing :is(button,label,legend,h1,h2,h3,.trsechead,.mftab):hover{outl
   body.armfull .armfullexit:hover{opacity:1}
   .armleft,.armright{overflow:auto;overflow-anchor:none;background:var(--panel);border:1px solid var(--edge);border-radius:8px;padding:8px}
   /* 99d: a side folded to a strip, the viewport taking its room */
-  .armgrid.lshut{grid-template-columns:34px 6px 1fr 6px var(--armR,300px)}
-  .armgrid.rshut{grid-template-columns:var(--armL,300px) 6px 1fr 6px 34px}
-  .armgrid.lshut.rshut{grid-template-columns:34px 6px 1fr 6px 34px}
+  .armgrid.lshut{grid-template-columns:34px 6px minmax(0,1fr) 6px min(var(--armR,300px),30%)}
+  .armgrid.rshut{grid-template-columns:min(var(--armL,300px),30%) 6px minmax(0,1fr) 6px 34px}
+  .armgrid.lshut.rshut{grid-template-columns:34px 6px minmax(0,1fr) 6px 34px}
+  /* 2026-11-23: the studio fills what the page leaves it, so nothing around it scrolls */
+  @container page (min-width:1101px){
+    main:has(>.armgrid){overflow:hidden;display:flex;flex-direction:column;padding-bottom:8px}
+    main:has(>.armgrid)>.armgrid{flex:1 1 0;height:auto;min-height:0}
+  }
+  .armleft,.armright{min-width:0}
+  .armgrip.armpropsgrip{flex:none;height:6px;margin:2px 0 -2px}
   .armgrid.lshut #armGripL,.armgrid.rshut #armGripR{visibility:hidden}
   /* 2026-11-23: the bars between the panels (armGripsInstall), drawn like .splitbar */
   .armgrip{position:relative;border-radius:3px}
@@ -3700,6 +3707,8 @@ body.look-editing :is(button,label,legend,h1,h2,h3,.trsechead,.mftab):hover{outl
   .armfoldbox.coll{border-top:1px dashed var(--edge);padding-top:4px}
   .armfoldhead{display:flex;gap:4px;align-items:center}
   .armfoldname{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .armfoldname{cursor:pointer}
+  .armfoldname.sel{color:#e07b1f}
   .armexp{display:inline-flex;gap:3px;align-items:center}
   .armswatch{display:inline-block;width:12px;height:12px;border-radius:3px;border:1px solid var(--edge)}
   .armswatch.big{width:18px;height:18px}
@@ -3710,6 +3719,14 @@ body.look-editing :is(button,label,legend,h1,h2,h3,.trsechead,.mftab):hover{outl
   .armpropsrow input[type=color]{width:34px;height:24px;padding:0 2px}
   .armrange input{width:100%}
   .armsect{font-weight:600;color:var(--accent);margin-top:4px}
+  /* 2026-11-23: Properties in folding parts */
+  .armsec>summary.armsect{cursor:pointer;list-style:none;padding:3px 0;border-top:1px solid var(--edge);margin-top:6px}
+  .armsec>summary.armsect::-webkit-details-marker{display:none}
+  .armsec>summary.armsect::before{content:"▾  ";color:var(--dim)}
+  .armsec:not([open])>summary.armsect::before{content:"▸  "}
+  .armtip{display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;border-radius:50%;border:1px solid var(--edge);font-size:11px;font-weight:700;color:var(--dim);cursor:help;flex:none}
+  .armpct{width:52px;padding:2px 4px}
+  .armactive{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
   .armlit{border:1px solid var(--edge);border-radius:6px;padding:6px;margin-bottom:6px;display:flex;flex-direction:column;gap:4px}
   .armlayers{display:flex;flex-direction:column;gap:3px}
   .armlayer{display:flex;gap:6px;align-items:center}
@@ -3742,11 +3759,24 @@ body.look-editing :is(button,label,legend,h1,h2,h3,.trsechead,.mftab):hover{outl
   .armtexrow{display:flex;gap:10px;align-items:center;border:1px solid var(--edge);border-radius:6px;padding:6px}
   .armtexthumb{width:72px;height:72px;object-fit:contain;background:#111;border-radius:4px}
   .armtexthumb.bad{opacity:.3}
+  /* 2026-11-23: export step 4 in folding parts, the models beside them */
+  .armexpmod{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:12px;align-items:start}
+  .armexpmodmain{min-width:0;display:flex;flex-direction:column;gap:6px}
+  .armexpside{display:flex;flex-direction:column;gap:6px;position:sticky;top:0}
+  .armexpsec{border:1px solid var(--edge);border-radius:7px;background:var(--panel2)}
+  .armexpsec>summary{cursor:pointer;font-weight:600;color:var(--accent);padding:6px 9px}
+  .armexpsecbody{padding:0 9px 8px;display:flex;flex-direction:column;gap:5px}
+  .armexplist{max-height:220px;overflow:auto;border:1px solid var(--edge);border-radius:6px;display:flex;flex-direction:column}
+  .armexprowbtn{text-align:left;background:none;border:0;border-bottom:1px solid var(--edge);border-radius:0;padding:4px 8px}
+  .armexprowbtn:hover{background:var(--panel)}
+  .armexprowbtn.on{background:rgba(224,123,31,.18)}
+  .armexpunit{font-weight:600}
+  .armexpv3{height:300px;position:relative}
+  .armexpmine{width:100%;height:auto;border-radius:6px;background:#22272e}
+  @container page (max-width:1000px){.armexpmod{grid-template-columns:1fr}}
   .armtexmeta{display:flex;flex-direction:column;gap:2px;flex:1;min-width:0}
   .armtexmeta b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .armtexbtns{display:flex;gap:4px;flex-wrap:wrap;justify-content:flex-end;max-width:300px}
-  .armtexpeek{position:absolute;right:8px;top:44px;z-index:5;background:var(--panel);border:1px solid var(--edge);border-radius:6px;padding:6px}
-  .armtexpeekhead{display:flex;gap:6px;align-items:center;margin-bottom:4px;font-size:12px}
   .armimpfilt{flex-wrap:wrap;margin-top:4px}
   .armimpfilt select{max-width:190px}
   .armimptile{position:relative}

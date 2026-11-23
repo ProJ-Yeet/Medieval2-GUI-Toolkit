@@ -33,9 +33,10 @@ function armXrayToggle(){
   armPaintShade(); armFrame();
 }
 function armShadeHtml(){
-  const wire = ARM.shade === 'wire';
-  return `<button class="mini${wire ? '' : ' on'}" onclick="armShadeSet('solid')" title="${esc(tt('armory.shade_solid_title'))}">${tt('armory.shade_solid')}</button>
-    <button class="mini${wire ? ' on' : ''}" onclick="armShadeSet('wire')" title="${esc(tt('armory.shade_wire_title'))}">${tt('armory.shade_wire')}</button>
+  const sh = ARM.shade === 'wire' || ARM.shade === 'both' ? ARM.shade : 'solid';
+  return `<button class="mini${sh === 'solid' ? ' on' : ''}" onclick="armShadeSet('solid')" title="${esc(tt('armory.shade_solid_title'))}">${tt('armory.shade_solid')}</button>
+    <button class="mini${sh === 'both' ? ' on' : ''}" onclick="armShadeSet('both')" title="${esc(tt('armory.shade_both_title'))}">${tt('armory.shade_both')}</button>
+    <button class="mini${sh === 'wire' ? ' on' : ''}" onclick="armShadeSet('wire')" title="${esc(tt('armory.shade_wire_title'))}">${tt('armory.shade_wire')}</button>
     <button class="mini${armXrayOn() ? ' on' : ''}" onclick="armXrayToggle()" title="${esc(tt('armory.xray_title'))}">${tt('armory.xray')}</button>`;
 }
 function armPaintShade(){ const el = document.getElementById('armShade'); if(el) el.innerHTML = armShadeHtml(); }
@@ -187,7 +188,7 @@ function armWireIdx(key, corners){
 function armWireColour(ob){
   if(ARM.hover === ob.id) return ARM_COL.hover;
   if(ARM.sel.has(ob.id)) return ARM.active === ob.id ? ARM_COL.active : ARM_COL.sel;
-  return ARM_COL.wire;
+  return ARM.shade === 'both' ? ARM_COL.editWire : ARM_COL.wire;
 }
 /* Wireframe shading: every visible object's edges, in its selection's colour. */
 function armWireDraw(objs, cam, top){
@@ -482,6 +483,19 @@ function armEditSet(type, id, on){
     flushFaces(T.vFaces[id]);
   }
 }
+/* A (Blender) and Ctrl+A: every vertex, edge and face in the modes on; Alt+A none. */
+function armEditSelectAll(on){
+  const d = ARM.detail;
+  if(!d || !armEditTopo()) return;
+  const T = d.topo, m = armEditModes();
+  armEditClear();
+  if(on){
+    if(m.v) for(let v = 0; v < T.verts.length; v++) armEditSet('v', v, true);
+    if(m.e) for(let i = 0; i < T.edges.length; i++) armEditSet('e', i, true);
+    if(m.f) for(let f = 0; f < T.faces.length; f++) armEditSet('f', f, true);
+  }
+  armPaintDetailBar(); armFrame();
+}
 function armEditClear(){ const d = ARM.detail; d.sv.clear(); d.se.clear(); d.sf.clear(); d.last = null; }
 /* The linked part an element belongs to, as faces. */
 function armEditPart(hit){
@@ -665,7 +679,6 @@ function armDetailOpen(){
   ARM.detail = {id: o.id, sv: new Set(), se: new Set(), sf: new Set(), last: null, hover: null, hoverKey: '',
                 connected: !!ARM.editConnected, topo: null};
   armPaintDetailBar();
-  if(typeof armTexPeekPaint === 'function') armTexPeekPaint();
   const b = armBounds([o]);
   if(b){
     const [lo, hi] = b;
@@ -678,7 +691,6 @@ function armDetailOpen(){
 function armDetailClose(){
   ARM.detail = null;
   armPaintDetailBar(); armFrame();
-  if(typeof armTexPeekPaint === 'function') armTexPeekPaint();
   if(typeof armPaintSliders === 'function') armPaintSliders();
 }
 function armDetailToggle(){ if(ARM.detail) armDetailClose(); else armDetailOpen(); }
@@ -708,7 +720,6 @@ function armPaintDetailBar(){
       <span class="armselmode" id="armSelMode"></span>
       <button class="mini" id="armEditConn" onclick="armEditConnectedToggle()" title="${esc(tt('armory.connected_mode_title'))}">${tt('armory.connected_mode')}</button>
       <button class="mini" onclick="armDetailClear()">${tt('armory.clear_selection')}</button>
-      <button class="mini" id="armEditPeek" onclick="armTexPeek()" title="${esc(tt('armory.tex_peek_title'))}">${tt('armory.tex_peek')}</button>
       <span class="count" id="armEditCount"></span>
       <span class="armsplit"><input id="armSplitName" value="${esc(d.splitName)}" title="${esc(tt('armory.split_name'))}"
           oninput="ARM.detail.splitName=this.value" onkeydown="event.stopPropagation();if(event.key==='Enter')armSplit(false)">
@@ -721,7 +732,6 @@ function armPaintDetailBar(){
   document.getElementById('armSelMode').innerHTML = modes.map(([k, label, key]) =>
     `<button class="mini${m[k] ? ' on' : ''}" onclick="armEditMode('${k}', event.shiftKey)" title="${esc(tt('armory.sel_mode_title', {key}))}">${tt(label)}</button>`).join('');
   document.getElementById('armEditConn').classList.toggle('on', !!d.connected);
-  document.getElementById('armEditPeek').classList.toggle('on', !!ARM.texPeek);
   const nF = d.sf.size;
   document.getElementById('armEditCount').textContent = ttN('armory.n_tris_selected', nF);
   document.getElementById('armSplitCut').disabled = !nF;

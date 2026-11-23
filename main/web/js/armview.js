@@ -34,6 +34,8 @@ const ARM_KEY_DEFAULTS = {
   undo: 'ctrl+z', redo: 'ctrl+shift+z', redoAlt: 'ctrl+y', tpose: '',
   // 100i, Blender's own key for a maximised area
   fullView: 'ctrl+space',
+  // 2026-11-23: the keys every other program has, beside Blender's
+  selectAllAlt: 'ctrl+a', deleteAlt: 'delete', copy: 'ctrl+c', paste: 'ctrl+v',
 };
 const armKeyLabel = k => ({grab: tt('armory.key_grab'), rotate: tt('armory.key_rotate'), scale: tt('armory.key_scale'),
   hide: tt('armory.key_hide'), unhideAll: tt('armory.key_unhide_all'), selectAll: tt('armory.key_select_all'),
@@ -43,7 +45,8 @@ const armKeyLabel = k => ({grab: tt('armory.key_grab'), rotate: tt('armory.key_r
   viewBottom: tt('armory.key_view_bottom'), ortho: tt('armory.key_ortho'), selectConnected: tt('armory.select_connected'),
   faceOrient: tt('armory.face_orientation'), stats: tt('armory.statistics'), detail: tt('armory.detail'),
   undo: tt('armory.key_undo'), redo: tt('armory.key_redo'), redoAlt: tt('armory.key_redo_alt'), tpose: tt('armory.tpose'),
-  fullView: tt('armory.full_view'), wireframe: tt('armory.shade_wire'), xray: tt('armory.xray'), move: tt('armory.key_move')})[k] || k;
+  fullView: tt('armory.full_view'), wireframe: tt('armory.shade_wire'), xray: tt('armory.xray'), move: tt('armory.key_move'),
+  selectAllAlt: tt('armory.key_select_all'), deleteAlt: tt('armory.key_delete'), copy: tt('armory.key_copy'), paste: tt('armory.key_paste')})[k] || k;
 
 function armKeys(){ return Object.assign({}, ARM_KEY_DEFAULTS, ARM.keys || {}); }
 async function armLoadKeys(){
@@ -89,7 +92,8 @@ function armWireKeys(){
     }
     const anywhere = name && ['undo', 'redo', 'redoAlt', 'fullView'].some(k => keys[k] === name);
     // over the Objects panel too, the keys about objects (M, H, A, X)
-    const pane = ARM.overPane && name && ['move', 'hide', 'unhideAll', 'selectAll', 'deselectAll', 'delete'].some(k => keys[k] === name);
+    const pane = ARM.overPane && name && ['move', 'hide', 'unhideAll', 'selectAll', 'deselectAll', 'delete',
+      'selectAllAlt', 'deleteAlt', 'copy', 'paste'].some(k => keys[k] === name);
     if(!ARM.overView && !anywhere && !pane) return;
     armKey(e);
   });
@@ -106,11 +110,18 @@ function armKey(e){
   const name = armKeyName(e);
   if(!name) return;
   const keys = armKeys();
-  const act = Object.keys(keys).find(k => keys[k] && keys[k] === name);
+  let act = Object.keys(keys).find(k => keys[k] && keys[k] === name);
   if(!act) return;
   e.preventDefault();
+  if(act === 'selectAllAlt') act = 'selectAll';
+  if(act === 'deleteAlt') act = 'delete';
   const sel = armSelected();
+  // Edit Mode: A and Ctrl+A take every element of the object in the modes on
+  if(ARM.detail && act === 'selectAll'){ armEditSelectAll(true); return; }
+  if(ARM.detail && act === 'deselectAll'){ armEditSelectAll(false); return; }
   switch(act){
+    case 'copy': if(!ARM.detail) armCopy(); break;
+    case 'paste': if(!ARM.detail) armPaste(); break;
     case 'grab': case 'rotate': case 'scale':
       if(sel.length && !ARM.detail) armXformStart(act);
       break;
@@ -519,7 +530,10 @@ function armOverlay95g(ctx, w, h){
     const selT = armSelected().reduce((s, o) => s + armObjTris(o), 0);
     const level = tris <= ARM_BUDGET.high ? 'ok' : tris <= ARM_BUDGET.heavy ? 'high' : 'heavy';
     const one = armSoldierStats(objs);
+    // 2026-11-23: the active object named first, as Blender's overlay does
+    const act = armObj(ARM.active) || armSelected()[0];
     const lines = [
+      ...(act ? [armFullName(act)] : []),
       tt('armory.stat_objects', {n: objs.length.toLocaleString()}),
       tt('armory.stat_vertices', {n: verts.toLocaleString()}),
       tt('armory.stat_triangles', {n: tris.toLocaleString()}),
@@ -550,14 +564,20 @@ function armOverlay95g(ctx, w, h){
    cycle's travel taken out; in T-pose, the bind pose. */
 function armBonesDraw(ctx, w, h){
   const a = ARM.anim;
-  if(!a || !a.data || !a.data.bones || !ARM.view) return;
-  if(!ARM.bones && armVisibleObjects().length) return;
+  if(!a || !ARM.view) return;
+  // 2026-11-23: Bones with no action picked draws the skeleton's bind pose
+  const still = !a.data;
+  if(still && ARM.bones && typeof armAnimBindLoad === 'function') armAnimBindLoad();
+  const data = still ? (a.bindOf === (a.skel || '').toLowerCase() ? a.bindData : null) : a.data;
+  if(!data || !data.bones) return;
+  if(!ARM.bones && (still || armVisibleObjects().length)) return;
   const len = armAnimLength(), f = len > 0 ? ((a.t % len) + len) % len / len : 0;
   const tr = a.travel || [0, 0];
-  const pts = a.tpose ? (a.bind || v3aBind(a.data)) : v3aPose(a.data, a.t).map(b => b.p);
+  const bind = still || a.tpose;
+  const pts = still ? a.bindPts : a.tpose ? (a.bind || v3aBind(a.data)) : v3aPose(a.data, a.t).map(b => b.p);
   // lowered as armAnimPose lowered the posed model; alone, it stands as it is
   const drop = armVisibleObjects().length ? (a.ground || 0) : 0;
-  const shift = a.tpose ? [0, 0, 0] : [-tr[0] * f, drop, -tr[1] * f];
+  const shift = bind ? [0, 0, 0] : [-tr[0] * f, drop, -tr[1] * f];
   const r = ARM.view.getBoundingClientRect(), dpr = w / (r.width || w);
   const at = p => { const s = armToScreen([p[0] + shift[0], p[1] + shift[1], p[2] + shift[2]]);
     return [(s[0] - r.left) * dpr, (s[1] - r.top) * dpr]; };
@@ -566,7 +586,7 @@ function armBonesDraw(ctx, w, h){
   ctx.lineWidth = 2 * dpr;
   ctx.strokeStyle = '#f3c26b';
   ctx.fillStyle = '#f3c26b';
-  a.data.bones.forEach((b, i) => {
+  data.bones.forEach((b, i) => {
     // the scene root stands at the origin and joins nothing that matters
     if(b.parent > 0 && b.parent < i){
       ctx.beginPath(); ctx.moveTo(scr[b.parent][0], scr[b.parent][1]); ctx.lineTo(scr[i][0], scr[i][1]); ctx.stroke();

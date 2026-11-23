@@ -6771,7 +6771,8 @@ class Handler(BaseHTTPRequestHandler):
             return self._json({"templates": armunit.role_templates(mod),
                                "characters": armunit.character_targets(mod),
                                "units": [{"type": u.type, "category": u.category, "class": u.class_type,
-                                          "soldier": u.soldier_model} for u in mod.edu.units],
+                                          "soldier": u.soldier_model, "factions": list(u.ownership)}
+                                         for u in mod.edu.units],
                                "entries": sorted(mod.modeldb.by_name())})
         if path == "/api/armory/card_sizes":
             # the size the mod's own unit cards and info pictures are

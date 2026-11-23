@@ -31,7 +31,9 @@ function armAnimPaint(){
   if(el.parentNode !== host) host.appendChild(el);
   const a = armAnim(), p = armProj();
   const entries = armAnimEntries();
-  const tp = `<button class="mini${a.tpose ? ' on' : ''}" onclick="armTpose()" title="${esc(tt('armory.tpose_title'))}">${tt('armory.tpose')}</button>`;
+  // 2026-11-23: Rest sits by T-pose, and takes the action back to its first frame
+  const tp = `${a.data ? `<button class="mini" onclick="armAnimToStart()" title="${esc(tt('armory.rest_title'))}">${tt('armory.rest')}</button>` : ''}
+    <button class="mini${a.tpose ? ' on' : ''}" onclick="armTpose()" title="${esc(tt('armory.tpose_title'))}">${tt('armory.tpose')}</button>`;
   el.style.height = a.open && armSize('anim_h') ? armSize('anim_h') + 'px' : '';
   if(!a.open){
     el.innerHTML = `<div class="armhead"><button class="armfold" onclick="armAnimFold()">▸ ${tt('armory.animations')}</button><span style="flex:1"></span>${tp}</div>`;
@@ -70,8 +72,7 @@ function armAnimPaint(){
         <button class="mini" onclick="armAnimPlay()">${a.playing ? '⏸' : '▶'}</button>
         <input type="range" id="armAnimT" min="0" max="1000" value="${armAnimFrac()}" oninput="armAnimScrub(this.value)">
         <input type="number" class="armanimspeed" min="0.05" max="10" step="0.25" value="${a.speed}" title="${esc(tt('armory.anim_speed_title'))}"
-          oninput="const v=+this.value;if(Number.isFinite(v)&&v>0)armAnim().speed=v">×
-        <button class="mini" onclick="armAnimRest()" title="${esc(tt('armory.rest_title'))}">${tt('armory.rest')}</button></div>
+          oninput="const v=+this.value;if(Number.isFinite(v)&&v>0)armAnim().speed=v">×</div>
       <div class="count" id="armAnimNote">${armAnimNote()}</div>${armAnimScaleHtml()}` : ''}
     ${a.err ? `<div class="w-bad">${esc(a.err)}</div>` : ''}`;
   // the top edge is the grip: the window sits on the view's bottom corner
@@ -199,8 +200,9 @@ async function armAnimPick(key){
   if(!row || !row.playable) return;
   a.key = key; a.err = ''; a.source=null;
   const pick=a.pickSerial=(a.pickSerial || 0)+1;
-  const asset = p.assets.find(x => armAssetKey(x) === (p.anim || {}).asset);
-  const from = asset ? asset.mod : (p.anim || {}).mod;
+  const asset = a.fromMod ? null : p.assets.find(x => armAssetKey(x) === (p.anim || {}).asset);
+  // the export's side preview borrows the state with its own mod (armexport.js)
+  const from = a.fromMod || (asset ? asset.mod : (p.anim || {}).mod);
   if(!from) return;
   const q = row.rel ? `rel=${enc(row.rel)}` : `pack=${enc(row.path)}`;
   const w = armAnimWeapons();
@@ -314,6 +316,35 @@ function armAnimLength(){ const d = armAnim().data; return d && d.times && d.tim
 function armAnimFrac(){ const a = armAnim(), len = armAnimLength(); return len > 0 ? Math.round((((a.t % len) + len) % len) / len * 1000) : 0; }
 function armAnimPlay(){ const a = armAnim(); a.playing = !a.playing; a.last = performance.now(); armAnimPaint(); armAnimLoop(); }
 function armAnimScrub(v){ const a = armAnim(); a.playing = false; a.t = armAnimLength() * v / 1000; armFrame(); }
+/* The Rest button: the action kept, back at its first frame and paused. */
+function armAnimToStart(){
+  const a = armAnim();
+  if(!a.data) return;
+  a.t = 0; a.playing = false; a.tpose = false;
+  armAnimPaint(); armFrame();
+}
+
+/* Bones on with no action picked: the skeleton's bind pose, read from the
+   first action it can play (nothing is played or kept in the project). */
+async function armAnimBindLoad(){
+  const a = armAnim(), p = armProj();
+  const sk = a.list && a.list.skeletons && a.list.skeletons[(a.skel || '').toLowerCase()];
+  const want = (a.skel || '').toLowerCase();
+  if(!sk || a.bindBusy || (a.bindData && a.bindOf === want)) return;
+  const row = (sk.actions || []).find(r => r.playable);
+  const asset = p.assets.find(x => armAssetKey(x) === (p.anim || {}).asset);
+  const from = asset ? asset.mod : (p.anim || {}).mod;
+  if(!row || !from) return;
+  a.bindBusy = true;
+  try{
+    const q = row.rel ? `rel=${enc(row.rel)}` : `pack=${enc(row.path)}`;
+    const data = await api.get(`/api/model/anim?mod=${enc(from)}&${q}&skel=${enc(a.skel)}` + (row.slot != null ? `&slot=${row.slot}` : ''));
+    if((a.skel || '').toLowerCase() === want){ a.bindData = data; a.bindOf = want; a.bindPts = v3aBind(data); }
+  }catch(e){}
+  a.bindBusy = false;
+  armFrame();
+}
+
 /* Back to the bind pose: the model as it stands still. */
 function armAnimRest(){
   const a = armAnim();

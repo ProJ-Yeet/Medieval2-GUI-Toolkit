@@ -111,7 +111,8 @@ def role_templates(mod) -> Dict[str, dict]:
         out[r] = {"role": r, "units": len(rows), "example": example.type,
                   "clone_from": example.soldier_model.lower(),
                   "skeletons": [x for x in (sig[0][1], sig[0][2]) if x],
-                  "weapons": list(sig[0][3]) + list(sig[0][4]), "fields": fields}
+                  "weapons": list(sig[0][3]) + list(sig[0][4]), "fields": fields,
+                  "members": [{"type": u.type, "soldier": u.soldier_model.lower()} for u, _s in rows]}
     return out
 
 

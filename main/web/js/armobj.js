@@ -123,16 +123,32 @@ function armPaintObjects(){
       ${[...groups].map(([name, objs]) => armFoldHtml('g:' + name, name, objs, null)).join('')}
       ${p.collections.map(c => armFoldHtml('c:' + c.id, c.name, p.objects.filter(o => o.coll === c.id), c)).join('')}
     </div>
+    ${shut ? '' : '<div class="armgrip armgriph armpropsgrip" id="armGripP"></div>'}
     <div class="armpropshead"><button class="armfold" onclick="armObjSetting('armory_props_shut', ${!shut})" title="${esc(tt('armory.props_fold_title'))}">${shut ? '▸' : '▾'} ${tt('armory.properties')}</button>
       <span class="count">${sel.length === 1 ? esc(armFullName(sel[0])) : sel.length ? ttN('armory.n_selected', sel.length) : ''}</span></div>
-    ${shut ? '' : `<div class="armpropspane" id="armPropsPane"><div id="armProps">${sel.length === 1 ? armPropsHtml(sel[0]) : sel.length ? armMultiHtml(sel) : `<div class="count armnote">${tt('armory.nothing_selected')}</div>`}</div>
-      ${p.objects.length && typeof armNormalsHtml === 'function' ? `<div class="armnorms">${armNormalsHtml()}</div>` : ''}</div>`}`;
+    ${shut ? '' : `<div class="armpropspane" id="armPropsPane"><div id="armProps">${sel.length === 1 ? armPropsHtml(sel[0]) : sel.length ? armMultiHtml(sel) : `<div class="count armnote">${tt('armory.nothing_selected')}</div>`}</div></div>`}`;
+  armPropsGripWire();
   ['armObjList', 'armPropsPane'].forEach((id, i) => { const x = document.getElementById(id); if(x) x.scrollTop = tops[i]; });
   if(ARM.optOpen && typeof armOptPaint === 'function') armOptPaint();
   if(gal) armThumbsPaint();
   armDragWire(el);
   const tools = document.getElementById('armSelTools');
   if(tools) tools.innerHTML = armSelToolsHtml();
+}
+/* 2026-11-23: the bar over Properties sets how tall they are (armory_props_h),
+   the objects above taking the rest; a double-click shares the room again. */
+function armPropsGripWire(){
+  const bar = document.getElementById('armGripP'), pane = document.getElementById('armPropsPane');
+  if(!bar || !pane) return;
+  const set = h => { pane.style.flex = h ? '0 0 ' + h + 'px' : ''; };
+  set(armSize('props_h'));
+  let h = 0;
+  armGripDrag(bar, 'y', () => pane.getBoundingClientRect().height, (h0, d) => {
+    const room = document.getElementById('armRight').clientHeight - 160;
+    h = Math.round(Math.max(80, Math.min(h0 - d, room)));
+    set(h);
+  }, () => { if(h) armSizeSave('props_h', h); });
+  bar.ondblclick = () => { armSizeSave('props_h', 0); set(0); };
 }
 // 100f: Duplicate and Detail sit beside the sliders, under Statistics
 function armSelToolsHtml(){
@@ -150,7 +166,7 @@ function armFoldHtml(key, name, objs, coll){
     <div class="armfoldhead" data-drop="${esc(key)}">
       <button class="armfold" onclick="armFold('${k}')">${shut ? '▸' : '▾'}</button>
       <button class="mini armeye" onclick="armFoldEye('${k}')" title="${esc(tt('armory.hide_show'))}">${allHidden ? '◌' : '●'}</button>
-      <b class="armfoldname" ondblclick="armRenameFold('${k}', this)" title="${esc(tt('armory.rename_hint'))}">${esc(name)}</b><span class="count">${objs.length}</span>
+      <b class="armfoldname${objs.length && objs.every(o => ARM.sel.has(o.id)) ? ' sel' : ''}" onclick="armSelectFold('${k}', event)" ondblclick="armRenameFold('${k}', this)" title="${esc(tt('armory.fold_select_hint'))}">${esc(name)}</b><span class="count">${objs.length}</span>
       ${coll ? `<label class="count armexp" title="${esc(tt('armory.export_coll_title'))}"><input type="checkbox"${coll.export === false ? '' : ' checked'}
           onchange="armCollExport(${coll.id}, this.checked)"> ${tt('armory.export')}</label>
         <button class="mini armx" onclick="armCollDelete(${coll.id})" title="${esc(tt('armory.delete_collection'))}">✕</button>` : ''}
@@ -158,6 +174,18 @@ function armFoldHtml(key, name, objs, coll){
     ${shut ? '' : armObjGallery() ? `<div class="armotiles">${objs.map(armObjTileHtml).join('')}</div>`
       : `<div class="armrows">${objs.map(armObjRowHtml).join('')}</div>`}
   </div>`;
+}
+
+/* 2026-11-23: a click on a collection's (or group's) name selects what is in
+   it; Shift or Ctrl adds it to the selection. */
+function armSelectFold(key, ev){
+  const p = armProj();
+  const objs = key.startsWith('c:') ? p.objects.filter(o => o.coll === +key.slice(2))
+    : p.objects.filter(o => !o.coll && o.name === key.slice(2));
+  if(!(ev && (ev.shiftKey || ev.ctrlKey))) ARM.sel.clear();
+  objs.filter(o => !o.hidden).forEach(o => ARM.sel.add(o.id));
+  ARM.active = objs.length ? objs[objs.length - 1].id : ARM.active;
+  armPaintObjects(); armPaintSliders(); armFrame();
 }
 
 /* A tile: the object drawn small (armThumbsPaint), named under it. */
@@ -495,6 +523,44 @@ function armDuplicate(){
   ARM.sel = new Set(made);
   armRepaint();
 }
+/* 2026-11-23: Ctrl+C and Ctrl+V. The copy carries the assets its parts come
+   from, so it pastes into another project (a session opened since) too. */
+function armCopy(){
+  const sel = armSelected();
+  if(!sel.length) return;
+  const p = armProj(), keys = new Set(sel.flatMap(o => (o.src || []).map(pc => pc.asset)));
+  ARM.clip = JSON.stringify({objects: sel, assets: p.assets.filter(a => keys.has(armAssetKey(a))),
+    colls: p.collections.filter(c => sel.some(o => o.coll === c.id))});
+  toast(ttN('armory.copied_n', sel.length));
+}
+function armPaste(){
+  if(!ARM.clip) return;
+  const clip = JSON.parse(ARM.clip), p = armProj();
+  for(const a of clip.assets){
+    const k = armAssetKey(a);
+    if(p.assets.some(x => armAssetKey(x) === k)) continue;
+    p.assets.push(a);
+    if(!ARM.assets.has(k)) armLoadAsset(a);
+  }
+  const made = [];
+  for(const o of clip.objects){
+    const c = JSON.parse(JSON.stringify(o));
+    c.id = p.nextId++;
+    c.mesh = armUniqueMesh(c.name, c.mesh);
+    // into the collection of the same name, when this project has one
+    if(c.coll != null){
+      const was = clip.colls.find(x => x.id === c.coll);
+      const here = was && p.collections.find(x => x.name === was.name);
+      c.coll = here ? here.id : null;
+    }
+    p.objects.push(c);
+    made.push(c.id);
+  }
+  ARM.sel = new Set(made);
+  ARM.active = made[made.length - 1];
+  armRepaint();
+  toast(ttN('armory.pasted_n', made.length));
+}
 function armUniqueMesh(type, mesh){
   const taken = new Set(armProj().objects.filter(o => o.name === type).map(o => o.mesh));
   const stem = mesh.replace(/_\d+$/, '');
@@ -562,8 +628,13 @@ const ARM_BONES = ['bone_head', 'bone_torso', 'bone_abs', 'bone_pelvis',
   'bone_rthigh', 'bone_rlowerleg', 'bone_rfoot', 'bone_lthigh', 'bone_llowerleg', 'bone_lfoot',
   'bone_jaw', 'bone_eyebrow'];
 const armRigRowsHtml = id => `<div class="armpropsrow"><select id="armRigA" title="${esc(tt('armory.rig_first'))}">${ARM_BONES.map(b => `<option>${b}</option>`).join('')}</select>
-      <select id="armRigB" title="${esc(tt('armory.rig_second_title'))}"><option value="">${tt('armory.rig_second')}</option>${ARM_BONES.map(b => `<option>${b}</option>`).join('')}</select></div>
-    <div class="armpropsrow"><label class="armrange" title="${esc(tt('armory.rig_share_title'))}">${tt('armory.rig_share')}<input type="range" id="armRigShare" min="50" max="100" value="100"></label>
+      <select id="armRigB" title="${esc(tt('armory.rig_second_title'))}"><option value="">${tt('armory.rig_second')}</option>${ARM_BONES.map(b => `<option>${b}</option>`).join('')}</select>
+      <span class="armtip" title="${esc(tt('armory.rig_second_title'))}">?</span></div>
+    <div class="armpropsrow"><label class="armrange" title="${esc(tt('armory.rig_share_title'))}">${tt('armory.rig_share')}<input type="range" id="armRigShare" min="50" max="100" value="100"
+        oninput="document.getElementById('armRigPct').value=this.value"></label>
+      <input type="number" class="armpct" id="armRigPct" min="50" max="100" step="1" value="100"
+        oninput="const v=Math.max(50,Math.min(100,+this.value||100));document.getElementById('armRigShare').value=v">%
+      <button class="mini" onclick="document.getElementById('armRigShare').value=100;document.getElementById('armRigPct').value=100" title="${esc(tt('armory.rig_all_title'))}">${tt('armory.rig_all')}</button>
       <button class="mini" onclick="armRigBones(${id})" title="${esc(tt('armory.rig_bones_title'))}">${tt('armory.rig_bones')}</button></div>`;
 async function armRigBones(id){
   const ids = ARM.sel.size ? [...ARM.sel] : [id];
@@ -603,20 +674,29 @@ function armPropsHtml(o){
       ${to ? `<button class="mini" onclick="armDyeLayer(${o.id},${i},null)">✕</button>` : ''}</label>`;
   }).join('') : '';
   return `<div class="armprops">
+    ${armSecHtml('names', tt('armory.sec_names'), `
     <div class="armpropsrow"><label>${tt('armory.group_type')}<input value="${esc(o.name)}" onchange="armSetName(${o.id},'name',this.value)"></label>
       <label>${tt('armory.mesh_name')}<input value="${esc(o.mesh)}" onchange="armSetName(${o.id},'mesh',this.value)"></label></div>
     <div class="armpropsrow">${armGroupPickHtml(o.name, `armSetName(${o.id},'name',this.value)`)}
       <button class="mini armhelp" onclick="armPrefixHelp()" title="${esc(tt('armory.prefix_help_title'))}">?</button></div>
     <div class="armpropsrow">
-      <label class="armcheck"><input type="checkbox"${o.flag ? ' checked' : ''} onchange="armToggleOpt(${o.id})"> ${tt('armory.optional')}</label>
+      <label class="armcheck"><input type="checkbox"${o.flag ? ' checked' : ''} onchange="armToggleOpt(${o.id})"> ${tt('armory.optional_short')}</label>
+      <span class="armtip" title="${esc(tt('armory.optional'))}">?</span>
       <button class="mini" onclick="armRenameFix(${o.id})" title="${esc(tt('armory.fix_name_title'))}">${tt('armory.fix_name')}</button>
     </div>
     <div class="armpropsrow"><label>${tt('armory.material')}<select onchange="armSetMaterial(${o.id}, this.value)">
         <option value="">${tt('armory.mat_none')}</option>${ARM_MATERIALS.map(m => `<option value="${m}"${o.material === m ? ' selected' : ''}>${esc(armMatLabel(m))}</option>`).join('')}</select></label>
       <label>${tt('armory.collection')}<select onchange="armSetCollection(${o.id}, this.value)">
         <option value="">${tt('armory.no_collection')}</option>${p.collections.map(c => `<option value="${c.id}"${o.coll === c.id ? ' selected' : ''}>${esc(c.name)}</option>`).join('')}
-        <option value="new">${tt('armory.new_collection_option')}</option></select></label></div>
-    <div class="armsect">${tt('armory.recolour')}</div>
+        <option value="new">${tt('armory.new_collection_option')}</option></select></label></div>`)}
+    ${armSecHtml('weights', tt('armory.weights'), `
+    <div class="armpropsrow"><span class="count">${!o.weights ? tt('armory.weights_from_source')
+      : o.weights.mode === 'rig' ? tt('armory.weights_rigged', {bones: (o.weights.bones || []).join(' + ')})
+      : tt('armory.weights_own', {mode: armWModeLabel(o.weights.mode)})}</span></div>
+    ${armWeightsRowHtml(`armTransferWeights(${o.id})`)}
+    ${o.weights ? `<div class="armpropsrow"><button class="mini" onclick="armClearWeights(${o.id})">${tt('armory.clear_weights')}</button></div>` : ''}
+    ${armRigRowsHtml(o.id)}`)}
+    ${armSecHtml('recolour', tt('armory.recolour'), `
     <div class="armpropsrow"><select onchange="armDyePreset(${o.id}, this.value)"><option value="">${tt('armory.preset')}</option>${presets}</select>
       <input type="color" value="${hex(d.color)}" onchange="armDyeSet(${o.id},'color',this.value)" title="${esc(tt('armory.dye_colour'))}">
       <button class="mini" onclick="armEyedrop(v => armDyeSet(${o.id},'color',v))" title="${esc(tt('armory.eyedrop_title'))}">💧</button>
@@ -628,24 +708,35 @@ function armPropsHtml(o){
     <div class="armpropsrow"><button class="mini" onclick="armDetectPattern(${o.id})" title="${esc(tt('armory.detect_title'))}">${tt('armory.detect_layers')}</button>
       <button class="mini" onclick="armSavePreset(${o.id})"${o.dye ? '' : ' disabled'}>${tt('armory.save_preset')}</button>
       <button class="mini" onclick="armDyeClear(${o.id})"${o.dye ? '' : ' disabled'}>${tt('armory.clear_dye')}</button></div>
-    ${layers ? `<div class="armlayers">${layers}</div>` : ''}
-    <div class="armsect">${tt('armory.stamps')}</div>
-    ${armStampsHtml(o)}
-    ${typeof armNormalObjHtml === 'function' ? armNormalObjHtml(o) : ''}
-    <div class="armsect">${tt('armory.weights')}</div>
-    <div class="armpropsrow"><span class="count">${!o.weights ? tt('armory.weights_from_source')
-      : o.weights.mode === 'rig' ? tt('armory.weights_rigged', {bones: (o.weights.bones || []).join(' + ')})
-      : tt('armory.weights_own', {mode: armWModeLabel(o.weights.mode)})}</span></div>
-    <div class="armpropsrow"><select id="armWMode">${['face', 'vertex', 'edge'].map(m => `<option value="${m}">${esc(armWModeLabel(m))}</option>`).join('')}</select>
-      <button class="mini" id="armWGo" onclick="armTransferWeights(${o.id})" title="${esc(tt('armory.transfer_weights_title'))}">${tt('armory.transfer_weights')}</button>
-      ${o.weights ? `<button class="mini" onclick="armClearWeights(${o.id})">${tt('armory.clear_weights')}</button>` : ''}</div>
-    ${armRigRowsHtml(o.id)}
+    ${layers ? `<div class="armlayers">${layers}</div>` : ''}`)}
+    ${armSecHtml('stamps', tt('armory.stamps'), armStampsHtml(o))}
     ${typeof armOptimized === 'function' && armOptimized(o) ? `<div class="armpropsrow"><span class="count">${tt('armory.opt_is_on')}</span>
       <button class="mini" onclick="armOptRestore(${o.id})" title="${esc(tt('armory.opt_restore_title'))}">${tt('armory.opt_restore')}</button></div>` : ''}
     ${o.lit ? `<div class="armpropsrow"><span class="count">${tt('armory.lit_is_on')}</span>
       <button class="mini" onclick="armLitRemove([${o.id}])" title="${esc(tt('armory.lit_remove_title'))}">${tt('armory.lit_remove')}</button></div>` : ''}
     <div class="count armnote">${tt('armory.object_facts', {tris: armObjTris(o).toLocaleString(), pieces: (o.src || []).length})}</div>
   </div>`;
+}
+
+/* 2026-11-23: each part of Properties folds, and stays as it was left
+   (armory_props_closed). */
+function armSecHtml(key, title, body){
+  const shut = ((state.settings || {}).armory_props_closed || []).includes(key);
+  return `<details class="armsec"${shut ? '' : ' open'} ontoggle="armSecToggle('${key}', this.open)">
+    <summary class="armsect">${title}</summary>${body}</details>`;
+}
+function armSecToggle(key, open){
+  const list = ((state.settings || {}).armory_props_closed || []).filter(k => k !== key);
+  if(!open) list.push(key);
+  state.settings.armory_props_closed = list;
+  api.post('/api/settings', {armory_props_closed: list}).catch(() => {});
+}
+/* Transfer weights, with the selection's active object named beside it. */
+function armWeightsRowHtml(go){
+  const act = armObj(ARM.active) || armSelected()[0];
+  return `<div class="armpropsrow"><select id="armWMode">${['face', 'vertex', 'edge'].map(m => `<option value="${m}">${esc(armWModeLabel(m))}</option>`).join('')}</select>
+      <button class="mini" id="armWGo" onclick="${go}" title="${esc(tt('armory.transfer_weights_title'))}">${tt('armory.transfer_weights')}</button>
+      ${act ? `<span class="count armactive" title="${esc(tt('armory.active_title'))}">${tt('armory.active_short', {name: esc(armFullName(act))})}</span>` : ''}</div>`;
 }
 
 /* --- several objects at once (100e) ----------------------------------------- */
@@ -657,19 +748,18 @@ function armMultiHtml(sel){
   return `<div class="armprops">
     <div class="count armnote">${ttN('armory.n_selected', sel.length)}${(() => { const a = armObj(ARM.active);
       return a ? ` · ${tt('armory.active_is', {name: esc(armFullName(a))})}` : ''; })()}</div>
+    ${armSecHtml('names', tt('armory.sec_names'), `
     <div class="armpropsrow">${armGroupPickHtml(same('name'), `armMultiName('name',this.value)`)}
       <button class="mini armhelp" onclick="armPrefixHelp()" title="${esc(tt('armory.prefix_help_title'))}">?</button></div>
     <div class="armpropsrow"><label>${tt('armory.group_type')}<input value="${esc(same('name'))}" placeholder="${esc(tt('armory.multi_mixed'))}" onchange="armMultiName('name', this.value)"></label>
-      <label title="${esc(tt('armory.multi_mesh_title'))}">${tt('armory.mesh_name')}<input value="${esc(same('mesh'))}" placeholder="${esc(tt('armory.multi_mixed'))}" onchange="armMultiName('mesh', this.value)"></label></div>
-    <div class="armsect">${tt('armory.recolour')}</div>
+      <label title="${esc(tt('armory.multi_mesh_title'))}">${tt('armory.mesh_name')}<input value="${esc(same('mesh'))}" placeholder="${esc(tt('armory.multi_mixed'))}" onchange="armMultiName('mesh', this.value)"></label></div>`)}
+    ${armSecHtml('weights', tt('armory.weights'), `${armWeightsRowHtml('armMultiTransfer()')}
+    ${armRigRowsHtml(sel[0].id)}`)}
+    ${armSecHtml('recolour', tt('armory.recolour'), `
     <div class="armpropsrow"><select onchange="armMultiDye('preset', this.value)"><option value="">${tt('armory.preset')}</option>${presets}</select>
       <input type="color" value="#962020" onchange="armMultiDye('color', this.value)" title="${esc(tt('armory.dye_colour'))}">
       <button class="mini" onclick="armEyedrop(v => armMultiDye('color', v))" title="${esc(tt('armory.eyedrop_title'))}">💧</button>
-      <button class="mini" onclick="armMultiDye('clear')">${tt('armory.clear_dye')}</button></div>
-    <div class="armsect">${tt('armory.weights')}</div>
-    <div class="armpropsrow"><select id="armWMode">${['face', 'vertex', 'edge'].map(m => `<option value="${m}">${esc(armWModeLabel(m))}</option>`).join('')}</select>
-      <button class="mini" id="armWGo" onclick="armMultiTransfer()" title="${esc(tt('armory.transfer_weights_title'))}">${tt('armory.transfer_weights')}</button></div>
-    ${armRigRowsHtml(sel[0].id)}
+      <button class="mini" onclick="armMultiDye('clear')">${tt('armory.clear_dye')}</button></div>`)}
   </div>`;
 }
 // One name for all: the group type as given, the mesh name numbered where

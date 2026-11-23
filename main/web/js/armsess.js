@@ -25,7 +25,7 @@ function armExtrasInto(p){
 function armExtrasFrom(p){
   const x = (p && p.extra) || {};
   if(x.cam && Array.isArray(x.cam.target)) ARM.cam = Object.assign({}, ARM.cam, x.cam);
-  if(x.card) state.cg = Object.assign(cg(), x.card);
+  if(x.card) state.cg = Object.assign(cg('armory'), x.card);
   state.armExp = null;
   if(x.exp) armExp().settings = Object.assign(armExp().settings, x.exp);
   if(x.exportOutput) Object.assign(armExp(), x.exportOutput);

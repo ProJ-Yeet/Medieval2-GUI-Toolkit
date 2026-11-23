@@ -44,7 +44,7 @@ function armSheetTex(path){
       await armAllow(path);
       row.img = await armImage(armSheetUrl(path));
       row.tex = armTexture(row.img, 1);
-      armFrame(); armTexPeekPaint();
+      armFrame();
     }catch(e){ row.err = String(e); }
   })();
   return null;
@@ -206,7 +206,7 @@ function armTexReload(path, slots){
   }
   ARM.sheetCache.delete(path);
   if(typeof ARM_DYE !== 'undefined') ARM_DYE.forEach(v => { v.stale = true; });
-  armFrame(); armTexPeekPaint();
+  armFrame();
 }
 async function armTexEdit(i){
   const r = ARM.texRows[i];
@@ -274,53 +274,3 @@ function armTexWatch(path){
   }, 1500);
 }
 
-/* --- the detail view's sheet, with the object's UVs over it ------------------------ */
-
-function armTexPeek(){
-  ARM.texPeek = !ARM.texPeek;
-  if(typeof armPaintDetailBar === 'function') armPaintDetailBar();
-  armTexPeekPaint();
-}
-function armTexPeekPaint(){
-  const host = document.getElementById('armView');
-  let el = document.getElementById('armTexPeek');
-  if(!host || !ARM.texPeek || !ARM.detail){ if(el) el.remove(); return; }
-  const o = armObj(ARM.detail.id);
-  if(!o) return;
-  if(!el){ el = Object.assign(document.createElement('div'), {id: 'armTexPeek', className: 'armtexpeek'}); host.appendChild(el); }
-  const pc0 = (o.src || [])[0];
-  const live0 = pc0 && ARM.assets.get(pc0.asset);
-  let img = null, us = 0.5;
-  if(o.sheet){ const hit = ARM.sheetCache.get(o.sheet); img = hit && hit.img; us = 1; if(!hit) armSheetTex(o.sheet); }
-  else if(live0 && live0.objImg){ img = live0.objImg[pc0.group]; us = 1; }
-  else if(live0){ img = live0.img; us = live0.uScale || 0.5; }
-  const side = 300;
-  const w = img ? side : side, h = img ? Math.round(side * img.height / img.width) : side;
-  el.innerHTML = `<div class="armtexpeekhead"><b>${tt('armory.tex_peek')}</b>${img ? `<span class="count">${img.width} × ${img.height}</span>` : ''}
-    <span style="flex:1"></span><button class="mini" onclick="armTexOpen()">${tt('armory.textures')}</button>
-    <button class="mini" onclick="armTexPeek()">✕</button></div><canvas width="${w}" height="${h}"></canvas>`;
-  const c = el.querySelector('canvas').getContext('2d');
-  c.fillStyle = '#222'; c.fillRect(0, 0, w, h);
-  if(img) c.drawImage(img, 0, 0, w, h);
-  else{ c.fillStyle = '#888'; c.fillText(tt('armory.tex_no_sheet'), 10, 20); }
-  c.strokeStyle = 'rgba(255, 200, 60, 0.85)'; c.lineWidth = 0.6;
-  for(const pc of o.src || []){
-    const live = ARM.assets.get(pc.asset);
-    if(!live || !live.geo || !live.geo.uvs) continue;
-    const UV = live.geo.uvs, idx = [];
-    armPieceEach(live, pc, i => idx.push(i));
-    const u = pc === pc0 ? us : (live.objImg || o.sheet ? 1 : (live.uScale || 0.5));
-    c.beginPath();
-    for(let t = 0; t + 2 < idx.length; t += 3){
-      // a triangle drawn where its first corner's tile is, so one that
-      // crosses a tile edge is not stretched over the whole sheet
-      const bu = Math.floor(UV[idx[t] * 2] * u), bv = Math.floor(UV[idx[t] * 2 + 1]);
-      for(let k = 0; k < 4; k++){
-        const v = idx[t + (k % 3)];
-        const X = (UV[v * 2] * u - bu) * w, Y = (UV[v * 2 + 1] - bv) * h;
-        if(k === 0) c.moveTo(X, Y); else c.lineTo(X, Y);
-      }
-    }
-    c.stroke();
-  }
-}

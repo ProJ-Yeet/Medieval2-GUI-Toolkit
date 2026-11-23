@@ -46,7 +46,10 @@ function armUvClose(){
   const el = document.getElementById('armUvPanel');
   if(el) el.remove();
   ARM.uvEd = null;
+  armPaintBar();
 }
+// 2026-11-23: the bar's UV edit opens it and, pressed again, closes it
+function armUvToggle(){ if(ARM.uvEd) armUvClose(); else{ armUvOpen(); armPaintBar(); } }
 // the object's UV vertices, one per piece and asset vertex, and its triangles
 function armUvBuild(){
   const e = ARM.uvEd, o = armObj(e.id);

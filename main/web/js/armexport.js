@@ -104,8 +104,14 @@ function armExportPaint(){
       <button onclick="armExpScaleEnd(true);closeModal()">${tt('common.close')}</button>
       ${e.step === 'check' ? `<button class="primary" onclick="armExportStep('uv')"${errors || !e.check ? ' disabled' : ''}>${tt('armory.exp_next')}</button>` : ''}
       ${e.step === 'uv' ? `<button class="primary" onclick="armExportStep('bake')"${e.plan && e.plan.fits ? '' : ' disabled'}>${tt('armory.exp_next')}</button>` : ''}
-      ${e.step === 'bake' && (e.done || (e.plan && e.plan.fits)) ? `<button class="primary" onclick="armExportStep('mod')">${tt('armory.exp_next')}</button>` : ''}
+      ${e.step === 'bake' && (e.done || (e.plan && e.plan.fits)) ? `<button class="primary" onclick="armExpContinue()"${e.busy ? ' disabled' : ''} title="${ttA('armory.exp_continue_title')}">${tt(e.done ? 'armory.exp_next' : 'armory.exp_continue')}</button>` : ''}
     </div></div>`;
+  if(e.step === 'mod'){
+    const side = document.getElementById('armExpSide');
+    if(side && ARM.expSideNode && ARM.expSideNode !== side) side.replaceWith(ARM.expSideNode);
+    ARM.expSideNode = document.getElementById('armExpSide');
+    armExpSide();
+  }
   if(e.step === 'uv'){ armExpDrawSheets(); if(focused && focused.startsWith('armExpCv_')){ const cv=document.getElementById(focused); if(cv) cv.focus({preventScroll:true}); } }
 }
 
@@ -719,6 +725,8 @@ function armExpBakeHtml(){
         `<option value="${m}"${armNormals().mode === m ? ' selected' : ''}>${esc(armNormModeLabel(m))}</option>`).join('')}</select></label>
       <button onclick="armExpPreview()"${e.peeking ? ' disabled' : ''} title="${ttA('armory.exp_preview_title')}">${tt('armory.exp_preview')}</button></div>
     <div class="count">${tt('armory.exp_normals_note')}</div>${armExpNormWarnHtml()}
+    ${typeof armNormalsBodyHtml === 'function' ? armNormalsBodyHtml() : ''}
+    ${armNormals().mode !== 'skip' && armNormals().mode !== 'source' ? `<label class="armcheck"><input type="checkbox"${armNormals().preview !== false ? ' checked' : ''} onchange="armNormPreview(this.checked)"> ${tt('armory.norm_preview')}</label>` : ''}
     <div id="armBakeProgress" role="status">${e.baking ? `${e.bakePct || 0}% <progress max="100" value="${e.bakePct || 0}"></progress>` : ''}</div>
     ${armExpPreviewHtml()}${done}`;
 }
@@ -822,8 +830,12 @@ async function armExpBake(){
 
 function armExpMod(){
   const e = armExp();
-  return e.mod = e.mod || {target: state.src || (ARM.mods || [])[0] || '', choice: 'skip', name: '', folder: '',
-                           template: '', clone_from: '', unit: '', new_type: '', new_name: '', data: null, plan: null};
+  // a state saved before a field existed gets it (2026-11-23: folder was missing)
+  const blank = {target: state.src || (ARM.mods || [])[0] || '', choice: 'skip', name: '', folder: '',
+                 template: '', clone_from: '', unit: '', new_type: '', new_name: '', data: null, plan: null};
+  e.mod = e.mod || {};
+  for(const k in blank) if(e.mod[k] === undefined) e.mod[k] = blank[k];
+  return e.mod;
 }
 async function armExpModLoad(){
   const m = armExpMod(), e = armExp();
@@ -957,63 +969,251 @@ function armExpCharacterSet(key,value){
   armExpModSet('characterTarget',target);
 }
 
+/* 2026-11-23: Into a mod in parts that fold (armExpSec): where it goes, the
+   entry, the unit, the skeletons and weapons, a character, and writing it.
+   Beside them, the source model (the unit's soldier or the entry cloned) and
+   this model playing the source's animations, each folding too. */
+function armExpSec(key, title, body){
+  const shut = (ARM.expShut || []).includes(key);
+  return `<details class="armexpsec"${shut ? '' : ' open'} ontoggle="armExpSecToggle('${key}', this.open)"><summary>${title}</summary>
+    <div class="armexpsecbody">${body}</div></details>`;
+}
+function armExpSecToggle(key, open){
+  ARM.expShut = (ARM.expShut || []).filter(k => k !== key);
+  if(!open) ARM.expShut.push(key);
+  if(key.startsWith('side')) armExpSide();
+}
+/* Where the skeletons and weapons come from: the unit's own soldier, an
+   entry named here, or a role (then one of its units, or its most typical). */
+function armExpSrc(){
+  const m = armExpMod();
+  if(m.src === 'unit' && m.choice === 'skip') return m.template ? 'role' : 'entry';
+  return m.src || (m.template ? 'role' : m.clone_from ? 'entry' : m.choice === 'skip' ? 'role' : 'unit');
+}
+/* The entry whose skeletons and weapons are cloned, as the plan will take it. */
+function armExpSrcEntry(){
+  const m = armExpMod(), d = m.data || {}, src = armExpSrc();
+  if(src === 'entry') return (m.clone_from || '').trim().toLowerCase();
+  if(src === 'role'){ const t = (d.templates || {})[m.template]; return m.clone_from ? m.clone_from.toLowerCase() : t ? t.clone_from : ''; }
+  const u = (d.units || []).find(x => x.type === m.unit);
+  return u ? (u.soldier || '').toLowerCase() : '';
+}
 function armExpModHtml(){
   const m = armExpMod(), d = m.data;
   const radio = (v, label, note) => `<label class="armcheck armexpchoice"><input type="radio" name="armExpChoice"${m.choice === v ? ' checked' : ''}
       onchange="armExpModSet('choice','${v}')"> <b>${label}</b> <span class="count">${note}</span></label>`;
   const mods = (ARM.mods || []).map(x => `<option${x === m.target ? ' selected' : ''}>${esc(x)}</option>`).join('');
   const unbaked = armExp().done ? '' : `<div class="count armnote">${tt('armory.exp_bakes_on_write', {folder: esc(armExp().folder || '?')})}</div>`;
-  let html = `${unbaked}<div class="armexprow"><label>${tt('armory.exp_target_mod')}<select onchange="armExpModTarget(this.value)">${mods}</select></label></div>
+  let main = armExpSec('where', tt('armory.exp_sec_where'), `${unbaked}<div class="armexprow"><label>${tt('armory.exp_target_mod')}<select onchange="armExpModTarget(this.value)">${mods}</select></label></div>
     <div class="armexpchoices">${radio('skip', tt('armory.exp_choice_skip'), tt('armory.exp_choice_skip_note'))}
       ${radio('add', tt('armory.exp_choice_add'), tt('armory.exp_choice_add_note'))}
-      ${radio('new', tt('armory.exp_choice_new'), tt('armory.exp_choice_new_note'))}</div>`;
-  if(!d) return html;
-  const units = `<datalist id="armExpUnits">${d.units.map(u => `<option value="${esc(u.type)}">${esc(u.category)} · ${esc(u['class'])}</option>`).join('')}</datalist>`;
+      ${radio('new', tt('armory.exp_choice_new'), tt('armory.exp_choice_new_note'))}</div>`);
+  if(!d) return `<div class="armexpmod"><div class="armexpmodmain">${main}</div></div>`;
   const entries = `<datalist id="armExpEntries">${d.entries.map(n => `<option value="${esc(n)}">`).join('')}</datalist>`;
-  const roles = Object.values(d.templates);
-  html += `<div class="armexprow">
+  main += armExpSec('entry', tt('armory.exp_sec_entry'), `<div class="armexprow">
       <label>${tt('armory.exp_entry_name')}<input value="${esc(m.name)}" oninput="armExpModSet('name', this.value, true)"></label>
       <label>${tt('armory.exp_entry_folder')}<input class="armwide" value="${esc(m.folder)}" placeholder="unit_models/_units/armory/${esc(m.name)}" oninput="armExpModSet('folder', this.value, true)" onchange="armExpRememberFolder()"></label>
       <button onclick="armExpModBrowse()">${tt('armory.browse')}</button>
       <select id="armExpFolderChoices" aria-label="${ttA('armory.folder_choices')}" onchange="armExpChooseFolder(this.value)"><option value="">${tt('armory.folder_choices')}</option>${armExpFolderChoices()}</select></div>
     <div class="armexprow"><label class="armcheck" title="${ttA('armory.exp_replace_entry_title')}"><input type="checkbox"${m.replace ? ' checked' : ''}
         onchange="armExpModSet('replace', this.checked)"> ${tt('armory.exp_replace_entry')}</label>
-      ${d.entries.includes(m.name.trim().toLowerCase()) && !m.replace ? `<span class="armexpwarn">${tt('armory.exp_entry_taken', {name: esc(m.name.trim().toLowerCase())})}</span>` : ''}</div>`;
-  if(m.choice !== 'skip')
-    html += `<div class="armexprow"><label>${m.choice === 'new' ? tt('armory.exp_unit_from') : tt('armory.exp_unit')}<input list="armExpUnits" value="${esc(m.unit)}"
-        placeholder="${esc(tt('armory.find'))}" onchange="armExpModSet('unit', this.value)"></label>${units}
+      ${d.entries.includes(m.name.trim().toLowerCase()) && !m.replace ? `<span class="armexpwarn">${tt('armory.exp_entry_taken', {name: esc(m.name.trim().toLowerCase())})}</span>` : ''}</div>`);
+  if(m.choice !== 'skip'){
+    let unit = `<div class="armexprow"><b>${m.choice === 'new' ? tt('armory.exp_unit_from') : tt('armory.exp_unit')}</b>
+        <span class="armexpunit">${m.unit ? esc(m.unit) : `<span class="count">${tt('armory.exp_unit_none')}</span>`}</span>
+        <button class="mini${m.picking ? ' on' : ''}" onclick="armExpModSet('picking', !armExpMod().picking)">${tt(m.unit ? 'armory.exp_unit_change' : 'armory.exp_unit_choose')}</button>
       <label>${tt('armory.assign_slot')}<select onchange="armExpModSet('assign_to',this.value)"${m.unitData ? '' : ' disabled'}>${armExpAssignSlots().map(s=>
         `<option value="${esc(s.v)}"${s.v === (m.assign_to || armExpAssignDefault()) ? ' selected' : ''}>${esc(s.t)}</option>`).join('')}</select></label></div>`;
-  if(m.choice === 'new')
-    html += `<div class="armexprow"><label>${tt('armory.exp_new_type')}<input value="${esc(m.new_type)}" oninput="armExpModSet('new_type', this.value, true)"></label>
-      <label>${tt('armory.exp_new_name')}<input value="${esc(m.new_name)}" oninput="armExpModSet('new_name', this.value, true)"></label></div>`;
-  html += `<div class="armsect">${tt('armory.exp_skeletons_from')}</div>
-    <div class="armexprow"><select onchange="armExpModSet('template', this.value)">
-      <option value="">${m.choice === 'skip' ? tt('armory.exp_template_entry') : tt('armory.exp_template_unit')}</option>
-      ${roles.map(t => `<option value="${t.role}"${m.template === t.role ? ' selected' : ''}>${esc(tt('armory.exp_template_option', {role: armRoleLabel(t.role), n: t.units}))}</option>`).join('')}</select>
-      ${m.template ? '' : `<label>${tt('armory.exp_clone_from')}<input list="armExpEntries" value="${esc(m.clone_from)}" onchange="armExpModSet('clone_from', this.value)"></label>${entries}`}</div>`;
-  const t = d.templates[m.template];
-  if(t){
-    const fields = Object.entries(t.fields).map(([k, v]) => `${k} ${v}`).join(' · ');
-    html += `<div class="count armnote">${tt('armory.exp_template_facts', {example: t.example, skeletons: t.skeletons.join(', '), fields})}</div>`;
-    if(m.choice !== 'new') html += `<div class="count armnote">${tt('armory.exp_template_fields_new_only')}</div>`;
+    if(m.picking || !m.unit) unit += armExpPickerHtml();
+    if(m.choice === 'new')
+      unit += `<div class="armexprow"><label>${tt('armory.exp_new_type')}<input value="${esc(m.new_type)}" oninput="armExpModSet('new_type', this.value, true)"></label>
+        <label>${tt('armory.exp_new_name')}<input value="${esc(m.new_name)}" oninput="armExpModSet('new_name', this.value, true)"></label></div>`;
+    main += armExpSec('unit', tt('armory.exp_sec_unit'), unit);
   }
-  html += armExpCharacterHtml();
-  html += `<div class="armexprow"><button onclick="armExpModPlan()">${tt('armory.exp_plan')}</button>
+  const src = armExpSrc(), roles = Object.values(d.templates);
+  const opt = (v, label, note) => `<label class="armcheck armexpchoice"><input type="radio" name="armExpSrc"${src === v ? ' checked' : ''}
+      onchange="armExpSrcSet('${v}')"> <b>${label}</b> <span class="count">${note}</span></label>`;
+  let sk = `<div class="armexpchoices">
+      ${m.choice === 'skip' ? '' : opt('unit', tt('armory.exp_src_unit'), m.unit ? esc(armExpSrcEntryOf('unit')) : tt('armory.exp_src_unit_note'))}
+      ${opt('entry', tt('armory.exp_src_entry'), tt('armory.exp_src_entry_note'))}
+      ${opt('role', tt('armory.exp_src_role'), tt('armory.exp_src_role_note'))}</div>`;
+  if(src === 'entry')
+    sk += `<div class="armexprow"><label>${tt('armory.exp_clone_from')}<input list="armExpEntries" value="${esc(m.clone_from)}" onchange="armExpModSet('clone_from', this.value)"></label>${entries}</div>`;
+  if(src === 'role'){
+    const t = d.templates[m.template];
+    sk += `<div class="armexprow"><select onchange="armExpModSet('template', this.value);armExpModSet('clone_from', '')">
+        <option value="">${tt('armory.exp_pick_role')}</option>
+        ${roles.map(r => `<option value="${r.role}"${m.template === r.role ? ' selected' : ''}>${esc(tt('armory.exp_template_option', {role: armRoleLabel(r.role), n: r.units}))}</option>`).join('')}</select></div>`;
+    if(t){
+      sk += `<div class="armexprow"><input id="armExpRoleQ" placeholder="${esc(tt('armory.find'))}" value="${esc(m.roleQ || '')}" oninput="armExpMod().roleQ=this.value;armExpRoleRows()"></div>
+        <div class="armexplist" id="armExpRoleRows">${armExpRoleRowsHtml()}</div>`;
+      const fields = Object.entries(t.fields).map(([k, v]) => `${k} ${v}`).join(' · ');
+      sk += `<div class="count armnote">${tt('armory.exp_template_facts', {example: t.example, skeletons: t.skeletons.join(', '), fields})}</div>`;
+      if(m.choice !== 'new') sk += `<div class="count armnote">${tt('armory.exp_template_fields_new_only')}</div>`;
+    }
+  }
+  main += armExpSec('skel', tt('armory.exp_skeletons_from'), sk);
+  main += armExpSec('character', tt('armory.exp_sec_character'), armExpCharacterHtml());
+  let write = `<div class="armexprow"><button onclick="armExpModPlan()">${tt('armory.exp_plan')}</button>
       <button class="primary" onclick="armExpModApply()"${armExp().busy ? ' disabled' : ''}>${tt('armory.exp_write')}</button>
       <button class="mini" onclick="armExpCards()" title="${esc(tt('armory.exp_cards_later'))}">${tt('armory.exp_cards')}</button></div>`;
-  if(m.plan) html += m.plan.steps.map((st, i) => `<div class="armissue ${st.errors.length ? 'error' : 'ok'}">
+  if(m.plan) write += m.plan.steps.map((st, i) => `<div class="armissue ${st.errors.length ? 'error' : 'ok'}">
       <b>${m.plan.steps.length > 1 ? `${i + 1}. ` : ''}${armExpModStepTitle(st, m)}</b>
       ${st.lines.slice(1).map(l => `<div class="count">${esc(l)}</div>`).join('')}
       ${st.warnings.map(w => `<div class="armexpwarn">${esc(w)}</div>`).join('')}
       ${st.errors.map(w => `<div class="armexperr">${esc(w)}</div>`).join('')}</div>`).join('');
-  if(m.written) html += `<div class="armissue ok">${tt('armory.exp_written_mod', {mod: m.written.mod, name: m.written.name})}</div>`;
-  return html;
+  if(m.written) write += `<div class="armissue ok">${tt('armory.exp_written_mod', {mod: m.written.mod, name: m.written.name})}</div>`;
+  main += armExpSec('write', tt('armory.exp_sec_write'), write);
+  return `<div class="armexpmod"><div class="armexpmodmain">${main}</div><div class="armexpside" id="armExpSide"></div></div>`;
+}
+function armExpSrcEntryOf(src){
+  const m = armExpMod(), was = m.src; m.src = src;
+  const e = armExpSrcEntry(); m.src = was; return e;
+}
+function armExpSrcSet(v){
+  const m = armExpMod();
+  m.src = v;
+  if(v !== 'role') m.template = '';
+  if(v !== 'entry') m.clone_from = '';
+  armExpModSet('src', v);
+}
+
+/* The unit, picked as the unit editor picks one: a search and its faction,
+   category and class filters, the rows under them repainted alone. */
+function armExpPickerHtml(){
+  const m = armExpMod(), units = (m.data || {}).units || [];
+  const f = m.pick = m.pick || {q: '', faction: '', category: '', cls: ''};
+  const uniq = list => [...new Set(list.filter(Boolean))].sort((x, y) => x.localeCompare(y));
+  const sel = (k, label, list) => `<select onchange="armExpMod().pick.${k}=this.value;armExpPickRows()"><option value="">${label}</option>
+    ${list.map(v => `<option${f[k] === v ? ' selected' : ''}>${esc(v)}</option>`).join('')}</select>`;
+  setTimeout(armExpPickRows, 0);
+  return `<div class="armexppick"><div class="armexprow">
+      <input id="armExpPickQ" placeholder="${esc(tt('armory.find'))}" value="${esc(f.q)}" oninput="armExpMod().pick.q=this.value;armExpPickRows()">
+      ${sel('faction', tt('armory.exp_all_factions'), uniq(units.flatMap(u => u.factions || [])))}
+      ${sel('category', tt('armory.exp_all_categories'), uniq(units.map(u => u.category)))}
+      ${sel('cls', tt('armory.exp_all_classes'), uniq(units.map(u => u['class'])))}</div>
+    <div class="armexplist" id="armExpPickRows"></div></div>`;
+}
+function armExpPickRows(){
+  const el = document.getElementById('armExpPickRows');
+  if(!el) return;
+  const m = armExpMod(), f = m.pick, q = (f.q || '').trim().toLowerCase();
+  const rows = ((m.data || {}).units || []).filter(u => (!q || u.type.toLowerCase().includes(q) || (u.soldier || '').toLowerCase().includes(q))
+    && (!f.faction || (u.factions || []).includes(f.faction)) && (!f.category || u.category === f.category) && (!f.cls || u['class'] === f.cls));
+  el.innerHTML = rows.slice(0, 400).map(u => `<button class="armexprowbtn${u.type === m.unit ? ' on' : ''}" onclick="armExpPickUnit(${esc(JSON.stringify(u.type))})">
+      <b>${esc(u.type)}</b> <span class="count">${esc(u.category)} · ${esc(u['class'])} · ${esc(u.soldier || '')}</span></button>`).join('')
+    || `<div class="count">${tt('armory.nothing_matches')}</div>`;
+}
+function armExpPickUnit(type){ const m = armExpMod(); m.picking = false; armExpModSet('unit', type); }
+function armExpRoleRowsHtml(){
+  const m = armExpMod(), t = ((m.data || {}).templates || {})[m.template];
+  if(!t) return '';
+  const q = (m.roleQ || '').trim().toLowerCase();
+  const pick = (m.clone_from || '').toLowerCase();
+  return `<button class="armexprowbtn${pick ? '' : ' on'}" onclick="armExpModSet('clone_from','')"><b>${tt('armory.exp_role_typical')}</b>
+      <span class="count">${esc(t.example)} · ${esc(t.clone_from)}</span></button>`
+    + (t.members || []).filter(u => !q || u.type.toLowerCase().includes(q) || u.soldier.includes(q)).slice(0, 400).map(u =>
+      `<button class="armexprowbtn${pick === u.soldier ? ' on' : ''}" onclick="armExpModSet('clone_from', ${esc(JSON.stringify(u.soldier))})">
+        <b>${esc(u.type)}</b> <span class="count">${esc(u.soldier)}</span></button>`).join('');
+}
+function armExpRoleRows(){ const el = document.getElementById('armExpRoleRows'); if(el) el.innerHTML = armExpRoleRowsHtml(); }
+
+/* --- the side: the source model, and this one playing its animations ------- */
+
+function armExpSide(){
+  const el = document.getElementById('armExpSide');
+  if(!el) return;
+  const m = armExpMod(), entry = armExpSrcEntry(), a = ARM.expAnim || {};
+  const shut = k => (ARM.expShut || []).includes(k);
+  if(el.dataset.entry !== entry || el.dataset.shut !== String(shut('side_src')) || !el.childElementCount){
+    el.dataset.entry = entry; el.dataset.shut = String(shut('side_src'));
+    el.innerHTML = armExpSec('side_src', entry ? tt('armory.exp_side_source', {entry: esc(entry)}) : tt('armory.exp_side_source_none'),
+        `<div class="armexpv3" id="armExpV3"></div>`)
+      + armExpSec('side_mine', tt('armory.exp_side_mine'), `<canvas class="armexpmine" id="armExpMine" width="320" height="400"></canvas>
+        <div class="armexprow"><select id="armExpAct" onchange="armExpAnimPick(this.value)"></select>
+          <button class="mini" id="armExpPlay" onclick="armExpAnimPlay()">▶</button></div>
+        <div class="count" id="armExpAnimNote"></div>`);
+    if(entry && !shut('side_src') && typeof v3Mount === 'function'){ if(typeof v3 !== 'undefined' && v3 && v3.host === 'armExpV3') v3 = null; v3Mount('armExpV3', m.target, entry); }
+    ARM.expAnimFor = null;
+  }
+  if(!shut('side_mine')) armExpAnimLoad(entry);
+}
+/* This model, posed by the source entry's animations: a borrowed animation
+   state (ARM.anim swapped out while the dialog is open, put back after), so
+   the project's own Animations choice is never touched. */
+async function armExpAnimLoad(entry){
+  const m = armExpMod();
+  if(!entry || ARM.expAnimFor === m.target + '|' + entry) return armExpAnimUi();
+  ARM.expAnimFor = m.target + '|' + entry;
+  if(!ARM.expAnimHeld){ ARM.expAnimHeld = {anim: ARM.anim}; ARM.anim = null; }
+  ARM.anim = null;
+  const a = armAnim();
+  a.fromMod = m.target;
+  armExpAnimUi(tt('armory.reading'));
+  try{ a.list = await api.get(`/api/model/anims?mod=${enc(m.target)}&entry=${enc(entry)}`); }
+  catch(e){ a.list = {error: errText(e)}; }
+  if(ARM.anim !== a) return;
+  const set = (a.list.sets || [])[0];
+  a.skel = set ? (set.primary || set.secondary || '') : Object.keys(a.list.skeletons || {})[0] || '';
+  a.set = set || null;
+  // a standing action to start on, the first that plays failing one
+  const sk = a.list.skeletons && a.list.skeletons[(a.skel || '').toLowerCase()];
+  const rows = ((sk || {}).actions || []).filter(r => r.playable);
+  const first = rows.find(r => /stand.*idle|idle/i.test(r.action)) || rows[0];
+  armExpAnimUi();
+  if(first) await armExpAnimPick(first.slot != null ? String(first.slot) : 'a:' + first.action);
+  armExpAnimRun();
+}
+function armExpAnimUi(note){
+  const sel = document.getElementById('armExpAct'), a = ARM.anim;
+  const n = document.getElementById('armExpAnimNote');
+  if(n) n.textContent = note || (a && a.list && a.list.error) || (a && a.skel ? tt('armory.exp_side_skeleton', {skeleton: a.skel}) : '');
+  if(!sel || !a || !a.list || !a.list.skeletons) return;
+  const sk = a.list.skeletons[(a.skel || '').toLowerCase()];
+  sel.innerHTML = sk ? armAnimListHtml(sk) : '';
+  const play = document.getElementById('armExpPlay');
+  if(play) play.textContent = a.playing ? '⏸' : '▶';
+}
+async function armExpAnimPick(key){ await armAnimPick(key); armExpAnimUi(); armExpAnimRun(); }
+function armExpAnimPlay(){ if(ARM.anim && ARM.anim.data) armAnimPlay(); armExpAnimUi(); }
+/* Drawn every frame while the dialog shows it; when the dialog has gone,
+   the project's animation state is put back and the viewer let go. */
+function armExpAnimRun(){
+  if(ARM.expAnimLoop) return;
+  ARM.expAnimLoop = true;
+  const id = ARM.expLoopId = (ARM.expLoopId || 0) + 1;
+  const step = () => {
+    if(id !== ARM.expLoopId) return;
+    const cv = document.getElementById('armExpMine');
+    if(!cv || !ARM.expAnimLoop){ armExpSideDrop(); return; }
+    if(!document.hidden) armExpMineDraw(cv);
+    requestAnimationFrame(step);
+  };
+  requestAnimationFrame(step);
+}
+function armExpSideDrop(){
+  ARM.expAnimLoop = false; ARM.expAnimFor = null; ARM.expSideNode = null;
+  if(ARM.expAnimHeld){ ARM.anim = ARM.expAnimHeld.anim; ARM.expAnimHeld = null; armFrame(); }
+  if(typeof v3 !== 'undefined' && v3 && v3.host === 'armExpV3' && typeof v3Unmount === 'function') v3Unmount();
+}
+function armExpMineDraw(cv){
+  const objs = armVisibleObjects();
+  if(!objs.length) return;
+  const w = cv.width, h = cv.height;
+  armAnimPose(objs);
+  const [lo, hi] = cgBounds(objs), center = lo.map((v, i) => (v + hi[i]) / 2);
+  const height = Math.max(0.1, hi[1] - lo[1]) * 1.25, width = height * w / h;
+  const target = [-center[0], center[1], center[2]], eye = [target[0] + 6, target[1] + 2, target[2] + 8];
+  const cam = {proj: [2 / width, 0, 0, 0, 0, 2 / height, 0, 0, 0, 0, -0.01, 0, 0, 0, 0, 1], view: v3LookAt(eye, target, [0, 1, 0]), eye};
+  const light = {amount: 1, ambient: 0.35, level: 1, point: false, dir: [0.45, 0.75, 0.5]};
+  if(!armRender(objs, w, h, cam, {plain: true, card: true, light, bg: [0.13, 0.15, 0.18]})) return;
+  cv.getContext('2d').drawImage(ARM.glCanvas, 0, 0, w, h, 0, 0, w, h);
 }
 function armExpModBody(){
-  const m = armExpMod(), e = armExp();
+  const m = armExpMod(), e = armExp(), src = armExpSrc();
   return {mod: m.target, choice: m.choice, name: m.name.trim().toLowerCase(), folder: m.folder.trim(),
-          template: m.template, clone_from: m.template ? '' : m.clone_from.trim().toLowerCase(),
+          // the unit's own soldier is the plan's default: neither a role nor an entry
+          template: src === 'role' ? m.template : '', clone_from: src === 'unit' ? '' : (m.clone_from || '').trim().toLowerCase(),
           unit: m.unit, assign_to: m.assign_to || armExpAssignDefault(), replace: !!m.replace, character_target: m.characterTarget || null,
           new_type: m.new_type.trim(), new_name: m.new_name.trim(),
           bake_folder: e.done ? e.done.folder : e.folder, stem: e.stem};
@@ -1025,6 +1225,14 @@ function armExpModSet(k, v, live){
   if(!live) armExportPaint();
 }
 function armExpModTarget(v){ const m=armExpMod(); m.target=v; m.folders=[]; m.unitData=null; m.assign_to=''; m.characterTarget=null; m.characters=null; m.plan=null; m.written=null; armSave(); armExpModLoad(); }
+/* 2026-11-23: the bake step's Continue. An export already on disk under this
+   folder and name is taken as it is; otherwise the bake runs first. */
+async function armExpContinue(){
+  const e = armExp();
+  await armExpFindExisting();
+  if(!e.done) await armExpBake();
+  if(e.done) armExportStep('mod');
+}
 /* Nothing baked yet: bake now, into the folder and name the bake step holds,
    so "Into a mod" works without a trip back to step 3. */
 async function armExpEnsureBaked(){
@@ -1059,6 +1267,7 @@ async function armExpModApply(){
 
 /* The unit card maker (95m) on this model, for the unit it went into. */
 function armExpCards(){
+  state.cgSrc = 'armory';            // the card maker on this model, not a unit of the mod
   const m = armExpMod(), c = cg();
   const unit = m.written && m.choice !== 'skip' ? m.written.name : m.unit;
   if(unit) c.unit = unit;
