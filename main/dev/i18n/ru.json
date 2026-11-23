@@ -15071,5 +15071,12 @@
  "cards.gen_peek_hint": "Нажмите на отряд в списке, чтобы просмотреть его здесь; перетащите его, чтобы повернуть, и дважды щёлкните по нему или нажмите «Использовать этот отряд», чтобы создать его карточку.",
  "cards.gen_ug": "Улучшение брони",
  "cards.gen_ug_base": "Модель солдата",
- "cards.gen_ug_level": "Уровень {level}"
+ "cards.gen_ug_level": "Уровень {level}",
+ "cards.gen_pose_name": "Имя позы",
+ "cards.gen_pose_save": "Сохранить позу",
+ "cards.gen_pose_default": "Поза {n}",
+ "cards.gen_pose_saved": "Поза {name} сохранена в папку Saved библиотеки поз.",
+ "cards.gen_pose_delete": "Удалить эту сохранённую позу",
+ "cards.gen_save_legend": "Сохранить",
+ "cards.gen_reveal_failed": "Этого файла больше нет."
 }

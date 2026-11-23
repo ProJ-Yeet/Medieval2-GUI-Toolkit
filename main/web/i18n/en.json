@@ -13006,5 +13006,12 @@
 "cards.gen_bone_reset": "Reset bone",
 "cards.gen_ug": "Armour upgrade",
 "cards.gen_ug_base": "Soldier model",
-"cards.gen_ug_level": "Level {level}"
+"cards.gen_ug_level": "Level {level}",
+"cards.gen_pose_name": "Name for the pose",
+"cards.gen_pose_save": "Save pose",
+"cards.gen_pose_default": "Pose {n}",
+"cards.gen_pose_saved": "Saved the pose {name}, under Saved in the pose library.",
+"cards.gen_pose_delete": "Delete this saved pose",
+"cards.gen_save_legend": "Save",
+"cards.gen_reveal_failed": "That file is not there any more."
 }

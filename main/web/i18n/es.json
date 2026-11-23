@@ -14703,5 +14703,12 @@
  "cards.gen_peek_hint": "Haz clic en una unidad de la lista para verla aquí, arrástrala para girarla y haz doble clic en ella o pulsa «Usar esta unidad» para crear su tarjeta.",
  "cards.gen_ug": "Mejora de armadura",
  "cards.gen_ug_base": "Modelo de soldado",
- "cards.gen_ug_level": "Nivel {level}"
+ "cards.gen_ug_level": "Nivel {level}",
+ "cards.gen_pose_name": "Nombre de la pose",
+ "cards.gen_pose_save": "Guardar pose",
+ "cards.gen_pose_default": "Pose {n}",
+ "cards.gen_pose_saved": "Se guardó la pose {name} en Saved, dentro de la biblioteca de poses.",
+ "cards.gen_pose_delete": "Eliminar esta pose guardada",
+ "cards.gen_save_legend": "Guardar",
+ "cards.gen_reveal_failed": "Ese archivo ya no está."
 }

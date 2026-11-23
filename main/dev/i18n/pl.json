@@ -14959,5 +14959,12 @@
  "cards.gen_peek_hint": "Kliknij jednostkę na liście, aby zobaczyć ją tutaj, przeciągnij, aby ją obrócić, a następnie kliknij ją dwukrotnie lub naciśnij „Użyj tej jednostki”, aby utworzyć jej kartę.",
  "cards.gen_ug": "Ulepszenie pancerza",
  "cards.gen_ug_base": "Model żołnierza",
- "cards.gen_ug_level": "Poziom {level}"
+ "cards.gen_ug_level": "Poziom {level}",
+ "cards.gen_pose_name": "Nazwa pozy",
+ "cards.gen_pose_save": "Zapisz pozę",
+ "cards.gen_pose_default": "Poza {n}",
+ "cards.gen_pose_saved": "Zapisano pozę {name} w folderze Saved w bibliotece póz.",
+ "cards.gen_pose_delete": "Usuń tę zapisaną pozę",
+ "cards.gen_save_legend": "Zapisz",
+ "cards.gen_reveal_failed": "Tego pliku już tam nie ma."
 }

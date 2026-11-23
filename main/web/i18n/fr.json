@@ -14346,5 +14346,12 @@
  "cards.gen_peek_hint": "Cliquez sur une unité dans la liste pour l’afficher ici, faites-la glisser pour la faire pivoter, puis double-cliquez dessus ou cliquez sur « Utiliser cette unité » pour créer sa carte.",
  "cards.gen_ug": "Amélioration d’armure",
  "cards.gen_ug_base": "Modèle de soldat",
- "cards.gen_ug_level": "Niveau {level}"
+ "cards.gen_ug_level": "Niveau {level}",
+ "cards.gen_pose_name": "Nom de la pose",
+ "cards.gen_pose_save": "Enregistrer la pose",
+ "cards.gen_pose_default": "Pose {n}",
+ "cards.gen_pose_saved": "La pose {name} a été enregistrée dans Saved, dans la bibliothèque de poses.",
+ "cards.gen_pose_delete": "Supprimer cette pose enregistrée",
+ "cards.gen_save_legend": "Enregistrer",
+ "cards.gen_reveal_failed": "Ce fichier n’existe plus."
 }

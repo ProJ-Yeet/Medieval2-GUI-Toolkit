@@ -3522,6 +3522,17 @@ class Handler(BaseHTTPRequestHandler):
                 return self._json({"ok": True})
             if u.path == "/api/armory/allow_texture":
                 return self._json({"ok": armory.allow_texture(body.get("path") or "")})
+            if u.path == "/api/armory/cards/reveal":
+                # 2026-11-24: Open file location for a card the maker saved
+                target = armory.card_file(body.get("path") or "")
+                if not target:
+                    return self._json({"ok": False})
+                from .folder_dialog import reveal
+                return self._json({"ok": reveal(str(target)), "path": str(target)})
+            if u.path == "/api/armory/poses/save":
+                return self._json({"poses": armory.save_user_pose(body.get("name") or "", body.get("b") or {})})
+            if u.path == "/api/armory/poses/delete":
+                return self._json({"poses": armory.delete_user_pose(body.get("name") or "")})
             if u.path == "/api/armory/cards/save":
                 # 95m: a card the maker drew, as the game reads it
                 try:
@@ -6717,6 +6728,8 @@ class Handler(BaseHTTPRequestHandler):
             if arg("mark"):
                 armory.opened()     # this page has it open from now, until it says goodbye
             return self._json(view)
+        if path == "/api/armory/poses/saved":
+            return self._json({"poses": armory.user_poses()})
         if path == "/api/armory/poses":
             # 99n: the Blender kit's IK rigs and pose library, read out of it
             return self._file(Path(__file__).resolve().parent / "data" / "m2_poses.json",

@@ -14233,5 +14233,12 @@
  "cards.gen_peek_hint": "Klicke auf eine Einheit in der Liste, um sie hier anzuzeigen. Ziehe sie, um sie zu drehen, und doppelklicke darauf oder drücke auf „Diese Einheit verwenden“, um ihre Karte zu erstellen.",
  "cards.gen_ug": "Rüstungsaufrüstung",
  "cards.gen_ug_base": "Soldatenmodell",
- "cards.gen_ug_level": "Stufe {level}"
+ "cards.gen_ug_level": "Stufe {level}",
+ "cards.gen_pose_name": "Name der Pose",
+ "cards.gen_pose_save": "Pose speichern",
+ "cards.gen_pose_default": "Pose {n}",
+ "cards.gen_pose_saved": "Die Pose {name} wurde unter Saved in der Posensammlung gespeichert.",
+ "cards.gen_pose_delete": "Diese gespeicherte Pose löschen",
+ "cards.gen_save_legend": "Speichern",
+ "cards.gen_reveal_failed": "Diese Datei ist nicht mehr vorhanden."
 }

@@ -1112,6 +1112,16 @@ try:
 except armory.ArmoryError:
     refused = True
 check("a card with no name is refused", refused)
+# 2026-11-24: Open file location reaches only a saved card; poses saved from the rig
+check("Open file location finds a card it saved",
+      armory.card_file(got["path"]) is not None)
+check("and refuses anything outside the saved cards", armory.card_file(str(ROOT / "app.py")) is None and armory.card_file("") is None)
+kept = armory.save_user_pose("Lunge", {"IK Pelvis": {"l": [0, 0.1, 0], "bad": [1]}, "IK Head": {"e": [0.1, 0, 0]}, 3: {}})
+kept = armory.save_user_pose("Lunge", {"IK Head": {"q": [1, 0, 0, 0]}})
+check(f"a saved pose is kept under its name, a second save replacing it ({kept})",
+      [p["n"] for p in armory.user_poses()] == ["Lunge"] and armory.user_poses()[0]["b"] == {"IK Head": {"q": [1.0, 0.0, 0.0, 0.0]}}
+      and armory.user_poses()[0]["c"] == "Saved")
+check("and is deleted", armory.delete_user_pose("Lunge") == [] and armory.user_poses() == [])
 if node:
     js = (ROOT / "web" / "js" / "cardgen.js").read_text(encoding="utf-8")
     probe = ("const tt=x=>x,ttN=x=>x,state={},ARM={};" + js + r""";

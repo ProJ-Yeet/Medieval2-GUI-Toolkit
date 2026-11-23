@@ -1983,6 +1983,58 @@ def rig_to_bones(project: dict, obj_ids: Sequence[int], bones: Sequence[str],
 
 
 
+def card_file(path: str) -> Optional[Path]:
+    """A file save_card wrote, for Open file location: only one under
+    ``config/armory/cards/`` that is still there."""
+    root = (ARMORY_DIR / "cards").resolve()
+    try:
+        target = Path(path or "").resolve()
+        target.relative_to(root)
+    except (ValueError, OSError):
+        return None
+    return target if target.is_file() else None
+
+
+# 2026-11-24: poses saved from the card maker's IK rig, beside the kit's own
+def _poses_file() -> Path:
+    return ARMORY_DIR / "poses.json"
+
+
+def user_poses() -> list:
+    try:
+        data = json.loads(_poses_file().read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return []
+    return [p for p in data if isinstance(p, dict) and isinstance(p.get("n"), str) and isinstance(p.get("b"), dict)]
+
+
+def save_user_pose(name: str, basis: dict) -> list:
+    """Keeps a pose (the rig's bones, as the library holds them) under its
+    name, replacing one of the same name."""
+    name = (name or "").strip()[:80]
+    if not name or not isinstance(basis, dict):
+        return user_poses()
+    bones = {}
+    for bone, ch in basis.items():
+        if not isinstance(bone, str) or not isinstance(ch, dict):
+            continue
+        keep = {k: [float(x) for x in v] for k, v in ch.items()
+                if k in ("l", "e", "q", "s") and isinstance(v, list) and len(v) in (3, 4)}
+        if keep:
+            bones[bone[:64]] = keep
+    poses = [p for p in user_poses() if p["n"] != name] + [{"n": name, "c": "Saved", "b": bones}]
+    _poses_file().parent.mkdir(parents=True, exist_ok=True)
+    _poses_file().write_text(json.dumps(poses, indent=1), encoding="utf-8")
+    return poses
+
+
+def delete_user_pose(name: str) -> list:
+    poses = [p for p in user_poses() if p["n"] != name]
+    _poses_file().parent.mkdir(parents=True, exist_ok=True)
+    _poses_file().write_text(json.dumps(poses, indent=1), encoding="utf-8")
+    return poses
+
+
 def save_card(name: str, kind: str, png_data_url: str) -> dict:
     """A card the page drew, written as ``.tga`` (and ``.png``) under
     ``config/armory/cards/<name>/``: ``#<name>.tga`` for a unit card,

@@ -960,6 +960,8 @@ function armMountView(){
     ARM.view = document.createElement('canvas');
     ARM.view.className = 'armcanvas';
     armInstallControls(ARM.view);
+    // 2026-11-24: Shift + click is a view control, never a text selection
+    ARM.view.addEventListener('mousedown', e => { if(e.shiftKey) e.preventDefault(); });
   }
   host.appendChild(ARM.view);
   if(typeof armViewWire === 'function') armViewWire();

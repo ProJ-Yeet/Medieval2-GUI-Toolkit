@@ -13686,5 +13686,12 @@
  "cards.gen_bone_reset": "Kemiği sıfırla",
  "cards.gen_ug": "Zırh yükseltmesi",
  "cards.gen_ug_base": "Asker modeli",
- "cards.gen_ug_level": "Seviye {level}"
+ "cards.gen_ug_level": "Seviye {level}",
+ "cards.gen_pose_name": "Pozun adı",
+ "cards.gen_pose_save": "Pozu kaydet",
+ "cards.gen_pose_default": "Poz {n}",
+ "cards.gen_pose_saved": "Poz {name}, poz kitaplığındaki Saved klasörüne kaydedildi.",
+ "cards.gen_pose_delete": "Bu kaydedilmiş pozu sil",
+ "cards.gen_save_legend": "Kaydet",
+ "cards.gen_reveal_failed": "Bu dosya artık orada değil."
 }

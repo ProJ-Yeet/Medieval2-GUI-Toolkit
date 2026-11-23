@@ -13537,5 +13537,12 @@
  "cards.gen_peek_hint": "点击列表中的一支部队即可在此查看，拖动可旋转它，双击它或按“使用此部队”即可生成其卡片。",
  "cards.gen_ug": "盔甲升级",
  "cards.gen_ug_base": "士兵模型",
- "cards.gen_ug_level": "等级 {level}"
+ "cards.gen_ug_level": "等级 {level}",
+ "cards.gen_pose_name": "姿势名称",
+ "cards.gen_pose_save": "保存姿势",
+ "cards.gen_pose_default": "姿势 {n}",
+ "cards.gen_pose_saved": "已将姿势 {name} 保存到姿势库中的 Saved 文件夹。",
+ "cards.gen_pose_delete": "删除此已保存的姿势",
+ "cards.gen_save_legend": "保存",
+ "cards.gen_reveal_failed": "该文件已不存在。"
 }
