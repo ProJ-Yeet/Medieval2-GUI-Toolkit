@@ -544,13 +544,18 @@ async function rcApply(){
 
 function edDeleteDialog(){
   const e=state.ed;
+  // one owner only: taking it away from that faction is deleting the unit
+  const owners=(()=>{const o=csv(edFieldVal('ownership'));return o.length>1?o:[];})();
   document.getElementById('modal').innerHTML=`<h2 class="w-bad">${tt('packs.delete',{type:esc(e.d.type)})}</h2>
     <div class="mbody">
-      <div class="warnbox">${tt('packs.this_removes_the_units_block_from')}</div>
+      <label>${tt('packs.delete_for')} <select id="dOptFaction" onchange="edDeleteFactionPick()">
+        <option value="">${tt('packs.delete_for_every_faction')}</option>
+        ${owners.map(f=>`<option value="${esc(f)}">${esc(f)}</option>`).join('')}</select></label>
+      <div class="warnbox" id="dWarn">${tt('packs.this_removes_the_units_block_from')}</div>
       <fieldset><legend>${tt('packs.also_remove')}</legend>
-        <label class="chk"><input type="checkbox" id="dOptLoc" checked> ${tt('packs.its_text_entry_from_export_units',{dictionary:esc(e.d.dictionary)})}</label><br>
+        <span class="dAll"><label class="chk"><input type="checkbox" id="dOptLoc" checked> ${tt('packs.its_text_entry_from_export_units',{dictionary:esc(e.d.dictionary)})}</label><br>
         <label class="chk"><input type="checkbox" id="dOptModels" checked> ${tt('packs.its_battle_model_entries_only_ones')}</label><br>
-        <label class="chk"><input type="checkbox" id="dOptAssets"> ${tt('packs.the_mesh_texture_files_of_those')}</label><br>
+        <label class="chk"><input type="checkbox" id="dOptAssets"> ${tt('packs.the_mesh_texture_files_of_those')}</label><br></span>
         <label class="chk"><input type="checkbox" id="dOptIcons"> ${tt('packs.its_unit_card_and_info_card')}</label><br>
         <label class="chk" title="${ttA('packs.its_lines_elsewhere_title')}"><input type="checkbox" id="dOptRefs" checked onchange="edDeletePreview()"> ${tt('packs.its_lines_elsewhere')}</label>
       </fieldset>
@@ -559,13 +564,22 @@ function edDeleteDialog(){
     </div>
     <div class="foot"><button onclick="renderEditor()">${tt('common.cancel')}</button>
       <button onclick="edDeletePreview()">${tt('common.probe')}</button>
-      <button class="danger" onclick="edDoDelete()">${tt('packs.delete_unit')}</button></div>`;
+      <button class="danger" id="dGo" onclick="edDoDelete()">${tt('packs.delete_unit')}</button></div>`;
   edDeletePreview();
 }
+// For one faction the unit stays: its text, models and files are other factions' too.
+function edDeleteFactionPick(){
+  const f=edDeleteFaction();
+  document.querySelectorAll('#modal .dAll input').forEach(el=>{el.disabled=!!f;});
+  document.getElementById('dWarn').innerHTML=f?tt('packs.delete_for_faction_warn',{faction:esc(f)}):tt('packs.this_removes_the_units_block_from');
+  document.getElementById('dGo').textContent=f?tt('packs.delete_for_faction_go',{faction:f}):tt('packs.delete_unit');
+  edDeletePreview();
+}
+function edDeleteFaction(){const el=document.getElementById('dOptFaction');return el?el.value:'';}
 function edDeleteOpts(){
   const g=id=>{const el=document.getElementById(id);return !!(el&&el.checked);};
   return {delete:true,delete_options:{remove_loc:g('dOptLoc'),remove_models:g('dOptModels'),
-    remove_assets:g('dOptAssets'),remove_icons:g('dOptIcons'),remove_refs:g('dOptRefs')}};
+    remove_assets:g('dOptAssets'),remove_icons:g('dOptIcons'),remove_refs:g('dOptRefs'),faction:edDeleteFaction()}};
 }
 async function edDeletePreview(){
   const box=document.getElementById('edPreview'); if(!box)return;
@@ -575,7 +589,9 @@ async function edDeletePreview(){
 }
 async function edDoDelete(){
   const e=state.ed;
-  if(!confirm(tt('packs.delete_from_it_is_backed_up',{type:e.d.type,mod:e.mod})))return;
+  const f=edDeleteFaction();
+  if(!confirm(f?tt('packs.delete_for_faction_confirm',{type:e.d.type,faction:f,mod:e.mod})
+    :tt('packs.delete_from_it_is_backed_up',{type:e.d.type,mod:e.mod})))return;
   const res=await api.post('/api/edit/apply',edPayload(edDeleteOpts()));
   if(res.error){toast(tt('packs.delete_failed_error',{error:res.error}));return;}
   closeModal(); toast(tt('packs.deleted_undo_in_log',{type:e.d.type}),4200);

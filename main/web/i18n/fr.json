@@ -14205,5 +14205,13 @@
  "mapgen.hydro_file": "Fichier HydroRIVERS (le ZIP ou son fichier .shp)",
  "mapgen.hydro_browse": "Parcourir...",
  "mapgen.hydro_order": "Rivières d'ordre",
- "mapgen.hydro_note": "HydroRIVERS (Lehner et Grill 2013, hydrosheds.org) est un réseau de rivières homogène. Son ordre est l'ordre de Strahler : 4 conserve les grandes rivières et 1 tous les cours d'eau. Téléchargez le ZIP du shapefile de votre région et indiquez son emplacement ici. Le toolkit le lit sur cet ordinateur et n'envoie rien. Les ravins et volcans proviennent toujours de OpenStreetMap si cette option est activée. De Mylae's M2TW Editor. Téléchargements :"
+ "mapgen.hydro_note": "HydroRIVERS (Lehner et Grill 2013, hydrosheds.org) est un réseau de rivières homogène. Son ordre est l'ordre de Strahler : 4 conserve les grandes rivières et 1 tous les cours d'eau. Téléchargez le ZIP du shapefile de votre région et indiquez son emplacement ici. Le toolkit le lit sur cet ordinateur et n'envoie rien. Les ravins et volcans proviennent toujours de OpenStreetMap si cette option est activée. De Mylae's M2TW Editor. Téléchargements :",
+ "packs.delete_for": "Supprimer pour",
+ "packs.delete_for_every_faction": "Toutes les factions (l'unité entière)",
+ "packs.delete_for_faction_warn": "L'unité reste disponible pour ses autres propriétaires. <b>{faction}</b> est retirée de ses lignes <code>ownership</code> et <code>era</code> ; si la dernière case est cochée, ses propres lignes de recrutement sont aussi supprimées (son nom est retiré d'une liste <code>factions { }</code>, et une ligne qui ne la concerne qu'elle est supprimée). Les lignes de l'unité dans ses armées de départ sont également supprimées. L'entrée texte et les modèles sont conservés ; tout script qui mentionne l'unité est indiqué ci-dessous pour vérification, sans jamais être modifié.",
+ "packs.delete_for_faction_go": "Retirer de {faction}",
+ "packs.delete_for_faction_confirm": "Retirer \"{type}\" de {faction} dans {mod} ? Les autres factions la conservent.\n\nUne sauvegarde est d'abord créée, afin que tu puisses annuler l'action depuis le journal d'annulation.",
+ "eng.edit.delete_faction_not_owner": "{faction} ne possède pas '{unit}', il n'y a donc rien à lui retirer",
+ "eng.edit.delete_faction_only_owner": "{faction} est la seule faction qui possède '{unit}' - choisis Toutes les factions pour supprimer l'unité",
+ "eng.edit.delete_faction_left_lines": "{n} ligne(s) de recrutement qui ne mentionnent pas {faction} dans une liste factions (une indication culture, not ou or) ont été conservées - la ligne ownership empêche déjà {faction} de recruter l'unité : {spots}{more}"
 }

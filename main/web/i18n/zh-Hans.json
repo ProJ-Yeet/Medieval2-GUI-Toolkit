@@ -13408,5 +13408,13 @@
  "mapgen.hydro_file": "HydroRIVERS 文件（ZIP 或其中的 .shp 文件）",
  "mapgen.hydro_browse": "浏览...",
  "mapgen.hydro_order": "河流级别",
- "mapgen.hydro_note": "HydroRIVERS（Lehner 和 Grill 2013，hydrosheds.org）是一套整洁的河流网。其级别为 Strahler 级别：4 保留较大的河流，1 保留所有溪流。下载所在地区的 shapefile ZIP，并在此选择。Toolkit 会在本机读取，不会发送任何内容。如果 OpenStreetMap 已启用，峭壁和火山仍由它提供。来自 Mylae's M2TW Editor。下载："
+ "mapgen.hydro_note": "HydroRIVERS（Lehner 和 Grill 2013，hydrosheds.org）是一套整洁的河流网。其级别为 Strahler 级别：4 保留较大的河流，1 保留所有溪流。下载所在地区的 shapefile ZIP，并在此选择。Toolkit 会在本机读取，不会发送任何内容。如果 OpenStreetMap 已启用，峭壁和火山仍由它提供。来自 Mylae's M2TW Editor。下载：",
+ "packs.delete_for": "为以下势力删除",
+ "packs.delete_for_faction_go": "从 {faction} 中移除",
+ "eng.edit.delete_faction_not_owner": "{faction} 不拥有 '{unit}'，因此无需从该势力移除任何内容",
+ "eng.edit.delete_faction_only_owner": "{faction} 是唯一拥有“{unit}”的派系 - 请选择“所有派系”以删除该部队",
+ "eng.edit.delete_faction_left_lines": "保留了 {n} 条招募行，这些行没有在派系列表中点名 {faction}（通过文化、not 或 or 生效） - ownership 行已阻止 {faction} 招募该部队：{spots}{more}",
+ "packs.delete_for_faction_warn": "该部队会保留给其他所有者。<b>{faction}</b>会从其 <code>ownership</code> 和 <code>era</code> 行中移除；勾选最后一个框时，也会删除其自身的招募行（其名称会从 <code>factions { }</code> 列表中移除，且仅针对它的行会被删除）。其初始军队中该部队的行也会删除。文本条目和模型会保留；下方会列出提及该部队的脚本供你检查，但不会修改脚本。",
+ "packs.delete_for_every_faction": "所有派系（整个部队）",
+ "packs.delete_for_faction_confirm": "要从 {mod} 中的 {faction} 移除“{type}”吗？其他派系会保留它。\n\n系统会先备份，你可以从 🕑 日志中撤销此操作。"
 }

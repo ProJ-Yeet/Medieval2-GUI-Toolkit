@@ -13551,5 +13551,13 @@
  "mapgen.hydro_file": "HydroRIVERS dosyası (ZIP veya içindeki .shp dosyası)",
  "mapgen.hydro_browse": "Gözat...",
  "mapgen.hydro_order": "Sırası şu olan nehirler:",
- "mapgen.hydro_note": "HydroRIVERS (Lehner ve Grill 2013, hydrosheds.org) düzenli bir nehir ağıdır. Sırası Strahler sırasıdır: 4 büyük nehirleri, 1 ise tüm dereleri tutar. Bölgenize ait shapefile ZIP dosyasını indirip burada belirtin. Toolkit dosyayı bu bilgisayarda okur ve hiçbir şey göndermez. Açık olduğunda uçurumlar ve volkanlar yine OpenStreetMap'ten alınır. Mylae's M2TW Editor'dan. İndirmeler:"
+ "mapgen.hydro_note": "HydroRIVERS (Lehner ve Grill 2013, hydrosheds.org) düzenli bir nehir ağıdır. Sırası Strahler sırasıdır: 4 büyük nehirleri, 1 ise tüm dereleri tutar. Bölgenize ait shapefile ZIP dosyasını indirip burada belirtin. Toolkit dosyayı bu bilgisayarda okur ve hiçbir şey göndermez. Açık olduğunda uçurumlar ve volkanlar yine OpenStreetMap'ten alınır. Mylae's M2TW Editor'dan. İndirmeler:",
+ "packs.delete_for": "Şunun için sil",
+ "packs.delete_for_every_faction": "Tüm fraksiyonlar (birimin tamamı)",
+ "packs.delete_for_faction_go": "{faction} içinden kaldır",
+ "packs.delete_for_faction_confirm": "\"{type}\" birimini {mod} içinde {faction} fraksiyonundan kaldır? Diğer fraksiyonlar birimi korur.\n\nÖnce yedek alınır; böylece işlemi Geri Alma Günlüğü'nden geri alabilirsiniz.",
+ "eng.edit.delete_faction_not_owner": "{faction}, '{unit}' biriminin sahibi değil; bu nedenle ondan kaldırılacak bir şey yok",
+ "eng.edit.delete_faction_only_owner": "'{unit}' biriminin tek sahibi {faction}; birimi silmek için Tüm fraksiyonlar'ı seçin",
+ "packs.delete_for_faction_warn": "Birim diğer sahiplerinde kalır. <b>{faction}</b>, <code>ownership</code> ve <code>era</code> satırlarından çıkarılır; son kutu işaretlendiğinde kendi devşirme satırları da silinir (adı bir <code>factions { }</code> listesinden çıkarılır ve yalnızca ona ait bir satır silinir). Birimin başlangıç ordularındaki satırları da silinir. Metin girdisi ve modeller kalır; birimden bahseden script'ler incelemeniz için aşağıda listelenir, hiçbir zaman değiştirilmez.",
+ "eng.edit.delete_faction_left_lines": "{faction} adını fraksiyon listesinde belirtmeyen {n} devşirme satırı bırakıldı (bir kültür, not veya or üzerinden geçerli) - ownership satırı zaten {faction} fraksiyonunun bu birimi devşirmesini engelliyor: {spots}{more}"
 }

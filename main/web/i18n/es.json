@@ -14565,5 +14565,13 @@
  "mapgen.hydro_file": "Archivo HydroRIVERS (el ZIP o su archivo .shp)",
  "mapgen.hydro_browse": "Examinar...",
  "mapgen.hydro_order": "Ríos de orden",
- "mapgen.hydro_note": "HydroRIVERS (Lehner y Grill 2013, hydrosheds.org) es una red fluvial limpia. Su orden es el orden Strahler: 4 conserva los ríos más grandes y 1 todos los arroyos. Descarga el ZIP del shapefile de tu región e indícalo aquí. El toolkit lo lee en este equipo y no envía nada. Los acantilados y volcanes siguen procediendo de OpenStreetMap cuando está activado. De Mylae's M2TW Editor. Descargas:"
+ "mapgen.hydro_note": "HydroRIVERS (Lehner y Grill 2013, hydrosheds.org) es una red fluvial limpia. Su orden es el orden Strahler: 4 conserva los ríos más grandes y 1 todos los arroyos. Descarga el ZIP del shapefile de tu región e indícalo aquí. El toolkit lo lee en este equipo y no envía nada. Los acantilados y volcanes siguen procediendo de OpenStreetMap cuando está activado. De Mylae's M2TW Editor. Descargas:",
+ "packs.delete_for": "Eliminar para",
+ "packs.delete_for_every_faction": "Todas las facciones (la unidad completa)",
+ "packs.delete_for_faction_warn": "La unidad se conserva para sus otros propietarios. <b>{faction}</b> se elimina de sus líneas <code>ownership</code> y <code>era</code>; si marcas la última casilla, también se eliminan sus propias líneas de reclutamiento (su nombre se quita de una lista <code>factions { }</code> y se elimina una línea exclusiva para ella). También se eliminan las líneas de la unidad en sus ejércitos iniciales. La entrada de texto y los modelos se conservan; abajo se muestra para que lo revises cualquier script que mencione la unidad, pero nunca se modifica.",
+ "packs.delete_for_faction_go": "Eliminar de {faction}",
+ "packs.delete_for_faction_confirm": "¿Eliminar \"{type}\" de {faction} en {mod}? Las demás facciones la conservan.\n\nPrimero se crea una copia de seguridad para que puedas deshacerlo desde el registro de deshacer.",
+ "eng.edit.delete_faction_not_owner": "{faction} no posee '{unit}', así que no hay nada que quitarle",
+ "eng.edit.delete_faction_only_owner": "{faction} es la única facción que posee '{unit}' - elige Todas las facciones para eliminar la unidad",
+ "eng.edit.delete_faction_left_lines": "Se conservaron {n} línea(s) de reclutamiento que no nombran a {faction} en una lista de facciones (llegan por una cultura, un not o un or) - la línea ownership ya impide que {faction} la reclute: {spots}{more}"
 }

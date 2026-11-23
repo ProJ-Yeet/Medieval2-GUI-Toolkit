@@ -14101,5 +14101,13 @@
  "mapgen.hydro_file": "HydroRIVERS-Datei (das ZIP oder die darin enthaltene .shp-Datei)",
  "mapgen.hydro_browse": "Durchsuchen...",
  "mapgen.hydro_order": "Flüsse der Ordnung",
- "mapgen.hydro_note": "HydroRIVERS (Lehner und Grill 2013, hydrosheds.org) ist ein sauberes Flussnetz. Die Ordnung entspricht der Strahler-Ordnung: 4 behält die größeren Flüsse, 1 jeden Bach. Lade das Shapefile-ZIP für deine Region herunter und gib es hier an. Das Toolkit liest es auf diesem Rechner ein und sendet keine Daten. Klippen und Vulkane stammen weiterhin aus OpenStreetMap, wenn es aktiviert ist. Von Mylaes M2TW Editor. Downloads:"
+ "mapgen.hydro_note": "HydroRIVERS (Lehner und Grill 2013, hydrosheds.org) ist ein sauberes Flussnetz. Die Ordnung entspricht der Strahler-Ordnung: 4 behält die größeren Flüsse, 1 jeden Bach. Lade das Shapefile-ZIP für deine Region herunter und gib es hier an. Das Toolkit liest es auf diesem Rechner ein und sendet keine Daten. Klippen und Vulkane stammen weiterhin aus OpenStreetMap, wenn es aktiviert ist. Von Mylaes M2TW Editor. Downloads:",
+ "packs.delete_for": "Entfernen für",
+ "packs.delete_for_every_faction": "Alle Fraktionen (die gesamte Einheit)",
+ "packs.delete_for_faction_warn": "Die Einheit bleibt für ihre anderen Besitzer erhalten. <b>{faction}</b> wird aus den Zeilen <code>ownership</code> und <code>era</code> entfernt; wenn das letzte Kästchen aktiviert ist, werden auch die eigenen Rekrutierungszeilen entfernt (ihr Name wird aus einer Liste <code>factions { }</code> entfernt, und eine nur für sie geltende Zeile wird gelöscht). Ebenso werden die Zeilen der Einheit in ihren Startarmeen entfernt. Der Texteintrag und die Modelle bleiben erhalten; ein Skript, das die Einheit nennt, wird unten zur Prüfung aufgeführt, aber nie geändert.",
+ "packs.delete_for_faction_go": "Aus {faction} entfernen",
+ "packs.delete_for_faction_confirm": "\"{type}\" aus {faction} in {mod} entfernen? Die anderen Fraktionen behalten die Einheit.\n\nZuerst wird eine Sicherung erstellt, damit du die Aktion über das Rückgängig-Protokoll rückgängig machen kannst.",
+ "eng.edit.delete_faction_not_owner": "{faction} besitzt '{unit}' nicht, daher kann dieser Fraktion nichts weggenommen werden",
+ "eng.edit.delete_faction_only_owner": "{faction} ist die einzige Fraktion, die '{unit}' besitzt - wähle Alle Fraktionen, um die Einheit zu löschen",
+ "eng.edit.delete_faction_left_lines": "{n} Rekrutierungszeile(n) nennen {faction} nicht namentlich in einer Fraktionsliste (sie gelten über eine Kultur, ein not oder ein or) und wurden beibehalten - die ownership-Zeile verhindert bereits, dass {faction} die Einheit rekrutiert: {spots}{more}"
 }

@@ -304,10 +304,14 @@ class RemoveResult:
     kept: List[Ref] = field(default_factory=list)       # still name it: check by hand
     alone: List[Ref] = field(default_factory=list)      # removed, and it was an army's only unit
     texts: Dict[Path, str] = field(default_factory=dict)
+    # one faction only (remove_for_faction): lines rewritten rather than cut,
+    # and recruit lines left because they do not name the faction
+    edited: List[Ref] = field(default_factory=list)
+    left: List[Ref] = field(default_factory=list)
 
     def counts(self) -> List[Tuple[str, int]]:
         per: Dict[str, int] = {}
-        for r in self.removed:
+        for r in self.removed + self.edited:
             per[r.rel] = per.get(r.rel, 0) + 1
         return sorted(per.items(), key=lambda kv: (-kv[1], kv[0]))
 
@@ -349,19 +353,107 @@ def remove_refs(mod, unit_type: str, all_types: Optional[Iterable[str]] = None,
                 res.kept.append(r)
         if not drop:
             continue
-        # an army or garrison left with no unit: said, since the game may refuse it
-        for i in sorted(drop):
-            if not _UNIT_LINE.match(lines[i]):
-                continue
-            j, k = i - 1, i + 1
-            while j >= 0 and (j in drop or not lines[j].strip()):
-                j -= 1
-            while k < len(lines) and (k in drop or not lines[k].strip()):
-                k += 1
-            before = lines[j].strip().lower() if j >= 0 else ""
-            after = lines[k] if k < len(lines) else ""
-            if before.startswith("army") and not _UNIT_LINE.match(after):
-                res.alone.extend(r for r in refs if r.line - 1 == i)
+        _note_alone(lines, drop, refs, res)
+        res.texts[path] = "\n".join(l for i, l in enumerate(lines) if i not in drop)
+    return res
+
+
+def _note_alone(lines: List[str], drop: set, refs: List[Ref], res: RemoveResult) -> None:
+    """An army or garrison left with no unit: said, since the game may refuse it."""
+    for i in sorted(drop):
+        if not _UNIT_LINE.match(lines[i]):
+            continue
+        j, k = i - 1, i + 1
+        while j >= 0 and (j in drop or not lines[j].strip()):
+            j -= 1
+        while k < len(lines) and (k in drop or not lines[k].strip()):
+            k += 1
+        before = lines[j].strip().lower() if j >= 0 else ""
+        after = lines[k] if k < len(lines) else ""
+        if before.startswith("army") and not _UNIT_LINE.match(after):
+            res.alone.extend(r for r in refs if r.line - 1 == i)
+
+
+#: a `factions { ... }` condition of an EDB line, and whether a `not` turns it round
+_FAC_CLAUSE = re.compile(r"(?P<not>\bnot\s+)?\bfactions\s*\{(?P<body>[^}]*)\}", re.I)
+_FAC_LINE = re.compile(r"^\s*faction\s+(?P<f>[A-Za-z0-9_\-]+)", re.I)
+
+
+def _names(body: str) -> List[str]:
+    return [t for t in re.split(r"[\s,]+", body) if t]
+
+
+def remove_for_faction(mod, unit_type: str, faction: str,
+                       all_types: Optional[Iterable[str]] = None,
+                       paths: Optional[Sequence[Path]] = None) -> RemoveResult:
+    """What taking ``unit_type`` away from ONE faction does outside the EDU.
+
+    * a recruit / retrain line whose ``factions { }`` list names the faction:
+      the name leaves the list (``edited``), and a line whose list held only
+      that faction goes whole (``removed``). A list inside ``not``, a line
+      joined with ``or``, and a line that reaches the faction only through its
+      culture or no list at all are ``left``: the EDU's ownership line, which
+      no longer names the faction, is what stops it recruiting the unit there.
+    * a ``unit`` line of that faction's armies, in every campaign and battle
+      under ``world/`` (``removed``); the other factions' armies keep theirs.
+    * a script or a Lua file naming the unit is ``kept``: whose spawn it is
+      cannot be told safely. Mercenaries, rebels and the voice bank belong to
+      no faction and are not touched.
+    """
+    res = RemoveResult()
+    fac = faction.strip().lower()
+    found = find_refs(mod, unit_type, all_types, paths)
+    by_path: Dict[Path, List[Ref]] = {}
+    for r in found.refs:
+        by_path.setdefault(r.path, []).append(r)
+    for path, refs in by_path.items():
+        name = path.name.lower()
+        rel_low = "/" + refs[0].rel.lower()
+        lines = _read(path).split("\n")
+        drop, changed = set(), False
+        if name == "export_descr_buildings.txt":
+            for r in refs:
+                i = r.line - 1
+                raw = lines[i] if 0 <= i < len(lines) else ""
+                if not _removable(r.rel, raw, unit_type):
+                    continue
+                hits = [m for m in _FAC_CLAUSE.finditer(raw)
+                        if not m.group("not") and fac in (n.lower() for n in _names(m.group("body")))]
+                if not hits:
+                    res.left.append(r)
+                    continue
+                emptied = False
+                out, pos = [], 0
+                for m in hits:
+                    kept = [n for n in _names(m.group("body")) if n.lower() != fac]
+                    emptied = emptied or not kept
+                    out.append(raw[pos:m.start("body") - 1])
+                    out.append("{ " + "".join(n + ", " for n in kept) + "}")
+                    pos = m.end()
+                out.append(raw[pos:])
+                if emptied and re.search(r"\bor\b", raw, re.I):
+                    res.left.append(r)
+                elif emptied:
+                    drop.add(i)
+                    res.removed.append(r)
+                else:
+                    lines[i] = "".join(out)
+                    changed = True
+                    res.edited.append(r)
+        elif "/world/" in rel_low and name.startswith("descr_"):
+            owner, at = "", {r.line - 1: r for r in refs}
+            for i, line in enumerate(lines):
+                m = _FAC_LINE.match(line)
+                if m:
+                    owner = m.group("f").lower()
+                elif i in at and owner == fac and _removable(at[i].rel, line, unit_type):
+                    drop.add(i)
+                    res.removed.append(at[i])
+        elif name.endswith(".lua") or ("/world/" in rel_low and not name.startswith("descr_")):
+            res.kept.extend(refs)
+        if not drop and not changed:
+            continue
+        _note_alone(lines, drop, refs, res)
         res.texts[path] = "\n".join(l for i, l in enumerate(lines) if i not in drop)
     return res
 

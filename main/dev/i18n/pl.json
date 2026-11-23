@@ -14812,5 +14812,13 @@
  "mapgen.hydro_file": "Plik HydroRIVERS (ZIP albo zawarty w nim plik .shp)",
  "mapgen.hydro_browse": "Przeglądaj...",
  "mapgen.hydro_order": "Rzeki rzędu",
- "mapgen.hydro_note": "HydroRIVERS (Lehner i Grill 2013, hydrosheds.org) to uporządkowana sieć rzek. Jej rzęd to rząd Strahlera: 4 zachowuje większe rzeki, a 1 wszystkie strumienie. Pobierz plik ZIP z shapefile'em dla swojego regionu i wskaż go tutaj. Toolkit odczytuje go na tym komputerze i niczego nie wysyła. Klify i wulkany nadal pochodzą z OpenStreetMap, gdy ta opcja jest włączona. Od Mylae's M2TW Editor. Pliki do pobrania:"
+ "mapgen.hydro_note": "HydroRIVERS (Lehner i Grill 2013, hydrosheds.org) to uporządkowana sieć rzek. Jej rzęd to rząd Strahlera: 4 zachowuje większe rzeki, a 1 wszystkie strumienie. Pobierz plik ZIP z shapefile'em dla swojego regionu i wskaż go tutaj. Toolkit odczytuje go na tym komputerze i niczego nie wysyła. Klify i wulkany nadal pochodzą z OpenStreetMap, gdy ta opcja jest włączona. Od Mylae's M2TW Editor. Pliki do pobrania:",
+ "packs.delete_for": "Usuń dla",
+ "packs.delete_for_every_faction": "Wszystkie frakcje (cała jednostka)",
+ "packs.delete_for_faction_warn": "Jednostka pozostanie u pozostałych właścicieli. Frakcja <b>{faction}</b> zostanie usunięta z jej wierszy <code>ownership</code> i <code>era</code>; po zaznaczeniu ostatniego pola zostaną usunięte również jej własne wiersze rekrutacji (jej nazwa zniknie z listy <code>factions { }</code>, a wiersz dotyczący wyłącznie jej zostanie usunięty). Usunięte zostaną także wiersze jednostki w jej armiach początkowych. Wpis tekstowy i modele pozostaną; skrypt wymieniający jednostkę zostanie poniżej podany do sprawdzenia, ale nie zostanie zmieniony.",
+ "packs.delete_for_faction_go": "Usuń z {faction}",
+ "packs.delete_for_faction_confirm": "Usunąć \"{type}\" z frakcji {faction} w {mod}? Pozostałe frakcje ją zachowają.\n\nNajpierw zostanie utworzona kopia zapasowa, aby można było cofnąć tę zmianę w dzienniku cofania.",
+ "eng.edit.delete_faction_not_owner": "Frakcja {faction} nie posiada jednostki '{unit}', więc nie ma czego jej odbierać",
+ "eng.edit.delete_faction_only_owner": "Frakcja {faction} jako jedyna posiada jednostkę '{unit}' - wybierz Wszystkie frakcje, aby usunąć jednostkę",
+ "eng.edit.delete_faction_left_lines": "Pozostawiono {n} wiersz(e) rekrutacji, które nie wymieniają frakcji {faction} z nazwy na liście frakcji (obejmują ją przez kultura, not lub or) - wiersz ownership już uniemożliwia frakcji {faction} rekrutację tej jednostki: {spots}{more}"
 }

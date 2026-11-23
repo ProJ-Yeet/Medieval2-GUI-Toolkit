@@ -145,6 +145,10 @@ class DeleteOptions:
     # the lines elsewhere that only name the unit: recruitment, armies and
     # garrisons, mercenary pools, rebel lists (unitrefs.remove_refs)
     remove_refs: bool = True
+    # One faction only: the unit stays, that faction leaves its ownership and
+    # era lines and the recruitment and armies that are its own
+    # (unitrefs.remove_for_faction). "" deletes the unit for every faction.
+    faction: str = ""
 
 
 @dataclass
@@ -302,7 +306,8 @@ def request_from_dict(d: dict) -> EditRequest:
             remove_models=bool(dops.get("remove_models", False)),
             remove_assets=bool(dops.get("remove_assets", False)),
             remove_icons=bool(dops.get("remove_icons", False)),
-            remove_refs=bool(dops.get("remove_refs", True))),
+            remove_refs=bool(dops.get("remove_refs", True)),
+            faction=str(dops.get("faction") or "").strip().lower()),
     )
 
 
@@ -1669,6 +1674,8 @@ def _plan_raw_model(plan: EditPlan, mod: Mod, nm: NewModel,
 
 def _plan_delete(plan: EditPlan, unit) -> EditPlan:
     mod, opts = plan.mod, plan.request.delete_options
+    if opts.faction:
+        return _plan_delete_faction(plan, unit, opts.faction)
     kept = [u for u in mod.edu.units if u.type != unit.type]
     _take_split(plan, eop.compose(mod, kept))
     plan.changes.append(
@@ -1773,6 +1780,77 @@ def _plan_delete(plan: EditPlan, unit) -> EditPlan:
                 break
             plan.deletes.append(rel)
             plan.changes.append(f"deleted data/{rel}")
+    return plan
+
+
+_OWNER_LINE = re.compile(r"^(?P<head>\s*(?:ownership|era\s+\d+)\s+)(?P<body>[^;\r\n]*?)(?P<tail>\s*(?:;.*)?\r?)$",
+                         re.I)
+
+
+def _plan_delete_faction(plan: EditPlan, unit, faction: str) -> EditPlan:
+    """Take the unit away from one faction; every other owner keeps it.
+
+    The faction leaves the block's ``ownership`` line and every ``era`` line
+    (an era line it was alone on goes), then its own recruitment and its own
+    armies leave the other files (:func:`unitrefs.remove_for_faction`), and,
+    with the icons box, its own card and info card. The text entry, the models
+    and everything that belongs to no faction stay: other factions still use them.
+    """
+    mod, opts = plan.mod, plan.request.delete_options
+    owners = [f.lower() for f in unit.ownership]
+    if faction not in owners:
+        plan.errors.append(_i18n.msg("eng.edit.delete_faction_not_owner", "{faction} does not own '{unit}', so there is nothing to take away from it", faction=faction, unit=unit.type))
+        return plan
+    if not [f for f in owners if f != faction]:
+        plan.errors.append(_i18n.msg("eng.edit.delete_faction_only_owner", "{faction} is the only faction that owns '{unit}' - choose Every faction to delete the unit", faction=faction, unit=unit.type))
+        return plan
+
+    out = []
+    for line in unit.raw.split("\n"):
+        m = _OWNER_LINE.match(line)
+        if m:
+            names = [n.strip() for n in m.group("body").split(",") if n.strip()]
+            kept = [n for n in names if n.lower() != faction]
+            if len(kept) != len(names):
+                if not kept:
+                    continue
+                line = m.group("head") + ", ".join(kept) + m.group("tail")
+        out.append(line)
+    _take_split(plan, _replace_block(mod, unit, "\n".join(out)))
+    plan.changes.append(f"{faction} removed from the ownership and era lines of '{unit.type}'")
+
+    if opts.remove_refs:
+        gone = unitrefs.remove_for_faction(mod, unit.type, faction, [u.type for u in mod.edu.units])
+        plan.ref_texts.update(gone.texts)
+        plan.ref_counts = gone.counts()
+        if gone.removed or gone.edited:
+            plan.changes.append(
+                f"{len(gone.removed) + len(gone.edited)} line(s) giving '{unit.type}' to {faction} changed in "
+                + ", ".join(f"{f} ({n})" for f, n in gone.counts()[:5])
+                + ("…" if len(gone.counts()) > 5 else ""))
+        for r in gone.alone[:5]:
+            plan.warnings.append(_i18n.msg(
+                "eng.edit.delete_left_an_army_empty",
+                "{where}: that army or garrison had only this unit, and is left with none - give it another unit, or the game may refuse the campaign",
+                where=r.label()))
+        if gone.left:
+            plan.warnings.append(_i18n.msg(
+                "eng.edit.delete_faction_left_lines",
+                "{n} recruit line(s) do not name {faction} in a factions list (a culture, a not, an or) and were left - the ownership line already stops {faction} recruiting it: {spots}{more}",
+                n=len(gone.left), faction=faction, spots=", ".join(r.label() for r in gone.left[:5]),
+                more="…" if len(gone.left) > 5 else ""))
+        if gone.kept:
+            plan.warnings.append(_i18n.msg(
+                "eng.edit.delete_still_named",
+                "{n} other place(s) still name '{unit}' and were left alone (a script or a list that cannot be cut safely) - check them by hand: {spots}{more}",
+                n=len(gone.kept), unit=unit.type, spots=", ".join(r.label() for r in gone.kept[:5]),
+                more="…" if len(gone.kept) > 5 else ""))
+
+    if opts.remove_icons:
+        for _abs, rel, _kind in _unit_icon_files(mod, unit.dictionary):
+            if rel.lower().split("/")[-2] == faction:
+                plan.deletes.append(rel)
+                plan.changes.append(f"deleted data/{rel}")
     return plan
 
 
