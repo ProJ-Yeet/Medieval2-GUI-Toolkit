@@ -14685,5 +14685,20 @@
   "other": "Dibujando {count} objetos de {entry}."
  },
  "cards.gen_view_hint_simple": "En la vista HD, arrastra con el botón izquierdo para girar la cámara, con el derecho para desplazarla y usa la rueda para ampliar o reducir. Arrastra un control del esqueleto para moverlo. G mueve y R gira el modelo; X, Y o Z lo restringen a un eje. Haz clic o pulsa Intro para confirmar; Esc para restaurar.",
- "armory.exp_sec_entry": "La entrada del modelo"
+ "armory.exp_sec_entry": "La entrada del modelo",
+ "cards.gen_random": "Aleatorizar variación",
+ "cards.gen_random_title": "Elegir al azar otra variante de cada pieza que tenga más de una.",
+ "cards.gen_peek_use": "Usar esta unidad",
+ "cards.gen_peek_cancel": "Mantener la unidad actual",
+ "cards.gen_peek_none": "Elige una unidad de la lista para verla.",
+ "cards.gen_bone": "Hueso",
+ "cards.gen_bone_none": "Ninguno seleccionado",
+ "cards.gen_bone_loc": "Ubicación",
+ "cards.gen_bone_rot": "Rotación",
+ "cards.gen_bone_move": "Mover (G)",
+ "cards.gen_bone_move_title": "Mueve el hueso seleccionado con el ratón. X, Y o Z lo limita al eje de Blender (Z hacia arriba); un clic o Enter lo confirma, y Esc o un clic derecho lo restaura.",
+ "cards.gen_bone_turn": "Rotar (R)",
+ "cards.gen_bone_turn_title": "Rota el hueso seleccionado alrededor de su controlador con el ratón, en torno a la línea de visión, o con X, Y o Z alrededor de ese eje. Un clic o Enter lo confirma, y Esc o un clic derecho lo restaura.",
+ "cards.gen_bone_reset": "Restablecer hueso",
+ "cards.gen_peek_hint": "Haz clic en una unidad de la lista para verla aquí, arrástrala para girarla y haz doble clic en ella o pulsa «Usar esta unidad» para crear su tarjeta."
 }

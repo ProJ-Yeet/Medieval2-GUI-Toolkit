@@ -3877,25 +3877,49 @@ body.look-editing :is(button,label,legend,h1,h2,h3,.trsechead,.mftab):hover{outl
   .armlibnotes{width:100%;min-height:54px}
   .armlibnote{padding-left:4px}
   .armlibpick{display:flex;gap:6px;align-items:baseline;padding:3px 0}
-  /* 95m: unit cards, Generate (cardgen.js) */
+  /* 95m: unit cards, Generate (cardgen.js). 2026-11-23: the grid is sized to
+     the window (cgLayout) and each column scrolls alone, never sideways */
   .cdsub{margin:6px 0}
-  .cggrid{display:grid;grid-template-columns:minmax(300px,420px) 1fr;gap:12px;align-items:start}
-  .cgctl{display:flex;flex-direction:column;gap:6px;max-height:calc(100vh - 190px);overflow:auto}
-  body.topshut .cgctl{max-height:calc(100vh - 60px)}
+  .cggrid{display:grid;grid-template-columns:minmax(300px,420px) minmax(0,1fr);gap:12px;align-items:stretch;min-height:0}
+  .cggrid>*{min-height:0}
+  .cgctl{display:flex;flex-direction:column;gap:6px;overflow-y:auto;overflow-x:hidden;min-width:0;padding-right:4px}
+  .cgctl>*{flex:none;min-width:0;max-width:100%}
+  .cgctl select,.cgctl input:not([type=checkbox]):not([type=radio]):not([type=range]){max-width:100%}
   .cgctl fieldset{border:1px solid var(--edge);border-radius:7px;padding:5px 8px;display:flex;flex-direction:column;gap:4px}
-  .cgrange{display:grid;grid-template-columns:110px 1fr 44px;gap:6px;align-items:center}
-  .cgout{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;align-items:start;min-width:0}
+  .cgsec{border:1px solid var(--edge);border-radius:7px;padding:3px 8px;min-width:0}
+  .cgsec>summary{cursor:pointer;font-size:12px;text-transform:uppercase;letter-spacing:.04em;color:var(--dim);padding:2px 0;user-select:none}
+  .cgsec[open]>summary{margin-bottom:4px}
+  .cgsecbody{display:flex;flex-direction:column;gap:4px;min-width:0;padding-bottom:4px}
+  .cgctl .armexplist{min-width:0;max-height:55vh;flex:none}
+  .cgctl .armexplist>*{flex:none}
+  .cgctl .armexprowbtn{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:left}
+  .cgctl .armexprow{flex-wrap:wrap;min-width:0}
+  .cgrange{display:grid;grid-template-columns:110px minmax(0,1fr) 44px;gap:6px;align-items:center}
+  .cgrange input{min-width:0}
+  .cgout{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:12px;align-items:stretch;min-width:0;overflow:auto}
   .cghd{display:flex;flex-direction:column;gap:4px;min-width:0}
-  .cghd canvas{display:block;width:100%;height:auto;max-height:calc(100vh - 200px);object-fit:contain;
+  .cghd canvas{display:block;width:100%;height:auto;max-height:calc(var(--cgh,80vh) - 30px);object-fit:contain;
     background:repeating-conic-gradient(#2a2f37 0 25%,#323844 0 50%) 0 0/16px 16px;border:1px solid var(--edge)}
-  .cgcard{display:flex;flex-direction:column;gap:6px;align-items:flex-start;max-width:360px}
+  .cgcard{display:flex;flex-direction:column;gap:6px;align-items:stretch;min-width:0;overflow-y:auto;overflow-x:hidden;padding-right:4px}
+  .cgcard>canvas{align-self:flex-start}
+  .cgobjlist{max-height:none;overflow:visible}
   /* 99m-99n: the HD view takes the mouse, the rig's handles drawn over it */
   .cghdview{position:relative}
   .cghdview #cgHd{outline:none;touch-action:none}
   .cghdview #cgHd:focus-visible{box-shadow:0 0 0 2px var(--accent2)}
   .cghd #cgHdUi{position:absolute;pointer-events:none;background:none;border:none;max-height:none}
   .cgrig{display:flex;flex-direction:column;gap:5px}
-  .cgposes{width:100%}
+  .cgbonegrid{display:grid;grid-template-columns:auto repeat(3,minmax(0,1fr));gap:4px;align-items:center}
+  .cgbonegrid .armnum{width:100%}
+  .cgposes{display:grid;grid-template-columns:repeat(auto-fill,minmax(84px,1fr));gap:6px;width:100%}
+  .cgpose{display:flex;flex-direction:column;align-items:stretch;gap:2px;padding:3px;border:1px solid var(--edge);border-radius:6px;background:var(--panel2,#1b2028);cursor:pointer;min-width:0}
+  .cgpose img{width:100%;aspect-ratio:3/4;object-fit:cover;border-radius:4px;background:#363d48;display:block}
+  .cgpose span{font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .cgpose:hover{border-color:var(--accent2)}
+  .cgpose.on{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
+  /* the unit picker's 3D look at the unit */
+  .cgpeek{display:flex;flex-direction:column;gap:6px;min-width:0;min-height:0}
+  .cgpeek canvas{flex:1;min-height:200px;width:100%;border:1px solid var(--edge);border-radius:6px;cursor:grab;touch-action:none}
   @container page (max-width:1250px){.cgout{grid-template-columns:1fr}}
   .cgcard canvas{image-rendering:pixelated;background:repeating-conic-gradient(#2a2f37 0 25%,#323844 0 50%) 0 0/16px 16px;border:1px solid var(--edge)}
   @container page (max-width:900px){.cggrid{grid-template-columns:1fr}}

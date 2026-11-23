@@ -1138,6 +1138,47 @@ console.log(JSON.stringify({n, same: Array.from(d), grey: Array.from(e), body, s
     check(f"and saturation 0 makes it grey ({grey})", max(grey[:3]) - min(grey[:3]) <= 1)
     check(f"specks in the silhouette are dropped before the outline grows them into dots (kept {got.get('body')}, specks {got.get('specks')})",
           got.get("body") == 100 and got.get("specks") == 0)
+    # 2026-11-23: the card's object list, Randomize variation, and the HD view
+    # widened to the whole model with the card's own pixels unchanged inside it
+    probe = ("const tt=x=>x,ttN=x=>x,ARM={},armCollHidden=()=>false,armProj=()=>({objects:[]});"
+             "var state={cgSrc:'unit'};" + js + r""";
+const ob = (id, name, mesh) => ({id, name, mesh, src: [{asset: 'a', group: id}]});
+CG_UNIT.objects = [ob(1,'Head','h1'), ob(2,'Head','h2'), ob(3,'Head','h3'), ob(4,'Body','b1')];
+cgPaint = () => {}; cgFitChanged = () => {};
+const ids = () => cgObjects().map(o => o.id).join(',');
+const first = ids();
+cg().pick = {'a|head': 3}; const picked = ids();
+cg().off = [3]; const offFalls = ids();
+cg().oneEach = false; const all = ids();
+cg().off = []; cg().pick = {}; cg().oneEach = true;
+let changed = 0; for(let i = 0; i < 20; i++){ const before = ids(); cgRandom(); if(ids() !== before) changed++; }
+// a card camera seeing [-1,1] of a model twice as tall
+const I = [1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1];
+armMul = (a, b) => { const o = new Array(16).fill(0); for(let c = 0; c < 4; c++) for(let r = 0; r < 4; r++) for(let k = 0; k < 4; k++) o[c*4+r] += a[k*4+r]*b[c*4+k]; return o; };
+cgBounds = () => [[-0.5, -2, 0], [0.5, 2, 0]];
+const cam = {proj: I.slice(), view: I.slice(), pre: I.slice(), width: 2, height: 2};
+const wide = cgWide(cam, [], 100, 100);
+const corner = p => { const q = cgNdc(wide.camera, p); return [(q[0]+1)*wide.w/2, (1-q[1])*wide.h/2]; };
+console.log(JSON.stringify({first, picked, offFalls, all, changed, w: wide.w, h: wide.h, cut: wide.cut, tl: corner([1, 1, 0]), br: corner([-1, -1, 0]),
+  scale: wide.camera.width / wide.w * 100 / cam.width}));
+""")
+    (tmp / "probe5b.js").write_text(probe, encoding="utf-8")
+    out = subprocess.run([node, str(tmp / "probe5b.js")], capture_output=True, text=True, timeout=60)
+    got = json.loads(out.stdout or "null") or {}
+    if not got: print(out.stderr[-800:])
+    check(f"One of each part draws the first variant of each part ({got.get('first')})", got.get("first") == "1,4")
+    check(f"a variant picked in the card's object list is drawn instead ({got.get('picked')})", got.get("picked") == "3,4")
+    check(f"one switched off falls back to the first again ({got.get('offFalls')})", got.get("offFalls") == "1,4")
+    check(f"without One of each part every object left on is drawn ({got.get('all')})", got.get("all") == "1,2,4")
+    check(f"Randomize variation draws another head every time ({got.get('changed')} of 20)", got.get("changed") == 20)
+    cut = got.get("cut") or {}
+    check(f"the HD view grows to the whole model ({got.get('w')}x{got.get('h')}, the card at {cut})",
+          got.get("h", 0) > 200 and cut.get("w") == 100 and cut.get("h") == 100 and cut.get("y", 0) > 50)
+    tl, br = got.get("tl") or [0, 0], got.get("br") or [0, 0]
+    check(f"and the card's own picture lands exactly on its frame inside it ({tl}, {br})",
+          abs(tl[0] - cut.get("x", -9)) < 1e-6 and abs(tl[1] - cut.get("y", -9)) < 1e-6
+          and abs(br[0] - cut.get("x", 0) - 100) < 1e-6 and abs(br[1] - cut.get("y", 0) - 100) < 1e-6)
+    check(f"at the card's own pixels per unit ({got.get('scale')})", abs((got.get("scale") or 0) - 1) < 1e-9)
 
 # ---------------------------------------------------------------------------
 print("\nThe card maker's IK rig and pose library (99n)")

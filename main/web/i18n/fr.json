@@ -14328,5 +14328,20 @@
   "one": "Rendu de {count} objet de {entry}.",
   "many": "Rendu de {count} objets de {entry}.",
   "other": "Rendu de {count} objets de {entry}."
- }
+ },
+ "cards.gen_random": "Aléatoiriser les variantes",
+ "cards.gen_random_title": "Tirer au hasard une autre variante de chaque élément qui en possède plusieurs.",
+ "cards.gen_peek_use": "Utiliser cette unité",
+ "cards.gen_peek_cancel": "Garder l’unité actuelle",
+ "cards.gen_peek_none": "Sélectionnez une unité dans la liste pour l’afficher.",
+ "cards.gen_bone": "Os",
+ "cards.gen_bone_none": "Aucun sélectionné",
+ "cards.gen_bone_loc": "Emplacement",
+ "cards.gen_bone_rot": "Rotation",
+ "cards.gen_bone_move": "Déplacer (G)",
+ "cards.gen_bone_move_title": "Déplacez l’os sélectionné avec la souris. Maintenez X, Y ou Z pour le contraindre à l’axe de Blender (Z vers le haut). Un clic ou Entrée valide le déplacement ; Échap ou un clic droit le rétablit.",
+ "cards.gen_bone_turn": "Pivoter (R)",
+ "cards.gen_bone_turn_title": "Faites pivoter l’os sélectionné autour de sa poignée avec la souris, autour de l’axe de visée, ou autour de l’axe X, Y ou Z. Un clic ou Entrée valide la rotation ; Échap ou un clic droit la rétablit.",
+ "cards.gen_bone_reset": "Réinitialiser l’os",
+ "cards.gen_peek_hint": "Cliquez sur une unité dans la liste pour l’afficher ici, faites-la glisser pour la faire pivoter, puis double-cliquez dessus ou cliquez sur « Utiliser cette unité » pour créer sa carte."
 }

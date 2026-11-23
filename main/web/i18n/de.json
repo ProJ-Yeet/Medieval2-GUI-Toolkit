@@ -14215,5 +14215,20 @@
   "one": "{count} Objekt aus dem Eintrag {entry} wird gezeichnet.",
   "other": "{count} Objekte aus dem Eintrag {entry} werden gezeichnet."
  },
- "cards.gen_view_hint_simple": "In der HD-Ansicht: Ziehen mit links dreht die Kamera, Ziehen mit rechts verschiebt sie, das Mausrad zoomt. Ziehen an einem Rig-Griff bewegt ihn. G verschiebt das Modell, R dreht es. X, Y oder Z beschränkt die Bewegung auf eine Achse. Ein Klick oder Enter übernimmt, Esc setzt zurück."
+ "cards.gen_view_hint_simple": "In der HD-Ansicht: Ziehen mit links dreht die Kamera, Ziehen mit rechts verschiebt sie, das Mausrad zoomt. Ziehen an einem Rig-Griff bewegt ihn. G verschiebt das Modell, R dreht es. X, Y oder Z beschränkt die Bewegung auf eine Achse. Ein Klick oder Enter übernimmt, Esc setzt zurück.",
+ "cards.gen_random": "Variation zufällig auswählen",
+ "cards.gen_random_title": "Wähle für jeden Teil, für den es mehr als eine Variante gibt, zufällig eine andere Variante aus.",
+ "cards.gen_peek_use": "Diese Einheit verwenden",
+ "cards.gen_peek_cancel": "Aktuelle Einheit beibehalten",
+ "cards.gen_peek_none": "Wähle eine Einheit in der Liste aus, um sie anzuzeigen.",
+ "cards.gen_bone": "Knochen",
+ "cards.gen_bone_none": "Nichts ausgewählt",
+ "cards.gen_bone_loc": "Position",
+ "cards.gen_bone_rot": "Drehung",
+ "cards.gen_bone_move": "Verschieben (G)",
+ "cards.gen_bone_move_title": "Verschiebe den ausgewählten Knochen mit der Maus. X, Y oder Z beschränkt ihn auf die entsprechende Blender-Achse (Z nach oben). Ein Klick oder Enter übernimmt die Änderung, Esc oder ein Rechtsklick setzt sie zurück.",
+ "cards.gen_bone_turn": "Drehen (R)",
+ "cards.gen_bone_turn_title": "Drehe den ausgewählten Knochen mit der Maus um seinen Griff, entlang der Blickrichtung oder mit X, Y oder Z um die jeweilige Achse. Ein Klick oder Enter übernimmt die Änderung, Esc oder ein Rechtsklick setzt sie zurück.",
+ "cards.gen_bone_reset": "Knochen zurücksetzen",
+ "cards.gen_peek_hint": "Klicke auf eine Einheit in der Liste, um sie hier anzuzeigen. Ziehe sie, um sie zu drehen, und doppelklicke darauf oder drücke auf „Diese Einheit verwenden“, um ihre Karte zu erstellen."
 }

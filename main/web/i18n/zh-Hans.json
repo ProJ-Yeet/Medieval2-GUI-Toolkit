@@ -13519,5 +13519,20 @@
  "cards.gen_source_unit": {
   "other": "正在绘制 {entry} 中的 {count} 个对象。"
  },
- "cards.gen_view_hint_simple": "高清视图中：左键拖动旋转镜头，右键拖动平移镜头，滚轮缩放；拖动骨架手柄可移动骨骼。G 移动模型，R 旋转模型；按 X、Y 或 Z 将操作限制在对应轴上。单击或按 Enter 确认，按 Esc 还原。"
+ "cards.gen_view_hint_simple": "高清视图中：左键拖动旋转镜头，右键拖动平移镜头，滚轮缩放；拖动骨架手柄可移动骨骼。G 移动模型，R 旋转模型；按 X、Y 或 Z 将操作限制在对应轴上。单击或按 Enter 确认，按 Esc 还原。",
+ "cards.gen_random": "随机化变体",
+ "cards.gen_random_title": "为每个拥有多个变体的部件随机抽取另一个变体。",
+ "cards.gen_peek_use": "使用此部队",
+ "cards.gen_peek_cancel": "保留当前部队",
+ "cards.gen_peek_none": "选择列表中的一支部队以查看。",
+ "cards.gen_bone": "骨骼",
+ "cards.gen_bone_none": "未选择",
+ "cards.gen_bone_loc": "位置",
+ "cards.gen_bone_rot": "旋转",
+ "cards.gen_bone_move": "移动 (G)",
+ "cards.gen_bone_move_title": "用鼠标移动所选骨骼。按住 X、Y 或 Z 可将其约束到 Blender 的相应轴（Z 朝上）；单击或按 Enter 确认，按 Esc 或单击鼠标右键可还原。",
+ "cards.gen_bone_turn": "旋转 (R)",
+ "cards.gen_bone_turn_title": "用鼠标绕所选骨骼的控制柄旋转，可沿视线方向旋转，也可按 X、Y 或 Z 绕对应轴旋转。单击或按 Enter 确认，按 Esc 或单击鼠标右键可还原。",
+ "cards.gen_bone_reset": "重置骨骼",
+ "cards.gen_peek_hint": "点击列表中的一支部队即可在此查看，拖动可旋转它，双击它或按“使用此部队”即可生成其卡片。"
 }

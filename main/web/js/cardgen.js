@@ -28,15 +28,28 @@ function cg(src){
   return c;
 }
 function cgHere(){ return state.mode === 'cards' && cardsSubNow() === 'generate'; }
+/* 2026-11-23: every section folds; which are shut is this browser's own. */
+const CG_SHUT = (() => { try{ return new Set(JSON.parse(localStorage.getItem('cardgen.shut') || '[]')); }catch(e){ return new Set(); } })();
+function cgSec(key, title, body){
+  return `<details class="cgsec"${CG_SHUT.has(key) ? '' : ' open'} ontoggle="cgSecToggle(${esc(JSON.stringify(key))},this.open)"><summary>${title}</summary><div class="cgsecbody">${body}</div></details>`;
+}
+function cgSecToggle(key, open){
+  if(open) CG_SHUT.delete(key); else CG_SHUT.add(key);
+  try{ localStorage.setItem('cardgen.shut', JSON.stringify([...CG_SHUT])); }catch(e){}
+}
+/* One part of a model: a horse's Body is not the rider's. */
+const cgPartKey = o => (((o.src || [])[0] || {}).asset || '') + '|' + String(o.name || '').toLowerCase();
+function cgAllObjects(){ return (cgSrc() === 'unit' ? CG_UNIT.objects : armProj().objects).filter(o => !o.hidden && !armCollHidden(o)); }
+/* What is drawn: the objects not switched off in the card's object list and,
+   with One of each part, one variant of each part (the one picked there, else
+   the first). */
 function cgObjects(){
-  const seen = new Set();
-  return (cgSrc() === 'unit' ? CG_UNIT.objects : armProj().objects).filter(o => {
-    if(o.hidden || armCollHidden(o)) return false;
-    // one of each part per model: a horse's Body is not the rider's
-    const key = (((o.src || [])[0] || {}).asset || '') + '|' + String(o.name || '').toLowerCase();
-    if(cg().oneEach && seen.has(key)) return false;
-    seen.add(key); return true;
-  });
+  const c = cg(), off = new Set(c.off || []), pick = c.pick || {};
+  const list = cgAllObjects().filter(o => !off.has(o.id));
+  if(!c.oneEach) return list;
+  const chosen = new Map();
+  for(const o of list){ const k = cgPartKey(o); if(!chosen.has(k) || pick[k] === o.id) chosen.set(k, o.id); }
+  return list.filter(o => chosen.get(cgPartKey(o)) === o.id);
 }
 function cgDimensions(){
   const c = cg(), s = CG_WORK.sizes || {};
@@ -89,7 +102,8 @@ async function cgUnitLoad(type){
   if(!u) return;
   const entry = (u.soldier || '').toLowerCase(), c = cg();
   CG_UNIT.unit = type; CG_UNIT.entry = entry; CG_UNIT.mod = mod; CG_UNIT.objects = []; CG_UNIT.picking = false;
-  c.unit = type; c.name = type.replace(/[^A-Za-z0-9_\-]/g, '_'); c.saved = null; c.givePlan = null; c.err = '';
+  c.unit = type; c.name = type.replace(/[^A-Za-z0-9_\-]/g, '_'); c.saved = null; c.givePlan = null; c.err = ''; c.off = []; c.pick = {};
+  CG_WORK.boneSel = '';
   cgPaint();
   const a = {kind: 'entry', mod, entry}, key = armAssetKey(a);
   const live = await armLoadAsset(a);
@@ -129,23 +143,101 @@ function cgUnitRows(){
   const f = CG_UNIT.f, q = (f.q || '').trim().toLowerCase();
   const rows = ((CG_UNIT.units || {}).list || []).filter(u => (!q || u.type.toLowerCase().includes(q) || (u.soldier || '').toLowerCase().includes(q))
     && (!f.faction || (u.factions || []).includes(f.faction)) && (!f.category || u.category === f.category) && (!f.cls || u['class'] === f.cls));
-  el.innerHTML = rows.slice(0, 400).map(u => `<button class="armexprowbtn${u.type === CG_UNIT.unit ? ' on' : ''}" onclick="cgUnitLoad(${esc(JSON.stringify(u.type))})">
-      <b>${esc(u.type)}</b> <span class="count">${esc(u.category)} · ${esc(u['class'])} · ${esc(u.soldier || '')}</span></button>`).join('')
+  const peek = (CG_UNIT.peek || {}).type;
+  el.innerHTML = rows.slice(0, 400).map(u => { const t = esc(JSON.stringify(u.type));
+    return `<button class="armexprowbtn${u.type === peek ? ' on' : ''}" onclick="cgUnitPeek(${t})" ondblclick="cgUnitLoad(${t})">
+      <b>${esc(u.type)}</b> <span class="count">${esc(u.category)} · ${esc(u['class'])} · ${esc(u.soldier || '')}</span></button>`; }).join('')
     || `<div class="count">${tt('armory.nothing_matches')}</div>`;
+}
+const cgPicking = () => cgSrc() === 'unit' && (CG_UNIT.picking || !CG_UNIT.unit);
+/* 2026-11-23: a unit picked from the list is shown first, turning in 3D where
+   the HD view stands, and taken with Use this unit (or a double click). */
+async function cgUnitPeek(type){
+  const u = ((CG_UNIT.units || {}).list || []).find(x => x.type === type);
+  if(!u) return;
+  const mod = state.src, entry = (u.soldier || '').toLowerCase(), a = {kind: 'entry', mod, entry}, key = armAssetKey(a);
+  const old = CG_UNIT.peek || {};
+  const pk = CG_UNIT.peek = {type, entry, info: u, objects: [], yaw: old.yaw != null ? old.yaw : 0.5, pitch: old.pitch != null ? old.pitch : 0.12, loading: true, err: ''};
+  cgUnitRows(); cgPeekPaint();
+  const live = await armLoadAsset(a);
+  if(CG_UNIT.peek !== pk) return;
+  pk.loading = false;
+  if(!live || !live.view){ pk.err = (live && live.err) || tt('cards.gen_unit_unreadable', {entry}); cgPeekPaint(); return; }
+  const seen = new Set();
+  pk.objects = live.view.objects.map((ob, i) => ({id: -100000 - i, src: [{asset: key, group: ob.index}], name: ob.name, mesh: ob.mesh, t: [0, 0, 0], r: [0, 0, 0], s: [1, 1, 1]}))
+    .filter(o => { const k = cgPartKey(o); if(seen.has(k)) return false; seen.add(k); return true; });
+  cgPeekPaint();
+}
+function cgPeekHtml(){
+  return `<div class="cgpeek"><div class="armexprow" id="cgPeekHead"></div><canvas id="cgPeek"></canvas>
+    <p class="count">${tt('cards.gen_peek_hint')}</p></div>`;
+}
+function cgPeekPaint(){
+  const head = document.getElementById('cgPeekHead'), canvas = document.getElementById('cgPeek');
+  if(!head || !canvas) return;
+  const pk = CG_UNIT.peek, u = pk && pk.info;
+  head.innerHTML = pk ? `<b>${esc(pk.type)}</b><span class="count">${esc(u.category)} · ${esc(u['class'])} · ${esc(pk.entry)}</span><span style="flex:1"></span>
+      ${CG_UNIT.unit ? `<button class="mini" onclick="CG_UNIT.picking=false;cgPaint()">${tt('cards.gen_peek_cancel')}</button>` : ''}
+      <button class="primary" onclick="cgUnitLoad(${esc(JSON.stringify(pk.type))})">${tt('cards.gen_peek_use')}</button>`
+    : `<span class="count">${tt('cards.gen_peek_none')}</span>`;
+  const box = canvas.getBoundingClientRect(), ratio = Math.min(2, devicePixelRatio || 1);
+  const w = Math.max(64, Math.round(box.width * ratio)), h = Math.max(64, Math.round(box.height * ratio));
+  if(canvas.width !== w || canvas.height !== h){ canvas.width = w; canvas.height = h; }
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle = '#353d47'; ctx.fillRect(0, 0, w, h);
+  cgPeekWire(canvas);
+  const say = text => { ctx.fillStyle = '#c9d1d9'; ctx.font = `${14 * ratio}px sans-serif`; ctx.textAlign = 'center'; ctx.fillText(text, w / 2, h / 2); };
+  if(!pk) return;
+  if(pk.loading) return say(tt('armory.reading'));
+  if(pk.err) return say(pk.err);
+  const b = armBounds(pk.objects);
+  if(!b) return;
+  const [lo, hi] = b, target = [-(lo[0] + hi[0]) / 2, (lo[1] + hi[1]) / 2, (lo[2] + hi[2]) / 2];
+  const size = Math.max(hi[1] - lo[1], (hi[0] - lo[0]) * h / w, (hi[2] - lo[2]) * h / w) * 0.62 / 0.42;
+  const dist = Math.max(0.05, size * 1.1);
+  const eye = [target[0] + dist * Math.cos(pk.pitch) * Math.sin(pk.yaw), target[1] + dist * Math.sin(pk.pitch), target[2] + dist * Math.cos(pk.pitch) * Math.cos(pk.yaw)];
+  const cam = {proj: v3Perspective(0.75, w / h, dist / 100, dist * 10), view: v3LookAt(eye, target, [0, 1, 0])};
+  if(!armRender(pk.objects, w, h, cam, {plain: true, bg: [0.21, 0.24, 0.28]})) return;
+  ctx.drawImage(ARM.glCanvas, 0, 0, w, h, 0, 0, w, h);
+}
+function cgTexturesIn(){
+  if(!cgHere() || CG_WORK.texTimer) return;
+  CG_WORK.texTimer = setTimeout(() => { CG_WORK.texTimer = 0; if(!cgHere()) return; if(cgPicking()) cgPeekPaint(); else cgDraw(); }, 120);
+}
+function cgPeekWire(canvas){
+  if(canvas.dataset.wired) return;
+  canvas.dataset.wired = '1';
+  let last = null;
+  canvas.addEventListener('pointerdown', e => { last = [e.clientX, e.clientY]; canvas.setPointerCapture(e.pointerId); });
+  canvas.addEventListener('pointermove', e => {
+    const pk = CG_UNIT.peek;
+    if(!last || !pk) return;
+    // Armory Studio's turn: a drag right swings the eye left round the model
+    pk.yaw -= (e.clientX - last[0]) * 0.01;
+    pk.pitch = Math.max(-1.4, Math.min(1.4, pk.pitch + (e.clientY - last[1]) * 0.01));
+    last = [e.clientX, e.clientY]; cgPeekPaint();
+  });
+  canvas.addEventListener('pointerup', () => { last = null; });
+  canvas.addEventListener('contextmenu', e => e.preventDefault());
 }
 function cgSourceHtml(){
   const src = cgSrc();
-  let html = `<fieldset><legend>${tt('cards.gen_source_legend')}</legend><div class="armexprow">
+  let html = `<div class="armexprow">
       <button class="mini${src === 'unit' ? ' on' : ''}" onclick="cgSource('unit')">${tt('cards.gen_src_unit')}</button>
       <button class="mini${src === 'armory' ? ' on' : ''}" onclick="cgSource('armory')">${tt('cards.gen_src_armory')}</button>
       ${src === 'armory' ? `<span style="flex:1"></span><button class="mini" onclick="setAppMode('armory')">${tt('cards.gen_back_armory')}</button>` : ''}</div>`;
   if(src === 'unit'){
     html += `<div class="armexprow"><b>${CG_UNIT.unit ? esc(CG_UNIT.unit) : `<span class="count">${tt('armory.exp_unit_none')}</span>`}</b>
         ${CG_UNIT.entry ? `<span class="count">${esc(CG_UNIT.entry)}</span>` : ''}
-        ${CG_UNIT.unit ? `<button class="mini${CG_UNIT.picking ? ' on' : ''}" onclick="CG_UNIT.picking=!CG_UNIT.picking;cgPaint()">${tt('armory.exp_unit_change')}</button>` : ''}</div>`;
-    if(CG_UNIT.picking || !CG_UNIT.unit) html += cgUnitPickHtml();
+        ${CG_UNIT.unit ? `<button class="mini${CG_UNIT.picking ? ' on' : ''}" onclick="cgUnitChange()">${tt('armory.exp_unit_change')}</button>` : ''}</div>`;
+    if(cgPicking()) html += cgUnitPickHtml();
   }else html += `<div class="count">${tt('cards.gen_src_armory_note')}</div>`;
-  return html + `</fieldset>`;
+  return cgSec('source', tt('cards.gen_source_legend'), html);
+}
+function cgUnitChange(){
+  CG_UNIT.picking = !CG_UNIT.picking;
+  if(CG_UNIT.picking && CG_UNIT.unit && (!CG_UNIT.peek || CG_UNIT.peek.type !== CG_UNIT.unit)) cgUnitPeek(CG_UNIT.unit);
+  cgPaint();
 }
 async function renderCardGen(){
   const serial = ++CG_WORK.serial, mod = state.src;
@@ -188,82 +280,164 @@ function cgRange(group,key,label,min,max,step){
 }
 function cgSizeHtml(){
   const c = cg(), sizes = CG_WORK.sizes || {};
-  return `<fieldset><legend>${tt('cards.gen_size')}</legend>${['card','large','info','custom','modcard','modinfo'].map(k => {
+  // 2026-11-23: a drop-down, not six radio buttons
+  return cgSec('size', tt('cards.gen_size'), `<select title="${ttA('cards.gen_size_mod_title')}" onchange="cgSet('','size',this.value,true)">${['card','large','info','custom','modcard','modinfo'].map(k => {
     const unavailable = k === 'modcard' && !sizes.card || k === 'modinfo' && !sizes.info;
-    return `<label title="${k.startsWith('mod') ? ttA('cards.gen_size_mod_title') : ''}"><input type="radio" name="cgSize" value="${k}" ${c.size === k ? 'checked' : ''} ${unavailable ? 'disabled' : ''} onchange="cgSet('','size',this.value,true)">${tt(CG_SIZE_KEYS[k])} ${unavailable ? tt('cards.gen_size_mod_none') : ''}</label>`;
-  }).join('')}
+    return `<option value="${k}"${c.size === k ? ' selected' : ''}${unavailable ? ' disabled' : ''}>${tt(CG_SIZE_KEYS[k])}${unavailable ? ' ' + tt('cards.gen_size_mod_none') : ''}</option>`;
+  }).join('')}</select>
     ${c.size === 'custom' ? `<div class="armexprow"><input class="armnum" type="number" min="8" value="${c.w}" onchange="cgSet('','w',Math.max(8,+this.value),true)"> × <input class="armnum" type="number" min="8" value="${c.h}" onchange="cgSet('','h',Math.max(8,+this.value),true)"></div>` : ''}
     <label title="${ttA('cards.gen_mult_title')}">${tt('cards.gen_mult')} ${cgSelectHtml('','mult',[1,2,3,4].map(n => [n,String(n)]))}</label>
-    <label>${tt('cards.gen_render_at')} ${cgSelectHtml('','ss',[10,15,20,25,30,35,40].map(n => [n,String(n) + '×']))}</label></fieldset>`;
+    <label>${tt('cards.gen_render_at')} ${cgSelectHtml('','ss',[10,15,20,25,30,35,40].map(n => [n,String(n) + '×']))}</label>`);
 }
 function cgPoseHtml(){
   const c = cg(), a = armAnim(), entries = cgSrc() === 'unit' ? [] : armAnimEntries(), skels = a.list && a.list.skeletons || {};
   const actions = (skels[a.skel.toLowerCase()] || {}).actions || [];
-  return `<fieldset><legend>${tt('cards.gen_pose')}</legend>${cgSelectHtml('','pose',['tpose','guard','brace','draw','riding','march','anim','rig'].map(x => [x,tt(CG_POSE_KEYS[x])]))}
+  return cgSec('pose', tt('cards.gen_pose'), `${cgSelectHtml('','pose',['tpose','guard','brace','draw','riding','march','anim','rig'].map(x => [x,tt(CG_POSE_KEYS[x])]))}
     ${cgSrc() === 'unit' ? '' : `<select onchange="cgEntry(this.value)"><option value="">${tt('cards.gen_pick_entry')}</option>`}${entries.map(e => `<option value="${esc(armAssetKey(e))}"${(armProj().anim || {}).asset === armAssetKey(e) ? ' selected' : ''}>${esc(armAssetLabel(e))}</option>`).join('')}${cgSrc() === 'unit' ? '' : '</select>'}
     ${Object.keys(skels).length ? `<select onchange="cgSkeleton(this.value)">${Object.keys(skels).map(s => `<option value="${esc(s)}"${s === a.skel.toLowerCase() ? ' selected' : ''}>${esc(s)}</option>`).join('')}</select>` : ''}
     ${c.pose === 'anim' ? `<select onchange="cgAction(this.value)">${actions.filter(x => x.playable).map(x => { const key = x.slot != null ? String(x.slot) : 'a:' + x.action; return `<option value="${esc(key)}"${a.key === key ? ' selected' : ''}>${esc(x.action)}</option>`; }).join('')}</select><input type="range" min="0" max="1000" value="${armAnimFrac()}" oninput="cgScrub(+this.value)">` : ''}
     <div class="count">${esc(c.poseNote || '')}</div><div class="count">${esc(c.poseNote2 || '')}</div>
-    ${c.pose === 'rig' ? cgRigHtml() : ''}</fieldset>`;
+    ${c.pose === 'rig' ? cgRigHtml() : ''}`) + (c.pose === 'rig' ? cgLibraryHtml() : '');
 }
 function cgRigHtml(){
-  const r = cg().rig, lib = CG_WORK.library || {poses:[]}, categories = [...new Set((lib.poses || []).map(p => p.c))].sort();
-  if(!categories.includes(r.cat)) r.cat = categories[0] || '';
+  const r = cg().rig;
   return `<div class="cgrig"><label>${tt('cards.gen_rig')} ${cgSelectHtml('rig','type',[['auto',tt('cards.gen_rig_auto',{rig:cgRigType()})],...['infantry','archer','dwarf'].map(t => [t,t])])}</label>
     <label class="armcheck" title="${ttA('cards.gen_two_hands_title')}"><input type="checkbox" ${((r.basis.Switch || {}).l || [0,0])[1] > 0 ? 'checked' : ''} onchange="cgTwoHands(this.checked)">${tt('cards.gen_two_hands')}</label>
     ${cgCheckHtml('rig','handles','cards.gen_handles')}<button class="mini" onclick="cg().rig.basis={};cgFitChanged();cgPaint()">${tt('cards.gen_rig_reset')}</button>
-    <p class="count">${tt('cards.gen_rig_on',{rig:cgRigType(),skeleton:esc(armAnim().skel)})}</p><p class="count">${tt('cards.gen_rig_hint')}</p>
-    <h4>${tt('cards.gen_library')}</h4><p class="count">${ttN('cards.gen_library_note',(lib.poses || []).length)}</p>
-    ${cgSelectHtml('rig','cat',categories.map(x => [x,x]))}<label>${tt('cards.gen_apply_to')} ${cgSelectHtml('rig','part',['whole','arms','legs','head','posture'].map(x => [x,tt(CG_PART_KEYS[x])]))}</label>
-    <div class="cgposes">${(lib.poses || []).map((p,i) => p.c === r.cat ? `<button class="mini${r.pick === p.n ? ' on' : ''}" onclick="cgLibraryPose(${i})">${esc(p.n)}</button>` : '').join('')}</div></div>`;
+    <div id="cgBone">${cgBoneHtml()}</div></div>`;
+}
+/* 2026-11-23: the pose library as pictures, each pose drawn on this model
+   (cgPoseThumbs), as the Blender kit's asset browser shows them. */
+function cgLibraryHtml(){
+  const r = cg().rig, lib = CG_WORK.library || {poses:[]}, categories = [...new Set((lib.poses || []).map(p => p.c))].sort();
+  if(!categories.includes(r.cat)) r.cat = categories[0] || '';
+  return cgSec('library', tt('cards.gen_library'), `${cgSelectHtml('rig','cat',categories.map(x => [x,x]))}<label>${tt('cards.gen_apply_to')} ${cgSelectHtml('rig','part',['whole','arms','legs','head','posture'].map(x => [x,tt(CG_PART_KEYS[x])]))}</label>
+    <div class="cgposes">${(lib.poses || []).map((p,i) => p.c === r.cat ? `<button class="cgpose${r.pick === p.n ? ' on' : ''}" onclick="cgLibraryPose(${i})" title="${esc(p.n)}"><img data-cgpose="${i}" alt=""><span>${esc(p.n)}</span></button>` : '').join('')}</div>`);
 }
 function cgCameraHtml(){
-  return `<fieldset><legend>${tt('cards.gen_camera')}</legend>${[['yaw','cards.gen_turn',-180,180,1],['pitch','cards.gen_tilt',-30,45,1],['scale','cards.gen_ortho_scale',0.4,3,0.05],['height','cards.gen_height',-1.5,1.5,0.02]].map(x => cgRange('cam',...x)).join('')}
+  return cgSec('camera', tt('cards.gen_camera'), `${[['yaw','cards.gen_turn',-180,180,1],['pitch','cards.gen_tilt',-30,45,1],['scale','cards.gen_ortho_scale',0.4,3,0.05],['height','cards.gen_height',-1.5,1.5,0.02]].map(x => cgRange('cam',...x)).join('')}
     <label title="${ttA('cards.gen_framing_hint')}">${tt('cards.gen_framing')} ${cgSelectHtml('fit','part',['whole','knees','thighs','waist'].map(x => [x,tt(CG_FRAME_KEYS[x])]))}</label>
     ${cgCheckHtml('fit','auto','cards.gen_fit_auto')}
     <button class="mini" id="cgReset" ${cgPlacementReset() ? 'disabled' : ''} onclick="cg().xf={t:[0,0,0],r:[0,0,0]};cg().cam.pan=0;cgPaint()">${tt('cards.gen_place_reset')}</button>
     <span class="armnav" title="${esc(tt('armory.nav_title'))}">${tt('armory.nav')}
       <button class="mini${armNav() === 'simple' ? ' on' : ''}" onclick="armNavSet('simple');cgPaint()">${tt('armory.nav_simple')}</button>
       <button class="mini${armNav() === 'blender' ? ' on' : ''}" onclick="armNavSet('blender');cgPaint()">${tt('armory.nav_blender')}</button></span>
-    <p class="count">${tt(armNav() === 'simple' ? 'cards.gen_view_hint_simple' : 'cards.gen_view_hint')}</p></fieldset>`;
+    <p class="count">${tt(armNav() === 'simple' ? 'cards.gen_view_hint_simple' : 'cards.gen_view_hint')}</p>`);
 }
 function cgGroundHtml(){
   const c = cg();
   const choices = ['none','colour','pic',...(cgIsInfo() ? ['scroll'] : ['strat','battle'])];
-  return `<fieldset><legend>${tt('cards.gen_ground')}</legend>${cgSelectHtml('ground','kind',choices.map(x => [x,tt(CG_GROUND_KEYS[x])]))}
+  return cgSec('ground', tt('cards.gen_ground'), `${cgSelectHtml('ground','kind',choices.map(x => [x,tt(CG_GROUND_KEYS[x])]))}
     ${c.ground.kind === 'colour' ? `<input type="color" value="${esc(c.ground.colour)}" oninput="cgSet('ground','colour',this.value,false)">` : ''}
     ${c.ground.kind === 'pic' ? `<label class="btn">${tt('cards.gen_ground_pick')}<input type="file" accept="image/*" onchange="cgPickGround(this.files[0])"></label>` : ''}
-    <p class="count">${tt('cards.gen_ground_none_note')}</p>${cgIsInfo() ? cgCheckHtml('','gframe','cards.gen_game_frame') : ''}</fieldset>`;
+    <p class="count">${tt('cards.gen_ground_none_note')}</p>${cgIsInfo() ? cgCheckHtml('','gframe','cards.gen_game_frame') : ''}`);
 }
 function cgLightHtml(){
   const c = cg();
-  return `<fieldset><legend>${tt('cards.gen_light')}</legend><div>${['sun','point'].map(x => `<label><input type="radio" name="cgLight" ${c.light.type === x ? 'checked' : ''} onchange="cgSet('light','type','${x}',false)">${tt(CG_LIGHT_KEYS[x])}</label>`).join('')}</div>
-    ${[['azimuth','cards.gen_azimuth',-180,180,1],['elevation','cards.gen_elevation',-60,89,1],['amount','cards.gen_amount',0,2,0.01],['level','cards.gen_level',0.2,2.5,0.01],['ambient','cards.gen_ambient',0,1,0.01]].map(x => cgRange('light',...x)).join('')}</fieldset>`;
+  return cgSec('light', tt('cards.gen_light'), `<div>${['sun','point'].map(x => `<label><input type="radio" name="cgLight" ${c.light.type === x ? 'checked' : ''} onchange="cgSet('light','type','${x}',false)">${tt(CG_LIGHT_KEYS[x])}</label>`).join('')}</div>
+    ${[['azimuth','cards.gen_azimuth',-180,180,1],['elevation','cards.gen_elevation',-60,89,1],['amount','cards.gen_amount',0,2,0.01],['level','cards.gen_level',0.2,2.5,0.01],['ambient','cards.gen_ambient',0,1,0.01]].map(x => cgRange('light',...x)).join('')}`);
 }
 function cgFinishHtml(){
-  return `<fieldset><legend>${tt('cards.gen_painted')}</legend>${cgCheckHtml('paint','on','cards.gen_painted_on')}
-    <div title="${ttA('cards.gen_painted_title')}">${cgRange('paint','strength','cards.gen_painted_strength',0.3,2,0.05)}</div></fieldset>
-    <fieldset><legend>${tt('cards.gen_finish')}</legend>${[['blur',0,2,0.05],['exposure',-2,2,0.05],['brightness',-0.5,0.5,0.01],['contrast',0.3,2,0.01],['gamma',0.3,3,0.01],['saturation',0,2,0.01],['hue',-180,180,1],['sharpen',0,1,0.01],['outline',0,1.5,0.05]].map(([k,...range]) => cgRange('post',k,CG_FINISH_KEYS[k],...range)).join('')}</fieldset>`;
+  return cgSec('painted', tt('cards.gen_painted'), `${cgCheckHtml('paint','on','cards.gen_painted_on')}
+    <div title="${ttA('cards.gen_painted_title')}">${cgRange('paint','strength','cards.gen_painted_strength',0.3,2,0.05)}</div>`)
+    + cgSec('finish', tt('cards.gen_finish'), `${[['blur',0,2,0.05],['exposure',-2,2,0.05],['brightness',-0.5,0.5,0.01],['contrast',0.3,2,0.01],['gamma',0.3,3,0.01],['saturation',0,2,0.01],['hue',-180,180,1],['sharpen',0,1,0.01],['outline',0,1.5,0.05]].map(([k,...range]) => cgRange('post',k,CG_FINISH_KEYS[k],...range)).join('')}`);
 }
 function cgPaint(){
   if(!cgHere()) return;
-  const c = cg(), objects = cgObjects();
+  const c = cg(), objects = cgObjects(), picking = cgPicking(), keep = cgScrollKeep();
   const nav = bmdbTabsHtml(tt('cards.data_ui_units_data_ui_unit')) + cardsSubTabsHtml();
-  if(!objects.length){
+  if(!picking && !cgAllObjects().length){
     main.innerHTML = nav + `<div class="cggrid"><div class="cgctl">${cgSourceHtml()}<div class="armexperr" id="cgError">${esc(c.err || '')}</div></div>
       <div class="armempty">${cgSrc() === 'unit' ? (CG_UNIT.unit ? tt('armory.reading') : tt('cards.gen_pick_unit_first'))
         : `${tt('cards.gen_no_model')}<br><button class="btn" onclick="setAppMode('armory')">${tt('core.armory_studio')}</button>`}</div></div>`;
+    cgLayout(); keep();
     return;
   }
   const [w,h] = cgDimensions(), ss = Math.min(Number(c.ss),4096/Math.max(w,h)), hw = Math.min(4096,Math.round(w*ss)), hh = Math.min(4096,Math.round(h*ss));
-  main.innerHTML = nav + `<div class="cggrid"><div class="cgctl">${cgSourceHtml()}<div class="count">${cgSrc() === 'unit' ? ttN('cards.gen_source_unit',objects.length,{entry:esc(CG_UNIT.entry)}) : ttN('cards.gen_source',objects.length)}</div>
-    ${cgCheckHtml('','oneEach','cards.gen_one_each')}${cgSizeHtml()}${cgPoseHtml()}${cgCameraHtml()}${cgGroundHtml()}${cgLightHtml()}${cgFinishHtml()}
-    <fieldset><legend>${tt('cards.gen_name')}</legend><input value="${esc(c.name)}" placeholder="${ttA('cards.gen_name_hint')}" oninput="cg().name=this.value">
+  CG_WORK.hdSize = [hw,hh];
+  const controls = picking ? '' : `<div class="count">${cgSrc() === 'unit' ? ttN('cards.gen_source_unit',objects.length,{entry:esc(CG_UNIT.entry)}) : ttN('cards.gen_source',objects.length)}</div>
+    <div class="armexprow">${cgCheckHtml('','oneEach','cards.gen_one_each')}<button class="mini" title="${ttA('cards.gen_random_title')}" onclick="cgRandom()">${tt('cards.gen_random')}</button></div>
+    ${cgSizeHtml()}${cgPoseHtml()}${cgCameraHtml()}${cgGroundHtml()}${cgLightHtml()}${cgFinishHtml()}
+    ${cgSec('save', tt('cards.gen_name'), `<input value="${esc(c.name)}" placeholder="${ttA('cards.gen_name_hint')}" oninput="cg().name=this.value">
     <div class="armexprow"><button class="primary" onclick="cgSave(false)">${tt('cards.gen_save')}</button><button onclick="cgSave(true)">${tt('cards.gen_save_hd')}</button></div>
-    <div id="cgSaveResult">${cgSavedHtml()}</div></fieldset><div class="armexperr" id="cgError">${esc(c.err || '')}</div></div>
-    <div class="cgout"><div class="cghd"><span class="count">${tt('cards.gen_hd',{w:hw,h:hh})}</span><div class="cghdview" id="cgHdView"><canvas id="cgHd" tabindex="0" width="${hw}" height="${hh}"></canvas><canvas id="cgHdUi"></canvas></div></div>
-    <div class="cgcard"><span class="count">${tt('cards.gen_card',{w,h})}</span><canvas id="cgCard" width="${w}" height="${h}" style="image-rendering:pixelated;width:${w*3}px;max-width:100%;height:auto"></canvas></div></div></div>`;
-  cgWire(); cgDraw();
+    <div id="cgSaveResult">${cgSavedHtml()}</div>`)}`;
+  const right = picking ? cgPeekHtml() : `<div class="cgout"><div class="cghd"><span class="count">${tt('cards.gen_hd',{w:hw,h:hh})}</span><div class="cghdview" id="cgHdView"><canvas id="cgHd" tabindex="0" width="${hw}" height="${hh}"></canvas><canvas id="cgHdUi"></canvas></div></div>
+    <div class="cgcard"><span class="count">${tt('cards.gen_card',{w,h})}</span><canvas id="cgCard" width="${w}" height="${h}" style="image-rendering:pixelated;width:${w*3}px;max-width:100%;height:auto"></canvas>
+    <div id="cgObjs">${cgObjListHtml()}</div></div></div>`;
+  main.innerHTML = nav + `<div class="cggrid"><div class="cgctl">${cgSourceHtml()}${controls}<div class="armexperr" id="cgError">${esc(c.err || '')}</div></div>${right}</div>`;
+  cgLayout(); keep();
+  if(picking){ cgPeekPaint(); return; }
+  cgWire(); cgDraw(); cgPoseThumbs();
+  if(armObjGallery()) armThumbsPaint();
+}
+/* 2026-11-23: a repaint leaves each column scrolled where it was. */
+function cgScrollKeep(){
+  const parts = ['.cgctl','.cgcard','.cgout'], tops = parts.map(k => { const el = main.querySelector(k); return el ? el.scrollTop : 0; });
+  return () => parts.forEach((k,i) => { const el = main.querySelector(k); if(el) el.scrollTop = tops[i]; });
+}
+/* The page fits the window: each column scrolls on its own, the page never. */
+function cgLayout(){
+  const grid = main.querySelector('.cggrid');
+  if(!grid) return;
+  const pad = parseFloat(getComputedStyle(main).paddingBottom) || 0;
+  const bottom = Math.min(innerHeight, main.getBoundingClientRect().bottom) - pad;
+  const h = Math.max(320, Math.floor(bottom - grid.getBoundingClientRect().top - 2));
+  // one column (a narrow window): the page scrolls as any other
+  const one = getComputedStyle(grid).gridTemplateColumns.trim().split(/\s+/).length < 2;
+  grid.style.height = one ? '' : h + 'px'; grid.style.setProperty('--cgh', h + 'px');
+  if(!CG_WORK.layoutWired){
+    CG_WORK.layoutWired = true;
+    addEventListener('resize', () => { if(cgHere()){ cgLayout(); if(cgPicking()) cgPeekPaint(); } });
+  }
+}
+/* The card's object list, under the card: Armory Studio's, by part. A click
+   picks the variant of its part drawn with One of each part; the eye leaves
+   an object out of the card. */
+function cgObjListHtml(){
+  const c = cg(), all = cgAllObjects(), off = new Set(c.off || []), drawn = new Set(cgObjects().map(o => o.id)), gal = armObjGallery();
+  const groups = new Map();
+  for(const o of all){ const k = cgPartKey(o); if(!groups.has(k)) groups.set(k, []); groups.get(k).push(o); }
+  const row = o => {
+    const cls = `${drawn.has(o.id) ? ' sel' : ''}${off.has(o.id) ? ' off' : ''}`, eye = `<button class="mini armeye" onclick="event.stopPropagation();cgObjOff(${o.id})" title="${ttA('armory.hide_show')}">${off.has(o.id) ? '◌' : '●'}</button>`;
+    const pc = (o.src || [])[0];
+    return gal ? `<div class="armotile${cls}" onclick="cgObjPick(${o.id})" title="${esc(o.name + '__' + o.mesh)}"><img class="armthumb" data-thumb="${pc ? esc(pc.asset + '|' + pc.group) : ''}" alt="">
+        <span class="armotilename">${esc(o.mesh)}</span>${eye}</div>`
+      : `<div class="armrow${cls}" onclick="cgObjPick(${o.id})">${eye}<span class="armrowname">${esc(o.mesh)}${o.flag ? ` <i class="count">${tt('armory.opt')}</i>` : ''}</span></div>`;
+  };
+  const body = [...groups].map(([k, objs]) => `<div class="armfoldbox"><div class="armfoldhead"><b class="armfoldname">${esc(objs[0].name)}</b><span class="count">${objs.length}</span></div>
+      ${gal ? `<div class="armotiles">${objs.map(row).join('')}</div>` : `<div class="armrows">${objs.map(row).join('')}</div>`}</div>`).join('');
+  return cgSec('objects', `${tt('armory.objects')} <span class="count">${drawn.size} / ${all.length}</span>`, `<div class="armexprow"><span style="flex:1"></span>
+      <button class="mini${gal ? '' : ' on'}" onclick="cgObjView('list')">${tt('armory.as_list')}</button>
+      <button class="mini${gal ? ' on' : ''}" onclick="cgObjView('gallery')">${tt('armory.as_gallery')}</button></div>
+    <div class="armobjlist cgobjlist">${body}</div>`);
+}
+function cgObjView(v){
+  state.settings.armory_obj_view = v;
+  api.post('/api/settings', {armory_obj_view: v}).catch(() => {});
+  cgPaint();
+}
+function cgObjPick(id){
+  const c = cg(), o = cgAllObjects().find(x => x.id === id);
+  if(!o) return;
+  c.pick = {...c.pick, [cgPartKey(o)]: id}; c.off = (c.off || []).filter(x => x !== id);
+  cgFitChanged(); cgPaint();
+}
+function cgObjOff(id){
+  const c = cg(), off = new Set(c.off || []);
+  if(off.has(id)) off.delete(id); else off.add(id);
+  c.off = [...off]; cgFitChanged(); cgPaint();
+}
+/* 2026-11-23: another of each part's variants, picked at random. */
+function cgRandom(){
+  const c = cg(), off = new Set(c.off || []), drawn = new Set(cgObjects().map(o => o.id)), groups = new Map();
+  for(const o of cgAllObjects()) if(!off.has(o.id)){ const k = cgPartKey(o); if(!groups.has(k)) groups.set(k, []); groups.get(k).push(o); }
+  const pick = {...c.pick};
+  for(const [k, objs] of groups){
+    if(objs.length < 2) continue;
+    const others = objs.filter(o => !drawn.has(o.id));
+    pick[k] = others[Math.floor(Math.random() * others.length)].id;
+  }
+  c.pick = pick; c.oneEach = true; cgFitChanged(); cgPaint();
 }
 function cgPlacementReset(){ const c = cg(); return !c.cam.pan && [...c.xf.t,...c.xf.r].every(v => !v); }
 function cgSet(group,key,value,redraw){
@@ -345,6 +519,26 @@ function cgCamera(objects,w,h){
   const proj = [2/width,0,0,0,0,2/height,0,0,0,0,-0.01,0,0,0,0,1];
   return {proj,view:v3LookAt(eye,target,[0,1,0]),eye,pre,height,width,target};
 }
+function cgNdc(camera,p){
+  const world = cgMatrixPoint(camera.pre,p); world[0] = -world[0];
+  return cgMatrixPoint(armMul(camera.proj,camera.view),world);
+}
+/* The card's camera widened to take in the whole model, and a margin, with
+   the card's own pixels (cut) unchanged inside it. */
+function cgWide(camera,objects,cw,ch){
+  const [lo,hi] = cgBounds(objects);
+  let x0 = -1, x1 = 1, y0 = -1, y1 = 1;
+  for(let i=0;i<8;i++){
+    const q = cgNdc(camera,[i & 1 ? hi[0] : lo[0],i & 2 ? hi[1] : lo[1],i & 4 ? hi[2] : lo[2]]);
+    x0 = Math.min(x0,q[0]); x1 = Math.max(x1,q[0]); y0 = Math.min(y0,q[1]); y1 = Math.max(y1,q[1]);
+  }
+  const margin = Math.round(Math.max(cw,ch)*0.05);
+  const room = (n,size) => Math.max(0,Math.min(size*1.5,Math.floor((4096-size)/2),Math.ceil(n*size/2)+margin));
+  const L = room(-1-x0,cw), R = room(x1-1,cw), B = room(-1-y0,ch), T = room(y1-1,ch);
+  const hx = 1+(L+R)/cw, hy = 1+(T+B)/ch, cx = (R-L)/cw, cy = (T-B)/ch, P = camera.proj.slice();
+  P[0] /= hx; P[12] = (P[12]-cx)/hx; P[5] /= hy; P[13] = (P[13]-cy)/hy;
+  return {camera:{...camera,proj:P,width:camera.width*hx,height:camera.height*hy},w:cw+L+R,h:ch+T+B,cut:{x:L,y:T,w:cw,h:ch}};
+}
 function cgLight(camera){
   const c = cg(), l = c.light, az = (Number(l.azimuth)+Number(c.cam.yaw))*Math.PI/180, el = l.elevation*Math.PI/180;
   const dir = [Math.sin(az)*Math.cos(el),Math.sin(el),Math.cos(az)*Math.cos(el)];
@@ -354,10 +548,13 @@ async function cgDraw(){
   if(!cgHere()) return;
   const token = ++CG_WORK.draw, hd = document.getElementById('cgHd'), card = document.getElementById('cgCard');
   if(!hd || !card) return;
-  const c = cg(), objects = cgObjects(), w = hd.width, h = hd.height;
+  const c = cg(), objects = cgObjects(), [cw,ch] = CG_WORK.hdSize || [hd.width,hd.height];
   try{
     armAnimPose(objects);
-    const camera = cgCamera(objects,w,h); CG_WORK.camera = camera;
+    // 2026-11-23: the HD view shows the whole unit, the card's frame within it
+    const wide = cgWide(cgCamera(objects,cw,ch),objects,cw,ch), camera = wide.camera, w = wide.w, h = wide.h, cut = wide.cut;
+    CG_WORK.camera = camera; CG_WORK.cut = cut;
+    if(hd.width !== w || hd.height !== h){ hd.width = w; hd.height = h; }
     const options = {plain:true,card:true,pre:camera.pre,light:cgLight(camera),bg:[0,0,0]};
     if(!armRender(objects,w,h,camera,options)) return;
     const ctx = hd.getContext('2d',{willReadFrequently:true}); ctx.clearRect(0,0,w,h); ctx.drawImage(ARM.glCanvas,0,0,w,h,0,0,w,h);
@@ -369,18 +566,18 @@ async function cgDraw(){
     let alpha = new Uint8Array(w*h);
     for(let i=0;i<alpha.length;i++) alpha[i] = mask[i*4] > 0 ? 1 : 0;
     // smaller than a card pixel's worth of the HD render is a speck, not the model
-    alpha = cgDespeck(alpha,w,h,Math.max(4,Math.round((w/card.width)*(h/card.height))));
+    alpha = cgDespeck(alpha,w,h,Math.max(4,Math.round((cw/card.width)*(ch/card.height))));
     for(let i=0;i<alpha.length;i++) image.data[i*4+3] = alpha[i] ? mask[i*4] : 0;
     if(c.paint.on) cgPaintPixels(image.data,w,h,c.paint.strength);
     ctx.putImageData(image,0,0);
     if(c.post.outline > 0){
-      const grown = cgDilate(alpha,w,h,c.post.outline*w/card.width), outline = ctx.createImageData(w,h);
+      const grown = cgDilate(alpha,w,h,c.post.outline*cw/card.width), outline = ctx.createImageData(w,h);
       for(let i=0;i<grown.length;i++) outline.data[i*4+3] = grown[i] ? 255 : 0;
       maskCtx.putImageData(outline,0,0); maskCtx.drawImage(hd,0,0); ctx.clearRect(0,0,w,h); ctx.drawImage(maskCanvas,0,0);
     }
     cgOverlay();
     const reduced = cgCanvas(card.width,card.height), small = reduced.getContext('2d',{willReadFrequently:true});
-    small.filter = c.post.blur ? ['blur(',c.post.blur,'px)'].join('') : 'none'; small.drawImage(hd,0,0,card.width,card.height); small.filter = 'none';
+    small.filter = c.post.blur ? ['blur(',c.post.blur,'px)'].join('') : 'none'; small.drawImage(hd,cut.x,cut.y,cut.w,cut.h,0,0,card.width,card.height); small.filter = 'none';
     const pixels = small.getImageData(0,0,card.width,card.height); cgFinish(pixels.data,card.width,card.height,c.post); small.putImageData(pixels,0,0);
     const ground = await cgGroundImage(c.ground.kind), frame = cgIsInfo() && c.gframe ? await cgArt('PORTRAIT_FRAME') : null;
     if(token !== CG_WORK.draw || !cgHere() || document.getElementById('cgCard') !== card) return;
@@ -500,9 +697,12 @@ function cgSavedHtml(){
 async function cgSave(hd){
   const c = cg(), name = c.name.trim(), mod = state.src;
   if(!name){ toast(tt('cards.gen_name_first')); return; }
-  const canvas = document.getElementById(hd ? 'cgHd' : 'cgCard'); if(!canvas) return;
+  let canvas = document.getElementById(hd ? 'cgHd' : 'cgCard'); if(!canvas) return;
   try{
     await cgDraw();
+    // the HD view is wider than the card: its saved picture is the card's part of it
+    const cut = CG_WORK.cut;
+    if(hd && cut){ const src = canvas; canvas = cgCanvas(cut.w,cut.h); canvas.getContext('2d').drawImage(src,cut.x,cut.y,cut.w,cut.h,0,0,cut.w,cut.h); }
     const kind = hd ? 'hd' : cgIsInfo() ? 'info' : c.size === 'custom' ? 'custom' : 'card';
     const r = await api.post('/api/armory/cards/save',{name,kind,size:[canvas.width,canvas.height],png:canvas.toDataURL('image/png')});
     if(r.error) throw new Error(r.error);
@@ -539,6 +739,14 @@ function cgOverlay(){
   const width = hd.width*scale,height = hd.height*scale;
   Object.assign(overlay.style,{left:(box.left-host.left+(box.width-width)/2)+'px',top:(box.top-host.top+(box.height-height)/2)+'px',width:width+'px',height:height+'px'});
   overlay.width = hd.width; overlay.height = hd.height;
+  const ctx = overlay.getContext('2d'), pref = typeof look === 'function' ? look() : {}, cut = CG_WORK.cut;
+  // what lies outside the card dimmed, and the card's edge drawn plain
+  if(cut){
+    const lw = Math.max(2,hd.width/200);
+    ctx.fillStyle = 'rgba(8,10,14,0.5)'; ctx.beginPath(); ctx.rect(0,0,hd.width,hd.height); ctx.rect(cut.x,cut.y,cut.w,cut.h); ctx.fill('evenodd');
+    ctx.lineWidth = lw*3; ctx.strokeStyle = 'rgba(0,0,0,0.85)'; ctx.strokeRect(cut.x-lw,cut.y-lw,cut.w+lw*2,cut.h+lw*2);
+    ctx.lineWidth = lw; ctx.strokeStyle = (pref.colours || {}).accent || '#f4ce61'; ctx.strokeRect(cut.x-lw,cut.y-lw,cut.w+lw*2,cut.h+lw*2);
+  }
   CG_WORK.handles = [];
   if(!cgRigActive() || !cg().rig.handles || !armAnim().data) return;
   const rig = cgRigLayout(), W = crSolve(rig,cg().rig.basis,cgRigType()), anim = armAnim().data;
@@ -546,23 +754,23 @@ function cgOverlay(){
   const ai = anim.bones.findIndex(b => /pelvis/i.test(b.name));
   const bind = armAnim().bind, origin = ai >= 0 && bind ? bind[ai] : [0,0,0];
   const rest = pelvis >= 0 ? crPos(rig.bones[pelvis].m) : [0,0,0];
-  const controlNames = ['IK Pelvis','IK Torso Controller','IK Head','IK frist right','IK frist  left','IK angle right','IK angle left','IK elbow right','IK elbow left','IK knee right','IK knee left'];
-  for(const name of controlNames){
+  // the controllers a pose is made with (CG_BONES)
+  for(const name of CG_BONES){
     const i = rig.byName.get(name); if(i === undefined) continue;
     const p = crPos(W[i]), delta = [p[0]-rest[0],p[2]-rest[2],p[1]-rest[1]];
     const game = delta.map((v,k) => v+origin[k]), point = cgScreenPoint(game);
-    CG_WORK.handles.push({name,i,point,W});
+    CG_WORK.handles.push({name,i,point,W,game});
   }
-  const ctx = overlay.getContext('2d'), radius = Math.max(6,hd.width/90);
-  const pref = typeof look === 'function' ? look() : {};
+  const radius = Math.max(6,hd.width/90);
   ctx.lineWidth = Math.max(1,hd.width/400); ctx.globalAlpha = 0.85;
   for(const side of ['left','right']) for(const pair of [['elbow','frist'],['knee','angle']]){
     const a = CG_WORK.handles.find(x => x.name.includes(pair[0]) && x.name.includes(side)), b = CG_WORK.handles.find(x => x.name.includes(pair[1]) && x.name.includes(side));
     if(a && b){ ctx.strokeStyle = side === 'left' ? '#58aaff' : '#ff7766'; ctx.beginPath(); ctx.moveTo(...a.point); ctx.lineTo(...b.point); ctx.stroke(); }
   }
   for(const h of CG_WORK.handles){
-    const [x,y] = h.point, active = h.name === CG_WORK.hover;
+    const [x,y] = h.point, picked = h.name === CG_WORK.boneSel, active = picked || h.name === CG_WORK.hover;
     const r = radius*(active ? 1.3 : 1);
+    if(picked){ ctx.save(); ctx.lineWidth *= 2.5; ctx.strokeStyle = '#ffffff'; ctx.beginPath(); ctx.arc(x,y,r*1.9,0,Math.PI*2); ctx.stroke(); ctx.restore(); }
     ctx.fillStyle = /left/.test(h.name) ? '#58aaff' : /right/.test(h.name) ? '#ff7766' : (pref.colours || {}).accent || '#f4ce61';
     ctx.strokeStyle = active ? '#fff' : '#181818'; ctx.beginPath();
     if(/elbow|knee/.test(h.name)){ ctx.moveTo(x,y-r); ctx.lineTo(x+r,y); ctx.lineTo(x,y+r); ctx.lineTo(x-r,y); ctx.closePath(); }
@@ -603,10 +811,9 @@ function cgWire(){
     CG_WORK.resize = new ResizeObserver(() => { if(cgHere() && document.getElementById('cgHd') === hd) cgOverlay(); });
     CG_WORK.resize.observe(hd);
   }
-  let drag = null, operation = null, last = [0,0];
-  const cancel = () => { if(operation){ cg().xf = operation.start; operation = null; cgSyncCamera(); cgDraw(); } };
-  const accept = () => { operation = null; cgSyncCamera(); };
-  hd.addEventListener('contextmenu',e => { e.preventDefault(); if(armNav() !== 'simple') cancel(); });
+  let drag = null, last = [0,0];
+  CG_WORK.op = null;
+  hd.addEventListener('contextmenu',e => { e.preventDefault(); });
   hd.addEventListener('auxclick',e => { if(e.button === 1) e.preventDefault(); });
   hd.addEventListener('wheel',e => {
     e.preventDefault(); cg().cam.scale = Math.max(0.2,Math.min(6,cg().cam.scale*Math.exp(e.deltaY*0.001)));
@@ -614,61 +821,194 @@ function cgWire(){
   },{passive:false});
   hd.addEventListener('pointerdown',e => {
     hd.focus(); last = cgPointerPoint(e);
-    if(e.button === 2){ e.preventDefault(); cancel(); return; }
-    if(operation && e.button === 0){ accept(); return; }
+    // a G or R under way: a left click keeps it, a right click puts it back
+    if(CG_WORK.op){ e.preventDefault(); if(e.button === 2) cgOpCancel(); else if(e.button === 0) cgOpAccept(); return; }
     // 2026-11-23: Simple (Armory's setting): a left drag off the rig's handles
-    // turns the view, a right drag moves it; Blender's middle button as before
+    // turns the view, a right drag moves it; Blender's middle button as before.
+    // A click on a handle selects that bone, a click off them lets it go.
     const simple = armNav() === 'simple';
     if(e.button === 1 || e.altKey && e.button === 0){ e.preventDefault(); drag = {kind:'camera'}; }
-    else if(simple && e.button === 2 && !operation){ e.preventDefault(); drag = {kind:'camera',pan:true}; }
+    else if(simple && e.button === 2){ e.preventDefault(); drag = {kind:'camera',pan:true}; }
     else if(e.button === 0){
       const hit = cgHit(e);
-      if(hit) drag = {kind:'rig',handle:hit};
-      else if(simple) drag = {kind:'camera'};
+      if(hit){ drag = {kind:'rig',handle:hit}; cgBoneSelect(hit.name); }
+      else drag = {kind:simple ? 'camera' : 'none',click:[e.clientX,e.clientY]};
     }
     if(drag) hd.setPointerCapture(e.pointerId);
   });
   hd.addEventListener('pointermove',e => {
     const p = cgPointerPoint(e), dx=p[0]-last[0],dy=p[1]-last[1]; last=p;
-    const c = cg();
-    if(operation){
-      if(operation.kind === 'r'){
-        if(operation.axis) c.xf.r['xyz'.indexOf(operation.axis)] += dx*0.3;
-        else{ c.xf.r[1] += dx*0.3; c.xf.r[0] += dy*0.3; }
-      }else{
-        const movement = cgMoveWorld(dx,dy);
-        if(operation.axis){ const i='xyz'.indexOf(operation.axis); const amount = (dx-dy)*CG_WORK.camera.height/hd.height; c.xf.t[i] += amount; }
-        else c.xf.t = c.xf.t.map((v,i) => v+movement[i]);
+    const c = cg(), op = CG_WORK.op;
+    if(op){
+      // the first move after a G or R from a button only finds the mouse
+      if(op.fresh){ op.fresh = false; return; }
+      if(op.bone) cgOpBone(op,p,dx,dy);
+      else{
+        if(op.kind === 'r'){
+          if(op.axis) c.xf.r['xyz'.indexOf(op.axis)] += dx*0.3;
+          else{ c.xf.r[1] += dx*0.3; c.xf.r[0] += dy*0.3; }
+        }else{
+          const movement = cgMoveWorld(dx,dy);
+          if(op.axis){ const i='xyz'.indexOf(op.axis); c.xf.t[i] += (dx-dy)*CG_WORK.camera.height/hd.height; }
+          else c.xf.t = c.xf.t.map((v,i) => v+movement[i]);
+        }
+        cgSyncCamera();
       }
-      cgSyncCamera(); cgDraw(); return;
+      cgDraw(); return;
     }
     if(!drag){ const hit = cgHit(e), name = hit ? hit.name : ''; if(CG_WORK.hover !== name){ CG_WORK.hover=name; cgOverlay(); } return; }
+    if(drag.click && Math.hypot(e.clientX-drag.click[0],e.clientY-drag.click[1]) > 3) drag.moved = true;
     if(drag.kind === 'camera'){
       if(e.ctrlKey) c.cam.scale = Math.max(0.2,Math.min(6,c.cam.scale*Math.exp(dy*0.005)));
       else if(e.shiftKey || drag.pan){ c.cam.pan -= dx*CG_WORK.camera.width/hd.width; c.cam.height += dy*CG_WORK.camera.height/hd.height; }
-      else{ c.cam.yaw += dx*0.3; c.cam.pitch = Math.max(-60,Math.min(80,c.cam.pitch+dy*0.3)); }
-      cgSyncCamera();
-    }else{
-      const rig = cgRigLayout(), h = drag.handle, ch = c.rig.basis[h.name] = {...c.rig.basis[h.name]};
-      if(h.name === 'IK Head'){
-        const angles = ch.e ? [...ch.e] : ch.q ? crToEuler(crQuat(ch.q)) : [0,0,0];
+      // Armory Studio's turn: a drag right swings the eye left round the model
+      else{ c.cam.yaw -= dx*0.3; c.cam.pitch = Math.max(-60,Math.min(80,c.cam.pitch+dy*0.3)); }
+      cgSyncCamera(); cgDraw();
+    }else if(drag.kind === 'rig'){
+      const name = drag.handle.name;
+      if(name === 'IK Head'){
+        const ch = c.rig.basis[name] = {...c.rig.basis[name]}, angles = ch.e ? [...ch.e] : ch.q ? crToEuler(crQuat(ch.q)) : [0,0,0];
         angles[0] += dy*0.003; angles[2] += dx*0.003; ch.e = angles; delete ch.q;
-      }else{
-        const W = crSolve(rig,c.rig.basis,cgRigType()), bone = rig.bones[h.i];
-        const base = bone.p < 0 ? bone.m : crMul(W[bone.p],rig.rel[h.i]);
-        const game = cgMoveWorld(dx,dy), blender = [game[0],game[2],game[1]];
-        const local = crR3(crT3(crRot(base)),blender);
-        ch.l = (ch.l || [0,0,0]).map((v,i) => v+local[i]);
-      }
+      }else cgBoneMove(name,dx,dy,'');
+      cgBoneRefresh(); cgDraw();
     }
-    cgDraw();
   });
-  hd.addEventListener('pointerup',e => { drag=null; if(hd.hasPointerCapture(e.pointerId)) hd.releasePointerCapture(e.pointerId); });
+  hd.addEventListener('pointerup',e => {
+    const d = drag; drag = null;
+    if(hd.hasPointerCapture(e.pointerId)) hd.releasePointerCapture(e.pointerId);
+    if(d && d.click && !d.moved) cgBoneSelect('');
+  });
   hd.addEventListener('keydown',e => {
-    const key=e.key.toLowerCase();
-    if(key === 'escape'){ e.preventDefault(); cancel(); return; }
-    if(key === 'enter'){ e.preventDefault(); accept(); return; }
-    if(operation && ['x','y','z'].includes(key)){ e.preventDefault(); operation.axis=operation.axis === key ? '' : key; return; }
-    if(!operation && ['g','r'].includes(key)){ e.preventDefault(); operation={kind:key,axis:key === 'r' ? 'y' : '',start:JSON.parse(JSON.stringify(cg().xf))}; }
+    const key = e.key.toLowerCase(), op = CG_WORK.op;
+    if(key === 'escape'){ e.preventDefault(); if(op) cgOpCancel(); else cgBoneSelect(''); return; }
+    if(key === 'enter'){ e.preventDefault(); cgOpAccept(); return; }
+    if(op && ['x','y','z'].includes(key)){ e.preventDefault(); op.axis = op.axis === key ? '' : key; return; }
+    if(!op && ['g','r'].includes(key)){ e.preventDefault(); cgOpStart(key,false); }
   });
+}
+/* --- 2026-11-23: the rig's bones picked and moved as in Blender ----------------
+   A click on a handle selects that controller; G moves it, R turns it (about
+   the line of sight, or with X, Y or Z about Blender's axis: Z up), a click or
+   Enter keeps it, Esc or a right click puts it back. With no bone selected G
+   and R move and turn the whole model, as before. */
+const CG_BONES = ['IK Pelvis','IK Torso Controller','IK Head','IK frist right','IK frist  left','IK angle right','IK angle left','IK elbow right','IK elbow left','IK knee right','IK knee left'];
+function cgBoneSelect(name){
+  if(CG_WORK.boneSel === name) return;
+  CG_WORK.boneSel = name; cgBoneRefresh(); cgOverlay();
+}
+function cgBoneRefresh(){ const el = document.getElementById('cgBone'); if(el) el.innerHTML = cgBoneHtml(); }
+function cgBoneHtml(){
+  const name = CG_WORK.boneSel || '', ch = name ? cg().rig.basis[name] || {} : {};
+  const l = ch.l || [0,0,0], e = ch.e || (ch.q ? crToEuler(crQuat(ch.q)) : [0,0,0]), op = CG_WORK.op;
+  const num = (k,i,v,step) => `<input class="armnum" type="number" step="${step}" value="${Math.round(v*1000)/1000}" onchange="cgBoneSet('${k}',${i},+this.value)">`;
+  return `<label>${tt('cards.gen_bone')} <select onchange="cgBoneSelect(this.value)"><option value="">${tt('cards.gen_bone_none')}</option>${CG_BONES.map(n => `<option value="${esc(n)}"${n === name ? ' selected' : ''}>${esc(n)}</option>`).join('')}</select></label>
+    ${name ? `<div class="cgbonegrid"><span>${tt('cards.gen_bone_loc')}</span>${l.map((v,i) => num('l',i,v,0.01)).join('')}<span>${tt('cards.gen_bone_rot')}</span>${e.map((v,i) => num('e',i,v*180/Math.PI,1)).join('')}</div>
+    <div class="armexprow"><button class="mini${op && op.bone && op.kind === 'g' ? ' on' : ''}" title="${ttA('cards.gen_bone_move_title')}" onclick="cgOpStart('g',true)">${tt('cards.gen_bone_move')}</button>
+      <button class="mini${op && op.bone && op.kind === 'r' ? ' on' : ''}" title="${ttA('cards.gen_bone_turn_title')}" onclick="cgOpStart('r',true)">${tt('cards.gen_bone_turn')}</button>
+      <button class="mini" onclick="cgBoneClear()">${tt('cards.gen_bone_reset')}</button></div>` : ''}`;
+}
+function cgBoneSet(k,i,v){
+  const name = CG_WORK.boneSel; if(!name || !isFinite(v)) return;
+  const basis = cg().rig.basis, ch = basis[name] = {...basis[name]};
+  if(k === 'l'){ ch.l = [...(ch.l || [0,0,0])]; ch.l[i] = v; }
+  else{ const e = ch.e ? [...ch.e] : ch.q ? crToEuler(crQuat(ch.q)) : [0,0,0]; e[i] = v*Math.PI/180; ch.e = e; delete ch.q; }
+  cgDraw();
+}
+function cgBoneClear(){ const name = CG_WORK.boneSel; if(!name) return; delete cg().rig.basis[name]; cgBoneRefresh(); cgDraw(); }
+function cgOpStart(kind,fromButton){
+  const c = cg(), name = cgRigActive() && CG_WORK.boneSel;
+  CG_WORK.op = name ? {kind,bone:name,axis:'',start:JSON.parse(JSON.stringify(c.rig.basis)),fresh:!!fromButton}
+    : {kind,axis:kind === 'r' ? 'y' : '',start:JSON.parse(JSON.stringify(c.xf)),fresh:!!fromButton};
+  if(name){ const h = CG_WORK.handles.find(x => x.name === name); CG_WORK.op.pivot = h ? h.point : null; cgBoneRefresh(); }
+  const hd = document.getElementById('cgHd'); if(hd) hd.focus();
+}
+function cgOpCancel(){
+  const op = CG_WORK.op; if(!op) return;
+  CG_WORK.op = null;
+  if(op.bone) cg().rig.basis = op.start; else cg().xf = op.start;
+  cgSyncCamera(); cgBoneRefresh(); cgDraw();
+}
+function cgOpAccept(){ if(!CG_WORK.op) return; CG_WORK.op = null; cgSyncCamera(); cgBoneRefresh(); }
+function cgOpBone(op,p,dx,dy){
+  if(op.kind === 'g') cgBoneMove(op.bone,dx,dy,op.axis);
+  else if(op.pivot){
+    const angle = Math.atan2(p[1]-op.pivot[1],p[0]-op.pivot[0]);
+    if(op.angle != null){ const d = angle-op.angle; cgBoneTurn(op.bone,Math.atan2(Math.sin(d),Math.cos(d)),op.axis); }
+    op.angle = angle;
+  }
+  cgBoneRefresh();
+}
+/* Blender's axis k (Z up) in the game's space (y up), and back. */
+const cgBlenderAxis = k => { const b = [0,0,0]; b[k] = 1; return [b[0],b[2],b[1]]; };
+function cgBoneBase(name){
+  const c = cg(), rig = cgRigLayout(), i = rig ? rig.byName.get(name) : undefined;
+  if(i === undefined) return null;
+  const W = crSolve(rig,c.rig.basis,cgRigType()), bone = rig.bones[i];
+  return bone.p < 0 ? bone.m : crMul(W[bone.p],rig.rel[i]);
+}
+function cgBoneMove(name,dx,dy,axis){
+  const base = cgBoneBase(name); if(!base) return;
+  let game = cgMoveWorld(dx,dy);
+  if(axis){
+    // along the axis as it is drawn: how far the mouse went down its line on screen
+    const h = CG_WORK.handles.find(x => x.name === name), o = h ? h.game : [0,0,0], g = cgBlenderAxis('xyz'.indexOf(axis));
+    const s0 = cgScreenPoint(o), s1 = cgScreenPoint(o.map((v,j) => v+g[j]*0.1)), sv = [s1[0]-s0[0],s1[1]-s0[1]];
+    const amount = (dx*sv[0]+dy*sv[1])/(sv[0]*sv[0]+sv[1]*sv[1] || 1)*0.1;
+    game = g.map(v => v*amount);
+  }
+  const ch = cg().rig.basis[name] = {...cg().rig.basis[name]}, local = crR3(crT3(crRot(base)),[game[0],game[2],game[1]]);
+  ch.l = (ch.l || [0,0,0]).map((v,j) => v+local[j]);
+}
+function cgBoneTurn(name,angle,axis){
+  const base = cgBoneBase(name); if(!base) return;
+  let ax;
+  if(axis){ ax = [0,0,0]; ax['xyz'.indexOf(axis)] = 1; }
+  else{
+    // the line of sight, from the page's space (x mirrored) into the rig's
+    const cam = CG_WORK.camera, v = crNorm(crSub(cam.eye,cam.target));
+    ax = [-v[0],v[2],v[1]];
+  }
+  const ch = cg().rig.basis[name] = {...cg().rig.basis[name]}, cur = ch.q ? crQuat(ch.q) : ch.e ? crEuler(ch.e) : [1,0,0, 0,1,0, 0,0,1];
+  const local = crNorm(crR3(crT3(crPure(crRot(base))),ax));
+  ch.e = crToEuler(crR3Mul(crAxisAngle(local,CG_TURN*angle),cur)); delete ch.q;
+}
+const CG_TURN = -1;
+/* --- 2026-11-23: the pose library's pictures, drawn on this model a few at a
+   time and kept until the model, its parts or the rig change. */
+function cgPoseThumbs(){
+  const imgs = [...document.querySelectorAll('img[data-cgpose]')];
+  if(!imgs.length || !cgRigActive() || !armAnim().data) return;
+  const objects = cgObjects(), sig = [cgRigType(),armAnim().skel,objects.map(o => o.id + ':' + cgPartKey(o)).join(',')].join('|');
+  if(CG_WORK.thumbSig !== sig || !CG_WORK.poseThumbs){ CG_WORK.thumbSig = sig; CG_WORK.poseThumbs = new Map(); }
+  const todo = imgs.filter(img => { const url = CG_WORK.poseThumbs.get(img.dataset.cgpose); if(url){ img.src = url; return false; } return true; });
+  if(!todo.length) return;
+  const run = CG_WORK.thumbRun = (CG_WORK.thumbRun || 0) + 1;
+  const step = () => {
+    if(run !== CG_WORK.thumbRun || !cgHere() || CG_WORK.thumbSig !== sig || !cgRigActive()) return;
+    const t0 = performance.now();
+    while(todo.length && performance.now()-t0 < 40){
+      const img = todo.shift();
+      if(!img.isConnected) continue;
+      const url = cgPoseThumb(+img.dataset.cgpose,objects);
+      if(url){ CG_WORK.poseThumbs.set(img.dataset.cgpose,url); img.src = url; }
+    }
+    armAnimPose(objects);
+    if(todo.length) setTimeout(step,0);
+  };
+  setTimeout(step,0);
+}
+function cgPoseThumb(index,objects){
+  const r = cg().rig, keep = r.basis, W = 96, H = 128;
+  r.basis = crApply({},CG_WORK.library.poses[index],'whole');
+  try{
+    armAnimPose(objects);
+    const [lo,hi] = cgBounds(objects), center = lo.map((v,k) => (v+hi[k])/2), target = [-center[0],center[1],center[2]];
+    const height = Math.max(hi[1]-lo[1],(hi[0]-lo[0])*H/W,(hi[2]-lo[2])*H/W)*1.08, width = height*W/H;
+    const yaw = cg().cam.yaw*Math.PI/180, pitch = 0.08;
+    const eye = [target[0]+10*Math.cos(pitch)*Math.sin(yaw),target[1]+10*Math.sin(pitch),target[2]+10*Math.cos(pitch)*Math.cos(yaw)];
+    const camera = {proj:[2/width,0,0,0,0,2/height,0,0,0,0,-0.01,0,0,0,0,1],view:v3LookAt(eye,target,[0,1,0]),eye,target};
+    if(!armRender(objects,W,H,camera,{plain:true,card:true,light:cgLight(camera),bg:[0.3,0.33,0.38]})) return '';
+    const canvas = cgCanvas(W,H); canvas.getContext('2d').drawImage(ARM.glCanvas,0,0,W,H,0,0,W,H);
+    return canvas.toDataURL('image/jpeg',0.85);
+  }finally{ r.basis = keep; }
 }

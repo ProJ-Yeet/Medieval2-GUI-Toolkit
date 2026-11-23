@@ -13668,5 +13668,20 @@
   "one": "{entry} için {count} nesne çiziliyor.",
   "other": "{entry} için {count} nesne çiziliyor."
  },
- "cards.gen_view_hint_simple": "HD görünümde sol sürükleme kamerayı döndürür, sağ sürükleme taşır, tekerlek yakınlaştırır; iskelet tutamacını sol sürükleyerek taşıyın. G modeli taşır, R döndürür; X, Y veya Z bir eksene kilitler. Tıklayın ya da Enter'a basarak onaylayın, Esc ile geri alın."
+ "cards.gen_view_hint_simple": "HD görünümde sol sürükleme kamerayı döndürür, sağ sürükleme taşır, tekerlek yakınlaştırır; iskelet tutamacını sol sürükleyerek taşıyın. G modeli taşır, R döndürür; X, Y veya Z bir eksene kilitler. Tıklayın ya da Enter'a basarak onaylayın, Esc ile geri alın.",
+ "cards.gen_random": "Varyasyonu rastgele belirle",
+ "cards.gen_random_title": "Birden fazla varyasyonu olan her parça için rastgele başka bir varyasyon seç.",
+ "cards.gen_peek_hint": "Burada görmek için listeden bir birime tıkla, döndürmek için sürükle; kartını oluşturmak için birime çift tıkla veya Bu birimi kullan'a bas.",
+ "cards.gen_peek_use": "Birimi kullan",
+ "cards.gen_peek_cancel": "Mevcut birimi koru",
+ "cards.gen_peek_none": "Görmek için listeden bir birim seç.",
+ "cards.gen_bone": "Kemik",
+ "cards.gen_bone_none": "Hiçbiri seçilmedi",
+ "cards.gen_bone_loc": "Konum",
+ "cards.gen_bone_rot": "Döndürme",
+ "cards.gen_bone_move": "Taşı (G)",
+ "cards.gen_bone_move_title": "Seçili kemiği fareyle taşı. X, Y veya Z tuşu kemiği Blender'ın ilgili eksenine sabitler (Z yukarı). Tıklama veya Enter işlemi uygular; Esc veya sağ tıklama kemiği eski konumuna getirir.",
+ "cards.gen_bone_turn": "Döndür (R)",
+ "cards.gen_bone_turn_title": "Seçili kemiği fareyle tutamacı etrafında, görüş doğrultusunda döndür veya X, Y ya da Z ile ilgili eksen etrafında döndür. Tıklama veya Enter işlemi uygular; Esc veya sağ tıklama kemiği eski konumuna getirir.",
+ "cards.gen_bone_reset": "Kemiği sıfırla"
 }

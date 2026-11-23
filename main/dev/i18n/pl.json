@@ -14941,5 +14941,20 @@
   "many": "Rysowanie {count} obiektów z wpisu {entry}.",
   "other": "Rysowanie {count} obiektu z wpisu {entry}."
  },
- "cards.gen_view_hint_simple": "W widoku HD: przeciągnij lewym przyciskiem, aby obrócić kamerę, prawym, aby ją przesunąć; kółkiem zmieniaj powiększenie. Przeciągnij lewym przyciskiem uchwyt szkieletu, aby go przesunąć. G przesuwa model, R go obraca, X, Y lub Z ogranicza operację do osi. Kliknięcie lub Enter zatwierdza, Esc przywraca położenie."
+ "cards.gen_view_hint_simple": "W widoku HD: przeciągnij lewym przyciskiem, aby obrócić kamerę, prawym, aby ją przesunąć; kółkiem zmieniaj powiększenie. Przeciągnij lewym przyciskiem uchwyt szkieletu, aby go przesunąć. G przesuwa model, R go obraca, X, Y lub Z ogranicza operację do osi. Kliknięcie lub Enter zatwierdza, Esc przywraca położenie.",
+ "cards.gen_random": "Losuj wariant",
+ "cards.gen_random_title": "Wylosuj kolejny wariant każdej części, która ma więcej niż jeden.",
+ "cards.gen_peek_use": "Użyj tej jednostki",
+ "cards.gen_peek_cancel": "Zachowaj bieżącą jednostkę",
+ "cards.gen_peek_none": "Wybierz jednostkę na liście, aby ją zobaczyć.",
+ "cards.gen_bone": "Kość",
+ "cards.gen_bone_none": "Nie wybrano",
+ "cards.gen_bone_loc": "Położenie",
+ "cards.gen_bone_rot": "Obrót",
+ "cards.gen_bone_move": "Przesuń (G)",
+ "cards.gen_bone_move_title": "Przesuwaj zaznaczoną kość myszą. X, Y lub Z ogranicza jej ruch do osi Blendera (Z jest skierowana w górę). Kliknięcie lub Enter zatwierdza zmianę, Esc lub kliknięcie prawym przyciskiem myszy ją cofa.",
+ "cards.gen_bone_turn": "Obróć (R)",
+ "cards.gen_bone_turn_title": "Obróć zaznaczoną kość wokół jej uchwytu za pomocą myszy, względem linii widzenia albo wokół osi X, Y lub Z. Kliknięcie lub Enter zatwierdza zmianę, Esc lub kliknięcie prawym przyciskiem myszy ją cofa.",
+ "cards.gen_bone_reset": "Resetuj kość",
+ "cards.gen_peek_hint": "Kliknij jednostkę na liście, aby zobaczyć ją tutaj, przeciągnij, aby ją obrócić, a następnie kliknij ją dwukrotnie lub naciśnij „Użyj tej jednostki”, aby utworzyć jej kartę."
 }

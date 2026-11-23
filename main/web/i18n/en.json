@@ -12988,5 +12988,20 @@
 "cards.gen_src_armory_note": "The model being built in Armory Studio, with settings kept in its Armory project.",
 "cards.gen_pick_unit_first": "Choose a unit: its soldier model is loaded here to make its card.",
 "cards.gen_unit_unreadable": "{entry} could not be read",
-"cards.gen_source_unit": {"one": "Drawing {count} object of {entry}.", "other": "Drawing {count} objects of {entry}."}
+"cards.gen_source_unit": {"one": "Drawing {count} object of {entry}.", "other": "Drawing {count} objects of {entry}."},
+"cards.gen_random": "Randomize variation",
+"cards.gen_random_title": "Draw another variant of each part that has more than one, picked at random.",
+"cards.gen_peek_hint": "Click a unit in the list to see it here, drag to rotate it, and double-click it or press Use this unit to make its card.",
+"cards.gen_peek_use": "Use this unit",
+"cards.gen_peek_cancel": "Keep the current unit",
+"cards.gen_peek_none": "Pick a unit in the list to see it.",
+"cards.gen_bone": "Bone",
+"cards.gen_bone_none": "None selected",
+"cards.gen_bone_loc": "Location",
+"cards.gen_bone_rot": "Rotation",
+"cards.gen_bone_move": "Move (G)",
+"cards.gen_bone_move_title": "Move the selected bone with the mouse. X, Y or Z holds it to Blender's axis (Z up), a click or Enter keeps it, Esc or a right click puts it back.",
+"cards.gen_bone_turn": "Rotate (R)",
+"cards.gen_bone_turn_title": "Rotate the selected bone round its handle with the mouse, about the line of sight, or with X, Y or Z about that axis. A click or Enter keeps it, Esc or a right click puts it back.",
+"cards.gen_bone_reset": "Reset bone"
 }

@@ -1160,6 +1160,8 @@ function armRender(objs, w, h, cam, opts){
 
 function armDraw(){
   const view = ARM.view;
+  // 2026-11-23: a texture landing while the card maker is shown redraws it
+  if(state.mode === 'cards' && typeof cgTexturesIn === 'function') cgTexturesIn();
   if(!view || !view.isConnected || state.mode !== 'armory') return;
   const r = view.parentElement.getBoundingClientRect();
   const dpr = Math.min(window.devicePixelRatio || 1, 2);
