@@ -28,6 +28,8 @@ const ARM_KEY_DEFAULTS = {
   viewFront: 'numpad1', viewBack: 'ctrl+numpad1', viewRight: 'numpad3', viewLeft: 'ctrl+numpad3',
   viewTop: 'numpad7', viewBottom: 'ctrl+numpad7', ortho: 'numpad5', selectConnected: 'l',
   faceOrient: '', stats: '', detail: 'numpad/',
+  // 2026-11-23: Blender's Wireframe and X-ray (Edit Mode's 1, 2, 3 are fixed, armKey)
+  wireframe: 'z', xray: 'alt+z', move: 'm',
   // 99i and 99j
   undo: 'ctrl+z', redo: 'ctrl+shift+z', redoAlt: 'ctrl+y', tpose: '',
   // 100i, Blender's own key for a maximised area
@@ -41,7 +43,7 @@ const armKeyLabel = k => ({grab: tt('armory.key_grab'), rotate: tt('armory.key_r
   viewBottom: tt('armory.key_view_bottom'), ortho: tt('armory.key_ortho'), selectConnected: tt('armory.select_connected'),
   faceOrient: tt('armory.face_orientation'), stats: tt('armory.statistics'), detail: tt('armory.detail'),
   undo: tt('armory.key_undo'), redo: tt('armory.key_redo'), redoAlt: tt('armory.key_redo_alt'), tpose: tt('armory.tpose'),
-  fullView: tt('armory.full_view')})[k] || k;
+  fullView: tt('armory.full_view'), wireframe: tt('armory.shade_wire'), xray: tt('armory.xray'), move: tt('armory.key_move')})[k] || k;
 
 function armKeys(){ return Object.assign({}, ARM_KEY_DEFAULTS, ARM.keys || {}); }
 async function armLoadKeys(){
@@ -86,7 +88,9 @@ function armWireKeys(){
       return;
     }
     const anywhere = name && ['undo', 'redo', 'redoAlt', 'fullView'].some(k => keys[k] === name);
-    if(!ARM.overView && !anywhere) return;
+    // over the Objects panel too, the keys about objects (M, H, A, X)
+    const pane = ARM.overPane && name && ['move', 'hide', 'unhideAll', 'selectAll', 'deselectAll', 'delete'].some(k => keys[k] === name);
+    if(!ARM.overView && !anywhere && !pane) return;
     armKey(e);
   });
 }
@@ -94,6 +98,11 @@ function armWireKeys(){
 function armKey(e){
   if(ARM.rebind){ return armRebindTake(e); }
   if(ARM.xform) return armXformKey(e);
+  // Edit Mode's select modes, Blender's 1 2 3 above the letters (Shift adds one)
+  if(ARM.detail && /^Digit[123]$/.test(e.code || '') && !e.ctrlKey && !e.altKey){
+    e.preventDefault();
+    return armEditMode('vef'[+e.code.slice(5) - 1], e.shiftKey);
+  }
   const name = armKeyName(e);
   if(!name) return;
   const keys = armKeys();
@@ -128,7 +137,10 @@ function armKey(e){
     case 'selectConnected': if(ARM.detail) armDetailConnected(); break;
     case 'faceOrient': armToggle('faceOrient'); break;
     case 'stats': armToggle('stats'); break;
-    case 'detail': ARM.detail ? armDetailClose() : armDetailOpen(); break;
+    case 'detail': armDetailToggle(); break;
+    case 'wireframe': armShadeSet(ARM.shade === 'wire' ? 'solid' : 'wire'); break;
+    case 'xray': armXrayToggle(); break;
+    case 'move': if(!ARM.detail) armMoveMenu((ARM.mouse || {}).x || innerWidth / 2, (ARM.mouse || {}).y || innerHeight / 2); break;
     case 'undo': armUndo(false); break;
     case 'redo': case 'redoAlt': armUndo(true); break;
     case 'tpose': armTpose(); break;
@@ -356,10 +368,19 @@ function armPaintSliders(){
   if(!el) return;
   const sel = armSelected();
   const o = sel[0];
+  if(armFootShut()){
+    el.innerHTML = `<div class="armfoothead"><button class="armfold" onclick="armFootToggle()" title="${esc(tt('armory.foot_fold_title'))}">▸ ${tt('armory.foot_tools')}</button>
+      <span class="count">${o ? ttN('armory.n_selected', sel.length) : tt('armory.nothing_selected')}</span>
+      <span id="armSelTools">${typeof armSelToolsHtml === 'function' ? armSelToolsHtml() : ''}</span></div>`;
+    if(typeof armAnimPaint === 'function') armAnimPaint();
+    armFrame();
+    return;
+  }
   const row = (kind, label, vals, step) => `<div class="armslrow"><b>${label}</b>${[0, 1, 2].map(i =>
     `<label>${'XYZ'[i]}<input type="number" step="${step}" value="${o ? armRound(vals[i], 1000) : ''}"${o ? '' : ' disabled'}
       onchange="armSlider('${kind}', ${i}, this.value)" onwheel="armSliderWheel(event, '${kind}', ${i}, ${step})"></label>`).join('')}</div>`;
-  el.innerHTML = `<div class="armslwrap"><div class="armsliders">
+  el.innerHTML = `<div class="armfoothead"><button class="armfold" onclick="armFootToggle()" title="${esc(tt('armory.foot_fold_title'))}">▾ ${tt('armory.foot_tools')}</button></div>
+    <div class="armslwrap"><div class="armsliders">
       ${row('t', tt('armory.move'), o ? o.t : [], 0.01)}
       ${row('r', tt('armory.rotate'), o ? o.r : [], 1)}
       ${row('s', tt('armory.scale'), o ? o.s : [], 0.01)}
@@ -384,6 +405,14 @@ function armPaintSliders(){
     </div>
     <div class="armanimhost" id="armAnimHost"></div>`;
   if(typeof armAnimPaint === 'function') armAnimPaint();
+}
+/* The bar under the view folds to one line, remembered (armory_foot_shut). */
+const armFootShut = () => !!(state.settings || {}).armory_foot_shut;
+function armFootToggle(){
+  state.settings.armory_foot_shut = !armFootShut();
+  api.post('/api/settings', {armory_foot_shut: state.settings.armory_foot_shut}).catch(() => {});
+  armPaintSliders();
+  armFrame();
 }
 function armToggleOrtho(){ ARM.cam.ortho = !ARM.cam.ortho; armPaintSliders(); armFrame(); }
 
@@ -448,6 +477,25 @@ function armObjVerts(o){
   if(ready) ARM_VCOUNT.set(o, {sig, n});
   return n;
 }
+/* One soldier as the game makes him: one object of each group type, or none
+   of a group whose every object is optional. His triangles at the least, on
+   average and at the most, and how many different soldiers there can be. */
+function armSoldierStats(objs){
+  const groups = new Map();
+  for(const o of objs){
+    if(!groups.has(o.name)) groups.set(o.name, []);
+    groups.get(o.name).push(o);
+  }
+  let min = 0, max = 0, avg = 0, count = 1;
+  for(const list of groups.values()){
+    const t = list.map(armObjTris);
+    if(list.every(o => o.flag)) t.push(0);
+    min += Math.min(...t); max += Math.max(...t);
+    avg += t.reduce((a, b) => a + b, 0) / t.length;
+    count *= t.length;
+  }
+  return {min, max, avg, count};
+}
 function armOverlay95g(ctx, w, h){
   const x = ARM.xform;
   const dpr = w / (ARM.view.getBoundingClientRect().width || w);
@@ -469,11 +517,14 @@ function armOverlay95g(ctx, w, h){
     const verts = objs.reduce((s, o) => s + armObjVerts(o), 0);
     const selT = armSelected().reduce((s, o) => s + armObjTris(o), 0);
     const level = tris <= ARM_BUDGET.high ? 'ok' : tris <= ARM_BUDGET.heavy ? 'high' : 'heavy';
+    const one = armSoldierStats(objs);
     const lines = [
       tt('armory.stat_objects', {n: objs.length.toLocaleString()}),
       tt('armory.stat_vertices', {n: verts.toLocaleString()}),
       tt('armory.stat_triangles', {n: tris.toLocaleString()}),
       tt('armory.stat_selected', {n: selT.toLocaleString()}),
+      tt('armory.stat_soldier', {avg: Math.round(one.avg).toLocaleString(), min: one.min.toLocaleString(), max: one.max.toLocaleString()}),
+      tt('armory.stat_variations', {n: one.count.toLocaleString()}),
     ];
     const badge = level === 'ok' ? tt('armory.budget_ok', {high: ARM_BUDGET.high.toLocaleString()})
       : level === 'high' ? tt('armory.budget_high', {high: ARM_BUDGET.high.toLocaleString()})
@@ -604,11 +655,15 @@ function armGizmoHover(e){
 /* Looks down an axis: the eye on that axis's side of the model. */
 function armGizmoClick(b){
   if(!b || b.disk) return;
-  if(b.axis === 1) return armView(ARM.cam.yaw, b.sign > 0 ? 1.5607 : -1.5607);
-  // the game's +x is the page's -x (ARM_MIRROR); the eye sits at yaw where
-  // sin(yaw) is its x and cos(yaw) its z
-  if(b.axis === 0) return armView(b.sign > 0 ? -Math.PI / 2 : Math.PI / 2, 0);
-  armView(b.sign > 0 ? 0 : Math.PI, 0);
+  const at = sign => b.axis === 1 ? [ARM.cam.yaw, sign > 0 ? 1.5607 : -1.5607]
+    // the game's +x is the page's -x (ARM_MIRROR); the eye sits at yaw where
+    // sin(yaw) is its x and cos(yaw) its z
+    : b.axis === 0 ? [sign > 0 ? -Math.PI / 2 : Math.PI / 2, 0] : [sign > 0 ? 0 : Math.PI, 0];
+  // Blender: the axis already looked down is clicked again, and the view turns to its far side
+  const [yaw, pitch] = at(b.sign);
+  const turn = Math.abs(Math.atan2(Math.sin(ARM.cam.yaw - yaw), Math.cos(ARM.cam.yaw - yaw)));
+  const same = Math.abs(ARM.cam.pitch - pitch) < 0.01 && (b.axis === 1 || turn < 0.01);
+  armView(...at(same ? -b.sign : b.sign));
 }
 
 /* --- shortcuts, every one editable ---------------------------------------------- */
@@ -709,4 +764,13 @@ function armViewWire(){
   ARM.view.dataset.wired95g = '1';
   ARM.view.addEventListener('pointerenter', () => { ARM.overView = true; });
   ARM.view.addEventListener('pointerleave', () => { ARM.overView = false; });
+  // where M's menu opens, and whether the pointer is over the Objects panel
+  if(!ARM.mouseWired){
+    ARM.mouseWired = true;
+    window.addEventListener('pointermove', e => {
+      ARM.mouse = {x: e.clientX, y: e.clientY};
+      const pane = document.getElementById('armRight');
+      ARM.overPane = !!(pane && pane.contains(e.target));
+    }, {passive: true});
+  }
 }

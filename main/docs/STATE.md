@@ -1,5 +1,5 @@
 # STATE - Medieval 2 GUI Toolkit
-_Updated: 2026-11-23 - Delete unit can take a unit away from one faction only (on master, uncut). Mylae's editor fetched to bc6d969: nothing to port._
+_Updated: 2026-11-23 - Armory Studio round of user requests (on master, uncut): Blender-style Edit Mode in the detail view (vertex/edge/face, paths, connected mode, cut or duplicate split), Solid/Wireframe/X-ray, outlined selection with an active object, the Objects panel split with its properties (gallery, drag to collections, M), inline Optimize, the weapon-prefix help, the import's 3D Start from with Back, gallery tiles that retry, Show soldier. Earlier the same day: Delete unit for one faction only. Mylae's editor fetched to bc6d969: nothing to port._
 
 ## Next up
 **Next: major V, the translations**, per `ROADMAP.md`. Major VI (Lua scripts, 120-127) is built, uncut, 2026-11-15: `lua_cli.py`, `luarun.py`, `luaapi.py`, every editor's data, the Scripts screen's Lua tab behind *Opt into beta features*. The tab's editor is CodeMirror 5 (`web/vendor/codemirror`). The guide (`lua/guide.html`) and ten example scripts (`lua/examples`) ship in the zip. Nothing of VI is left.

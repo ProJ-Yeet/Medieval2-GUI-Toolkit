@@ -49,7 +49,7 @@ uniform sampler2D uTex, uNTex;
 uniform float uHasTex, uUScale, uHi, uSel, uFlip, uXray, uHasN;
 uniform float uCard, uMask, uLAmt, uAmb, uLevel, uPoint;
 uniform float uLit, uLitAmb, uLitStr, uLitSoft;
-uniform vec3 uLDir, uLPos, uLitDir;
+uniform vec3 uLDir, uLPos, uLitDir, uMaskCol;
 uniform vec4 uCrop;
 ${V3_ENV}
 void main(){
@@ -93,7 +93,7 @@ void main(){
     float k = max(dot(n, normalize(L)), 0.0) * uLAmt * att;
     col = clamp(base.rgb * (uAmb + k) * uLevel, 0.0, 1.0);
   }
-  if(uMask > 0.5){ gl_FragColor = vec4(1.0); return; }
+  if(uMask > 0.5){ gl_FragColor = vec4(uMaskCol, 1.0); return; }
   col = mix(col, vec3(0.36, 0.55, 0.94), uHi * 0.28);
   col = mix(col, vec3(0.97, 0.62, 0.18), uSel * 0.30);
   // face orientation, Blender's colours: blue the front, red the back
@@ -265,6 +265,7 @@ function armPaintBar(){
     <span style="flex:1"></span>
     <button class="mini" id="armUndoBtn" onclick="armUndo(false)" title="${esc(tt('armory.undo_title'))}"${ARM.undo && ARM.undo.past.length ? '' : ' disabled'}>↶</button>
     <button class="mini" id="armRedoBtn" onclick="armUndo(true)" title="${esc(tt('armory.redo_title'))}"${ARM.undo && ARM.undo.future.length ? '' : ' disabled'}>↷</button>
+    <span class="armshade" id="armShade">${typeof armShadeHtml === 'function' ? armShadeHtml() : ''}</span>
     <button class="mini" onclick="armFullView()" title="${esc(tt('armory.full_view_title'))}">⛶ ${tt('armory.full_view')}</button>
     <button class="mini" onclick="armTexOpen()" title="${esc(tt('armory.textures_title'))}">🖼 ${tt('armory.textures')}</button>
     <button class="mini" onclick="armUvOpen()" title="${esc(tt('armory.uv_edit_title'))}">${tt('armory.uv_edit')}</button>
@@ -494,9 +495,20 @@ function armPull(key, group){
   if(typeof armBoneCheck === 'function') armBoneCheck(key, [group]);
   armSave(); armPaintAssets(); armPaintObjects(); armPaintBar(); armFrame();
 }
+/* Blender's duplicate suffixes (.001, .002) come off a name as it is pulled
+   in, wherever they are in it; two that then clash are numbered as the mods
+   number them. Only a name that is nothing but a suffix is kept, and said. */
+function armCleanNames(name, mesh){
+  const strip = v => String(v || '').replace(/\.\d{3,}(?=$|_|\.)/g, '');
+  let n = strip(name) || name, m = strip(mesh);
+  if(!m){ toast(tt('armory.name_suffix_kept', {name: mesh}), 6000); m = mesh; }
+  if(m !== mesh && armProj().objects.some(o => o.name === n && o.mesh === m)) m = armUniqueMesh(n, m);
+  return [n, m];
+}
 function armNewObject(key, ob){
   const p = armProj();
-  return {id: p.nextId++, src: [{asset: key, group: ob.index}], name: ob.name, mesh: ob.mesh,
+  const [name, mesh] = armCleanNames(ob.name, ob.mesh);
+  return {id: p.nextId++, src: [{asset: key, group: ob.index}], name, mesh,
           flag: ob.flag, hidden: false, coll: null, t: [0, 0, 0], r: [0, 0, 0], s: [1, 1, 1],
           material: '', dye: null};
 }
@@ -784,7 +796,7 @@ function armGl(){
   for(const n of ['aPos', 'aNormal', 'aUv']) ARM.loc[n] = gl.getAttribLocation(p, n);
   for(const n of ['uProj', 'uView', 'uModel', 'uTex', 'uHasTex', 'uUScale', 'uHi', 'uSel', 'uFlip', 'uXray', 'uCrop', 'uNTex', 'uHasN',
                   'uCard', 'uMask', 'uLAmt', 'uAmb', 'uLevel', 'uPoint', 'uLDir', 'uLPos',
-                  'uLit', 'uLitAmb', 'uLitStr', 'uLitSoft', 'uLitDir'])
+                  'uLit', 'uLitAmb', 'uLitStr', 'uLitSoft', 'uLitDir', 'uMaskCol'])
     ARM.loc[n] = gl.getUniformLocation(p, n);
   gl.enable(gl.DEPTH_TEST);
   return gl;
@@ -957,8 +969,10 @@ function armRender(objs, w, h, cam, opts){
   gl.enable(gl.SCISSOR_TEST);
   gl.scissor(0, ARM.glCanvas.height - h, w, h);
   const bg = o.bg || [0.16, 0.18, 0.21];
-  gl.clearColor(bg[0], bg[1], bg[2], 1);
-  gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+  if(!o.noClear){
+    gl.clearColor(bg[0], bg[1], bg[2], 1);
+    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+  }
   gl.useProgram(ARM.prog);
   const L = ARM.loc;
   gl.uniformMatrix4fv(L.uProj, false, new Float32Array(cam.proj));
@@ -968,6 +982,11 @@ function armRender(objs, w, h, cam, opts){
   const lt = o.light;
   gl.uniform1f(L.uCard, lt ? 1 : 0);
   gl.uniform1f(L.uMask, o.mask ? 1 : 0);
+  gl.uniform3fv(L.uMaskCol, o.maskCol || [1, 1, 1]);
+  // the viewport's own shading (armedit.js): never a card's, a mask's or a thumbnail's
+  const live3d = !o.plain && !o.mask;
+  const xray = live3d && typeof armXrayOn === 'function' && armXrayOn();
+  const wire = live3d && ARM.shade === 'wire';
   if(lt){
     gl.uniform1f(L.uLAmt, lt.amount); gl.uniform1f(L.uAmb, lt.ambient); gl.uniform1f(L.uLevel, lt.level);
     gl.uniform1f(L.uPoint, lt.point ? 1 : 0);
@@ -976,7 +995,10 @@ function armRender(objs, w, h, cam, opts){
   // the pre-render panel's light on the objects it is about to bake (armlit.js)
   const litOf = !o.plain && typeof armLitMode === 'function' ? armLitMode : () => 0;
   if(typeof armLitUniforms === 'function') armLitUniforms(gl, L);
-  if(!o.plain && ARM.xray){ gl.enable(gl.BLEND); gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA); gl.depthMask(false); }
+  if(xray && !wire){ gl.enable(gl.BLEND); gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA); gl.depthMask(false); }
+  // Wireframe: the faces only as depth, so the wires behind them hide (with
+  // X-ray, not even that)
+  if(wire) gl.colorMask(false, false, false, false);
   const bindTex = (live, pc, ob) => {
     // a dyed object draws from its own crop of the sheet (armobj.js)
     const dyed = typeof armDyedTexture === 'function' ? armDyedTexture(ob, pc) : null;
@@ -998,16 +1020,16 @@ function armRender(objs, w, h, cam, opts){
   // the card maker's own move and turn of the whole model (99m), in the
   // game's space, under the page's mirror
   const top = o.pre ? armMul(ARM_MIRROR, o.pre) : ARM_MIRROR;
-  for(const ob of objs){
+  for(const ob of (wire && xray ? [] : objs)){
     // posed by the animation previewer (armanim.js): already in the game's
     // space, its own move, turn and scale in it
     // a card (95m) is drawn plain, but posed
     const posed = (!o.plain || o.card) && typeof armAnimGeoFor === 'function' ? armAnimGeoFor(ob, o.card) : null;
     if(posed){
       gl.uniformMatrix4fv(L.uModel, false, new Float32Array(top));
-      gl.uniform1f(L.uHi, !o.plain && ARM.hover === ob.id ? 1 : 0);
-      gl.uniform1f(L.uSel, !o.plain && !ARM.dyeQuiet && ARM.sel.has(ob.id) ? 1 : 0);
-      gl.uniform1f(L.uXray, !o.plain && ARM.xray ? 1 : 0);
+      gl.uniform1f(L.uHi, live3d && ARM.hover === ob.id ? 1 : 0);
+      gl.uniform1f(L.uSel, 0);               // selected is an outline now (armedit.js)
+      gl.uniform1f(L.uXray, xray ? 1 : 0);
       gl.bindBuffer(gl.ARRAY_BUFFER, posed.glPos);
       gl.enableVertexAttribArray(L.aPos); gl.vertexAttribPointer(L.aPos, 3, gl.FLOAT, false, 0, 0);
       gl.bindBuffer(gl.ARRAY_BUFFER, posed.glNrm);
@@ -1031,9 +1053,9 @@ function armRender(objs, w, h, cam, opts){
       if(!g) continue;
       gl.uniformMatrix4fv(L.uModel, false, new Float32Array(pc.xf ? armMul(om, pc.xf) : om));
       bindTex(live, pc, ob);
-      gl.uniform1f(L.uHi, !o.plain && ARM.hover === ob.id ? 1 : 0);
-      gl.uniform1f(L.uSel, !o.plain && !ARM.dyeQuiet && ARM.sel.has(ob.id) ? 1 : 0);
-      gl.uniform1f(L.uXray, !o.plain && ARM.xray ? 1 : 0);
+      gl.uniform1f(L.uHi, live3d && ARM.hover === ob.id ? 1 : 0);
+      gl.uniform1f(L.uSel, 0);
+      gl.uniform1f(L.uXray, xray ? 1 : 0);
       gl.bindBuffer(gl.ARRAY_BUFFER, live.buf.pos);
       gl.enableVertexAttribArray(L.aPos); gl.vertexAttribPointer(L.aPos, 3, gl.FLOAT, false, 0, 0);
       gl.bindBuffer(gl.ARRAY_BUFFER, pc.nrm ? armNrmBuffer(live, pc) : live.buf.nrm);
@@ -1050,8 +1072,10 @@ function armRender(objs, w, h, cam, opts){
       }
     }
   }
-  gl.disable(gl.SCISSOR_TEST);
+  gl.colorMask(true, true, true, true);
   gl.disable(gl.BLEND); gl.depthMask(true);
+  if(wire && typeof armWireDraw === 'function') armWireDraw(objs, cam, top);
+  gl.disable(gl.SCISSOR_TEST);
   return true;
 }
 
@@ -1064,7 +1088,10 @@ function armDraw(){
   if(view.width !== w || view.height !== h){ view.width = w; view.height = h; }
   const cam = armCamera(w / h);
   if(typeof armAnimPose === 'function') armAnimPose();
-  if(!armRender(armVisibleObjects(), w, h, cam, {faceOrient: ARM.faceOrient})) return;
+  const objs = armVisibleObjects();
+  if(!armRender(objs, w, h, cam, {faceOrient: ARM.faceOrient})) return;
+  if(typeof armEditDraw === 'function') armEditDraw();
+  if(typeof armOutlineDraw === 'function') armOutlineDraw(objs, cam, w, h);
   const ctx = view.getContext('2d');
   ctx.drawImage(ARM.glCanvas, 0, 0, w, h, 0, 0, w, h);
   if(typeof armOverlay === 'function') armOverlay(ctx, w, h, cam);
@@ -1080,11 +1107,18 @@ function armThumbsPaint(fresh){
   for(const img of imgs){
     const k = img.dataset.thumb;
     if(ARM.thumbs.has(k)){ img.src = ARM.thumbs.get(k); continue; }
-    const cut = k.lastIndexOf('|');
-    const key = k.slice(0, cut), group = +k.slice(cut + 1);
-    const live = ARM.assets.get(key);
-    if(!live || !live.geo || !live.buf) continue;
-    const ob = {id: -1, src: [{asset: key, group}], t: [0,0,0], r: [0,0,0], s: [1,1,1]};
+    let ob;
+    if(k.startsWith('o:')){
+      // an object of the model (the Objects panel's tiles): drawn as it is, dye and all
+      ob = armObj(+k.split(':')[1]);
+      if(!ob || !(ob.src || []).length || ob.src.some(pc => { const l = ARM.assets.get(pc.asset); return !l || !l.geo || !l.buf; })) continue;
+    }else{
+      const cut = k.lastIndexOf('|');
+      const key = k.slice(0, cut), group = +k.slice(cut + 1);
+      const live = ARM.assets.get(key);
+      if(!live || !live.geo || !live.buf) continue;
+      ob = {id: -1, src: [{asset: key, group}], t: [0,0,0], r: [0,0,0], s: [1,1,1]};
+    }
     const b = armBounds([ob]);
     if(!b) continue;
     const [lo, hi] = b;
@@ -1313,6 +1347,8 @@ function armImportBodyHtml(){
       <button class="mini${imp.by === 'units' ? ' on' : ''}" onclick="state.armImp.by='units';armImportRows()">${tt('armory.units')}</button>
       <button class="mini${imp.by === 'entries' ? ' on' : ''}" onclick="state.armImp.by='entries';armImportRows()">${tt('armory.model_entries')}</button>
       <input id="armImpQ" placeholder="${esc(tt('armory.find'))}" value="${esc(imp.q)}" oninput="state.armImp.q=this.value;armImportRows()">
+      <label class="count" title="${ttA('bmdb.show_soldier_title')}"><input type="checkbox"${galSoldierOn() ? ' checked' : ''}
+        onchange="galSet('gallery_show_soldier',this.checked);armImportRows()"> ${tt('bmdb.show_soldier')}</label>
     </div>
     <div class="armimpctl armimpfilt" id="armImpFilt">${armImpFiltHtml()}</div>
     <div class="armimprows" id="armImpRows"><div class="count">${tt('armory.reading')}</div></div>`;
@@ -1376,6 +1412,10 @@ function armImportRows(){
   const tiles = armImpGallery();
   const roleOf = (m) => m.role === 'soldier' ? tt('armory.role_soldier') : m.role === 'officer'
     ? tt('armory.role_officer', {n: m.n}) : tt('armory.role_upgrade', {n: m.n});
+  const shownModels = u => {
+    const ups = u.models.some(m => m.role === 'upgrade');
+    return u.models.filter(m => m.role !== 'soldier' || galSoldierShown(ups));
+  };
   if(tiles && imp.by === 'units'){
     for(const u of cat.units){
       if(q && !u.type.toLowerCase().includes(q) && !u.models.some(m => m.name.includes(q))) continue;
@@ -1385,7 +1425,7 @@ function armImportRows(){
       shown++;
       html += `<div class="gunit"><div class="gulabel"><b>${esc(u.type)}</b>
           <span class="count">${esc([u.category, u.class, u.mount].filter(Boolean).join(' · '))}</span></div>
-        <div class="gurow">${u.models.map(m => { const k = `${imp.mod}|${m.name}|${u.type}`;
+        <div class="gurow">${shownModels(u).map(m => { const k = `${imp.mod}|${m.name}|${u.type}`;
           return armImpTileHtml(k, imp.mod, m.name, `<b>${esc(roleOf(m))}</b> ${esc(m.name)}`, imp.picked.has(k), m.missing); }).join('')}</div></div>`;
     }
   }else if(tiles){
@@ -1409,7 +1449,7 @@ function armImportRows(){
       shown++;
       html += `<div class="armimprow"><span class="armimpunit"><b>${esc(u.type)}</b>
         <span class="count">${esc([u.category, u.class, u.mount].filter(Boolean).join(' · '))}</span></span>
-        <span class="armchips">${u.models.map(m => {
+        <span class="armchips">${shownModels(u).map(m => {
           const k = `${imp.mod}|${m.name}|${u.type}`;
           const role = m.role === 'soldier' ? tt('armory.role_soldier') : m.role === 'officer'
             ? tt('armory.role_officer', {n: m.n}) : tt('armory.role_upgrade', {n: m.n});
@@ -1490,7 +1530,7 @@ async function armImportRun(adds){
   const imp = state.armImp, p = armProj();
   const btn = document.getElementById('armImpGo');
   if(btn) btn.disabled = true;
-  const said = [], failed = [];
+  const said = [], failed = [], addedKeys = [];
   let added = 0, i = 0;
   for(const a of adds){
     i++;
@@ -1512,7 +1552,10 @@ async function armImportRun(adds){
     a.open = p.assets.length < 3;
     p.assets.push(a);
     added++;
+    addedKeys.push(key);
   }
+  // what Back on the start chooser puts back on the dialog
+  ARM.lastImport = {tab: imp.tab, picked: new Set(imp.picked), keys: addedKeys};
   imp.picked.clear();
   if(imp.disk) imp.disk.picked.clear();
   armSave();
@@ -1529,23 +1572,52 @@ async function armImportRun(adds){
 }
 
 /* After the first import into an empty project: which loaded model to start
-   from, its every object pulled in, or nothing at all. */
+   from, its every object pulled in, or nothing at all. Each model is a turning
+   3D tile, as on the import dialog (gallery.js), a click picks it; Back takes
+   the import back and opens the dialog again with the same models ticked. */
 function armStartChooser(){
   const p = armProj();
-  document.getElementById('modal').className = 'modal';
-  modal.innerHTML = `<div style="padding:16px">
+  document.getElementById('modal').className = 'modal wide';
+  const tile = a => {
+    const key = armAssetKey(a);
+    const mod = a.kind === 'external' ? GAL_EXT : a.mod, name = a.kind === 'external' ? a.path : a.entry;
+    return `<div class="gtile armimptile armstarttile" data-k="${esc(key)}" data-mod="${esc(mod)}" data-name="${esc(name)}" title="${esc(name)}">
+      <canvas></canvas><span class="gname"><b>${esc(armAssetLabel(a))}</b> ${esc(a.kind === 'external' ? a.path : a.mod)}</span>
+      <span class="armimptick">✓</span></div>`;
+  };
+  modal.innerHTML = `<div class="armimp">
     <h3>${tt('armory.start_from')}</h3>
     <div class="count" style="margin-bottom:10px">${tt('armory.start_from_intro')}</div>
-    ${p.assets.map(a => `<label class="armimprow"><input type="radio" name="armBase" value="${esc(armAssetKey(a))}">
-      ${esc(armAssetLabel(a))} <span class="count">${esc(a.kind === 'external' ? a.path : a.mod)}</span></label>`).join('')}
-    <label class="armimprow"><input type="radio" name="armBase" value="" checked> ${tt('armory.start_from_scratch')}</label>
-    <div style="text-align:right;margin-top:12px"><button class="primary" onclick="armStartGo()">${tt('armory.start')}</button></div>
+    <div class="armimprows armimpgal" id="armStartRows"><div class="galgrid">${p.assets.map(tile).join('')}
+      <div class="gtile armimptile armstarttile picked armstartscratch" data-k=""><span class="armstartnone">∅</span>
+        <span class="gname"><b>${tt('armory.start_from_scratch')}</b></span><span class="armimptick">✓</span></div></div></div>
+    <div class="armimpfoot"><span style="flex:1"></span>
+      ${ARM.lastImport ? `<button onclick="armStartBack()" title="${esc(tt('armory.start_back_title'))}">← ${tt('armory.start_back')}</button>` : ''}
+      <button class="primary" onclick="armStartGo()">${tt('armory.start')}</button></div>
   </div>`;
   overlay.classList.add('open');
+  const host = document.getElementById('armStartRows');
+  const pick = t => host.querySelectorAll('.armstarttile').forEach(x => x.classList.toggle('picked', x === t));
+  host.querySelector('.armstartscratch').onclick = e => pick(e.currentTarget);
+  if(typeof galMount === 'function') galMount(host, (name, t) => pick(t));
+  else host.querySelectorAll('.armstarttile').forEach(t => { t.onclick = () => pick(t); });
+}
+/* Back: the models just imported leave the project (they stay loaded, so a
+   second Import is instant) and the dialog opens with them ticked again. */
+function armStartBack(){
+  const last = ARM.lastImport, p = armProj();
+  if(!last) return;
+  p.assets = p.assets.filter(a => !last.keys.includes(armAssetKey(a)));
+  armSave();
+  state.armImp.tab = last.tab;
+  if(last.tab === 'mod') state.armImp.picked = new Set(last.picked);
+  ARM.lastImport = null;
+  armImportOpen();
 }
 function armStartGo(){
-  const pick = document.querySelector('input[name=armBase]:checked');
-  const key = pick ? pick.value : '';
+  const pick = document.querySelector('#armStartRows .armstarttile.picked');
+  const key = pick ? pick.dataset.k : '';
+  ARM.lastImport = null;
   const p = armProj();
   p.base = key || null;
   closeModal();

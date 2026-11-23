@@ -40,8 +40,20 @@ function armAnimPaint(){
   const L = a.list;
   const skels = L && L.skeletons ? Object.keys(L.skeletons) : [];
   const sk = L && L.skeletons ? L.skeletons[(a.skel || '').toLowerCase()] : null;
+  // the model being worked on lends its skeleton until another is chosen:
+  // the one started from, else the first model entry loaded
+  if(!a.autoPicked && !a.list){
+    // a skeleton the project already names is read again on opening it
+    const kept = p.anim && p.anim.asset && entries.find(e => armAssetKey(e) === p.anim.asset);
+    if(kept || (!p.anim && entries.length)){
+      a.autoPicked = true;
+      const base = kept || entries.find(e => armAssetKey(e) === p.base) || entries[0];
+      armAnimFrom(armAssetKey(base));
+      return;
+    }
+  }
   el.innerHTML = `<div class="armhead"><button class="armfold" onclick="armAnimFold()">▾ ${tt('armory.animations')}</button>
-      ${a.data ? `<span class="count">${esc(a.data.name || '')}</span>` : ''}<span style="flex:1"></span>${tp}</div>
+      <span style="flex:1"></span>${tp}</div>
     <label class="count">${tt('armory.skeleton_of')}<select onchange="armAnimFrom(this.value)">
       <option value="">${tt('armory.pick_model_entry')}</option>${entries.map(e => { const k = armAssetKey(e);
         return `<option value="${esc(k)}"${k === chosen ? ' selected' : ''}>${esc(armAssetLabel(e))}</option>`; }).join('')}
@@ -55,7 +67,8 @@ function armAnimPaint(){
     ${a.data ? `<div class="armslrow">
         <button class="mini" onclick="armAnimPlay()">${a.playing ? '⏸' : '▶'}</button>
         <input type="range" id="armAnimT" min="0" max="1000" value="${armAnimFrac()}" oninput="armAnimScrub(this.value)">
-        <select onchange="armAnim().speed=+this.value">${[0.25, 0.5, 1, 2].map(v => `<option value="${v}"${a.speed === v ? ' selected' : ''}>${v}×</option>`).join('')}</select>
+        <input type="number" class="armanimspeed" min="0.05" max="10" step="0.25" value="${a.speed}" title="${esc(tt('armory.anim_speed_title'))}"
+          oninput="const v=+this.value;if(Number.isFinite(v)&&v>0)armAnim().speed=v">×
         <button class="mini" onclick="armAnimRest()" title="${esc(tt('armory.rest_title'))}">${tt('armory.rest')}</button></div>
       <div class="count" id="armAnimNote">${armAnimNote()}</div>${armAnimScaleHtml()}` : ''}
     ${a.err ? `<div class="w-bad">${esc(a.err)}</div>` : ''}`;
@@ -223,8 +236,9 @@ function armAnimScaleHtml(){
   const a=armAnim();
   if(!a.source) return '';
   const scale=a.scale || [1,1,1];
-  const input=(i,value)=>`<input type="number" min="0.001" step="0.01" value="${esc(value)}" style="width:64px" onchange="armAnimScaleSet(${i},this.value)"${a.scaleBusy ? ' disabled' : ''}>`;
-  return `<div class="count">${tt('armory.anim_scale_note')}</div>
+  // min is a whole step (0.01), so the arrows walk 0.99, 1, 1.01 and never 1.001
+  const input=(i,value)=>`<input type="number" min="0.01" step="0.01" value="${esc(value)}" style="width:64px" onchange="armAnimScaleSet(${i},this.value)"${a.scaleBusy ? ' disabled' : ''}>`;
+  return `<details class="armanimscale"${a.scaleOpen ? ' open' : ''} ontoggle="armAnim().scaleOpen=this.open"><summary title="${esc(tt('armory.anim_scale_note'))}">${tt('armory.anim_scale')}</summary>
     <label>${tt('armory.anim_scale')}${input(-1,scale.every(v=>v===scale[0]) ? scale[0] : '')}</label>
     <details${a.scaleAxes ? ' open' : ''} ontoggle="armAnim().scaleAxes=this.open"><summary>${tt('armory.anim_scale_axes')}</summary>
       ${['X','Y','Z'].map((axis,i)=>`<label>${axis}${input(i,scale[i])}</label>`).join('')}</details>
@@ -235,7 +249,7 @@ function armAnimScaleHtml(){
       onchange="armAnimScaleOption(armAnim().saveTarget === 'pack' ? 'packName' : 'saveAs',this.value)"></label>
     <button onclick="armAnimScaleSave()"${a.scaleBusy || !armAnimScaleEdits().scale ? ' disabled' : ''}>${tt('armory.anim_scale_save')}</button>
     ${a.scalePlan ? `<pre class="count">${esc(a.scalePlan.target || '')}\n${esc((a.scalePlan.notes || []).join('\n'))}</pre>` : ''}
-    ${a.scaleMsg ? `<div class="count">${esc(a.scaleMsg)}</div>` : ''}`;
+    ${a.scaleMsg ? `<div class="count">${esc(a.scaleMsg)}</div>` : ''}</details>`;
 }
 function armAnimScaleOption(key,value){
   const a=armAnim(); a[key]=value; a.scalePlan=null; a.scaleMsg=''; armAnimPaint();
@@ -381,7 +395,7 @@ function armAnimNote(){
   }
   if(missing.size) bits.push(tt('armory.anim_missing', {names: [...missing].slice(0, 5).join(', ')}));
   if(still.length) bits.push(tt('armory.anim_unweighted', {names: still.slice(0, 5).join(', ')}));
-  return bits.length ? esc(bits.join(' ')) : tt('armory.anim_all_follow');
+  return bits.length ? esc(bits.join(' ')) : '';
 }
 
 /* --- each object, laid out and skinned -------------------------------------------- */
@@ -452,7 +466,8 @@ function armAnimGeo(o){
   g.glPos = buf(g.positions, gl.ARRAY_BUFFER, gl.DYNAMIC_DRAW);
   g.glNrm = buf(g.normals, gl.ARRAY_BUFFER, gl.DYNAMIC_DRAW);
   g.glUv = buf(new Float32Array(uv), gl.ARRAY_BUFFER, gl.STATIC_DRAW);
-  g.glIdx = buf(new Uint16Array(idx), gl.ELEMENT_ARRAY_BUFFER, gl.STATIC_DRAW);
+  g.idx = new Uint16Array(idx);            // the wireframe's edges are read from it
+  g.glIdx = buf(g.idx, gl.ELEMENT_ARRAY_BUFFER, gl.STATIC_DRAW);
   a.geos.set(o.id, g);
   return g;
 }

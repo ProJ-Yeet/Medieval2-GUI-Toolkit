@@ -86,6 +86,8 @@ async function armSessOpen(){
     <div class="count">${v.name ? tt('armory.sess_current', {name: esc(v.name)}) : tt('armory.sess_unsaved')}</div>
     <div class="armexprow"><input id="armSessName" placeholder="${esc(tt('armory.sess_name'))}" value="${esc(armProj().name || '')}">
       <button class="primary" onclick="armSessSave()">${tt('armory.sess_save_as')}</button></div>
+    <div class="armexprow"><input id="armSessNewName" placeholder="${esc(tt('armory.sess_new_name'))}">
+      <button onclick="armSessNew()" title="${esc(tt('armory.sess_new_title'))}">${tt('armory.sess_new')}</button></div>
     <div class="armsect">${tt('armory.sess_saved')}</div>
     <div class="armsesslist">${rows || `<div class="count">${tt('armory.sess_none')}</div>`}</div>
     <div class="armsect">${tt('armory.sess_backups')}</div>
@@ -117,6 +119,25 @@ async function armSessSave(){
   toast(tt('armory.sess_saved_as', {name}));
   armSessOpen();
   armPaintBar();
+}
+/* A new, empty session under a name of its own. The one open now is saved
+   first (its own file, as every save is), so nothing of it is lost. */
+async function armSessNew(){
+  const name = ((document.getElementById('armSessNewName') || {}).value || '').trim();
+  if(!name){ toast(tt('armory.sess_name_first')); return; }
+  clearTimeout(ARM.saveTimer);
+  armExtrasInto(armProj());
+  try{ await api.post('/api/armory/project', {project: armProj()}); }
+  catch(err){ toast(errText(err), 6000); return; }
+  const keep = state.armProj;
+  state.armProj = null;
+  const fresh = armProj();
+  state.armProj = keep;
+  fresh.name = name;
+  const r = await armSessPost({action: 'save', name, project: fresh});
+  if(!r) return;
+  state.armExp = null;
+  armSessLoad(r.project);
 }
 async function armSessDo(action, id){
   const r = await armSessPost({action, id});
@@ -150,6 +171,7 @@ function armSessLoad(project){
   const p = armProj();
   p.objects = p.objects || []; p.assets = p.assets || []; p.collections = p.collections || [];
   ARM.sel.clear(); ARM.detail = null; ARM.unclean = null;
+  if(ARM.anim) ARM.anim.autoPicked = false;        // the new one lends its own skeleton
   armExtrasFrom(p);
   ARM.loading = Promise.all(p.assets.map(a => armLoadAsset(a)));
   armUndoReset();

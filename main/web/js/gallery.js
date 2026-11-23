@@ -39,6 +39,11 @@ const galOn = () => ['gallery', 'units'].includes(state.settings.bmdb_view);
 const galUnits = () => state.settings.bmdb_view === 'units';
 const galSpinOn = () => state.settings.gallery_spin !== false;
 const galVaryOn = () => state.settings.gallery_vary !== false;
+/* The soldier model of a unit with armour upgrades is never seen in game (its
+   first upgrade model stands in for it), so it is left out unless asked for.
+   A unit with no upgrades keeps its soldier: that one is what the game shows. */
+const galSoldierOn = () => state.settings.gallery_show_soldier === true;
+const galSoldierShown = hasUpgrades => !hasUpgrades || galSoldierOn();
 
 function galSet(key, value){
   state.settings[key] = value;
@@ -46,9 +51,12 @@ function galSet(key, value){
 }
 function galView(how){ galSet('bmdb_view', how); render(); }
 function galToggle(key){
-  galSet(key, !(key === 'gallery_spin' ? galSpinOn() : galVaryOn()));
+  const now = {gallery_spin: galSpinOn, gallery_vary: galVaryOn, gallery_show_soldier: galSoldierOn}[key]();
+  galSet(key, !now);
   if(gal) gal.dirty = true;
   galBarPaint();
+  // the soldier tiles come and go with the switch: the page is rewritten
+  if(key === 'gallery_show_soldier') render();
 }
 
 /* The view toggle and, in the gallery, its two switches. */
@@ -64,7 +72,9 @@ function galBarInner(){
     ${on?`<button class="${galSpinOn()?'on':''}" onclick="galToggle('gallery_spin')"
         title="${ttA('bmdb.gallery_spin_title')}">${tt('bmdb.gallery_spin')}</button>
       <button class="${galVaryOn()?'on':''}" onclick="galToggle('gallery_vary')"
-        title="${ttA('bmdb.gallery_vary_title')}">${tt('bmdb.gallery_vary')}</button>`:''}`;
+        title="${ttA('bmdb.gallery_vary_title')}">${tt('bmdb.gallery_vary')}</button>`:''}
+    ${units?`<button class="${galSoldierOn()?'on':''}" onclick="galToggle('gallery_show_soldier')"
+        title="${ttA('bmdb.show_soldier_title')}">${tt('bmdb.show_soldier')}</button>`:''}`;
 }
 function galBarPaint(){
   const el = document.getElementById('galBar');
@@ -85,7 +95,7 @@ function galTilesHtml(names, showing){
    one line however many models it has. */
 function galUnitsHtml(units, showing, known){
   return `<div class="galunits">${units.map(u => {
-    const tiles = [[u.soldier, tt('bmdb.role_soldier')]]
+    const tiles = (galSoldierShown(u.upgrades.length) ? [[u.soldier, tt('bmdb.role_soldier')]] : [])
       .concat(u.officers.map((o, i) => [o, tt('bmdb.role_officer', {n: i + 1})]))
       .concat(u.upgrades.map((a, i) => [a, tt('bmdb.role_upgrade', {n: i + 1})]));
     return `<div class="gunit"><div class="gulabel"><b>${esc(u.type)}</b>
@@ -205,11 +215,7 @@ async function galLoadExt(m, seq){
   if(!r.ok) throw new Error(String(r.status));
   const geo = v3Parse(await r.arrayBuffer());
   const file = ((view.objects || []).find(o => o.texture_file) || {}).texture_file;
-  const tex = file ? await new Promise(ok => {
-    const i = new Image();
-    i.onload = () => ok(i); i.onerror = () => ok(null);
-    i.src = '/api/armory/texture?path=' + enc(file);
-  }) : null;
+  const tex = file ? await galImage('/api/armory/texture?path=' + enc(file)) : null;
   if(!gal || seq !== gal.seq) return;
   m.geo = geo; m.tex = tex; m.att = null; m.uScale = 1.0;
   m.parts = galParts(geo);
@@ -221,10 +227,41 @@ async function galLoadExt(m, seq){
   m.status = 'ready';
 }
 
+/* A picture asked for again, with a growing pause, before it is given up:
+   under load the server drops one now and then, and a tile without its sheet
+   drew white (the user's report, 2026-11-23). */
+async function galImage(url, tries = 5){
+  for(let n = 0, wait = 300;; n++, wait = Math.min(wait * 2, 3000)){
+    const got = await new Promise(ok => {
+      const i = new Image();
+      i.onload = () => ok(i); i.onerror = () => ok(null);
+      i.src = n ? url + (url.includes('?') ? '&' : '?') + 'try=' + n : url;
+    });
+    if(got || n + 1 >= tries) return got;
+    await new Promise(r => setTimeout(r, wait));
+  }
+}
+
+/* A model that failed to load is put back in the queue after a pause, up to
+   GAL_RETRIES times, so a tile does not stay empty or half drawn. */
+const GAL_RETRIES = 8;
+function galRetry(m, seq){
+  m.tries = (m.tries || 0) + 1;
+  if(m.tries > GAL_RETRIES){ m.status = 'none'; return; }
+  m.status = 'retry';
+  setTimeout(() => {
+    if(!gal || seq !== gal.seq || m.status !== 'retry') return;
+    m.status = 'queued';
+    gal.queue.push(m);
+    galPump();
+    galLoop();
+  }, Math.min(500 * 2 ** (m.tries - 1), 8000));
+}
+
 async function galLoad(m, seq){
   m.status = 'loading';
   if(m.mod === GAL_EXT){
-    try{ await galLoadExt(m, seq); }catch(e){ m.status = 'none'; }
+    try{ await galLoadExt(m, seq); }catch(e){ galRetry(m, seq); }
     return;
   }
   const mod = m.mod, q = `mod=${enc(mod)}&entry=${enc(m.name)}`;
@@ -237,14 +274,13 @@ async function galLoad(m, seq){
     if(!r.ok) throw new Error(String(r.status));
     const geo = v3Parse(await r.arrayBuffer());
     const skin = (info.skins || []).find(s => s.exists) || null;
-    const img = rel => new Promise(ok => {
-      const i = new Image();
-      i.onload = () => ok(i); i.onerror = () => ok(null);
-      i.src = `/model_texture?mod=${enc(mod)}&rel=${enc(rel)}&small=1`;
-    });
+    const img = rel => galImage(`/model_texture?mod=${enc(mod)}&rel=${enc(rel)}&small=1`);
     const tex = skin ? await img(skin.rel) : null;
     const glued = skin && skin.attach && skin.attach_exists && skin.attach.toLowerCase() !== skin.rel.toLowerCase();
     const att = glued ? await img(skin.attach) : null;
+    // a sheet that is on disk but did not come is a half-loaded tile: try the
+    // whole model again rather than keep it white
+    if((skin && !tex) || (glued && !att)) throw new Error('texture');
     if(!gal || seq !== gal.seq) return;
     m.geo = geo; m.tex = tex; m.att = att;
     // the viewer's rule, v3Apply: u is halved for a glued pair and for an entry
@@ -262,8 +298,9 @@ async function galLoad(m, seq){
     m.centre = [0, 1, 2].map(k => (geo.min[k] + geo.max[k]) / 2);
     m.dist = (Math.max(tall, wide * 0.8) || 1) * 1.12;
     m.status = 'ready';
+    m.tries = 0;
   }catch(e){
-    m.status = 'none';
+    galRetry(m, seq);
   }
 }
 
@@ -369,7 +406,7 @@ function galFrame(now){
   // keep going while something moves or is still on its way
   const pending = [...gal.tiles.values()].some(n => {
     const m = gal.models.get(n);
-    return m && (m.status === 'queued' || m.status === 'loading');
+    return m && ['queued', 'loading', 'retry'].includes(m.status);
   });
   if(spin || galVaryOn() || pending) galLoop();
 }

@@ -41,26 +41,32 @@ function armOptSave(o){
   state.settings.armory_optimize = o;
   api.post('/api/settings', {armory_optimize: o}).catch(() => {});
 }
-// the selected objects, or every visible one when none is
+/* 2026-11-23: a drop-down under the Objects panel's tools, not a dialog, run
+   on every visible object or on the selected ones only (with nothing
+   selected, every one) */
+const armOptScope = () => ARM.optScope === 'sel' && armSelected().length ? 'sel' : 'all';
 function armOptTargets(){
-  const sel = armSelected();
-  return sel.length ? sel : armVisibleObjects();
+  return armOptScope() === 'sel' ? armSelected() : armVisibleObjects();
 }
-
 function armOptOpen(){
-  document.getElementById('modal').className = 'modal';
-  overlay.classList.add('open');
+  ARM.optOpen = !ARM.optOpen;
   ARM.optReport = null;
-  armOptPaint();
+  if(ARM.optOpen && ARM.optScope == null) ARM.optScope = armSelected().length ? 'sel' : 'all';
+  armPaintObjects();
 }
+function armOptScopeSet(v){ ARM.optScope = v; armOptPaint(); }
 function armOptPaint(){
-  const o = armOptOpts(), n = armOptTargets().length;
+  const host = document.getElementById('armOptBox');
+  if(!host) return;
+  const o = armOptOpts(), n = armOptTargets().length, nSel = armSelected().length, scope = armOptScope();
   const box = (k, label, title) => `<label class="armcheck armoptrow" title="${esc(title)}"><input type="checkbox"${o[k] ? ' checked' : ''}
       onchange="armOptSet('${k}', this.checked)"> ${label}</label>`;
   const r = ARM.optReport;
-  modal.innerHTML = `<div class="armopt">
-    <h3>${tt('armory.optimize')}</h3>
-    <div class="count" style="margin-bottom:8px">${tt('armory.opt_intro')}</div>
+  host.innerHTML = `<div class="armopt">
+    <div class="count" title="${esc(tt('armory.opt_intro'))}">${tt('armory.opt_intro')}</div>
+    <div class="armuvbar"><span class="count">${tt('armory.opt_run_on')}</span>
+      <label class="armcheck"><input type="radio" name="armOptScope"${scope === 'all' ? ' checked' : ''} onchange="armOptScopeSet('all')"> ${tt('armory.opt_on_all')}</label>
+      <label class="armcheck"${nSel ? '' : ' style="opacity:.5"'}><input type="radio" name="armOptScope"${scope === 'sel' ? ' checked' : ''}${nSel ? '' : ' disabled'} onchange="armOptScopeSet('sel')"> ${ttN('armory.opt_on_selected', nSel)}</label></div>
     <div class="armuvbar"><span class="count">${tt('armory.opt_presets')}</span>
       <button class="mini" onclick="armOptPreset('light')">${tt('armory.opt_light')}</button>
       <button class="mini" onclick="armOptPreset('game')">${tt('armory.opt_game')}</button></div>
@@ -74,7 +80,6 @@ function armOptPaint(){
     <div class="count armnote">${tt('armory.opt_left_out')}</div>
     ${r ? armOptReportHtml(r) : ''}
     <div class="armimpfoot"><span class="count">${ttN('armory.opt_scope', n)}</span><span style="flex:1"></span>
-      <button onclick="closeModal()">${tt('common.close')}</button>
       <button class="primary" id="armOptGo" onclick="armOptRun()"${n ? '' : ' disabled'}>${tt('armory.opt_run')}</button></div>
   </div>`;
 }

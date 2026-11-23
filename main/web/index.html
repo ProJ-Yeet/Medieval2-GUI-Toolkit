@@ -3608,6 +3608,36 @@ body.look-editing :is(button,label,legend,h1,h2,h3,.trsechead,.mftab):hover{outl
   .armgrid.rshut{grid-template-columns:minmax(240px,300px) 1fr 34px}
   .armgrid.lshut.rshut{grid-template-columns:34px 1fr 34px}
   .armgrid.lshut .armleft,.armgrid.rshut .armright{padding:0;overflow:hidden}
+  /* 2026-11-23: the objects above, their properties below, each scrolling */
+  .armright.armsplitpane{display:flex;flex-direction:column;overflow:hidden}
+  .armright.armsplitpane>.armhead,.armright.armsplitpane>.armtools,.armright.armsplitpane>.armpropshead{flex:none}
+  .armobjlist{flex:1 1 0;min-height:80px;overflow:auto;overflow-anchor:none}
+  .armpropspane{flex:1 1 0;min-height:80px;overflow:auto;overflow-anchor:none}
+  .armoptbox{flex:none;max-height:45%;overflow:auto;border:1px solid var(--edge);border-radius:6px;padding:6px;margin-bottom:6px}
+  .armright.armsplitpane>.armlit{flex:none;max-height:40%;overflow:auto}
+  .armpropshead{display:flex;gap:6px;align-items:center;border-top:1px solid var(--edge);padding-top:5px;margin-top:4px}
+  .armpropshead .count{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+  .armpropspane .armprops{border-top:0;margin-top:2px;padding-top:2px}
+  .armotiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(82px,1fr));gap:5px;padding:0 4px 6px}
+  .armotile{position:relative;border:1px solid var(--edge);border-radius:6px;padding:3px;display:flex;flex-direction:column;gap:2px;cursor:pointer;user-select:none;background:var(--bg)}
+  .armotile.sel{border-color:#e07b1f}
+  .armotile.act{border-color:#ffb84d;box-shadow:inset 0 0 0 1px #ffb84d}
+  .armotile.off{opacity:.5}
+  .armotile .armeye{position:absolute;top:4px;right:4px}
+  .armotilename{font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .armfoldhead.armdrop{outline:2px dashed var(--accent);border-radius:5px}
+  .armmenu{position:fixed;z-index:2000;background:var(--panel);border:1px solid var(--edge);border-radius:7px;padding:5px;display:flex;flex-direction:column;gap:2px;min-width:170px;box-shadow:0 6px 20px rgba(0,0,0,.4)}
+  .armmenu button{text-align:left;background:none;border:0;padding:4px 8px;border-radius:4px}
+  .armmenu button:hover{background:rgba(255,255,255,.08)}
+  .armfoothead{flex-basis:100%;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .armgrouppick{flex:1;min-width:120px}
+  .armhelp{font-weight:700;padding:0 7px}
+  .armprefixhelp{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:10px}
+  .armprefixcard{border:1px solid var(--edge);border-radius:7px;padding:8px;display:flex;flex-direction:column;gap:4px;font-size:12.5px}
+  .armprefixfigs{display:flex;gap:8px;flex-wrap:wrap}
+  .armprefixfig{margin:0;flex:1 1 110px;max-width:160px;display:flex;flex-direction:column;gap:3px}
+  .armprefixfig svg{width:100%;height:auto;background:#1b1f25;border-radius:5px}
+  .armprefixcard code{font-size:11.5px}
   .armstrip{width:100%;height:100%;display:flex;flex-direction:column;align-items:center;gap:8px;padding:8px 0;
     background:none;border:none;border-radius:8px;color:var(--ink)}
   .armstrip:hover{background:var(--panel2)}
@@ -3634,6 +3664,13 @@ body.look-editing :is(button,label,legend,h1,h2,h3,.trsechead,.mftab):hover{outl
   .armrow:hover{background:rgba(255,255,255,.04)}
   .armrow.in{opacity:.6}
   .armrow.sel{background:rgba(200,164,92,.18)}
+  .armrow.act{background:rgba(240,170,70,.32);box-shadow:inset 2px 0 0 #ffb84d}
+  .armrow{user-select:none}
+  .armshade{display:inline-flex;gap:3px}
+  .armselmode{display:inline-flex;gap:2px}
+  .armsplit{display:inline-flex;gap:4px;align-items:center}
+  .armsplit input{width:140px;font-size:12px;padding:1px 5px}
+  .armimpctl label input{flex:none;min-width:0}
   .armrow.off .armrowname{opacity:.45}
   .armrowname{flex:1;min-width:80px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .armeye{padding:0 5px}
@@ -3663,10 +3700,16 @@ body.look-editing :is(button,label,legend,h1,h2,h3,.trsechead,.mftab):hover{outl
   .armlit{border:1px solid var(--edge);border-radius:6px;padding:6px;margin-bottom:6px;display:flex;flex-direction:column;gap:4px}
   .armlayers{display:flex;flex-direction:column;gap:3px}
   .armlayer{display:flex;gap:6px;align-items:center}
-  .armanimwin{position:absolute;right:8px;bottom:8px;width:290px;max-width:calc(100% - 16px);display:flex;flex-direction:column;gap:4px;
+  .armanimwin{position:absolute;right:8px;bottom:8px;width:240px;max-width:calc(100% - 16px);max-height:calc(100% - 16px);overflow:auto;display:flex;flex-direction:column;gap:4px;
     background:rgba(20,23,28,.9);border:1px solid var(--edge);border-radius:7px;padding:6px 8px;font-size:12px}
   .armanimwin label{display:flex;flex-direction:column;gap:2px}
   .armanimlist{width:100%}
+  .armanimwin .armanimspeed{width:52px;flex:none}
+  .armanimwin .armslrow{flex-wrap:wrap;align-items:center;gap:4px}
+  .armanimwin input[type=range]{min-width:60px}
+  .armanimwin #armAnimNote:empty{display:none}
+  .armanimscale{display:flex;flex-direction:column;gap:4px}
+  .armanimscale summary{cursor:pointer}
   .armanimwin input[type=range]{flex:1}
   .armsliders{display:flex;flex-direction:column;gap:3px;font-size:12px}
   .armslwrap{display:flex;flex-wrap:wrap;gap:14px;align-items:flex-start}
@@ -3736,6 +3779,7 @@ body.look-editing :is(button,label,legend,h1,h2,h3,.trsechead,.mftab):hover{outl
   .armimptick{display:none;position:absolute;top:5px;right:5px;width:18px;height:18px;border-radius:50%;
     background:var(--accent);color:#1a1a1a;font-size:12px;line-height:18px;text-align:center;font-weight:700}
   .armimptile.picked .armimptick{display:block}
+  .armstartnone{display:flex;align-items:center;justify-content:center;aspect-ratio:3/4;font-size:48px;color:var(--dim)}
   .armchips{display:flex;gap:4px;flex-wrap:wrap}
   .armchip{font-size:12px;padding:2px 7px;border:1px solid var(--edge);border-radius:12px;cursor:pointer;display:inline-flex;gap:4px;align-items:center}
   .armchip.on{border-color:var(--accent);color:var(--accent)}
@@ -4090,6 +4134,7 @@ body.look-editing :is(button,label,legend,h1,h2,h3,.trsechead,.mftab):hover{outl
 <script src="js/scriptblocks.js"></script>
 <script src="js/armory.js"></script>
 <script src="js/armobj.js"></script>
+<script src="js/armedit.js"></script>
 <script src="js/armnormal.js"></script>
 <script src="js/armview.js"></script>
 <script src="js/armanim.js"></script>

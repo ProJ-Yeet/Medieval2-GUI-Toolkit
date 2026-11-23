@@ -23,7 +23,7 @@
 const ARM_MATERIALS = ['metal', 'fabric', 'leather', 'wood', 'skin', 'hair', 'bone', 'other'];
 const ARM_PREFIXES = ['weapon0', 'weapon1', 'primaryactive0', 'primaryactive1', 'primarypassive0',
   'primarypassive1', 'secondaryactive0', 'secondaryactive1', 'shield0', 'shield1', 'shieldactive0',
-  'shieldactive1', 'shieldpassive0', 'shieldpassive1', 'ramrod0',
+  'shieldactive1', 'shieldpassive0', 'shieldpassive1', 'ramrod0', 'equipment0', 'equipment20',
   // two the game spells with a space in them
   ['cannon', 'ball0'].join(' '), ['ballista', 'arrow0'].join(' ')];
 const ARM_BLENDS = ['multiply', 'overlay', 'softlight', 'screen', 'hardlight', 'keepshade'];
@@ -65,6 +65,24 @@ const armPresetLabel = id => ({metal: tt('armory.preset_metal'), rusted_metal: t
 
 /* --- the panel --------------------------------------------------------------- */
 
+/* 2026-11-23: the objects above, the selected object's properties below, half
+   and half, each scrolling on its own; the properties fold away to give the
+   list the room. The list is rows or tiles (each object drawn small), its
+   folds open and shut all at once, and rows are dragged onto a collection or
+   a group to move there. */
+const armObjGallery = () => (state.settings || {}).armory_obj_view === 'gallery';
+const armPropsShut = () => !!(state.settings || {}).armory_props_shut;
+function armObjSetting(k, v){
+  state.settings[k] = v;
+  api.post('/api/settings', {[k]: v}).catch(() => {});
+  armPaintObjects();
+}
+function armFoldAll(shut){
+  const p = armProj();
+  const keys = [...new Set(p.objects.filter(o => !o.coll).map(o => 'g:' + o.name))].concat(p.collections.map(c => 'c:' + c.id));
+  p.ui.folded = shut ? keys : [];
+  armSave(); armPaintObjects();
+}
 function armPaintObjects(){
   const el = document.getElementById('armRight');
   if(!el) return;
@@ -76,9 +94,13 @@ function armPaintObjects(){
     if(!groups.has(o.name)) groups.set(o.name, []);
     groups.get(o.name).push(o);
   }
+  armActiveFix();
   const sel = armSelected();
+  el.classList.toggle('armsplitpane', !armSideShut('right'));
   if(armSideShut('right')){ el.innerHTML = armStripHtml('right', tt('armory.objects'), p.objects.length); return; }
-  armKeepScroll(el, () => { el.innerHTML = `<div class="armhead">
+  const tops = ['armObjList', 'armPropsPane'].map(id => { const x = document.getElementById(id); return x ? x.scrollTop : 0; });
+  const gal = armObjGallery(), shut = armPropsShut();
+  el.innerHTML = `<div class="armhead">
       <button class="armfold" onclick="armSideToggle('right')" title="${esc(tt('armory.panel_fold'))}">▸ ${tt('armory.objects')}</button>
       <span class="count">${p.objects.length}</span><span style="flex:1"></span>
       <button class="mini" onclick="armBlank()" title="${esc(tt('armory.blank_title'))}">${tt('armory.blank')}</button>
@@ -86,15 +108,29 @@ function armPaintObjects(){
     </div>
     <div class="armtools">
       <button class="mini" onclick="armMerge()"${sel.length > 1 ? '' : ' disabled'} title="${esc(tt('armory.merge_title'))}">${tt('armory.merge')}</button>
-      <button class="mini" onclick="armOptOpen()"${p.objects.length ? '' : ' disabled'} title="${esc(tt('armory.optimize_title'))}">${tt('armory.optimize')}</button>
+      <button class="mini${ARM.optOpen ? ' on' : ''}" onclick="armOptOpen()"${p.objects.length ? '' : ' disabled'} title="${esc(tt('armory.optimize_title'))}">${tt('armory.optimize')} ${ARM.optOpen ? '▴' : '▾'}</button>
       <button class="mini${typeof armLit === 'function' && armLit().open ? ' on' : ''}" onclick="armLitToggle()"${p.objects.length ? '' : ' disabled'} title="${esc(tt('armory.lit_title'))}">${tt('armory.lit')}</button>
+      <span style="flex:1"></span>
+      <button class="mini" onclick="armFoldAll(false)" title="${esc(tt('armory.expand_all'))}">⊞</button>
+      <button class="mini" onclick="armFoldAll(true)" title="${esc(tt('armory.collapse_all'))}">⊟</button>
+      <button class="mini${gal ? '' : ' on'}" onclick="armObjSetting('armory_obj_view','list')" title="${esc(tt('armory.as_list'))}">☰</button>
+      <button class="mini${gal ? ' on' : ''}" onclick="armObjSetting('armory_obj_view','gallery')" title="${esc(tt('armory.as_gallery'))}">▦</button>
     </div>
+    ${ARM.optOpen && p.objects.length ? `<div class="armoptbox" id="armOptBox"></div>` : ''}
     ${p.objects.length && typeof armLit === 'function' && armLit().open ? armLitHtml() : ''}
-    ${p.objects.length ? '' : `<div class="empty armempty">${tt('armory.no_objects_yet')}</div>`}
-    ${[...groups].map(([name, objs]) => armFoldHtml('g:' + name, name, objs, null)).join('')}
-    ${p.collections.map(c => armFoldHtml('c:' + c.id, c.name, p.objects.filter(o => o.coll === c.id), c)).join('')}
-    <div id="armProps">${sel.length === 1 ? armPropsHtml(sel[0]) : sel.length ? armMultiHtml(sel) : ''}</div>
-    ${p.objects.length && typeof armNormalsHtml === 'function' ? `<div class="armnorms">${armNormalsHtml()}</div>` : ''}`; });
+    <div class="armobjlist" id="armObjList">
+      ${p.objects.length ? '' : `<div class="empty armempty">${tt('armory.no_objects_yet')}</div>`}
+      ${[...groups].map(([name, objs]) => armFoldHtml('g:' + name, name, objs, null)).join('')}
+      ${p.collections.map(c => armFoldHtml('c:' + c.id, c.name, p.objects.filter(o => o.coll === c.id), c)).join('')}
+    </div>
+    <div class="armpropshead"><button class="armfold" onclick="armObjSetting('armory_props_shut', ${!shut})" title="${esc(tt('armory.props_fold_title'))}">${shut ? '▸' : '▾'} ${tt('armory.properties')}</button>
+      <span class="count">${sel.length === 1 ? esc(armFullName(sel[0])) : sel.length ? ttN('armory.n_selected', sel.length) : ''}</span></div>
+    ${shut ? '' : `<div class="armpropspane" id="armPropsPane"><div id="armProps">${sel.length === 1 ? armPropsHtml(sel[0]) : sel.length ? armMultiHtml(sel) : `<div class="count armnote">${tt('armory.nothing_selected')}</div>`}</div>
+      ${p.objects.length && typeof armNormalsHtml === 'function' ? `<div class="armnorms">${armNormalsHtml()}</div>` : ''}</div>`}`;
+  ['armObjList', 'armPropsPane'].forEach((id, i) => { const x = document.getElementById(id); if(x) x.scrollTop = tops[i]; });
+  if(ARM.optOpen && typeof armOptPaint === 'function') armOptPaint();
+  if(gal) armThumbsPaint();
+  armDragWire(el);
   const tools = document.getElementById('armSelTools');
   if(tools) tools.innerHTML = armSelToolsHtml();
 }
@@ -102,7 +138,7 @@ function armPaintObjects(){
 function armSelToolsHtml(){
   const n = armSelected().length;
   return `<button class="mini" onclick="armDuplicate()"${n ? '' : ' disabled'}>${tt('armory.duplicate_object')}</button>
-    <button class="mini" onclick="armDetailOpen()"${n === 1 ? '' : ' disabled'} title="${esc(tt('armory.detail_title'))}">${tt('armory.detail')}</button>`;
+    <button class="mini${ARM.detail ? ' on' : ''}" onclick="armDetailToggle()"${n === 1 || ARM.detail ? '' : ' disabled'} title="${esc(tt('armory.detail_title'))}">${tt('armory.detail')}</button>`;
 }
 
 function armFoldHtml(key, name, objs, coll){
@@ -111,7 +147,7 @@ function armFoldHtml(key, name, objs, coll){
   const allHidden = coll ? coll.hidden : objs.length && objs.every(o => o.hidden);
   const k = esc(key).replace(/'/g, "\\'");
   return `<div class="armfoldbox${coll ? ' coll' : ''}">
-    <div class="armfoldhead">
+    <div class="armfoldhead" data-drop="${esc(key)}">
       <button class="armfold" onclick="armFold('${k}')">${shut ? '▸' : '▾'}</button>
       <button class="mini armeye" onclick="armFoldEye('${k}')" title="${esc(tt('armory.hide_show'))}">${allHidden ? '◌' : '●'}</button>
       <b class="armfoldname" ondblclick="armRenameFold('${k}', this)" title="${esc(tt('armory.rename_hint'))}">${esc(name)}</b><span class="count">${objs.length}</span>
@@ -119,14 +155,102 @@ function armFoldHtml(key, name, objs, coll){
           onchange="armCollExport(${coll.id}, this.checked)"> ${tt('armory.export')}</label>
         <button class="mini armx" onclick="armCollDelete(${coll.id})" title="${esc(tt('armory.delete_collection'))}">✕</button>` : ''}
     </div>
-    ${shut ? '' : `<div class="armrows">${objs.map(armObjRowHtml).join('')}</div>`}
+    ${shut ? '' : armObjGallery() ? `<div class="armotiles">${objs.map(armObjTileHtml).join('')}</div>`
+      : `<div class="armrows">${objs.map(armObjRowHtml).join('')}</div>`}
   </div>`;
+}
+
+/* A tile: the object drawn small (armThumbsPaint), named under it. */
+function armObjSig(o){
+  let h = 5381;
+  const t = JSON.stringify([o.src, o.dye, o.sheet]);
+  for(let i = 0; i < t.length; i++) h = ((h << 5) + h + t.charCodeAt(i)) | 0;
+  return (h >>> 0).toString(36);
+}
+function armObjTileHtml(o){
+  return `<div class="armotile${ARM.sel.has(o.id) ? ' sel' : ''}${ARM.active === o.id && ARM.sel.size > 1 ? ' act' : ''}${o.hidden ? ' off' : ''}" data-id="${o.id}"
+      onclick="armSelectRow(${o.id}, event)" onmouseenter="armHoverRow(${o.id})" onmouseleave="armHoverRow(null)" title="${esc(armFullName(o))}">
+    <img class="armthumb" data-thumb="o:${o.id}:${armObjSig(o)}" alt="">
+    <span class="armotilename" ondblclick="event.stopPropagation();armRenameRow(${o.id}, this)">${esc(o.mesh)}${o.flag ? ` <i class="count">${tt('armory.opt')}</i>` : ''}</span>
+    <button class="mini armeye" onclick="event.stopPropagation();armHide(${o.id})" title="${esc(tt('armory.hide_show'))}">${o.hidden ? '◌' : '●'}</button>
+  </div>`;
+}
+
+/* Rows and tiles are dragged onto a fold's head: onto a collection to go
+   into it, onto a group to leave any collection and take that group type. */
+function armDragWire(el){
+  el.querySelectorAll('.armrow[data-id], .armotile[data-id]').forEach(r => {
+    r.draggable = true;
+    r.ondragstart = e => {
+      const id = +r.dataset.id;
+      const ids = ARM.sel.has(id) ? [...ARM.sel] : [id];
+      e.dataTransfer.setData('text/x-arm-objects', JSON.stringify(ids));
+      e.dataTransfer.effectAllowed = 'move';
+    };
+  });
+  el.querySelectorAll('.armfoldhead[data-drop]').forEach(h => {
+    h.ondragover = e => { if(e.dataTransfer.types.includes('text/x-arm-objects')){ e.preventDefault(); h.classList.add('armdrop'); } };
+    h.ondragleave = () => h.classList.remove('armdrop');
+    h.ondrop = e => {
+      e.preventDefault(); h.classList.remove('armdrop');
+      let ids;
+      try{ ids = JSON.parse(e.dataTransfer.getData('text/x-arm-objects')); }catch(err){ return; }
+      armMoveTo(ids, h.dataset.drop);
+    };
+  });
+}
+/* `to` is a fold's key: c:<id> a collection, g:<type> a group outside them. */
+function armMoveTo(ids, to){
+  const p = armProj();
+  const objs = ids.map(armObj).filter(Boolean);
+  if(!objs.length) return;
+  if(to.startsWith('c:')) objs.forEach(o => { o.coll = +to.slice(2); });
+  else objs.forEach(o => { o.coll = null; o.name = to.slice(2); });
+  // the fold they land in opens
+  const f = p.ui.folded, i = f.indexOf(to);
+  if(i >= 0) f.splice(i, 1);
+  armRepaint();
+}
+
+/* Blender's M: a menu by the pointer of every collection, the model outside
+   them, and a new collection, for the selected objects. */
+function armMoveMenu(x, y){
+  const sel = armSelected();
+  if(!sel.length){ toast(tt('armory.nothing_selected')); return; }
+  const p = armProj();
+  armMoveMenuClose();
+  const m = document.createElement('div');
+  m.id = 'armMoveMenu'; m.className = 'armmenu';
+  m.innerHTML = `<div class="count">${ttN('armory.move_to_n', sel.length)}</div>
+    <button onclick="armMoveMenuPick('none')">${tt('armory.no_collection')}</button>
+    ${p.collections.map(c => `<button onclick="armMoveMenuPick('c:${c.id}')">${esc(c.name)}</button>`).join('')}
+    <button onclick="armMoveMenuPick('new')">＋ ${tt('armory.new_collection_option')}</button>`;
+  document.body.appendChild(m);
+  m.style.left = Math.max(8, Math.min(x, innerWidth - m.offsetWidth - 8)) + 'px';
+  m.style.top = Math.max(8, Math.min(y, innerHeight - m.offsetHeight - 8)) + 'px';
+  ARM.moveAway = e => { if(e.type === 'keydown' ? e.key === 'Escape' : !m.contains(e.target)){ if(e.type === 'keydown') e.stopPropagation(); armMoveMenuClose(); } };
+  document.addEventListener('pointerdown', ARM.moveAway, true);
+  document.addEventListener('keydown', ARM.moveAway, true);
+}
+function armMoveMenuClose(){
+  document.getElementById('armMoveMenu')?.remove();
+  if(ARM.moveAway){
+    document.removeEventListener('pointerdown', ARM.moveAway, true);
+    document.removeEventListener('keydown', ARM.moveAway, true);
+    ARM.moveAway = null;
+  }
+}
+function armMoveMenuPick(to){
+  armMoveMenuClose();
+  if(to === 'new') return armNewCollection();
+  if(to === 'none'){ armSelected().forEach(o => { o.coll = null; }); return armRepaint(); }
+  armMoveTo([...ARM.sel], to);
 }
 
 function armObjRowHtml(o){
   const sw = o.dye && o.dye.color ? `<span class="armswatch" style="background:rgb(${o.dye.color.join(',')})"></span>` : '';
   const empty = !(o.src || []).length;
-  return `<div class="armrow${ARM.sel.has(o.id) ? ' sel' : ''}${o.hidden ? ' off' : ''}" data-id="${o.id}" onclick="armSelectRow(${o.id}, event)"
+  return `<div class="armrow${ARM.sel.has(o.id) ? ' sel' : ''}${ARM.active === o.id && ARM.sel.size > 1 ? ' act' : ''}${o.hidden ? ' off' : ''}" data-id="${o.id}" onclick="armSelectRow(${o.id}, event)"
       onmouseenter="armHoverRow(${o.id})" onmouseleave="armHoverRow(null)">
     <button class="mini armeye" onclick="event.stopPropagation();armHide(${o.id})" title="${esc(tt('armory.hide_show'))}">${o.hidden ? '◌' : '●'}</button>
     <span class="armrowname" ondblclick="event.stopPropagation();armRenameRow(${o.id}, this)" title="${esc(tt('armory.rename_hint'))}">${esc(o.mesh)}${o.flag ? ` <i class="count">${tt('armory.opt')}</i>` : ''}${empty ? ` <i class="count">${tt('armory.empty_object')}</i>` : ''}</span>
@@ -139,6 +263,12 @@ function armObjRowHtml(o){
 function armSelected(){ return armProj().objects.filter(o => ARM.sel.has(o.id)); }
 function armRepaint(){ armSave(); armPaintObjects(); armPaintAssets(); armPaintBar(); armFrame(); }
 
+/* The active object is Blender's: the last one picked, outlined lighter, the
+   one Merge joins the others into. Shift on a selected object makes it the
+   active one, Shift on the active one lets it go; Ctrl (the list) toggles. */
+function armActiveFix(){
+  if(ARM.active == null || !ARM.sel.has(ARM.active)) ARM.active = ARM.sel.size ? [...ARM.sel].pop() : null;
+}
 function armSelect(id, ev){
   const add = ev && (ev.shiftKey || ev.ctrlKey);
   // the same one object clicked again changes nothing, and the row stays the
@@ -146,7 +276,11 @@ function armSelect(id, ev){
   if(!add && id != null && ARM.sel.size === 1 && ARM.sel.has(id)) return;
   if(!add) ARM.sel.clear();
   ARM.dyeQuiet = false;
-  if(add && ARM.sel.has(id)) ARM.sel.delete(id); else if(id != null) ARM.sel.add(id);
+  if(add && ARM.sel.has(id)){
+    if(ev.ctrlKey || ARM.active === id){ ARM.sel.delete(id); if(ARM.active === id) ARM.active = null; }
+    else ARM.active = id;
+  }else if(id != null){ ARM.sel.add(id); ARM.active = id; }
+  armActiveFix();
   armPaintObjects(); armFrame();
   if(typeof armPaintSliders === 'function') armPaintSliders();
 }
@@ -160,6 +294,7 @@ function armSelectRow(id, ev){
     if(a >= 0 && b >= 0){
       if(!ev.ctrlKey) ARM.sel.clear();
       ids.slice(Math.min(a, b), Math.max(a, b) + 1).forEach(x => ARM.sel.add(x));
+      ARM.active = id;
       armPaintObjects(); armFrame();
       if(typeof armPaintSliders === 'function') armPaintSliders();
       return;
@@ -201,14 +336,16 @@ function armFoldEye(key){
 
 /* --- collections ------------------------------------------------------------- */
 
+/* A new collection is made at once, named in its own fold (no dialog): the
+   selected objects go into it and its name is ready to be typed over. */
 function armNewCollection(){
-  const name = prompt(tt('armory.collection_name'), tt('armory.collection_default', {n: armProj().collections.length + 1}));
-  if(!name) return;
   const p = armProj();
-  const c = {id: p.nextId++, name: name.trim(), hidden: false, export: true};
+  const c = {id: p.nextId++, name: tt('armory.collection_default', {n: p.collections.length + 1}), hidden: false, export: true};
   p.collections.push(c);
   for(const o of armSelected()) o.coll = c.id;
   armRepaint();
+  const head = document.querySelector(`.armfoldhead[data-drop="c:${c.id}"] .armfoldname`);
+  if(head){ head.scrollIntoView({block: 'nearest'}); armRenameFold('c:' + c.id, head); }
 }
 function armCollExport(id, on){
   const c = armProj().collections.find(x => x.id === id);
@@ -262,18 +399,16 @@ function armRenameFix(id){
   toast(tt('armory.renamed', {from: before, to: armFullName(o)}));
   armRepaint();
 }
-/* The kit's Apply prefix: add makes `x` into `prefix__x`, swap replaces what
-   is before the first underscore; a `__` inside the kept part collapses to `_`. */
-function armApplyPrefix(id, swap){
-  const o = armObj(id); if(!o) return;
-  const sel = document.getElementById('armPrefix');
-  const prefix = sel ? sel.value : '';
-  if(!prefix) return;
-  const full = armFullName(o);
-  let kept = swap ? full.slice(full.indexOf('_') < 0 ? full.length : full.indexOf('_')).replace(/^_+/, '') : full;
-  kept = kept.replace(/__/g, '_');
-  [o.name, o.mesh] = [prefix, kept || prefix];
-  armRepaint();
+/* The group type picked from a list, which replaces it: another group of the
+   model (the object joins that group) or a weapon prefix (the game's slot
+   names, explained by armPrefixHelp). Typing one in stays possible. */
+function armGroupPickHtml(current, onchange){
+  const groups = [...new Set(armProj().objects.map(o => o.name))].sort((a, b) => a.localeCompare(b));
+  const opt = v => `<option value="${esc(v)}"${v === current ? ' selected' : ''}>${esc(v)}</option>`;
+  return `<select class="armgrouppick" onchange="if(this.value)${onchange}" title="${esc(tt('armory.group_pick_title'))}">
+    <option value="">${tt('armory.group_pick')}</option>
+    <optgroup label="${esc(tt('armory.group_pick_groups'))}">${groups.map(opt).join('')}</optgroup>
+    <optgroup label="${esc(tt('armory.group_pick_prefixes'))}">${ARM_PREFIXES.map(opt).join('')}</optgroup></select>`;
 }
 /* --- rename in place (99h) ---------------------------------------------------
 
@@ -371,7 +506,9 @@ function armMerge(){
   const objs = armSelected();
   if(objs.length < 2) return;
   const p = armProj();
-  const first = objs[0];
+  // joined into the active object: its name, place in the list and dye
+  armActiveFix();
+  const first = objs.find(o => o.id === ARM.active) || objs[0];
   const src = [];
   for(const o of objs){
     const om = armObjMatrix(o, armPivot(o));
@@ -394,7 +531,7 @@ function armBlank(){
   const like = armSelected()[0];
   // like the selected object, else like the model's first, else a helmet
   const type = like ? like.name : p.objects.length ? p.objects[0].name : 'helmet';
-  const o = {id: p.nextId++, src: [], name: type, mesh: armUniqueMesh(type, 'empty'), flag: 1,
+  const o = {id: p.nextId++, src: [], name: type, mesh: armUniqueMesh(type, 'empty'), flag: 0,
              hidden: false, coll: like ? like.coll : null, t: [0, 0, 0], r: [0, 0, 0], s: [1, 1, 1],
              material: '', dye: null};
   p.objects.push(o);
@@ -468,13 +605,12 @@ function armPropsHtml(o){
   return `<div class="armprops">
     <div class="armpropsrow"><label>${tt('armory.group_type')}<input value="${esc(o.name)}" onchange="armSetName(${o.id},'name',this.value)"></label>
       <label>${tt('armory.mesh_name')}<input value="${esc(o.mesh)}" onchange="armSetName(${o.id},'mesh',this.value)"></label></div>
+    <div class="armpropsrow">${armGroupPickHtml(o.name, `armSetName(${o.id},'name',this.value)`)}
+      <button class="mini armhelp" onclick="armPrefixHelp()" title="${esc(tt('armory.prefix_help_title'))}">?</button></div>
     <div class="armpropsrow">
       <label class="armcheck"><input type="checkbox"${o.flag ? ' checked' : ''} onchange="armToggleOpt(${o.id})"> ${tt('armory.optional')}</label>
       <button class="mini" onclick="armRenameFix(${o.id})" title="${esc(tt('armory.fix_name_title'))}">${tt('armory.fix_name')}</button>
     </div>
-    <div class="armpropsrow"><select id="armPrefix"><option value="">${tt('armory.prefix')}</option>${ARM_PREFIXES.map(x => `<option>${esc(x)}</option>`).join('')}</select>
-      <button class="mini" onclick="armApplyPrefix(${o.id}, false)">${tt('armory.prefix_add')}</button>
-      <button class="mini" onclick="armApplyPrefix(${o.id}, true)">${tt('armory.prefix_swap')}</button></div>
     <div class="armpropsrow"><label>${tt('armory.material')}<select onchange="armSetMaterial(${o.id}, this.value)">
         <option value="">${tt('armory.mat_none')}</option>${ARM_MATERIALS.map(m => `<option value="${m}"${o.material === m ? ' selected' : ''}>${esc(armMatLabel(m))}</option>`).join('')}</select></label>
       <label>${tt('armory.collection')}<select onchange="armSetCollection(${o.id}, this.value)">
@@ -519,7 +655,10 @@ function armMultiHtml(sel){
     + (ARM.userPresets || []).map((x, i) => `<option value="u:${i}">${esc(x.name)}</option>`).join('');
   const same = k => sel.every(o => o[k] === sel[0][k]) ? sel[0][k] : '';
   return `<div class="armprops">
-    <div class="count armnote">${ttN('armory.n_selected', sel.length)}</div>
+    <div class="count armnote">${ttN('armory.n_selected', sel.length)}${(() => { const a = armObj(ARM.active);
+      return a ? ` · ${tt('armory.active_is', {name: esc(armFullName(a))})}` : ''; })()}</div>
+    <div class="armpropsrow">${armGroupPickHtml(same('name'), `armMultiName('name',this.value)`)}
+      <button class="mini armhelp" onclick="armPrefixHelp()" title="${esc(tt('armory.prefix_help_title'))}">?</button></div>
     <div class="armpropsrow"><label>${tt('armory.group_type')}<input value="${esc(same('name'))}" placeholder="${esc(tt('armory.multi_mixed'))}" onchange="armMultiName('name', this.value)"></label>
       <label title="${esc(tt('armory.multi_mesh_title'))}">${tt('armory.mesh_name')}<input value="${esc(same('mesh'))}" placeholder="${esc(tt('armory.multi_mixed'))}" onchange="armMultiName('mesh', this.value)"></label></div>
     <div class="armsect">${tt('armory.recolour')}</div>
@@ -1071,13 +1210,15 @@ function armCanvasXY(e){
 
 /* The object under the cursor lights up (95g); in the detail view, nothing does. */
 function armHoverAt(e){
-  if(ARM.detail){ return; }
+  if(ARM.detail && !e){ armEditHover(null); return; }
   if(!e){ if(ARM.hover != null){ ARM.hover = null; armFrame(); } return; }
   if(ARM.hoverAsked) { ARM.hoverEv = e; return; }
   ARM.hoverAsked = true; ARM.hoverEv = e;
   requestAnimationFrame(() => {
     ARM.hoverAsked = false;
     const [x, y] = armCanvasXY(ARM.hoverEv);
+    // in the detail view, the vertex, edge or face under the pointer (armedit.js)
+    if(ARM.detail){ armEditHover(x, y); return; }
     const hit = armPickAt(x, y);
     const id = hit ? hit[0].id : null;
     if(id !== ARM.hover){ ARM.hover = id; armFrame(); }
@@ -1085,129 +1226,15 @@ function armHoverAt(e){
 }
 function armClick(e){
   const [x, y] = armCanvasXY(e);
-  if(ARM.detail) return armDetailClick(x, y, e);
+  if(ARM.detail) return armEditClick(x, y, e);
   const hit = armPickAt(x, y);
   armSelect(hit ? hit[0].id : null, e);
 }
 
-/* --- the detail view, and split ------------------------------------------------ */
-
-function armDetailOpen(){
-  const o = armSelected()[0];
-  if(!o || !(o.src || []).length) return;
-  ARM.detail = {id: o.id, selT: new Set(), selV: new Set()};
-  ARM.xray = false;
-  armPaintDetailBar();
-  if(typeof armTexPeekPaint === 'function') armTexPeekPaint();
-  const b = armBounds([o]);
-  if(b){
-    const [lo, hi] = b;
-    ARM.cam.target = [-(lo[0] + hi[0]) / 2, (lo[1] + hi[1]) / 2, (lo[2] + hi[2]) / 2];
-    ARM.cam.dist = Math.max(0.1, Math.hypot(hi[0]-lo[0], hi[1]-lo[1], hi[2]-lo[2]) * 1.4);
-  }
-  armFrame();
-}
-function armDetailClose(){
-  ARM.detail = null; ARM.xray = false;
-  armPaintDetailBar(); armFrame();
-  if(typeof armTexPeekPaint === 'function') armTexPeekPaint();
-}
-function armPaintDetailBar(){
-  const el = document.getElementById('armDetailBar');
-  const host = document.getElementById('armView');
-  if(!host) return;
-  if(!ARM.detail){ if(el) el.remove(); return; }
-  const o = armObj(ARM.detail.id);
-  const bar = el || Object.assign(document.createElement('div'), {id: 'armDetailBar', className: 'armdetailbar'});
-  const nT = armDetailSelTris().length;
-  bar.innerHTML = `<b>${esc(o ? armFullName(o) : '')}</b>
-    <button class="mini" onclick="armDetailConnected()" title="${esc(tt('armory.select_connected_title'))}">${tt('armory.select_connected')}</button>
-    <button class="mini${ARM.xray ? ' on' : ''}" onclick="armXray()" title="${esc(tt('armory.xray_title'))}">${tt('armory.xray')}</button>
-    <button class="mini" onclick="armDetailClear()">${tt('armory.clear_selection')}</button>
-    <button class="mini${ARM.texPeek ? ' on' : ''}" onclick="armTexPeek()" title="${esc(tt('armory.tex_peek_title'))}">${tt('armory.tex_peek')}</button>
-    <span class="count">${ttN('armory.n_tris_selected', nT)}</span>
-    <button class="mini primary" onclick="armSplit()"${nT ? '' : ' disabled'}>${tt('armory.split_off')}</button>
-    <button class="mini" onclick="armDetailClose()">${tt('armory.leave_detail')}</button>`;
-  if(!el) host.appendChild(bar);
-}
-function armXray(){ ARM.xray = !ARM.xray; armPaintDetailBar(); armFrame(); }
-function armDetailClear(){ ARM.detail.selT.clear(); ARM.detail.selV.clear(); armPaintDetailBar(); armFrame(); }
-
-/* The triangles chosen: picked whole (L), or with all three corners picked by hand. */
-function armDetailSelTris(){
-  const d = ARM.detail;
-  if(!d) return [];
-  const o = armObj(d.id);
-  const out = new Set(d.selT);
-  if(d.selV.size && o){
-    (o.src || []).forEach((pc, pi) => {
-      const live = ARM.assets.get(pc.asset);
-      if(!live || !live.geo) return;
-      const g = live.geo.groups[pc.group], I = live.geo.indices;
-      const tris = pc.tris || [...Array(g.count / 3).keys()];
-      for(const t of tris)
-        if([0, 1, 2].every(k => d.selV.has(`${pi}:${I[g.start + t*3 + k]}`))) out.add(`${pi}:${t}`);
-    });
-  }
-  return [...out];
-}
-
-function armDetailClick(x, y, e){
-  const d = ARM.detail, o = armObj(d.id);
-  if(!o) return;
-  if(ARM.xray){
-    // the nearest corner within ten pixels, through the model
-    let best = null, bd = 100;
-    for(const tr of armScreenTris(o))
-      for(const p of [tr[3], tr[4], tr[5]]){
-        const dd = (p[0] - x) ** 2 + (p[1] - y) ** 2;
-        if(dd < bd){ bd = dd; best = `${tr[1]}:${p[3]}`; }
-      }
-    if(!e.shiftKey) d.selV.clear();
-    if(best){ if(d.selV.has(best) && e.shiftKey) d.selV.delete(best); else d.selV.add(best); }
-  }else{
-    const hit = armPickAt(x, y, o);
-    if(!e.shiftKey) d.selT.clear();
-    if(hit) d.lastTri = `${hit[1]}:${hit[2]}`;
-    if(hit) d.selT.add(d.lastTri);
-  }
-  armPaintDetailBar(); armFrame();
-}
-
-/* Blender's L: every triangle joined to the picked ones through shared
-   corners, in the same piece. */
-function armDetailConnected(){
-  const d = ARM.detail, o = d && armObj(d.id);
-  if(!o) return;
-  const seeds = [...d.selT];
-  if(!seeds.length){ toast(tt('armory.pick_a_triangle')); return; }
-  for(const seed of seeds){
-    const [pi, t0] = seed.split(':').map(Number);
-    const pc = o.src[pi], live = ARM.assets.get(pc.asset);
-    const g = live.geo.groups[pc.group], I = live.geo.indices, P = live.geo.positions;
-    const tris = pc.tris || [...Array(g.count / 3).keys()];
-    // corners joined by position as well as index: a seam splits a vertex in
-    // two for its UVs and the part is still one piece
-    const posKey = v => `${P[v*3].toFixed(5)},${P[v*3+1].toFixed(5)},${P[v*3+2].toFixed(5)}`;
-    const byCorner = new Map();
-    for(const t of tris) for(let k = 0; k < 3; k++){
-      const key = posKey(I[g.start + t*3 + k]);
-      if(!byCorner.has(key)) byCorner.set(key, []);
-      byCorner.get(key).push(t);
-    }
-    const seen = new Set([t0]), todo = [t0];
-    while(todo.length){
-      const t = todo.pop();
-      for(let k = 0; k < 3; k++) for(const u of byCorner.get(posKey(I[g.start + t*3 + k])) || [])
-        if(!seen.has(u)){ seen.add(u); todo.push(u); }
-    }
-    for(const t of seen) d.selT.add(`${pi}:${t}`);
-  }
-  armPaintDetailBar(); armFrame();
-}
+/* --- the detail view: armedit.js (Blender's Edit Mode) ---------------------------- */
 
 function armBoxDrag(drag, e){
-  if(drag.button !== 0 || (ARM.detail && !ARM.xray)) return false;
+  if(drag.button !== 0) return false;
   if(!drag.moved) return true;
   drag.box = true;
   const a = armCanvasXY({clientX: drag.x0, clientY: drag.y0}), b = armCanvasXY(e);
@@ -1230,54 +1257,9 @@ function armBoxEnd(drag, e){
     return;
   }
   if(!o){ armFrame(); return; }
-  if(!e.shiftKey) d.selV.clear();
-  for(const tr of armScreenTris(o))
-    for(const p of [tr[3], tr[4], tr[5]])
-      if(p[0] >= x0 && p[0] <= x1 && p[1] >= y0 && p[1] <= y1) d.selV.add(`${tr[1]}:${p[3]}`);
-  armPaintDetailBar(); armFrame();
+  armEditBox(x0, y0, x1, y1, e.shiftKey);
 }
 
-function armSplit(){
-  const d = ARM.detail, o = d && armObj(d.id);
-  if(!o) return;
-  const chosen = armDetailSelTris();
-  if(!chosen.length) return;
-  const name = prompt(tt('armory.split_name'), armUniqueMesh(o.name, o.mesh));
-  if(!name) return;
-  const p = armProj();
-  const byPiece = new Map();
-  for(const k of chosen){
-    const [pi, t] = k.split(':').map(Number);
-    if(!byPiece.has(pi)) byPiece.set(pi, new Set());
-    byPiece.get(pi).add(t);
-  }
-  const newSrc = [];
-  o.src = o.src.map((pc, pi) => {
-    const take = byPiece.get(pi);
-    if(!take) return pc;
-    const live = ARM.assets.get(pc.asset);
-    const g = live.geo.groups[pc.group];
-    const all = pc.tris || [...Array(g.count / 3).keys()];
-    newSrc.push(Object.assign({}, pc, {tris: all.filter(t => take.has(t))}));
-    const rest = all.filter(t => !take.has(t));
-    return rest.length ? Object.assign({}, pc, {tris: rest}) : null;
-  }).filter(Boolean);
-  const parts = armSplitName(name.includes('__') ? name : `${o.name}__${name}`);
-  const made = Object.assign(JSON.parse(JSON.stringify(o)), {id: p.nextId++, src: newSrc,
-    name: parts[0], mesh: parts[1], weights: null});
-  // the split part keeps its place: same move, turn and scale as before, about
-  // the pivot the whole object had
-  const pv = armPivot(o);
-  p.objects.splice(p.objects.indexOf(o) + 1, 0, made);
-  if(!o.src.length) p.objects = p.objects.filter(x => x !== o);
-  o.weights = null;
-  armFixPivot(made, pv);
-  if(o.src.length) armFixPivot(o, pv);
-  ARM.sel = new Set([made.id]);
-  armDetailClose();
-  toast(ttN('armory.split_done', chosen.length, {name: armFullName(made)}));
-  armRepaint();
-}
 /* A part keeps its place when its pivot moves: the move is corrected by what
    the turn and scale do about the old pivot against the new one. */
 function armFixPivot(o, oldPivot){
@@ -1290,36 +1272,66 @@ function armFixPivot(o, oldPivot){
 /* --- the overlay ---------------------------------------------------------------- */
 
 function armOverlay(ctx, w, h, cam){
-  if(ARM.detail){
-    const o = armObj(ARM.detail.id);
-    if(o){
-      const sel = new Set(armDetailSelTris());
-      const tris = armScreenTris(o);
-      ctx.save();
-      if(ARM.xray){
-        ctx.fillStyle = 'rgba(220,226,235,.55)';
-        const seen = new Set();
-        for(const tr of tris) for(const p of [tr[3], tr[4], tr[5]]){
-          const k = `${tr[1]}:${p[3]}`;
-          if(seen.has(k)) continue; seen.add(k);
-          ctx.fillStyle = ARM.detail.selV.has(k) ? '#f39c2a' : 'rgba(220,226,235,.55)';
-          ctx.fillRect(p[0] - 2, p[1] - 2, 4, 4);
-        }
-      }
-      ctx.fillStyle = 'rgba(243,156,42,.35)';
-      ctx.strokeStyle = 'rgba(243,156,42,.9)';
-      for(const tr of tris){
-        if(!sel.has(`${tr[1]}:${tr[2]}`)) continue;
-        ctx.beginPath(); ctx.moveTo(tr[3][0], tr[3][1]); ctx.lineTo(tr[4][0], tr[4][1]); ctx.lineTo(tr[5][0], tr[5][1]);
-        ctx.closePath(); ctx.fill();
-      }
-      ctx.restore();
-    }
-  }
   if(ARM.box){
     ctx.save(); ctx.strokeStyle = '#fff'; ctx.setLineDash([5, 4]);
     ctx.strokeRect(ARM.box[0], ARM.box[1], ARM.box[2] - ARM.box[0], ARM.box[3] - ARM.box[1]);
     ctx.restore();
   }
   if(typeof armOverlay95g === 'function') armOverlay95g(ctx, w, h, cam);
+}
+
+/* --- what the weapon prefixes mean (the ? beside the group picker) ------------
+
+   Checked 2026-11-23 against every vanilla model (701 entries, LOD0): vanilla
+   uses primaryactive, secondaryactive, shield0, equipment0 (quivers),
+   equipment20 (powder), ramrod0, cannon ball0 and ballista arrow0, and the
+   shieldactive0/shieldpassive0 pair on a few horse archers; no vanilla model
+   has primarypassive or secondarypassive. */
+function armPrefixFig(parts, caption, note){
+  // the parts drawn in their colours on a figure; their names listed under it,
+  // so a long prefix never runs off the picture
+  const at = {
+    hand: c => `<line x1="84" y1="70" x2="98" y2="16" stroke="${c}" stroke-width="4" stroke-linecap="round"/>`,
+    bow: c => `<path d="M86 30 Q104 70 86 110" fill="none" stroke="${c}" stroke-width="3"/><line x1="86" y1="30" x2="86" y2="110" stroke="${c}" stroke-width="1"/>`,
+    arm: c => `<ellipse cx="36" cy="70" rx="11" ry="16" fill="${c}" opacity=".9"/>`,
+    back: c => `<line x1="44" y1="30" x2="78" y2="86" stroke="${c}" stroke-width="5" stroke-dasharray="5 3" opacity=".75"/>`,
+    backshield: c => `<ellipse cx="66" cy="56" rx="13" ry="17" fill="none" stroke="${c}" stroke-width="3" stroke-dasharray="4 3"/>`,
+    side: c => `<line x1="66" y1="82" x2="80" y2="112" stroke="${c}" stroke-width="4" stroke-linecap="round"/>`,
+  };
+  const body = `<circle cx="60" cy="22" r="9" fill="none" stroke="#9aa3ad" stroke-width="2"/>
+    <line x1="60" y1="31" x2="60" y2="82" stroke="#9aa3ad" stroke-width="2"/>
+    <line x1="60" y1="42" x2="38" y2="68" stroke="#9aa3ad" stroke-width="2"/><line x1="60" y1="42" x2="84" y2="70" stroke="#9aa3ad" stroke-width="2"/>
+    <line x1="60" y1="82" x2="46" y2="124" stroke="#9aa3ad" stroke-width="2"/><line x1="60" y1="82" x2="74" y2="124" stroke="#9aa3ad" stroke-width="2"/>`;
+  const names = parts.filter(([, , l]) => l).map(([, c, l]) => `<div><span style="color:${c}">■</span> <code>${esc(l)}</code></div>`).join('');
+  return `<figure class="armprefixfig"><svg viewBox="0 0 120 130">${body}${parts.map(([k, c]) => at[k](c)).join('')}</svg>
+    ${caption ? `<figcaption><b>${caption}</b>${note ? ` <span class="count">(${note})</span>` : ''}</figcaption>` : ''}<div class="count">${names}</div></figure>`;
+}
+function armPrefixHelp(){
+  const A = '#f0a040', B = '#5aa9f0', C = '#7fd08a', D = '#c98be0';
+  const card = (title, figs, text) => `<div class="armprefixcard"><b>${title}</b>
+    ${figs.length ? `<div class="armprefixfigs">${figs.join('')}</div>` : ''}<div>${text}</div></div>`;
+  document.getElementById('modal').className = 'modal wide';
+  modal.innerHTML = `<div class="armimp">
+    <h3>${tt('armory.prefix_help_title')}</h3>
+    <div class="count">${tt('armory.prefix_help_intro')}</div>
+    <div class="armprefixhelp">
+      ${card(tt('armory.prefix_help_melee'), [armPrefixFig([['hand', A, 'primaryactive0'], ['arm', C, 'shield0']])],
+        tt('armory.prefix_help_melee_text'))}
+      ${card(tt('armory.prefix_help_two'), [
+          armPrefixFig([['hand', A, 'primaryactive0'], ['arm', C, 'shield0']], tt('armory.prefix_help_first')),
+          armPrefixFig([['hand', B, 'secondaryactive0'], ['arm', C, 'shield0']], tt('armory.prefix_help_second'))],
+        tt('armory.prefix_help_two_text'))}
+      ${card(tt('armory.prefix_help_passive'), [
+          armPrefixFig([['bow', A, 'primaryactive0'], ['side', D, 'secondarypassive0'], ['backshield', C, 'shieldpassive0']], tt('armory.prefix_help_ranged')),
+          armPrefixFig([['hand', B, 'secondaryactive0'], ['arm', C, 'shieldactive0'], ['back', A, 'primarypassive0']], tt('armory.prefix_help_melee_mode'))],
+        tt('armory.prefix_help_passive_text'))}
+      ${card(tt('armory.prefix_help_simple'), [
+          armPrefixFig([['bow', A, 'primaryactive0'], ['side', A, ''], ['backshield', A, '']], tt('armory.prefix_help_ranged'), tt('armory.prefix_help_one_group')),
+          armPrefixFig([['hand', B, 'secondaryactive0'], ['arm', B, ''], ['back', B, '']], tt('armory.prefix_help_melee_mode'), tt('armory.prefix_help_one_group'))],
+        tt('armory.prefix_help_simple_text'))}
+      ${card(tt('armory.prefix_help_other'), [], tt('armory.prefix_help_other_text'))}
+    </div>
+    <div class="armimpfoot"><span style="flex:1"></span><button onclick="closeModal()">${tt('common.close')}</button></div>
+  </div>`;
+  overlay.classList.add('open');
 }
