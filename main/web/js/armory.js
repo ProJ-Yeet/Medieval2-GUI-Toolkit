@@ -590,14 +590,22 @@ function armNewObject(key, ob){
           flag: ob.flag, hidden: false, coll: null, t: [0, 0, 0], r: [0, 0, 0], s: [1, 1, 1],
           material: '', dye: null};
 }
+/* A blank variant: one triangle hidden in the body, or none, that the game
+   picks for a soldier without that part. A fold holding nothing else is left
+   out of an import; one beside real parts stays, as the game's choice. */
+const armIsBlank = n => n <= 1;
 function armPullAll(key){
   const live = ARM.assets.get(key);
   if(!live || !live.view) return;
   const p = armProj();
+  const fresh = live.view.objects.filter(ob => !p.objects.some(o => armUses(o, key, ob.index)))
+    .map(ob => [ob, armNewObject(key, ob)]);
+  const real = new Set(p.objects.filter(o => !armIsBlank(armObjTris(o))).map(o => o.name)
+    .concat(fresh.filter(([ob]) => !armIsBlank(ob.triangles)).map(([, o]) => o.name)));
   let added = 0;
-  for(const ob of live.view.objects){
-    if(p.objects.some(o => armUses(o, key, ob.index))) continue;
-    p.objects.push(armNewObject(key, ob)); added++;
+  for(const [, o] of fresh){
+    if(!real.has(o.name)) continue;
+    p.objects.push(o); added++;
   }
   toast(ttN('armory.pulled_n', added));
   if(added && typeof armBoneCheck === 'function') armBoneCheck(key);

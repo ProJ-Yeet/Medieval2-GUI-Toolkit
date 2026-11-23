@@ -474,6 +474,25 @@ console.log(JSON.stringify({trip, keys, t1: o1.t.map(v => Math.round(v * 1000) /
     check(f"keys are named as the keymap writes them ({got.get('keys')})",
           got.get("keys") == ["numpad1", "ctrl+numpad1", "alt+h", "numpad."])
 
+    # an import leaves out a fold of nothing but blank variants (one hidden
+    # triangle, or none): a helmet_0 beside real helmets stays, a leg fold
+    # and an armour fold with only blanks in them do not
+    probe = stub + "function toast(){}" + js + r""";
+armSave = armPaintAssets = armPaintObjects = armPaintBar = armFrameAll = () => {};
+const ob = (index, name, mesh, triangles) => ({index, name, mesh, flag: 0, triangles});
+ARM.assets = new Map([['M|u', {view: {objects: [
+  ob(0, 'helmet', 'helmet_01', 1254), ob(1, 'helmet', 'helmet_0', 1),
+  ob(2, 'leg', 'leg_0', 1), ob(3, 'armour', 'armour_0', 0), ob(4, 'body', 'body_01', 2503)]}}]]);
+state.armProj = {objects: [], assets: [], collections: [], nextId: 1};
+armPullAll('M|u');
+console.log(JSON.stringify(armProj().objects.map(o => o.mesh)));
+"""
+    (tmp / "probe_blank.js").write_text(probe, encoding="utf-8")
+    out = subprocess.run([node, str(tmp / "probe_blank.js")], capture_output=True, text=True, timeout=60)
+    pulled = __import__("json").loads(out.stdout or "null")
+    check(f"an import drops folds that hold only blank variants ({pulled or out.stderr.strip()[-200:]})",
+          pulled == ["helmet_01", "helmet_0", "body_01"])
+
     # the export's UV step: the packing drawn bigger; Live off holds every
     # change until Refresh; Textures draws the bake's own art, not blocks
     probe = (r"""
