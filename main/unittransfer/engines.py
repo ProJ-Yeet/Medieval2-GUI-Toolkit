@@ -535,6 +535,85 @@ def textures_in_blob(blob: bytes) -> List[str]:
     return out
 
 
+def read_reference_points(blob: bytes) -> List[dict]:
+    """2026-11-24: a ``.modelReferencePoints`` file's points, in file order.
+
+    The file is a boost binary archive. After its header and a count, each
+    point is its type (``Engine StationPoint``, ``Artillery FrontPFX``...), a
+    4x4 matrix of floats, row-major with the place in its last column, and its
+    name. The first matrix is led by four bytes of class version. Each comes
+    back as ``{"type", "name", "pos": [x, y, z], "yaw"}``, the turn about the
+    up axis in radians; a file that does not read gives what read before it.
+    """
+    import math
+
+    def text(at):
+        if at + 4 > len(blob):
+            return None, at
+        n = struct.unpack_from("<I", blob, at)[0]
+        raw = blob[at + 4:at + 4 + n]
+        if not 0 < n <= 128 or len(raw) != n or not all(32 <= c < 127 for c in raw):
+            return None, at
+        return raw.decode("ascii"), at + 4 + n
+
+    def matrix(at):
+        if at + 64 > len(blob):
+            return None
+        m = struct.unpack_from("<16f", blob, at)
+        return m if [round(v, 4) for v in m[12:]] == [0, 0, 0, 1] else None
+
+    # the first point: the first text whose matrix follows, straight or after
+    # the class version
+    at = blob.find(b"serialization::archive")
+    if at < 0:
+        return []
+    at += 22
+    out: List[dict] = []
+    while at < len(blob):
+        kind, nxt = text(at)
+        m = None
+        if kind is not None:
+            m = matrix(nxt)
+            if m is None and not out:
+                nxt += 4
+                m = matrix(nxt)
+        if m is None:
+            if out:
+                break
+            at += 1
+            continue
+        name, at = text(nxt + 64)
+        if name is None:
+            break
+        out.append({"type": kind, "name": name, "pos": [m[3], m[7], m[11]],
+                    "yaw": math.atan2(m[2], m[0])})
+    return out
+
+
+def crew_points(raw: str) -> List[str]:
+    """The reference points a block's ``crew_animations`` puts its crew at
+    (``crank  Crew_Left, crew_left_stoke_1, ...``), each once, in order; the
+    ``*_attachment`` lines name the same points again."""
+    out: List[str] = []
+    inside = False
+    for line in raw.splitlines():
+        s = line.split(";", 1)[0].strip()
+        if not s:
+            continue
+        if not inside:
+            inside = s.lower() == "crew_animations"
+            continue
+        if s.lower() == "end":
+            break
+        parts = s.split(None, 1)
+        if len(parts) < 2 or parts[0].lower().endswith("_attachment"):
+            continue
+        point = parts[1].split(",", 1)[0].strip()
+        if point and point.lower() not in (p.lower() for p in out):
+            out.append(point)
+    return out
+
+
 def crew_scene(mod, name: str) -> dict:
     """96f: the siege engine a crew works, as the unit preview draws it with them.
 
@@ -548,13 +627,27 @@ def crew_scene(mod, name: str) -> dict:
     """
     from .factions import read_path
     out = {"engine": name or "", "blocks": 0, "culture": "", "group": "",
-           "mesh": "", "mesh_exists": False, "textures": [], "main": "", "mounted": False}
+           "mesh": "", "mesh_exists": False, "textures": [], "main": "", "mounted": False,
+           "crew": []}
     blocks = mod.engine_defs(name) if name else []
     if not blocks:
         out["mounted"] = bool(name and mod.mounted_engine_defs(name))
         return out
     e = blocks[0]
     out["blocks"], out["culture"] = len(blocks), e.culture
+    # 2026-11-24: where its crew stand: the station point of each point its
+    # crew_animations names, from its .modelReferencePoints
+    ref = read_path(mod, data_rel(e.reference_points)) if e.reference_points else None
+    if ref is not None:
+        try:
+            pts = read_reference_points(ref.read_bytes())
+        except OSError:
+            pts = []
+        for point in crew_points(e.raw):
+            same = [p for p in pts if p["name"].lower() == point.lower()]
+            p = next((x for x in same if "station" in x["type"].lower()), same[0] if same else None)
+            if p:
+                out["crew"].append({"name": p["name"], "pos": p["pos"], "yaw": p["yaw"]})
     group = next((g for g in e.groups if g.name.lower() == "normal" and g.meshes),
                  next((g for g in e.groups if g.meshes), None))
     if group is None:

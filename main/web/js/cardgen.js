@@ -85,7 +85,7 @@ function cgGroupName(gk, objs){
   const o = objs[0], dup = (cg().dups || []).find(d => 'dup:' + d.k === gk);
   if(dup) return tt('cards.gen_grp_copy', {name: dup.name});
   if(gk.startsWith('coll:')){ const coll = armProj().collections.find(x => x.id === o.coll); return coll ? coll.name : gk; }
-  if(gk === 'crew') return tt('cards.gen_crew_riders', {name: (ARM.assets.get(((o.src || [])[0] || {}).asset) || {asset: {}}).asset.entry || o.mesh});
+  if(gk === 'crew') return tt(cgCrewKey('riders'), {name: (ARM.assets.get(((o.src || [])[0] || {}).asset) || {asset: {}}).asset.entry || o.mesh});
   const live = ARM.assets.get(((o.src || [])[0] || {}).asset), entry = live && live.asset ? live.asset.entry : o.mesh;
   return o.still === 'mount' ? tt('cards.gen_grp_mount', {name: entry}) : o.still === 'engine' ? tt('cards.gen_grp_engine', {name: entry}) : entry;
 }
@@ -124,7 +124,12 @@ function cgGroupHide(gk){
    on top), the riders their skeleton's standing idle, as men on foot. The
    riders are their own model in the object list (grp 'crew'), one copy for
    each further spot (a copy's o.spot), and each can be hidden there or with
-   the Crew row. */
+   the Crew row.
+   2026-11-24: a siege unit's crew the same way (kind 'siege'): a man at each
+   station point its engine's crew_animations name, from the engine's
+   .modelReferencePoints (engines.crew_scene), standing by crew_stand where
+   his skeleton has it. The unit's own man stays where he stands; spot 0 is
+   his, as an elephant's driver's. */
 async function cgCrewLoad(u, mod, driver){
   if(!u.mount || u.engine) return null;
   let rows = [];
@@ -132,18 +137,30 @@ async function cgCrewLoad(u, mod, driver){
   const want = u.mount.toLowerCase(), row = rows.find(r => (r.type || '').toLowerCase() === want || (r.entry || '').toLowerCase() === want);
   const spots = (row && row.offsets) || [];
   if(!row || (row['class'] || '').toLowerCase() !== 'elephant' || spots.length < 2) return null;
+  const objects = await cgCrewObjects(mod, driver);
+  return objects && {objects, spots, kind: 'elephant'};
+}
+async function cgCrewObjects(mod, driver){
   const a = {kind: 'entry', mod, entry: driver}, live = await armLoadAsset(a);
   if(!live || !live.view || !live.geo) return null;
   const key = armAssetKey(a);
-  const objects = live.view.objects.map((ob, i) => ({id: -9000 - i, src: [{asset: key, group: ob.index}], name: ob.name, mesh: ob.mesh,
+  return live.view.objects.map((ob, i) => ({id: -9000 - i, src: [{asset: key, group: ob.index}], name: ob.name, mesh: ob.mesh,
     flag: ob.flag, crew: true, grp: 'crew', t: [0, 0, 0], r: [0, 0, 0], s: [1, 1, 1]}));
-  return {objects, spots};
 }
-async function cgCrewAnim(mod, list){
+/* The engine set beside the unit (cgBeside) first: its station points are
+   from its own origin. */
+async function cgSiegeCrew(mod, driver, extras){
+  const eng = extras.find(o => o.still === 'engine'), live = eng && ARM.assets.get(((eng.src || [])[0] || {}).asset);
+  const pts = (live && live.crew) || [];
+  if(!pts.length) return null;
+  const objects = await cgCrewObjects(mod, driver);
+  return objects && {objects, kind: 'siege', spots: [null, ...pts.map(p => [p.pos[0] + eng.t[0], 0, p.pos[2] + eng.t[2]])]};
+}
+async function cgCrewAnim(mod, list, kind){
   const skels = list.skeletons || {}, set = (list.sets || [])[0] || {};
   const skel = set.primary || Object.keys(skels)[0] || '';
   const acts = ((skels[skel.toLowerCase()] || {}).actions || []).filter(x => x.playable);
-  const row = ['stand_a_idle', 'stand_idle', 'idle'].map(n => acts.find(x => x.action.toLowerCase() === n)).find(Boolean) || acts[0];
+  const row = [...(kind === 'siege' ? ['crew_stand'] : []), 'stand_a_idle', 'stand_idle', 'idle'].map(n => acts.find(x => x.action.toLowerCase() === n)).find(Boolean) || acts[0];
   if(!row) return null;
   const w = set.primary_weapons || [], q = row.rel ? `rel=${enc(row.rel)}` : `pack=${enc(row.path)}`;
   let data;
@@ -156,19 +173,59 @@ async function cgCrewAnim(mod, list){
 function cgCrewSpots(crew){
   const c = cg(), ids = crew.objects.map(o => o.id), kept = (c.dups || []).filter(d => typeof d.spot !== 'number');
   let k = kept.reduce((m, d) => Math.max(m, d.k), 0);
-  c.dups = kept.concat(crew.spots.slice(2).map((p, i) => ({k: ++k, ids, name: tt('cards.gen_crew_rider', {n: i + 2}), spot: i + 2})));
+  c.dups = kept.concat(crew.spots.slice(2).map((p, i) => ({k: ++k, ids, name: tt(cgCrewKey('rider'), {n: i + 2}), spot: i + 2})));
 }
+/* The Crew row's words: an elephant's driver and riders, a siege engine's crew. */
+const cgCrewKey = k => CG_UNIT.crewKind === 'siege' ? {rider: 'cards.gen_crew_man', riders: 'cards.gen_crew_men', title: 'cards.gen_crew_siege_title',
+  all: 'cards.gen_crew_all_men', none: 'cards.gen_crew_none_men', driver: 'cards.gen_crew_own'}[k] : 'cards.gen_crew_' + k;
 function cgCrewHtml(){
   const groups = cgGroups();
   if(!groups.has('crew')) return '';
   const off = new Set(cg().off || []), driver = [...groups.keys()].find(gk => (groups.get(gk) || []).some(o => !o.still && !o.crew && o.dupOf == null));
   const riders = [...groups.keys()].filter(gk => gk === 'crew' || (groups.get(gk) || []).some(o => o.crew && o.dupOf != null));
   const shown = gk => !(groups.get(gk) || []).every(o => off.has(o.id)), q = v => esc(JSON.stringify(v));
-  const chip = (gk, label) => `<button class="mini${shown(gk) ? ' on' : ''}" onclick="cgGroupHide(${q(gk)})">${label}</button>`;
-  return `<div class="armexprow cgcrew" title="${ttA('cards.gen_crew_title')}"><span>${tt('cards.gen_crew')}</span>
-    ${driver ? chip(driver, tt('cards.gen_crew_driver')) : ''}
-    ${riders.map((gk, i) => chip(gk, tt('cards.gen_crew_rider', {n: i + 1}))).join('')}
-    <button class="mini" onclick="cgCrewAll(${riders.some(shown) ? 'false' : 'true'})">${tt(riders.some(shown) ? 'cards.gen_crew_none' : 'cards.gen_crew_all')}</button></div>`;
+  const a = armAnim(), dups = cg().dups || [];
+  const spotOf = gk => gk === 'crew' ? 1 : ((dups.find(d => 'dup:' + d.k === gk) || {}).spot);
+  const crouch = k => a.crouch && k != null ? `<button class="mini${cgCrouched(k) ? ' on' : ''}" title="${ttA('cards.gen_crew_crouch_title')}" onclick="cgCrouch(${k})">${tt(cgCrouched(k) ? 'cards.gen_crew_stand' : 'cards.gen_crew_crouch')}</button>` : '';
+  const chip = (gk, label) => `<span class="cgcrewman"><button class="mini${shown(gk) ? ' on' : ''}" onclick="cgGroupHide(${q(gk)})">${label}</button>${crouch(gk === driver ? 0 : spotOf(gk))}</span>`;
+  return `<div class="armexprow cgcrew" title="${ttA(cgCrewKey('title'))}"><span>${tt('cards.gen_crew')}</span>
+    ${driver ? chip(driver, tt(cgCrewKey('driver'))) : ''}
+    ${riders.map((gk, i) => chip(gk, tt(cgCrewKey('rider'), {n: i + 1}))).join('')}
+    <button class="mini" onclick="cgCrewAll(${riders.some(shown) ? 'false' : 'true'})">${tt(cgCrewKey(riders.some(shown) ? 'none' : 'all'))}</button></div>`;
+}
+/* 2026-11-24: any man crouched or stood by hand (c.crouch, by spot; the
+   driver's is 0). Crouched is the elephant rider's idle, er_stand_a_idle, from
+   the first skeleton that has it: the soldier line's, else the model's own
+   (cgCrouchAnim). Stood is the crew's standing idle. Left alone, a man is as
+   the game has him: the driver by his own skeleton, the rest standing. */
+async function cgCrouchAnim(mod, lists){
+  for(const list of lists) for(const [k, sk] of Object.entries((list && list.skeletons) || {})){
+    const row = (sk.actions || []).find(x => x.playable && x.action.toLowerCase() === 'er_stand_a_idle');
+    if(!row) continue;
+    try{
+      const data = await api.get(`/api/model/anim?mod=${enc(mod)}&${row.rel ? `rel=${enc(row.rel)}` : `pack=${enc(row.path)}`}&skel=${enc(k)}&slot=${row.slot}`);
+      if(data && !data.error && data.bones) return {data, bind: v3aBind(data), action: row.action, skel: k};
+    }catch(e){}
+  }
+  return null;
+}
+function cgDriverAction(){
+  const a = armAnim(), sk = ((a.list || {}).skeletons || {})[(a.skel || '').toLowerCase()];
+  const row = sk && (sk.actions || []).find(x => String(x.slot != null ? x.slot : 'a:' + x.action) === a.key);
+  return row ? row.action.toLowerCase() : '';
+}
+const cgCrouched = k => { const v = (cg().crouch || {})[k]; return v != null ? !!v : k === 0 && cgDriverAction() === 'er_stand_a_idle'; };
+/* Called by armAnimPose for each man: the action that stands in for his own, or null. */
+function cgCrouchFor(k){
+  const a = armAnim(), v = (cg().crouch || {})[k];
+  if(cgSrc() !== 'unit' || v == null) return null;
+  if(k === 0 && !!v === (cgDriverAction() === 'er_stand_a_idle')) return null;
+  const d = v ? a.crouch : a.crew;
+  return d && d.data ? d : null;
+}
+function cgCrouch(k){
+  const c = cg(); c.crouch = {...(c.crouch || {}), [k]: !cgCrouched(k)};
+  cgFitChanged(); cgPaint();
 }
 function cgCrewAll(on){
   const c = cg(), off = new Set(c.off || []);
@@ -330,7 +387,7 @@ async function cgUnitLoad(type, model, how){
   const entry = (model || cgUnitModel(u)).toLowerCase(), c = cg();
   CG_UNIT.unit = type; CG_UNIT.entry = entry; CG_UNIT.mod = mod; CG_UNIT.objects = []; CG_UNIT.picking = false; CG_WORK.view = null;
   c.unit = type; c.name = type.replace(/[^A-Za-z0-9_\-]/g, '_'); c.saved = null; c.give = null; c.err = ''; c.off = []; c.pick = {}; c.oxf = {};
-  c.gxf = {}; c.dups = []; c.texFaction = '';
+  c.gxf = {}; c.dups = []; c.texFaction = ''; c.crouch = {};
   c.rig.autoFor = '';
   if(resume){ for(const [k, v] of Object.entries(sess.c || {})) if(!CG_SESS_SKIP.has(k)) c[k] = JSON.parse(JSON.stringify(v)); cg(); CG_WORK.fit = null; }
   CG_WORK.boneSel = ''; CG_WORK.objSel = 0;
@@ -345,27 +402,33 @@ async function cgUnitLoad(type, model, how){
   if(!c.texFaction) c.texFaction = cgOwnerSkin(u);
   const objects = live.view.objects.map((ob, i) => ({id: -1 - i, src: [{asset: key, group: ob.index}], name: ob.name, mesh: ob.mesh,
     flag: ob.flag, t: [0, 0, 0], r: [0, 0, 0], s: [1, 1, 1]}));
-  const extras = await cgExtras(u, mod, -5000), crew = await cgCrewLoad(u, mod, entry);
+  const extras = await cgExtras(u, mod, -5000);
+  let crew = await cgCrewLoad(u, mod, entry);
   if(CG_UNIT.unit !== type) return;
   // the mount under the rider, the engine beside the crew
   cgBeside(objects, extras.filter(o => o.still !== 'mount'));
+  if(!crew && u.engine) crew = await cgSiegeCrew(mod, entry, extras);
+  if(CG_UNIT.unit !== type) return;
+  CG_UNIT.crewKind = crew ? crew.kind : '';
   CG_UNIT.objects = objects.concat(extras, crew ? crew.objects : []);
   // its own animations, in the held-aside state
   cgUnitAnimIn();
   ARM.anim = null; const an = armAnim(); CG_UNIT.anim = an; an.fromMod = mod;
-  // a model with foot skeletons only, played by the unit's riding one (cgRideEntry)
+  // played by the soldier line's skeletons, as the game does (cgRideEntry)
   const from = await cgRideEntry(u, entry);
   try{ an.list = await cgGet(`/api/model/anims?mod=${enc(mod)}&entry=${enc(from || entry)}`); }catch(e){ an.list = {error: errText(e)}; }
   if(ARM.anim !== an) return;
   an.from = from;
   if(crew){
-    an.elephant = true;
+    an.elephant = crew.kind === 'elephant';
     // the pose library has no driver's crouch or stance: a new elephant card
     // opens on Riding, the driver's own rider idle (cgPoseAnim)
-    if(!resume && c.pose === 'rig') c.pose = 'riding';
-    an.crew = await cgCrewAnim(mod, an.list);
+    if(an.elephant && !resume && c.pose === 'rig') c.pose = 'riding';
+    an.crew = await cgCrewAnim(mod, an.list, crew.kind);
     if(ARM.anim !== an) return;
     if(an.crew) an.crew.spots = crew.spots;
+    an.crouch = await cgCrouchAnim(mod, [an.list, from ? await cgGet(`/api/model/anims?mod=${enc(mod)}&entry=${enc(entry)}`).catch(() => null) : null]);
+    if(ARM.anim !== an) return;
     if(!resume || !(c.dups || []).some(d => typeof d.spot === 'number')) cgCrewSpots(crew);
   }
   const set = (an.list.sets || [])[0];
@@ -406,6 +469,7 @@ async function cgEngineLoad(mod, name){
     const live = {asset: {kind: 'engine', mod, entry: name}, key, geo, uScale: 1,
       view: {objects: geo.groups.map((g, i) => ({index: i, name: 'engine', mesh: stem + (geo.groups.length > 1 ? ' ' + (i + 1) : '')}))}};
     ARM.assets.set(key, live); armUpload(live);
+    live.crew = sc.crew || [];
     if(sc.main){ try{ live.tex = armTexture(await armImage(`/model_texture?mod=${enc(mod)}&rel=${enc(sc.main)}`), 1); }catch(e){} }
     return live;
   })().catch(() => null));
@@ -500,25 +564,23 @@ function cgPeekHtml(){
 const cgPeekDocked = pk => !!(pk && pk.info && !pk.info.engine && typeof v3Mount === 'function');
 const cgPeekLive = () => typeof v3 !== 'undefined' && v3 && v3.host === 'cgPeekV3' ? v3 : null;
 const cgSleep = ms => new Promise(ok => setTimeout(ok, ms));
-/* 2026-11-24: why Territorial Cavalry stood beside his horse: modeldb gives
-   its armour upgrade models (territorial_cavalry_upg0..3) one skeleton row,
-   MTW2_Spear with mount none, and only its soldier model (pinnath_cavalry) a
-   horse row. Such a model is played by the skeletons of the unit's model that
-   has a riding row (its soldier line's, else another upgrade level's); rider
-   meshes share the bone names, so his skin follows them. '' when the model
-   has its own, or none of the unit's models has one. */
+/* 2026-11-24: whose skeletons play the unit. In the game every soldier is
+   played by the first skeleton row of the EDU soldier line's model
+   (unit_cavalry.cpp link_skeletons, m_soldier_data.m_ModelBattle);
+   armour_ug_models only picks the mesh he wears. So Mumakil (soldier line
+   Turkish_Archers, a longbowman's skeleton) stand on the mumak, its driver
+   too, while Great Beasts (gorgoroth_beast_riders, a rider's skeleton with
+   er_stand_a_idle) have the driver crouched on its neck; and Territorial
+   Cavalry's upgrade models, with a foot skeleton row only, ride by
+   pinnath_cavalry's. The soldier line's model when it is another entry and
+   modeldb has it, else '' (the model's own). */
 function cgRideEntry(u, entry){
   entry = (entry || '').toLowerCase();
-  if(!u || !u.mount || u.engine) return Promise.resolve('');
-  const memo = CG_WORK.rideMemo = CG_WORK.rideMemo || new Map(), key = state.src + '|' + u.type + '|' + entry;
-  if(!memo.has(key)) memo.set(key, (async () => {
-    const rides = async e => { try{ const l = await cgGet(`/api/model/anims?mod=${enc(state.src)}&entry=${enc(e)}`);
-      return (l.sets || []).some(x => (x.mount || 'none').toLowerCase() !== 'none'); }catch(err){ return false; } };
-    if(await rides(entry)) return '';
-    const others = [u.soldier, ...(u.ug || [])].map(x => (x || '').toLowerCase()).filter((x, i, l) => x && x !== entry && l.indexOf(x) === i);
-    for(const e of others) if(await rides(e)) return e;
-    return '';
-  })());
+  const soldier = ((u && u.soldier) || '').toLowerCase();
+  if(!soldier || soldier === entry) return Promise.resolve('');
+  const memo = CG_WORK.rideMemo = CG_WORK.rideMemo || new Map(), key = state.src + '|' + soldier;
+  if(!memo.has(key)) memo.set(key, cgGet(`/api/model/anims?mod=${enc(state.src)}&entry=${enc(soldier)}`)
+    .then(l => (l.sets || []).length ? soldier : '', () => ''));
   return memo.get(key);
 }
 async function cgPeekV3(pk){
@@ -546,7 +608,9 @@ async function cgPeekWait(pk, ready){
 /* The unit's mount read while he stands, so Mounted has it at once; the view
    kept where it was. */
 async function cgPeekPreload(pk){
-  const v = await cgPeekWait(pk, v => v.anim && v.anim.list && (!v.anim.mount || v.anim.mount.list || v.anim.mount.err));
+  let v = await cgPeekWait(pk, v => v.anim && v.anim.list);
+  if(v) cgPeekMountEnsure(pk, v);
+  v = v && await cgPeekWait(pk, v => !v.anim.mount || v.anim.mount.list || v.anim.mount.err);
   const m = v && v.anim.mount;
   if(!m || !m.list || m.x || m.on || CG_UNIT.mounted) return;
   cgPeekMountPick(pk, m);
@@ -554,6 +618,18 @@ async function cgPeekPreload(pk){
   pk.preload = v3AnimMountLoad();
   await pk.preload;
   if(cgPeekLive() === v && !m.on){ v.centre = keep[0]; v.dist = keep[1]; m.framed = false; }
+}
+/* 2026-11-24: a man whose skeleton set rides nothing (Mumakil's soldier line,
+   a longbowman's) is seated all the same on his unit's mount, as the game
+   seats him: the viewer offers mounts only to a riding set, so the unit's own
+   is read here (descr_mount.txt by its type). */
+function cgPeekMountEnsure(pk, v){
+  const a = v.anim, want = pk.info.mount;
+  if(a.mount || !want || pk.info.engine) return;
+  const m = a.mount = {on: false, list: null, pick: 0, x: null, data: null, err: ''};
+  cgGet(`/api/model/mounts?mod=${enc(state.src)}&entry=${enc(pk.from || pk.entry)}&mount=${enc(want)}`)
+    .then(r => { if(a.mount === m){ m.list = r; v3AnimPanel(); } })
+    .catch(e => { if(a.mount === m){ m.err = errText(e); v3AnimPanel(); } });
 }
 function cgPeekMountPick(pk, m){
   const want = (pk.info.mount || '').toLowerCase(), rows = (m.list || {}).mounts || [];
@@ -566,7 +642,8 @@ async function cgPeekRide(pk){
   if(!v) return;
   const a = v.anim;
   if(!CG_UNIT.mounted){ if(a.mount && a.mount.on) v3AnimMountOn(false); return; }
-  // its actions read and none a rider's: nothing to carry him
+  cgPeekMountEnsure(pk, v);
+  // its actions read, none a rider's, and no mount of its unit's: nothing to carry him
   if(!a.mount){ pk.noRide = true; cgPeekHead(); return; }
   if(pk.preload) await pk.preload;
   if(!await cgPeekWait(pk, () => a.mount.list || a.mount.err) || !a.mount.list) return;
@@ -601,7 +678,7 @@ function cgPeekHead(){
   head.innerHTML = pk ? `<b>${esc(pk.type)}</b><span class="count">${esc(u.category)} · ${esc(u['class'])} · ${esc(pk.entry)}</span>
       ${cgUgSelect(u, pk.entry, `cgUnitPeek(${t},this.value)`)}<span style="flex:1"></span>
       ${pk.err ? `<button class="mini" onclick="cgRetry(${t},${esc(JSON.stringify(pk.entry))},true)">${tt('cards.gen_retry')}</button>` : ''}
-      ${pk.from && CG_UNIT.mounted ? `<span class="count" title="${ttA('cards.gen_peek_borrow_title')}">${tt('cards.gen_peek_borrow', {entry: esc(pk.from)})}</span>` : ''}
+      ${pk.from ? `<span class="count" title="${ttA('cards.gen_peek_borrow_title')}">${tt('cards.gen_peek_borrow', {entry: esc(pk.from)})}</span>` : ''}
       ${pk.noRide && CG_UNIT.mounted ? `<span class="count">${tt('cards.gen_peek_no_ride')}</span>` : ''}
       ${cgPeekDocked(pk) ? `<button class="mini" title="${ttA('cards.gen_tex_reload_title')}" onclick="cgPeekTexReload()">${tt('cards.gen_tex_reload')}</button>` : ''}
       ${u.mount ? `<button class="mini${CG_UNIT.mounted ? ' on' : ''}" title="${ttA('cards.gen_peek_mounted_title')}" onclick="cgPeekMount(${!CG_UNIT.mounted})">${tt('cards.gen_peek_mounted')}</button>` : ''}
@@ -1174,8 +1251,9 @@ async function cgPoseAnim(){
   a.playing = false; a.tpose = false;
   if(presets[c.pose]) a.t = armAnimLength()*presets[c.pose][1];
   c.poseNote = tt('cards.gen_pose_from',{action:selected.action,skeleton});
-  if(c.pose === 'riding' && !a.carried && !/mount|cavalry|horse/i.test(skeleton)) c.poseNote2 = tt('cards.gen_pose_no_mount');
   await cgSeat();
+  // seated on the unit's mount all the same (cgSeat): nothing to say
+  if(c.pose === 'riding' && !a.carried && !a.mount && !/mount|cavalry|horse/i.test(skeleton)) c.poseNote2 = tt('cards.gen_pose_no_mount');
 }
 /* 2026-11-24: a cavalry unit whose model has foot skeletons only (its actions
    are not a rider's, so nothing carried him): the unit's mount is set under

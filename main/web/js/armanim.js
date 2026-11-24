@@ -547,12 +547,14 @@ function armAnimPose(objs){
   // 99n: the card maker's IK rig poses the skeleton itself, about the bind
   // pose's own pelvis, so the model stays where it stood
   const rig = card && typeof cgRigActive === 'function' && cgRigActive();
-  let pose = rig ? cgRigPose(a.data) : v3aPose(a.data, a.t);
+  // 2026-11-24: the card maker's driver crouched or stood by hand (cgCrouchFor)
+  const alt = card && !rig && typeof cgCrouchFor === 'function' ? cgCrouchFor(0) : null;
+  let pose = rig ? cgRigPose(a.data) : v3aPose(alt ? alt.data : a.data, a.t);
   let shift = rig ? [0, 0, 0] : [-tr[0] * f, a.carried ? 0 : (isFinite(low) ? low : 0), -tr[1] * f];
   a.ground = shift[1];      // armBonesDraw lowers the skeleton with the model
   // a man on his horse: whichever of the two was picked, the horse stands as
   // a man on foot does and carries the man at its root plus rider_offset
-  const own = {key: '', data: a.data, bind: a.bind, pose, shift};
+  const own = {key: '', data: alt ? alt.data : a.data, bind: alt ? alt.bind : a.bind, pose, shift};
   let horse = null, man = null;
   a.carry = null;
   // 2026-11-24: the card maker's rig rides too: its pose is the rider's skeleton's
@@ -577,13 +579,15 @@ function armAnimPose(objs){
   // 2026-11-24: the card maker's elephant riders (cgCrewLoad), each spot's
   // carried from the elephant's root at its own rider_offset, or standing on
   // the ground at it while the elephant does not carry them
-  const crew = a.crew && a.crew.data ? a.crew : null, spots = new Map();
-  const crewPose = crew ? v3aPose(crew.data, a.t) : null;
+  // 2026-11-24: a man crouched or stood by hand plays that action instead (cgCrouchFor)
+  const crew = a.crew && a.crew.data ? a.crew : null, spots = new Map(), poses = new Map();
+  const poseOf = d => { if(!poses.has(d)) poses.set(d, v3aPose(d.data, a.t)); return poses.get(d); };
   const crewAt = k => {
     if(!spots.has(k)){
       const off = (crew.spots || [])[k] || [0, 0, 0];
-      spots.set(k, horse && m ? {key: '', data: crew.data, bind: crew.bind, shift: [0, 0, 0], carried: true, pose: v3aCarry(crewPose, horse.pose[m.hub], off, horse.shift)}
-        : {key: '', data: crew.data, bind: crew.bind, pose: crewPose, shift: [off[0], isFinite(low) ? low : 0, off[2]]});
+      const d = (card && typeof cgCrouchFor === 'function' && cgCrouchFor(k)) || crew, p = poseOf(d);
+      spots.set(k, horse && m ? {key: '', data: d.data, bind: d.bind, shift: [0, 0, 0], carried: true, pose: v3aCarry(p, horse.pose[m.hub], off, horse.shift)}
+        : {key: '', data: d.data, bind: d.bind, pose: p, shift: [off[0], isFinite(low) ? low : 0, off[2]]});
     }
     return spots.get(k);
   };

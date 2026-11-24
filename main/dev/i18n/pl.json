@@ -15069,8 +15069,8 @@
  "cards.gen_sess_days": "{n} dni temu",
  "cards.gen_give_suggest": "Inne jednostki z tym modelem:",
  "cards.gen_give_suggest_title": "Dodaj tę jednostkę do menu z kartą, którą ma obecnie każda z jej frakcji",
- "cards.gen_peek_borrow": "Animowany przez szkielety jeździeckie {entry}",
- "cards.gen_peek_borrow_title": "modeldb przypisuje temu modelowi tylko szkielety piechoty, więc animują go szkielety modelu jednostki, która na nim jeździ",
+ "cards.gen_peek_borrow": "Animowany przez szkielety {entry}",
+ "cards.gen_peek_borrow_title": "Tak jak w grze: każdy żołnierz jest animowany przez pierwszy wiersz szkieletów modelu linii żołnierzy w modeldb; armour_ug_models wybiera tylko siatkę, którą nosi",
  "cards.gen_crew": "Załoga",
  "cards.gen_crew_title": "Prowadzący słonia i jeźdźcy, każdy na swoim rider_offset w descr_mount.txt. Kliknij osobę, aby ją ukryć lub pokazać.",
  "cards.gen_crew_driver": "Prowadzący",
@@ -15202,5 +15202,14 @@
  "v3kit.turn_title": "Jak daleko jednostka może się obrócić podczas tej akcji: najpierw mniejsza, potem większa wartość, w stopniach od -180 do 180. Pozostaw oba pola puste, aby zachować wartości slotu.",
  "v3kit.timing_turn": "obraca się od {lo} do {hi} stopni",
  "eng.animkit.timing_numbers": "klatka uderzenia i limity obrotu muszą być liczbami",
- "eng.animkit.turn_outside": "limity obrotu {lo:g} do {hi:g}: najpierw podaj mniejszą wartość; obie muszą mieścić się w zakresie od -180 do 180 stopni"
+ "eng.animkit.turn_outside": "limity obrotu {lo:g} do {hi:g}: najpierw podaj mniejszą wartość; obie muszą mieścić się w zakresie od -180 do 180 stopni",
+ "cards.gen_crew_siege_title": "Załoga machiny oblężniczej. Każdy członek zajmuje punkt stanowiska, którego nazwa crew_animations znajduje się w descr_engines.txt. Kliknij członka załogi, aby go ukryć lub pokazać.",
+ "cards.gen_crew_own": "Żołnierz jednostki",
+ "cards.gen_crew_man": "Członek załogi {n}",
+ "cards.gen_crew_men": "Załoga: {name}",
+ "cards.gen_crew_all_men": "Pokaż całą załogę",
+ "cards.gen_crew_none_men": "Ukryj całą załogę",
+ "cards.gen_crew_crouch": "Kucnij",
+ "cards.gen_crew_stand": "Wstań",
+ "cards.gen_crew_crouch_title": "Ustaw tego żołnierza w kucki lub nakaż mu wstać. Pozycja w kucki odpowiada animacji bezczynności jeźdźca na słoniu (er_stand_a_idle). W przeciwnym razie każdy żołnierz przyjmuje pozę przypisaną mu przez grę."
 }

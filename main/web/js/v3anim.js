@@ -932,6 +932,7 @@ function v3AnimStep(){
   if(root){
     pose = v3aCarry(pose, root.at, root.off, root.lift);
     shift = [0, 0, 0];
+    v3AnimCrewStep(g, root);
   }
   v3aSkin(g, pose, a.bind, a.map, a.pos, a.nrm, shift);
   v3AnimTwinStep(g);
@@ -964,6 +965,8 @@ function v3AnimExtras(){
   const out = [];
   const m = a.mount;
   if(m && m.on && m.x && m.x.pos && m.data) out.push(m.x);
+  const c = a.crewMen;
+  if(c && m && m.on && m.data && c.xs) out.push(...c.xs);
   const t = a.twin;
   if(t && t.x && t.x.pos && t.data && !a.seqOn && !(m && m.on)) out.push(t.x);
   return out;
@@ -1042,6 +1045,41 @@ async function v3AnimMountLoad(){
   m.state = '';
   await v3AnimMountAction();
   v3AnimFrameMounted();
+  v3AnimCrewLoad();
+}
+
+/* 2026-11-24: an elephant's crew. descr_mount.txt gives it a rider_offset per
+   man; the model played is the driver, at the first, and a copy of it stands
+   at each of the others, by the first skeleton set's standing idle, as the
+   game's riders stand once the unit idles (unit_cavalry_elephant.cpp). The
+   copies share the model's buffers and sheet, as the twin does. */
+async function v3AnimCrewLoad(){
+  const a = v3 && v3.anim, m = a && a.mount, mine = v3;
+  const r = m && ((m.list || {}).mounts || [])[m.pick];
+  const offs = (r && r.offsets) || [];
+  if(!r || (r['class'] || '').toLowerCase() !== 'elephant' || offs.length < 2){ if(a) a.crewMen = null; return; }
+  if(a.crewMen && a.crewMen.mount === r.entry) return;
+  const set = (a.list.sets || [])[0] || {}, skel = set.primary || '';
+  const acts = (((a.list.skeletons || {})[skel.toLowerCase()] || {}).actions || []).filter(x => x.playable);
+  const row = ['stand_a_idle', 'stand_idle', 'idle'].map(n => acts.find(x => x.action.toLowerCase() === n)).find(Boolean);
+  if(!row) return;
+  const d = await v3AnimFetch(row, v3AnimMod(), skel, set.primary_weapons || []);
+  if(v3 !== mine || a.mount !== m || !d || d.error || !d.bones) return;
+  a.crewMen = {mount: r.entry, offs, data: d, bind: v3aBind(d), geo: null, xs: null};
+  a.dirty = true;
+}
+function v3AnimCrewStep(g, root){
+  const c = v3.anim.crewMen;
+  if(!c) return;
+  if(c.geo !== g){
+    c.map = v3aBoneMap(g.bones, c.data).map; c.geo = g;
+    c.xs = c.offs.slice(1).map(() => ({geo: g, shared: true, pos: new Float32Array(g.vertices * 3), nrm: g.normals ? new Float32Array(g.vertices * 3) : null}));
+  }
+  const pose = v3aPose(c.data, v3.anim.t);
+  c.xs.forEach((x, i) => {
+    v3aSkin(g, v3aCarry(pose, root.at, c.offs[i + 1], root.lift), c.bind, c.map, x.pos, x.nrm, [0, 0, 0]);
+    v3ExtraUpload(x);
+  });
 }
 
 /* A mount's sheets, glued as the model's are (v3Apply's rule for u). */

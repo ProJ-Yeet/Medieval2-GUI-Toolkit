@@ -13659,8 +13659,8 @@
  "cards.gen_sess_none": "此模组还没有卡片会话。",
  "cards.gen_give_suggest": "使用此模型的其他部队：",
  "cards.gen_give_suggest_title": "将这支部队连同其各派系当前使用的卡片添加到菜单中",
- "cards.gen_peek_borrow": "由 {entry} 的骑兵骨架驱动",
- "cards.gen_peek_borrow_title": "modeldb 仅为此模型指定了步兵骨架，因此由骑乘该模型的部队骨架驱动",
+ "cards.gen_peek_borrow": "由 {entry} 的骨架驱动",
+ "cards.gen_peek_borrow_title": "与游戏中的情况相同：每名士兵由 modeldb 中士兵列模型的第一排骨架驱动；armour_ug_models 只决定他穿戴的网格",
  "cards.gen_crew": "乘员",
  "cards.gen_crew_title": "大象的驾驭员和骑手，每人位于 descr_mount.txt 中自己的 rider_offset。单击一人可隐藏或显示他。",
  "cards.gen_crew_driver": "驾驭员",
@@ -13789,5 +13789,14 @@
  "eng.animkit.extend_no_change": "{name} 已经播放了全部内容：不会有任何更改",
  "v3kit.target_title": "新建一个骨架，或将这些更改添加到此模组中之前创建的 kit。添加更改时会直接修改该 kit，所有播放它的模型条目都会应用更改。",
  "v3kit.target_new": "新骨架",
- "v3kit.turn_title": "部队播放此动作时可转动的角度：先填最小值，再填最大值，范围为 -180 到 180 度。两个字段都留空即保留槽位自身的值。"
+ "v3kit.turn_title": "部队播放此动作时可转动的角度：先填最小值，再填最大值，范围为 -180 到 180 度。两个字段都留空即保留槽位自身的值。",
+ "cards.gen_crew_own": "部队士兵",
+ "cards.gen_crew_man": "乘员 {n}",
+ "cards.gen_crew_men": "{name} 的乘员",
+ "cards.gen_crew_all_men": "显示全部乘员",
+ "cards.gen_crew_none_men": "隐藏全部乘员",
+ "cards.gen_crew_crouch": "蹲下",
+ "cards.gen_crew_stand": "站起",
+ "cards.gen_crew_crouch_title": "让这名士兵蹲下或站起。蹲姿是象骑兵的待机动作（er_stand_a_idle）。保持不变时，每名士兵都会采用游戏为其设定的姿势。",
+ "cards.gen_crew_siege_title": "围攻器械的乘员。每名乘员站在一个位置点上，其 crew_animations 名称见 descr_engines.txt。点击乘员可将其隐藏或显示。"
 }

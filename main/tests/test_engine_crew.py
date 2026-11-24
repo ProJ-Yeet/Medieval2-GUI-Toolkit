@@ -110,5 +110,49 @@ n = engines.crew_scene(mod, "ut_nothing")
 check("an unknown engine comes back with nothing", not n["mounted"] and not n["mesh"] and n["blocks"] == 0)
 check("an empty name too", engines.crew_scene(mod, "")["blocks"] == 0)
 
+# 2026-11-24: where the crew stand. A block's crew_animations name reference
+# points of its .modelReferencePoints; the station point of each is a man's
+# place. The file is a boost binary archive: per point its type, a 4x4 matrix
+# (row-major, the place in its last column) and its name; the first matrix is
+# led by four bytes of class version. The header is copied from the game's.
+def refpoints(points):
+    out = (struct.pack("<I", 22) + b"serialization::archive" + bytes([3, 4, 4, 4, 8, 1])
+           + b"\x00" * 7 + struct.pack("<I", len(points)) + b"\x00\x02")
+    for i, (kind, name, x, y, z, yaw) in enumerate(points):
+        import math
+        c, s = math.cos(yaw), math.sin(yaw)
+        out += struct.pack("<I", len(kind)) + kind.encode() + (b"\x00" * 4 if i == 0 else b"")
+        out += struct.pack("<16f", c, 0, s, x, 0, 1, 0, y, -s, 0, c, z, 0, 0, 0, 1)
+        out += struct.pack("<I", len(name)) + name.encode()
+    return out
+
+
+(data / "siege_engines" / "ut_catapult.modelReferencePoints").write_bytes(refpoints([
+    ("Engine PushPoint", "Crew_Left", -1.0, 0.0, -5.0, 0.0),
+    ("Engine StationPoint", "Crew_Left", 1.5, 0.0, -2.0, 0.0),
+    ("Engine StationPoint", "Crew_Right", -1.5, 0.25, -2.0, 1.5708),
+    ("Artillery FrontPFX", "exit01", 0.0, 7.0, 1.0, 0.0)]))
+(data / "descr_engines.txt").write_text(
+    (data / "descr_engines.txt").read_text(encoding="latin-1").replace(
+        "type                ut_catapult\nculture             northern_european\n",
+        "type                ut_catapult\nculture             northern_european\n"
+        "reference_points    siege_engines/ut_catapult.modelReferencePoints\n"
+        "crew_animations\n    crank\tCrew_Right, crew_right_load_1, crew_right\n"
+        "\tcrank_attachment\tCrew_Right,\tunarmed\n"
+        "    crank\tCrew_Left, crew_left_stoke_1, crew_left\n    fire\tCrew_Right, crew_right\n"
+        "    fire\tCrew_Missing, crew_rear\nend\n", 1), encoding="latin-1")
+mod = Mod(tmp / "M")
+pts = engines.read_reference_points((data / "siege_engines" / "ut_catapult.modelReferencePoints").read_bytes())
+check("a .modelReferencePoints file reads as type, place and name per point",
+      [(p["type"], p["name"]) for p in pts] == [("Engine PushPoint", "Crew_Left"), ("Engine StationPoint", "Crew_Left"),
+                                                ("Engine StationPoint", "Crew_Right"), ("Artillery FrontPFX", "exit01")]
+      and [round(v, 3) for v in pts[2]["pos"]] == [-1.5, 0.25, -2.0] and abs(pts[2]["yaw"] - 1.5708) < 1e-3)
+crew = engines.crew_scene(mod, "ut_catapult")["crew"]
+check("the crew stand at the station point of each name crew_animations gives, in its order",
+      [(c["name"], [round(v, 2) for v in c["pos"]]) for c in crew] == [("Crew_Right", [-1.5, 0.25, -2.0]),
+                                                                     ("Crew_Left", [1.5, 0.0, -2.0])])
+check("an engine with no reference points has no crew places", engines.crew_scene(mod, "ut_ram")["crew"] == [])
+check("a damaged file reads as no points", engines.read_reference_points(b"\x00\x01garbage") == [])
+
 print(f"\n{sum(ok)}/{len(ok)} passed")
 sys.exit(0 if all(ok) else 1)

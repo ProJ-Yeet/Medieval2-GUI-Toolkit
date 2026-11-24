@@ -13798,7 +13798,7 @@
  "cards.gen_sess_days": "{n} g önce",
  "cards.gen_give_suggest": "Bu modele sahip diğer birimler:",
  "cards.gen_give_suggest_title": "Bu birimi, her fraksiyonunun şu anda sahip olduğu kartla menüye ekle",
- "cards.gen_peek_borrow": "{entry} süvari iskeletleri tarafından canlandırılır",
+ "cards.gen_peek_borrow": "{entry} iskeletleri tarafından canlandırılır",
  "cards.gen_crew": "Mürettebat",
  "cards.gen_crew_title": "Fil sürücüsü ve biniciler, her biri descr_mount.txt içindeki kendi rider_offset konumunda. Gizlemek veya göstermek için birine tıklayın.",
  "cards.gen_crew_driver": "Sürücü",
@@ -13825,7 +13825,7 @@
  "armory.uv_editmode": "Düzenleme modu",
  "armory.uv_editmode_title": "Bu nesneyi UV düzenleyicisi açık kalacak şekilde 3D görünümünün düzenleme modunda (ayrıntı görünümünde) aç",
  "armory.lib_add_obj_title": "Kitaplıkta yalnızca bu nesneyi tut: yükleme sırasında modelinden yalnızca bu nesne alınır",
- "cards.gen_peek_borrow_title": "modeldb bu modele yalnızca piyade iskeletleri atar; bu nedenle onu, birimin süvari modelinin iskeletleri canlandırır",
+ "cards.gen_peek_borrow_title": "Oyundaki gibi: her asker, modeldb'deki asker sırası modelinin ilk iskelet satırı tarafından canlandırılır; armour_ug_models yalnızca giydiği mesh'i seçer",
  "core.gplv3": "GPLv3",
  "cards.gen_given": "Kart artık {unit}'nin, sahibi olan her fraksiyonun klasöründedir.",
  "cards.gen_handles": "Kontroller",
@@ -13929,5 +13929,14 @@
  "eng.animkit.timing_numbers": "darbe karesi ve dönüş sınırları sayı olmalıdır",
  "eng.animkit.impact_outside": "{n} darbe karesi, animasyonun 0 ile {last} arasındaki karelerinin dışında",
  "eng.animkit.turn_outside": "{lo:g} ile {hi:g} dönüş sınırları: önce en düşük değeri gir; ikisi de -180 ile 180 derece arasında olmalıdır",
- "eng.animkit.extend_no_change": "{name} bunun tamamını zaten oynatıyor: hiçbir şey değişmez"
+ "eng.animkit.extend_no_change": "{name} bunun tamamını zaten oynatıyor: hiçbir şey değişmez",
+ "cards.gen_crew_man": "Mürettebat üyesi {n}",
+ "cards.gen_crew_men": "{name} mürettebatı",
+ "cards.gen_crew_all_men": "Tüm mürettebatı göster",
+ "cards.gen_crew_none_men": "Tüm mürettebatı gizle",
+ "cards.gen_crew_crouch": "Eğil",
+ "cards.gen_crew_stand": "Ayağa kalk",
+ "cards.gen_crew_crouch_title": "Bu askeri eğilmiş duruma getirin veya ayağa kaldırın. Eğilmiş duruş, fil binicisinin boşta bekleme animasyonudur (er_stand_a_idle). Değiştirilmezse her asker oyunun belirlediği pozda gösterilir.",
+ "cards.gen_crew_siege_title": "Kuşatma makinesinin mürettebatı. Her mürettebat üyesi, crew_animations adı descr_engines.txt içinde bulunan bir mevki noktasında durur. Gizlemek veya göstermek için bir üyeye tıklayın.",
+ "cards.gen_crew_own": "Birimin askeri"
 }

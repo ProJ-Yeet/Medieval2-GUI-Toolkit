@@ -14817,8 +14817,8 @@
  "cards.gen_sess_days": "hace {n} d",
  "cards.gen_give_suggest": "Otras unidades con este modelo:",
  "cards.gen_give_suggest_title": "Añadir esta unidad al menú con la carta que tiene ahora cada una de sus facciones",
- "cards.gen_peek_borrow": "Lo animan los esqueletos de montura de {entry}",
- "cards.gen_peek_borrow_title": "modeldb solo asigna esqueletos de infantería a este modelo, así que lo animan los esqueletos del modelo de la unidad que lo monta",
+ "cards.gen_peek_borrow": "Animado por los esqueletos de {entry}",
+ "cards.gen_peek_borrow_title": "Como en el juego: cada soldado se anima con la primera fila de esqueletos del modelo de la línea de soldados en modeldb; armour_ug_models solo elige la malla que lleva",
  "cards.gen_crew": "Tripulación",
  "cards.gen_crew_title": "El conductor y los jinetes del elefante, cada uno en su rider_offset de descr_mount.txt. Haz clic en uno para ocultarlo o mostrarlo.",
  "cards.gen_crew_driver": "Conductor",
@@ -14949,5 +14949,14 @@
  "eng.animkit.timing_numbers": "el fotograma del impacto y los límites de giro deben ser números",
  "eng.animkit.turn_outside": "límites de giro {lo:g} a {hi:g}: indica primero el menor valor; ambos deben estar entre -180 y 180 grados",
  "v3kit.target_title": "Crea un esqueleto nuevo o añade estos cambios a un kit creado antes en este mod. El kit se modifica directamente; todas las entradas de modelo que lo reproduzcan recibirán los cambios.",
- "v3kit.confirm_add": "¿Escribir {n} cambio(s) de ranura en {name}, dentro de los archivos del mod {mod}?\n\nCierra el juego primero. Todas las entradas de modelo que reproduzcan {name} recibirán los cambios. El registro permite deshacerlos."
+ "v3kit.confirm_add": "¿Escribir {n} cambio(s) de ranura en {name}, dentro de los archivos del mod {mod}?\n\nCierra el juego primero. Todas las entradas de modelo que reproduzcan {name} recibirán los cambios. El registro permite deshacerlos.",
+ "cards.gen_crew_siege_title": "La tripulación de la máquina de asedio. Cada miembro ocupa un punto de la estación cuyo nombre crew_animations aparece en descr_engines.txt. Haz clic en uno para ocultarlo o mostrarlo.",
+ "cards.gen_crew_own": "Soldado de la unidad",
+ "cards.gen_crew_man": "Tripulante {n}",
+ "cards.gen_crew_men": "Tripulación de {name}",
+ "cards.gen_crew_all_men": "Mostrar toda la tripulación",
+ "cards.gen_crew_none_men": "Ocultar toda la tripulación",
+ "cards.gen_crew_crouch": "Agacharse",
+ "cards.gen_crew_stand": "Ponerse en pie",
+ "cards.gen_crew_crouch_title": "Agacha a este soldado o haz que se ponga en pie. La postura agachada es la animación inactiva del jinete de elefante (er_stand_a_idle). Si no se cambia, cada soldado adopta la postura que le asigna el juego."
 }

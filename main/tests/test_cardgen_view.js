@@ -104,5 +104,29 @@ setImmediate(() => {
   const skins = [{factions: ['england', 'slave'], exists: true}, {factions: ['spain'], exists: true}];
   assert.strictEqual(vm.runInContext(`cgOwnerSkin({factions: ['slave', 'spain']}, ${JSON.stringify(skins)})`, ctx), 'spain', 'the owner before the rebels');
   assert.strictEqual(vm.runInContext(`cgOwnerSkin({factions: ['spain']}, [{factions: ['spain'], exists: true}])`, ctx), '', 'one sheet: nothing to pick');
-  console.log('PASS: card maker view waits for its camera, offers upgrade models only, lights, copies, the Save menu, the pose folders and an elephant\'s crew');
+  // 8: a siege crew stands by crew_stand where the skeleton has it
+  const siegeList = {sets: [{primary: 'mtw2_swordsman'}], skeletons: {mtw2_swordsman: {actions: [
+    {action: 'stand_a_idle', playable: true, slot: 0}, {action: 'crew_stand', playable: true, slot: 9}]}}};
+  vm.runInContext(`cgCrewAnim('m', ${JSON.stringify(siegeList)}, 'siege').then(r => globalThis.__siege = r)`, ctx);
+  // 9: every man is played by the soldier line's skeletons (the game's rule),
+  // the model's own when the soldier line is that model
+  vm.runInContext(`cgGet = async url => ({sets: [{primary: 'x'}]}); state.src = 'm'; CG_WORK.rideMemo = null;
+    cgRideEntry({soldier: 'Turkish_Archers'}, 'elephant_crew2').then(r => globalThis.__ride = r);
+    cgRideEntry({soldier: 'gorgoroth_beast_riders'}, 'gorgoroth_beast_riders').then(r => globalThis.__own = r);`, ctx);
+  setImmediate(() => {
+    assert.strictEqual(ctx.__siege.action, 'crew_stand', 'a siege crew stands by crew_stand');
+    assert.strictEqual(ctx.__ride, 'turkish_archers', 'Mumakil is played by its soldier line, Turkish_Archers');
+    assert.strictEqual(ctx.__own, '', 'a model that is its own soldier line plays its own skeletons');
+    // 10: the crouch: left alone the driver is as his action has him and the
+    // crew stand; a click turns either way
+    vm.runInContext(`globalThis.__a = {list: {skeletons: {s: {actions: [{action: 'er_stand_a_idle', slot: 679}]}}}, skel: 's', key: '679',
+      crouch: {data: 'C'}, crew: {data: 'S'}}; armAnim = () => __a; cg().crouch = {}; cgFitChanged = () => {}; cgPaint = () => {};`, ctx);
+    assert.strictEqual(vm.runInContext('cgCrouched(0)', ctx), true, 'a driver in his rider idle is crouched');
+    assert.strictEqual(vm.runInContext('cgCrouched(3)', ctx), false, 'a crewman stands');
+    assert.strictEqual(vm.runInContext('cgCrouchFor(0)', ctx), null, 'left alone, nothing stands in for the driver');
+    vm.runInContext('cgCrouch(0); cgCrouch(3)', ctx);
+    assert.strictEqual(vm.runInContext('cgCrouchFor(0).data', ctx), 'S', 'the driver stood up plays the standing idle');
+    assert.strictEqual(vm.runInContext('cgCrouchFor(3).data', ctx), 'C', 'a crewman crouched plays the rider idle');
+    console.log('PASS: card maker view waits for its camera, offers upgrade models only, lights, copies, the Save menu, the pose folders, an elephant\'s and a siege engine\'s crew, and the soldier line\'s skeletons');
+  });
 });

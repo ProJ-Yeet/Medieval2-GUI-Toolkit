@@ -14460,8 +14460,8 @@
  "cards.gen_sess_days": "il y a {n} j",
  "cards.gen_give_suggest": "Autres unités avec ce modèle :",
  "cards.gen_give_suggest_title": "Ajouter cette unité au menu avec la carte que possède actuellement chacune de ses factions",
- "cards.gen_peek_borrow": "Animé par les squelettes montés de {entry}",
- "cards.gen_peek_borrow_title": "modeldb n'attribue à ce modèle que des squelettes de fantassins ; il est donc animé par les squelettes du modèle de l'unité montée",
+ "cards.gen_peek_borrow": "Animé par les squelettes de {entry}",
+ "cards.gen_peek_borrow_title": "Comme dans le jeu : chaque soldat est animé par la première rangée de squelettes du modèle de la ligne de soldats dans modeldb ; armour_ug_models choisit uniquement le maillage qu'il porte",
  "cards.gen_crew": "Équipage",
  "cards.gen_crew_title": "Le conducteur et les cavaliers de l'éléphant, chacun à son rider_offset dans descr_mount.txt. Cliquez sur l'un d'eux pour le masquer ou l'afficher.",
  "cards.gen_crew_driver": "Conducteur",
@@ -14592,5 +14592,14 @@
  "eng.animkit.extend_no_change": "{name} joue déjà tout cela : rien ne changerait",
  "v3kit.turn": "Limites de rotation",
  "eng.animkit.timing_numbers": "la frame d'impact et les limites de rotation doivent être des nombres",
- "eng.animkit.turn_outside": "limites de rotation {lo:g} à {hi:g} : indiquez d'abord la valeur minimale ; les deux doivent être comprises entre -180 et 180 degrés"
+ "eng.animkit.turn_outside": "limites de rotation {lo:g} à {hi:g} : indiquez d'abord la valeur minimale ; les deux doivent être comprises entre -180 et 180 degrés",
+ "cards.gen_crew_siege_title": "L'équipage de la machine de siège. Chaque membre occupe un point de poste dont le nom crew_animations figure dans descr_engines.txt. Cliquez sur un membre pour le masquer ou l'afficher.",
+ "cards.gen_crew_own": "Soldat de l'unité",
+ "cards.gen_crew_man": "Membre d'équipage {n}",
+ "cards.gen_crew_men": "Équipage de {name}",
+ "cards.gen_crew_all_men": "Afficher tout l'équipage",
+ "cards.gen_crew_none_men": "Masquer tout l'équipage",
+ "cards.gen_crew_crouch": "S'accroupir",
+ "cards.gen_crew_stand": "Se relever",
+ "cards.gen_crew_crouch_title": "Accroupissez ce soldat ou faites-le se relever. La position accroupie correspond à l'animation inactive du cavalier d'éléphant (er_stand_a_idle). Sinon, chaque soldat prend la pose que le jeu lui attribue."
 }

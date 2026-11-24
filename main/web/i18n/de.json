@@ -14351,8 +14351,8 @@
  "cards.gen_sess_days": "vor {n} Tg.",
  "cards.gen_give_suggest": "Andere Einheiten mit diesem Modell:",
  "cards.gen_give_suggest_title": "Diese Einheit mit der aktuellen Karte jeder ihrer Fraktionen zum Menü hinzufügen",
- "cards.gen_peek_borrow": "Wird von den Reitskeletten von {entry} gespielt",
- "cards.gen_peek_borrow_title": "modeldb weist diesem Modell nur Fußsoldaten-Skelette zu, daher wird es von den Skeletten des reitenden Einheitenmodells gespielt",
+ "cards.gen_peek_borrow": "Wird von den Skeletten von {entry} animiert",
+ "cards.gen_peek_borrow_title": "Wie im Spiel: Jeder Soldat wird von der ersten Skelettreihe des Modells der Soldatenlinie in modeldb animiert; armour_ug_models legt nur fest, welches Mesh er trägt",
  "cards.gen_crew": "Besatzung",
  "cards.gen_crew_title": "Der Elefantentreiber und die Reiter, jeweils an ihrem rider_offset in descr_mount.txt. Klicke auf einen, um ihn ein- oder auszublenden.",
  "cards.gen_crew_driver": "Treiber",
@@ -14482,5 +14482,14 @@
  "v3kit.turn_title": "Wie weit sich die Einheit während dieser Aktion drehen darf, zuerst der kleinste, dann der größte Wert, in Grad von -180 bis 180. Beide Felder leer lassen, um die Werte des Slots beizubehalten.",
  "v3kit.timing_turn": "Drehung von {lo} bis {hi} Grad",
  "eng.animkit.timing_numbers": "Aufprall-Frame und Drehgrenzen müssen Zahlen sein",
- "eng.animkit.turn_outside": "Drehgrenzen {lo:g} bis {hi:g}: Gib zuerst den kleineren Wert an; beide müssen zwischen -180 und 180 Grad liegen"
+ "eng.animkit.turn_outside": "Drehgrenzen {lo:g} bis {hi:g}: Gib zuerst den kleineren Wert an; beide müssen zwischen -180 und 180 Grad liegen",
+ "cards.gen_crew_siege_title": "Die Besatzung der Belagerungsmaschine. Jedes Besatzungsmitglied steht an einem Stationspunkt, dessen crew_animations-Name in descr_engines.txt steht. Klicke auf ein Besatzungsmitglied, um es ein- oder auszublenden.",
+ "cards.gen_crew_own": "Soldat der Einheit",
+ "cards.gen_crew_man": "Besatzungsmitglied {n}",
+ "cards.gen_crew_men": "Besatzung von {name}",
+ "cards.gen_crew_all_men": "Gesamte Besatzung anzeigen",
+ "cards.gen_crew_none_men": "Gesamte Besatzung ausblenden",
+ "cards.gen_crew_crouch": "Ducken",
+ "cards.gen_crew_stand": "Aufstehen",
+ "cards.gen_crew_crouch_title": "Diesen Soldaten ducken oder aufstehen lassen. Die geduckte Haltung entspricht der Leerlaufanimation des Elefantenreiters (er_stand_a_idle). Andernfalls wird jeder Soldat so dargestellt, wie das Spiel ihn darstellt."
 }
