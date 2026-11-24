@@ -880,7 +880,7 @@ async function v3Load(){
   v3Note(tt('viewer3d.reading_the_model'));
   let buf;
   try{
-    const r = await fetch(v3.cas
+    const r = await v3FetchGeo(v3.cas
       ? `/api/map/model/geometry?mod=${enc(v3.mod)}&rel=${enc(v3.cas)}`
       : v3.loose ? `/api/model/geometry?mod=${enc(v3.mod)}&loose=${enc(v3.loose)}`
       : `/api/model/geometry?mod=${enc(v3.mod)}&entry=${enc(v3.entry)}&lod=${v3.lod}`);
@@ -1001,6 +1001,15 @@ function v3AskWhy(rel, want){
    big .dds for the first time, or busy with the model, dropped it now and
    then and the model stood bare. */
 const V3_TEX_WAIT = [600, 1200, 2400, 4800];
+/* 2026-11-24: a model's geometry the same way: "Failed to fetch" (nothing
+   answered) is asked again; an answer, even an error, is not. A mount that
+   did not come left Mounted on with the rider alone. */
+async function v3FetchGeo(url){
+  for(let i = 0; ; i++){
+    try{ return await fetch(url); }
+    catch(e){ if(i >= V3_TEX_WAIT.length) throw e; await new Promise(ok => setTimeout(ok, V3_TEX_WAIT[i])); }
+  }
+}
 function v3Fetch(rel, want, into, tries){
   if(!rel){ v3[into] = null; v3Apply(); return; }
   tries = tries || 0;

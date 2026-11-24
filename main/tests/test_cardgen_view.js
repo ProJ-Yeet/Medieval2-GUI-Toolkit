@@ -92,4 +92,17 @@ assert.strictEqual(JSON.stringify(sub), JSON.stringify(['IK Full/Mounted/crossbo
 const order = vm.runInContext(`['IK Bodyparts/IK Arms', 'IK Orcs Full', 'Saved', 'IK Dwarves Full', 'IK Full/2H', 'IK Full'].sort((x,y) => cgFolderRank(x)-cgFolderRank(y) || x.localeCompare(y))`, ctx);
 assert.strictEqual(JSON.stringify(order), JSON.stringify(['IK Full', 'IK Full/2H', 'IK Dwarves Full', 'IK Orcs Full', 'IK Bodyparts/IK Arms', 'Saved']));
 
-console.log('PASS: card maker view waits for its camera, offers upgrade models only, lights, copies, the Save menu and the pose folders');
+// 7: an elephant's crew as the game has it: the riders stand by their skeleton's
+// standing idle (only the driver plays er_stand_a_idle), and the model wears
+// its owner's sheet (Mumakil's Elephant_Crew2 lists a generic one first)
+const beastList = {sets: [{primary: 'fs_gorgoroth_beast_rider'}], skeletons: {fs_gorgoroth_beast_rider: {actions: [
+  {action: 'er_stand_a_idle', playable: true, slot: 1}, {action: 'stand_a_idle', playable: true, slot: 2}]}}};
+vm.runInContext(`enc = encodeURIComponent; api = {get: async url => ({bones: [{}]})}; v3aBind = () => null;`, ctx);
+vm.runInContext(`cgCrewAnim('m', ${JSON.stringify(beastList)}).then(r => globalThis.__crew = r)`, ctx);
+setImmediate(() => {
+  assert.strictEqual(ctx.__crew.action, 'stand_a_idle', 'the riders stand as men on foot, not in the driver\'s rider idle');
+  const skins = [{factions: ['england', 'slave'], exists: true}, {factions: ['spain'], exists: true}];
+  assert.strictEqual(vm.runInContext(`cgOwnerSkin({factions: ['slave', 'spain']}, ${JSON.stringify(skins)})`, ctx), 'spain', 'the owner before the rebels');
+  assert.strictEqual(vm.runInContext(`cgOwnerSkin({factions: ['spain']}, [{factions: ['spain'], exists: true}])`, ctx), '', 'one sheet: nothing to pick');
+  console.log('PASS: card maker view waits for its camera, offers upgrade models only, lights, copies, the Save menu, the pose folders and an elephant\'s crew');
+});

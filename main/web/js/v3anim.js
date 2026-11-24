@@ -1014,13 +1014,13 @@ async function v3AnimMountLoad(){
   const a = v3.anim, m = a.mount, mine = v3;
   const r = ((m.list || {}).mounts || [])[m.pick];
   if(!r) return;
-  m.state = 'loading'; m.note = ''; v3AnimPanel();
+  m.state = 'loading'; m.note = ''; m.err = ''; v3AnimPanel();
   let info, geo, list;
   try{
     info = await api.get(`/api/model?mod=${enc(v3AnimMod())}&entry=${enc(r.entry)}`);
     if(info.error) throw new Error(info.error);
     const lod = (info.lods.find(l => l.exists) || {index: 0}).index;
-    const res = await fetch(`/api/model/geometry?mod=${enc(v3AnimMod())}&entry=${enc(r.entry)}&lod=${lod}`);
+    const res = await v3FetchGeo(`/api/model/geometry?mod=${enc(v3AnimMod())}&entry=${enc(r.entry)}&lod=${lod}`);
     if(!res.ok){ let msg = tt('v3anim.the_server_answered',{status:res.status}); try{ msg = (await res.json()).error || msg; }catch(e){} throw new Error(msg); }
     geo = v3Parse(await res.arrayBuffer());
     list = await api.get(`/api/model/anims?mod=${enc(v3AnimMod())}&entry=${enc(r.entry)}`);
