@@ -300,13 +300,16 @@ def rider_offset(raw: str) -> Optional[List[float]]:
     return offs[0] if offs else None
 
 
-def mounts_for(mod, entry) -> dict:
+def mounts_for(mod, entry, mount: str = "") -> dict:
     """The mounts a rider entry can be shown on: first those its own units ride
     (EDU ``soldier`` this entry, ``mount`` that type), then every other mount
     of the class its skeleton sets are for. Each with its modeldb entry, its
-    skeleton and its ``rider_offset``."""
+    skeleton and its ``rider_offset``. ``mount`` (a descr_mount.txt type) is
+    listed whatever the entry's skeletons are: a cavalry unit's model may carry
+    foot skeletons only, and the card maker still sets it on its mount."""
     riders = [a for a in entry.animations if (a.mount_type or "none").lower() != "none"]
-    if not riders:
+    want = (mount or "").strip().lower()
+    if not riders and not want:
         return {"mounts": [], "classes": []}
     classes = {a.mount_type.lower() for a in riders}
     me = entry.name.lower()
@@ -318,7 +321,7 @@ def mounts_for(mod, entry) -> dict:
     rows = []
     for m in mod.mount_file.mounts:
         units = ridden.get(m.type.lower(), [])
-        if not units and (m.mount_class or "").lower() not in classes:
+        if not units and (m.mount_class or "").lower() not in classes and want not in (m.type.lower(), (m.model or "").lower()):
             continue
         model = db.get((m.model or "").lower())
         if model is None:

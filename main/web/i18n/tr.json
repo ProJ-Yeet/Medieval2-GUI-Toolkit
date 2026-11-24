@@ -13756,5 +13756,11 @@
  "cards.gen_give_mercs_only": "Her fraksiyonun bu birimler için kendi kartlarını kaldır, böylece her fraksiyon bu kartı gösterir.",
  "cards.gen_given_n": "Kart {n} birime verildi.",
  "cards.gen_peek_mounted": "Binekli",
- "cards.gen_peek_mounted_title": "Modeller görüntüleyicisinde, biriminin bindiği binek üzerindeki atlıyı animasyonları oynatırken görüntüle"
+ "cards.gen_peek_mounted_title": "Modeller görüntüleyicisinde, biriminin bindiği binek üzerindeki atlıyı animasyonları oynatırken görüntüle",
+ "cards.gen_peek_no_ride": "Bu modelin burada gösterilecek binme animasyonu yok; kart görünümü birimi IK rig ile bineğine oturtur.",
+ "cards.gen_sess_found": "Bu birim için daha önce bir kart oluşturdunuz.",
+ "cards.gen_sess_continue": "Bu karta devam et",
+ "cards.gen_sess_continue_title": "Birimi bıraktığınız gibi açın: modeli, pozu, kamerası, ışıkları, nesneleri ve dokularıyla",
+ "cards.gen_sess_new": "Baştan başla",
+ "cards.gen_sess_new_title": "Bu birimin önceki kartını unutun ve varsayılan ayarlarla başlayın"
 }

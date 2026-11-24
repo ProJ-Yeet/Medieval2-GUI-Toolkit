@@ -15027,5 +15027,11 @@
  "cards.gen_give_mercs_only": "Usuń własne karty frakcji dla tych jednostek, aby każda frakcja wyświetlała tę kartę.",
  "cards.gen_given_n": "Kartę przypisano do jednostek: {n}.",
  "cards.gen_peek_mounted": "Na wierzchowcu",
- "cards.gen_peek_mounted_title": "Zobacz jeźdźca na wierzchowcu swojej jednostki z odtwarzanymi animacjami w przeglądarce modeli"
+ "cards.gen_peek_mounted_title": "Zobacz jeźdźca na wierzchowcu swojej jednostki z odtwarzanymi animacjami w przeglądarce modeli",
+ "cards.gen_peek_no_ride": "Ten model nie ma animacji jazdy do wyświetlenia; widok karty umieszcza jednostkę na wierzchowcu za pomocą IK rig.",
+ "cards.gen_sess_found": "Ta karta tej jednostki została już utworzona.",
+ "cards.gen_sess_continue": "Kontynuuj tę kartę",
+ "cards.gen_sess_continue_title": "Otwórz jednostkę w stanie, w którym ją pozostawiono: z jej modelem, pozą, kamerą, oświetleniem, obiektami i teksturami",
+ "cards.gen_sess_new": "Zacznij od nowa",
+ "cards.gen_sess_new_title": "Porzuć poprzednią kartę tej jednostki i zacznij z ustawieniami domyślnymi"
 }

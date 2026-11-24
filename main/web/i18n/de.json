@@ -14309,5 +14309,11 @@
  "cards.gen_give_mercs_only": "Die eigenen Karten der Fraktionen für diese Einheiten entfernen, damit jede Fraktion diese Karte anzeigt.",
  "cards.gen_given_n": "Die Karte wurde {n} Einheit(en) zugewiesen.",
  "cards.gen_peek_mounted_title": "Den Reiter auf dem Reittier seiner Einheit mit laufenden Animationen im Modellbetrachter ansehen",
- "cards.gen_peek_mounted": "Aufgesessen"
+ "cards.gen_peek_mounted": "Aufgesessen",
+ "cards.gen_peek_no_ride": "Dieses Modell hat hier keine Reitanimationen zum Anzeigen; die Kartenansicht setzt die Einheit mithilfe des IK rig auf ihr Reittier.",
+ "cards.gen_sess_found": "Du hast bereits eine Karte für diese Einheit erstellt.",
+ "cards.gen_sess_continue": "Diese Karte fortsetzen",
+ "cards.gen_sess_continue_title": "Öffne die Einheit so, wie du sie verlassen hast: mit ihrem Modell, ihrer Pose, Kamera, Beleuchtung, Objekten und Texturen",
+ "cards.gen_sess_new": "Von vorn beginnen",
+ "cards.gen_sess_new_title": "Verwirf die vorherige Karte dieser Einheit und beginne mit den Standardeinstellungen"
 }

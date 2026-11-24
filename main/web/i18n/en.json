@@ -13076,5 +13076,11 @@
 "cards.gen_give_mercs_only": "Remove the factions' own cards for these units, so every faction shows this one",
 "cards.gen_given_n": "The card was given to {n} unit(s).",
 "cards.gen_peek_mounted": "Mounted",
-"cards.gen_peek_mounted_title": "See the rider on the mount his unit rides, playing their actions, in the Models viewer"
+"cards.gen_peek_mounted_title": "See the rider on the mount his unit rides, playing their actions, in the Models viewer",
+"cards.gen_peek_no_ride": "This model has no riding actions to show here; the card view sets him on his mount with the IK rig.",
+"cards.gen_sess_found": "You made a card of this unit before.",
+"cards.gen_sess_continue": "Continue that card",
+"cards.gen_sess_continue_title": "Open the unit as you left it: its model, pose, camera, lights, objects and textures",
+"cards.gen_sess_new": "Start anew",
+"cards.gen_sess_new_title": "Forget the earlier card of this unit and start from the defaults"
 }

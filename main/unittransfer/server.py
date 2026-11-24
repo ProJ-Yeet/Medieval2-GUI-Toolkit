@@ -6685,7 +6685,7 @@ class Handler(BaseHTTPRequestHandler):
             return self._json(animview.entry_view(mod.data, entry))
         if path == "/api/model/mounts":
             # 80b: the mounts a rider can be shown on, with its rider_offset
-            return self._json(animview.mounts_for(mod, entry))
+            return self._json(animview.mounts_for(mod, entry, (q.get("mount") or [""])[0]))
 
         lod = int((q.get("lod") or ["0"])[0] or 0)
         rels = entry.mesh_files()

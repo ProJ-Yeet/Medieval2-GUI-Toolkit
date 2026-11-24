@@ -126,7 +126,7 @@ async function cgRidersOnSpots(){
   const c = cg(), u = ((CG_UNIT.units || {}).list || []).find(x => x.type === CG_UNIT.unit);
   if(!u || !u.mount) return;
   let rows = [];
-  try{ rows = (await cgGet(`/api/model/mounts?mod=${enc(CG_UNIT.mod)}&entry=${enc(CG_UNIT.entry)}`)).mounts || []; }catch(e){ toast(errText(e)); return; }
+  try{ rows = (await cgGet(`/api/model/mounts?mod=${enc(CG_UNIT.mod)}&entry=${enc(CG_UNIT.entry)}&mount=${enc(u.mount)}`)).mounts || []; }catch(e){ toast(errText(e)); return; }
   const row = rows.find(r => (r.type || '').toLowerCase() === u.mount.toLowerCase() || (r.entry || '').toLowerCase() === u.mount.toLowerCase());
   const spots = (row && row.offsets) || [];
   if(spots.length < 2){ toast(tt('cards.gen_riders_spots_none')); return; }
@@ -263,15 +263,45 @@ function cgSource(src){
   renderCardGen();
 }
 /* model: one of the unit's armour_ug_models, its soldier model when none is given */
-async function cgUnitLoad(type, model){
+/* --- 2026-11-24: a card's session, kept per unit -----------------------------
+   Everything the card maker holds for a unit's card (its model, pose, camera,
+   lights, objects, copies, textures) is kept in this browser under the mod and
+   the unit, saved as the card is drawn. Picking a unit that has one asks:
+   Continue the earlier card, or Start anew (which forgets it). */
+const CG_SESS_SKIP = new Set(['saved','give','err','poseNote','poseNote2']);
+const cgSessKey = (mod, type) => 'cardgen_sess|' + mod + '|' + type;
+function cgSessGet(mod, type){ try{ return JSON.parse(localStorage.getItem(cgSessKey(mod, type)) || 'null'); }catch(e){ return null; } }
+function cgSessSave(){
+  if(cgSrc() !== 'unit' || !CG_UNIT.unit || !CG_UNIT.objects.length) return;
+  const c = cg(), keep = {};
+  for(const [k, v] of Object.entries(c)) if(!CG_SESS_SKIP.has(k)) keep[k] = v;
+  const rec = JSON.stringify({entry: CG_UNIT.entry, when: Date.now(), c: keep});
+  try{ localStorage.setItem(cgSessKey(CG_UNIT.mod, CG_UNIT.unit), rec); }
+  catch(e){
+    // a picture for the ground can be too big for the browser's store: kept without it
+    try{ keep.ground = {...keep.ground, pic: ''}; localStorage.setItem(cgSessKey(CG_UNIT.mod, CG_UNIT.unit), JSON.stringify({entry: CG_UNIT.entry, when: Date.now(), c: keep})); }catch(e2){}
+  }
+}
+function cgSessDrop(mod, type){ try{ localStorage.removeItem(cgSessKey(mod, type)); }catch(e){} }
+/* how: 'continue' or 'new' from the picker's buttons; 'level' for another
+   armour upgrade of the unit already shown. Left out (a double click), a unit
+   with a session is shown in the picker to ask. */
+async function cgUnitLoad(type, model, how){
   const mod = state.src, units = (CG_UNIT.units || {}).list || [];
   const u = units.find(x => x.type === type);
   if(!u) return;
+  const sess = how === 'level' ? null : cgSessGet(mod, type);
+  if(sess && !how){ CG_UNIT.picking = true; cgPaint(); cgUnitPeek(type, model); return; }
+  // Start anew on a unit with a session: the defaults, not the last unit's settings
+  if(how === 'new' && sess){ cgSessDrop(mod, type); state.cgUnit = {}; }
+  const resume = how === 'continue' && sess;
+  if(resume && !model) model = sess.entry;
   const entry = (model || cgUnitModel(u)).toLowerCase(), c = cg();
   CG_UNIT.unit = type; CG_UNIT.entry = entry; CG_UNIT.mod = mod; CG_UNIT.objects = []; CG_UNIT.picking = false; CG_WORK.view = null;
   c.unit = type; c.name = type.replace(/[^A-Za-z0-9_\-]/g, '_'); c.saved = null; c.give = null; c.err = ''; c.off = []; c.pick = {}; c.oxf = {};
   c.gxf = {}; c.dups = []; c.texFaction = '';
   c.rig.autoFor = '';
+  if(resume){ for(const [k, v] of Object.entries(sess.c || {})) if(!CG_SESS_SKIP.has(k)) c[k] = JSON.parse(JSON.stringify(v)); cg(); CG_WORK.fit = null; }
   CG_WORK.boneSel = ''; CG_WORK.objSel = 0;
   cgPaint();
   const a = {kind: 'entry', mod, entry}, key = armAssetKey(a);
@@ -297,6 +327,7 @@ async function cgUnitLoad(type, model){
   an.mountFor = u.mount ? cgMountFor(mod, entry, u.mount.toLowerCase()) : null;
   CG_WORK.fit = null;
   await cgPreparePose();
+  if(resume && c.texFaction) await cgTexPick(c.texFaction);
   cgPaint();
 }
 /* 2026-11-24: a cavalry unit's mount and a siege unit's engine, standing still
@@ -339,7 +370,7 @@ async function cgEngineLoad(mod, name){
 function cgMountFor(mod, rider, mount){
   let rows = null, list = null;
   return async slot => {
-    if(!rows){ try{ rows = (await cgGet(`/api/model/mounts?mod=${enc(mod)}&entry=${enc(rider)}`)).mounts || []; }catch(e){ rows = []; } }
+    if(!rows){ try{ rows = (await cgGet(`/api/model/mounts?mod=${enc(mod)}&entry=${enc(rider)}&mount=${enc(mount)}`)).mounts || []; }catch(e){ rows = []; } }
     const row = rows.find(r => (r.entry || '').toLowerCase() === mount);
     if(!row) return null;
     if(!list){ try{ list = await cgGet(`/api/model/anims?mod=${enc(mod)}&entry=${enc(mount)}`); }catch(e){ return null; } }
@@ -359,7 +390,7 @@ function cgMountFor(mod, rider, mount){
 function cgRetry(type, entry, peek){
   for(const [key, live] of ARM.assets) if(!live.loading && !live.geo) ARM.assets.delete(key);
   if(CG_WORK.engines) for(const [key] of CG_WORK.engines) CG_WORK.engines.delete(key);
-  if(peek) cgUnitPeek(type, entry); else cgUnitLoad(type, entry);
+  if(peek) cgUnitPeek(type, entry); else cgUnitLoad(type, entry, 'level');
 }
 /* An API read tried again a few times before it counts as failed. */
 async function cgGet(url){
@@ -435,14 +466,16 @@ function cgPeekHtml(){
 /* 2026-11-24: a cavalry unit seen Mounted: the rider on his mount, playing
    their actions, in the Models viewer (viewer3d.js) docked where the turning
    view stands; its own "On his mount", with the mount the unit rides. */
-function cgPeekMounted(){ const pk = CG_UNIT.peek; return !!(CG_UNIT.mounted && pk && pk.info && pk.info.mount && !pk.err); }
+function cgPeekMounted(){ const pk = CG_UNIT.peek; return !!(CG_UNIT.mounted && pk && pk.info && pk.info.mount && !pk.err && !pk.noRide); }
 async function cgPeekV3(pk){
   if(typeof v3Mount !== 'function') return;
   await v3Mount('cgPeekV3', state.src, pk.entry);
   const want = (pk.info.mount || '').toLowerCase();
   // its mount list comes a moment after the model; the unit's own mount picked from it
   for(let i = 0; i < 60 && CG_UNIT.peek === pk && cgPeekMounted(); i++){
-    const m = typeof v3 !== 'undefined' && v3 && v3.host === 'cgPeekV3' && v3.anim && v3.anim.mount;
+    const here = typeof v3 !== 'undefined' && v3 && v3.host === 'cgPeekV3' ? v3 : null, m = here && here.anim && here.anim.mount;
+    // its actions read and none a rider's: nothing to carry him, the turntable again
+    if(here && here.anim && here.anim.list && !m){ pk.noRide = true; cgPeekPaint(); return; }
     if(m && m.list){
       const rows = m.list.mounts || [], at = rows.findIndex(r => (r.type || '').toLowerCase() === want || (r.entry || '').toLowerCase() === want);
       if(at >= 0 && at !== m.pick){ m.pick = at; m.x = null; m.data = null; }
@@ -468,9 +501,13 @@ function cgPeekPaint(){
   head.innerHTML = pk ? `<b>${esc(pk.type)}</b><span class="count">${esc(u.category)} · ${esc(u['class'])} · ${esc(pk.entry)}</span>
       ${cgUgSelect(u, pk.entry, `cgUnitPeek(${t},this.value)`)}<span style="flex:1"></span>
       ${pk.err ? `<button class="mini" onclick="cgRetry(${t},${esc(JSON.stringify(pk.entry))},true)">${tt('cards.gen_retry')}</button>` : ''}
+      ${pk.noRide && CG_UNIT.mounted ? `<span class="count">${tt('cards.gen_peek_no_ride')}</span>` : ''}
       ${u.mount ? `<button class="mini${CG_UNIT.mounted ? ' on' : ''}" title="${ttA('cards.gen_peek_mounted_title')}" onclick="cgPeekMount(${!CG_UNIT.mounted})">${tt('cards.gen_peek_mounted')}</button>` : ''}
       ${CG_UNIT.unit ? `<button class="mini" onclick="CG_UNIT.picking=false;cgPaint()">${tt('cards.gen_peek_cancel')}</button>` : ''}
-      <button class="primary" onclick="cgUnitLoad(${t},${esc(JSON.stringify(pk.entry))})">${tt('cards.gen_peek_use')}</button>`
+      ${cgSessGet(state.src, pk.type) ? `<span class="count">${tt('cards.gen_sess_found')}</span>
+        <button class="primary" title="${ttA('cards.gen_sess_continue_title')}" onclick="cgUnitLoad(${t},null,'continue')">${tt('cards.gen_sess_continue')}</button>
+        <button title="${ttA('cards.gen_sess_new_title')}" onclick="cgUnitLoad(${t},${esc(JSON.stringify(pk.entry))},'new')">${tt('cards.gen_sess_new')}</button>`
+      : `<button class="primary" onclick="cgUnitLoad(${t},${esc(JSON.stringify(pk.entry))},'new')">${tt('cards.gen_peek_use')}</button>`}`
     : `<span class="count">${tt('cards.gen_peek_none')}</span>`;
   const dock = document.getElementById('cgPeekV3'), mounted = cgPeekMounted();
   if(dock){
@@ -550,7 +587,7 @@ function cgSourceHtml(){
 function cgUgHtml(){
   const u = ((CG_UNIT.units || {}).list || []).find(x => x.type === CG_UNIT.unit);
   if(!u || CG_UNIT.picking) return '';
-  return cgUgSelect(u, CG_UNIT.entry, `cgUnitLoad(${esc(JSON.stringify(u.type))},this.value)`) + cgTexHtml();
+  return cgUgSelect(u, CG_UNIT.entry, `cgUnitLoad(${esc(JSON.stringify(u.type))},this.value,'level')`) + cgTexHtml();
 }
 /* 2026-11-24: whose textures the model wears. A model lists a texture per
    group of factions (its modeldb skins); the faction picked here wears its
@@ -945,6 +982,22 @@ async function cgPoseAnim(){
   if(presets[c.pose]) a.t = armAnimLength()*presets[c.pose][1];
   c.poseNote = tt('cards.gen_pose_from',{action:selected.action,skeleton});
   if(c.pose === 'riding' && !a.carried && !/mount|cavalry|horse/i.test(skeleton)) c.poseNote2 = tt('cards.gen_pose_no_mount');
+  await cgSeat();
+}
+/* 2026-11-24: a cavalry unit whose model has foot skeletons only (its actions
+   are not a rider's, so nothing carried him): the unit's mount is set under
+   him all the same, at its rider_offset, playing its standing action. */
+async function cgSeat(){
+  const a = armAnim();
+  if(cgSrc() !== 'unit' || a.mount || !a.mountFor || !a.data || !cgSeated()) return;
+  const slot = /^\d+$/.test(a.key || '') ? +a.key : null;
+  const m = await a.mountFor(slot);
+  if(m && armAnim() === a && a.data && !a.mount){ a.mount = m; CG_WORK.fit = null; }
+}
+/* A horse rides under its man; an elephant's crew stand in its howdah, beside. */
+function cgSeated(){
+  const u = ((CG_UNIT.units || {}).list || []).find(x => x.type === CG_UNIT.unit);
+  return !!(u && u.mount && !u.engine && !/elephant|mumak|oliphaunt|howdah/i.test(u.mount));
 }
 function cgTwoHands(on){
   const basis = cg().rig.basis; basis.Switch = {...basis.Switch,l:[0,on ? 0.05 : 0,0]}; cgFitChanged(); cgDraw();
@@ -1211,6 +1264,7 @@ function cgMoved(){
 }
 async function cgCardDraw(){
   if(!cgHere()) return;
+  cgSessSave();
   const token = ++CG_WORK.draw, card = document.getElementById('cgCard');
   if(!card) return;
   const c = cg(), objects = cgObjects(), [w,h] = CG_WORK.hdSize || [480,640];

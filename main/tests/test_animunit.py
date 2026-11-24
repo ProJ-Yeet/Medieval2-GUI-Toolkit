@@ -155,6 +155,12 @@ check("every rider_offset of a block, in order (a mumak lists one per rider)",
       and first.get("offsets") == [first["offset"]])
 foot = ro.modeldb.by_name()["duukunasi"]
 check("a man on foot has no mount to offer", animview.mounts_for(ro, foot)["mounts"] == [])
+# 2026-11-24: a cavalry unit whose model has foot skeletons only: the card
+# maker names the unit's mount and gets it, to set him on it
+_any = ro.mount_file.mounts[0] if ro.mount_file.mounts else None
+check("a named mount is listed for a man on foot",
+      _any is None or any(r["type"] == _any.type for r in animview.mounts_for(ro, foot, _any.type)["mounts"])
+      or ro.modeldb.by_name().get((_any.model or "").lower()) is None)
 horse = dac.modeldb.get(first["entry"])
 hv = animview.entry_view(dac.data, horse)
 hsk = hv["skeletons"][first["skeleton"].lower()]

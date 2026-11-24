@@ -14775,5 +14775,11 @@
  "cards.gen_give_mercs_only": "Eliminar las cartas propias de las facciones para estas unidades, para que todas muestren esta carta.",
  "cards.gen_given_n": "La carta se asignó a {n} unidad(es).",
  "cards.gen_peek_mounted_title": "Ver al jinete sobre la montura de su unidad con las animaciones en curso en el visor de modelos",
- "cards.gen_peek_mounted": "A caballo"
+ "cards.gen_peek_mounted": "A caballo",
+ "cards.gen_peek_no_ride": "Este modelo no tiene animaciones de monta que mostrar aquí; la vista de la tarjeta coloca la unidad sobre su montura con el IK rig.",
+ "cards.gen_sess_found": "Ya has creado una tarjeta de esta unidad.",
+ "cards.gen_sess_continue": "Reanudar esa tarjeta",
+ "cards.gen_sess_continue_title": "Abre la unidad tal como la dejaste: con su modelo, pose, cámara, luces, objetos y texturas",
+ "cards.gen_sess_new": "Empezar de nuevo",
+ "cards.gen_sess_new_title": "Olvida la tarjeta anterior de esta unidad y empieza con los valores predeterminados"
 }

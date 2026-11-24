@@ -117,6 +117,7 @@ const near = (got, want, what) => want.forEach((v, k) =>
   // the card is Armory Studio's model; the pose library's own step is not this test's
   c.cgSrc = () => 'armory';
   c.cgPoseAuto = () => {};
+  c.cgSeat = async () => {};                       // a unit's own mount: not Armory Studio's
   vm.runInContext(pick(cg, /async function cgPreparePose\(\)\{[^\n]*\}/), c);
   vm.runInContext(pick(cg, /async function cgPoseAnim\(\)\{[\s\S]*?\n\}/), c);
   await c.armAnimFrom('M|mount_h');                 // the horse was loaded first

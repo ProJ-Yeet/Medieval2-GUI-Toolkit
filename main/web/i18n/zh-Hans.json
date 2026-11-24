@@ -13617,5 +13617,11 @@
  "cards.gen_give_mercs_only": "删除各派系这些部队的专属卡片，使所有派系都显示此卡片。",
  "cards.gen_given_n": "此卡片已分配给 {n} 个部队。",
  "cards.gen_peek_mounted": "骑乘状态",
- "cards.gen_peek_mounted_title": "在模型查看器中查看骑在其部队坐骑上的骑手，并播放他们的动作"
+ "cards.gen_peek_mounted_title": "在模型查看器中查看骑在其部队坐骑上的骑手，并播放他们的动作",
+ "cards.gen_peek_no_ride": "此模型没有可在此处显示的骑乘动作；卡片视图会使用 IK rig 将部队放到坐骑上。",
+ "cards.gen_sess_found": "你之前已经为这支部队制作过卡片。",
+ "cards.gen_sess_continue": "继续这张卡片",
+ "cards.gen_sess_continue_title": "按你离开时的状态打开部队：使用它的模型、姿势、摄像机、灯光、物件和贴图",
+ "cards.gen_sess_new": "从头开始",
+ "cards.gen_sess_new_title": "忘记这支部队之前的卡片，使用默认设置开始"
 }

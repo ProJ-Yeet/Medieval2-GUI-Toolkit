@@ -3948,7 +3948,12 @@ body.look-editing :is(button,label,legend,h1,h2,h3,.trsechead,.mftab):hover{outl
   .cgpose.on{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
   /* the unit picker's 3D look at the unit */
   .cgpeek{display:flex;flex-direction:column;gap:6px;min-width:0;min-height:0}
-  .cgpeekv3{flex:1;min-height:240px;overflow:auto}
+  /* the Models viewer docked in the unit picker: its stage alone, held to the
+     room it is given (a size that followed its content grew it sideways) */
+  .cgpeekv3{flex:1;min-height:240px;overflow:hidden;contain:size layout;position:relative}
+  .cgpeekv3 .v3side{display:none}
+  .cgpeekv3 .v3wrap{height:100%;flex-wrap:nowrap}
+  .cgpeekv3 .v3stage{flex:1 1 auto;min-width:0;min-height:0;height:100%}
   .cgpeek canvas{flex:1;min-height:200px;width:100%;border:1px solid var(--edge);border-radius:6px;cursor:grab;touch-action:none}
   @container page (max-width:1250px){.cgout{grid-template-columns:1fr}}
   .cgcard canvas{image-rendering:pixelated;background:repeating-conic-gradient(#2a2f37 0 25%,#323844 0 50%) 0 0/16px 16px;border:1px solid var(--edge)}

@@ -14421,5 +14421,11 @@
  "cards.gen_give_mercs_only": "Supprimer les cartes propres aux factions pour ces unités, afin que chaque faction affiche celle-ci.",
  "cards.gen_given_n": "La carte a été attribuée à {n} unité(s).",
  "cards.gen_peek_mounted_title": "Voir le cavalier sur la monture de son unité avec les animations en cours dans le visualiseur de modèles",
- "cards.gen_peek_mounted": "En selle"
+ "cards.gen_peek_mounted": "En selle",
+ "cards.gen_peek_no_ride": "Ce modèle n'a pas d'animations de monture à afficher ici ; la vue de la carte place l'unité sur sa monture avec l'IK rig.",
+ "cards.gen_sess_found": "Vous avez déjà créé une carte pour cette unité.",
+ "cards.gen_sess_continue": "Reprendre cette carte",
+ "cards.gen_sess_continue_title": "Ouvrez l'unité telle que vous l'avez laissée : avec son modèle, sa pose, sa caméra, ses lumières, ses objets et ses textures",
+ "cards.gen_sess_new": "Recommencer",
+ "cards.gen_sess_new_title": "Oubliez la carte précédente de cette unité et repartez des valeurs par défaut"
 }
