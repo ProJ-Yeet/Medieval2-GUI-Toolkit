@@ -128,7 +128,7 @@ const near = (got, want, what) => want.forEach((v, k) =>
 
   // "One of each part" is one of each part per model: the horse keeps its Body
   vm.runInContext(pick(cg, /function cgObjects\(\)\{[\s\S]*?\n\}/), c);
-  for(const re of [/const cgPartKey = [^\n]*/, /const CG_GEAR_OFF = [^\n]*/, /function cgGearOff\([^\n]*/, /function cgXf\(o\)\{[\s\S]*?\n\}/])
+  for(const re of [/const cgPartKey = [^\n]*/, /const CG_GEAR_OFF = [^\n]*/, /function cgGearOff\([^\n]*/, /function cgXf\(o\)\{[\s\S]*?\n\}/, /function cgGroupOf\(o\)\{[\s\S]*?\n\}/])
     vm.runInContext(pick(cg, re).replace(/^const /, 'var '), c);
   c.CG_WORK = {xfObjs: new WeakMap()};
   c.cgAllObjects = () => project.objects.filter(o => !o.hidden);

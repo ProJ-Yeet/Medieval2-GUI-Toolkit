@@ -148,6 +148,11 @@ check("rider_offset read as the files write it: tabs, a comment, a leading point
       and animview.rider_offset("rider_offset -.35, 1.22, .4") == [-0.35, 1.22, 0.4]
       and animview.rider_offset("rider_offset 0, 1, 2\nrider_offset 3, 4, 5") == [0.0, 1.0, 2.0]
       and animview.rider_offset(";rider_offset 1, 2, 3") is None)
+# 2026-11-24: the card maker sets copies of the rider on each of an elephant's spots
+check("every rider_offset of a block, in order (a mumak lists one per rider)",
+      animview.rider_offsets("riders 3\nrider_offset 0.0, 6.8, 0.3\n;rider_offset 9, 9, 9\nrider_offset -1.5, 4.75, -0.2\nrider_offset 1.5,4.75,1.3")
+      == [[0.0, 6.8, 0.3], [-1.5, 4.75, -0.2], [1.5, 4.75, 1.3]]
+      and first.get("offsets") == [first["offset"]])
 foot = ro.modeldb.by_name()["duukunasi"]
 check("a man on foot has no mount to offer", animview.mounts_for(ro, foot)["mounts"] == [])
 horse = dac.modeldb.get(first["entry"])

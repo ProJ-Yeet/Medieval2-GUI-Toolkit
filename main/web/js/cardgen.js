@@ -16,9 +16,9 @@ const cgSrc = () => state.cgSrc === 'armory' ? 'armory' : 'unit';
 function cg(src){
   // 2026-11-24: the IK rig is the pose a card starts on; gear, the weapon set drawn
   const defaults = {size:'card',mult:1,w:48,h:64,ss:10,oneEach:true,gear:'primary',guide:true,pose:'rig',name:'',unit:'',
-    cam:{yaw:20,pitch:4,scale:1.2,height:0,pan:0},xf:{t:[0,0,0],r:[0,0,0]},
+    cam:{yaw:20,pitch:4,scale:1.2,height:0,pan:0,persp:false},xf:{t:[0,0,0],r:[0,0,0],s:1},overlay:true,lights:[],
     rig:{type:'auto',basis:{},handles:true,cat:'',pick:'',part:'whole',camReset:true,autoFor:''},
-    light:{type:'sun',azimuth:35,elevation:40,amount:0.95,level:1,ambient:0.38},
+    light:{type:'sun',azimuth:35,elevation:40,amount:0.95,level:1,ambient:0.38,flat:false},
     post:{blur:0.5,exposure:0,brightness:0,contrast:1,gamma:1,saturation:1,hue:0,sharpen:0.2,outline:0.3},
     fit:{part:'thighs',auto:true},ground:{kind:'none',colour:'#5d4d36',pic:''},gframe:false,paint:{on:false,strength:1}};
   const c = (src || cgSrc()) === 'armory' ? (state.cg = state.cg || {}) : (state.cgUnit = state.cgUnit || {});
@@ -42,9 +42,124 @@ function cgSecToggle(key, open){
   if(open) CG_SHUT.delete(key); else CG_SHUT.add(key);
   try{ localStorage.setItem('cardgen_shut', JSON.stringify([...CG_SHUT])); }catch(e){}
 }
-/* One part of a model: a horse's Body is not the rider's. */
-const cgPartKey = o => (((o.src || [])[0] || {}).asset || '') + '|' + String(o.name || '').toLowerCase();
-function cgAllObjects(){ return (cgSrc() === 'unit' ? CG_UNIT.objects : armProj().objects).filter(o => !o.hidden && !armCollHidden(o)); }
+/* One part of a model: a horse's Body is not the rider's, nor a copy's its source's. */
+const cgPartKey = o => (o.grp ? o.grp + '|' : '') + (((o.src || [])[0] || {}).asset || '') + '|' + String(o.name || '').toLowerCase();
+function cgAllObjects(){
+  const base = (cgSrc() === 'unit' ? CG_UNIT.objects : armProj().objects).filter(o => !o.hidden && !armCollHidden(o));
+  return base.concat(cgCopies(base));
+}
+/* --- 2026-11-24: the models a card is made of ------------------------------
+   Each model (the rider, his mount, an engine; in Armory Studio a collection)
+   is a group of its own in the object list, moved and scaled as a whole
+   (c.gxf). A model or one object can be copied (c.dups): a mumak carries
+   several riders. A copy is the same objects under ids of its own, posed as
+   its source is. */
+function cgGroupOf(o){
+  if(o.grp) return o.grp;
+  if(cgSrc() === 'armory' && o.coll != null) return 'coll:' + o.coll;
+  return 'asset:' + (((o.src || [])[0] || {}).asset || '');
+}
+const cgDupId = (k,id) => 1e9 + k*1e6 + id + 500000;
+function cgCopies(base){
+  const dups = cg().dups || [], out = [];
+  CG_WORK.copyMemo = CG_WORK.copyMemo || new WeakMap();
+  for(const d of dups){
+    const ids = new Set(d.ids);
+    for(const o of base) if(ids.has(o.id)){
+      // one copy object per source object and copy, so caches keyed by it hold
+      let memo = CG_WORK.copyMemo.get(o);
+      if(!memo) CG_WORK.copyMemo.set(o, memo = new Map());
+      if(!memo.has(d.k)) memo.set(d.k, {...o, id: cgDupId(d.k, o.id), grp: 'dup:' + d.k, dupOf: o.id});
+      out.push(memo.get(d.k));
+    }
+  }
+  return out;
+}
+function cgGroups(){
+  const groups = new Map();
+  for(const o of cgAllObjects()){ const k = cgGroupOf(o); if(!groups.has(k)) groups.set(k, []); groups.get(k).push(o); }
+  return groups;
+}
+function cgGroupName(gk, objs){
+  const o = objs[0], dup = (cg().dups || []).find(d => 'dup:' + d.k === gk);
+  if(dup) return tt('cards.gen_grp_copy', {name: dup.name});
+  if(gk.startsWith('coll:')){ const coll = armProj().collections.find(x => x.id === o.coll); return coll ? coll.name : gk; }
+  const live = ARM.assets.get(((o.src || [])[0] || {}).asset), entry = live && live.asset ? live.asset.entry : o.mesh;
+  return o.still === 'mount' ? tt('cards.gen_grp_mount', {name: entry}) : o.still === 'engine' ? tt('cards.gen_grp_engine', {name: entry}) : entry;
+}
+/* The point a model is scaled about: the middle of its objects as they stand. */
+function cgGroupPivot(gk){
+  const memo = CG_WORK.gpivot = CG_WORK.gpivot || new Map(), objs = cgGroups().get(gk) || [];
+  const sig = objs.map(o => o.id).join(','), hit = memo.get(gk);
+  if(hit && hit.sig === sig) return hit.p;
+  const b = armBounds(objs), p = b ? b[0].map((v,i) => (v+b[1][i])/2) : [0,0,0];
+  if(b) memo.set(gk, {sig, p});
+  return p;
+}
+function cgGroupXf(gk){ return ((cg().gxf || {})[gk]) || {t:[0,0,0],s:1}; }
+function cgGroupSet(gk, fn){
+  const c = cg(); c.gxf = {...(c.gxf || {})};
+  const g = c.gxf[gk] = JSON.parse(JSON.stringify(cgGroupXf(gk)));
+  fn(g); cgFitChanged(); cgDraw();
+}
+function cgGroupScale(gk, v){
+  if(!isFinite(v) || v <= 0) return;
+  cgGroupSet(gk, g => { g.s = v; });
+  const out = document.querySelector(`[data-cggs="${CSS.escape(gk)}"]`); if(out) out.textContent = Math.round(v*100)/100;
+}
+function cgGroupHide(gk){
+  const c = cg(), ids = (cgGroups().get(gk) || []).map(o => o.id), off = new Set(c.off || []);
+  const all = ids.every(id => off.has(id));
+  for(const id of ids) if(all) off.delete(id); else off.add(id);
+  c.off = [...off]; cgFitChanged(); cgPaint();
+}
+/* 2026-11-24: an elephant's riders where the game puts them: descr_mount.txt
+   lists a rider_offset per rider (a mumak fifteen), the first the driver's.
+   The rider is set on the first and a copy of him on each of the others; the
+   offsets are the game's, so they are kept relative to the driver's when the
+   mount carries him, and taken as they are when it stands. */
+function cgRiderSpotsHtml(gk, objs){
+  if(cgSrc() !== 'unit' || !objs.some(o => o.still === 'mount')) return '';
+  return `<button class="mini" title="${ttA('cards.gen_riders_spots_title')}" onclick="cgRidersOnSpots()">${tt('cards.gen_riders_spots')}</button>`;
+}
+async function cgRidersOnSpots(){
+  const c = cg(), u = ((CG_UNIT.units || {}).list || []).find(x => x.type === CG_UNIT.unit);
+  if(!u || !u.mount) return;
+  let rows = [];
+  try{ rows = (await cgGet(`/api/model/mounts?mod=${enc(CG_UNIT.mod)}&entry=${enc(CG_UNIT.entry)}`)).mounts || []; }catch(e){ toast(errText(e)); return; }
+  const row = rows.find(r => (r.type || '').toLowerCase() === u.mount.toLowerCase() || (r.entry || '').toLowerCase() === u.mount.toLowerCase());
+  const spots = (row && row.offsets) || [];
+  if(spots.length < 2){ toast(tt('cards.gen_riders_spots_none')); return; }
+  const riders = CG_UNIT.objects.filter(o => !o.still), gk = riders.length ? cgGroupOf(riders[0]) : '';
+  if(!gk) return;
+  const carried = !!armAnim().mount, first = spots[0];
+  const at = p => carried ? p.map((v,i) => v-first[i]) : p.slice();
+  const kept = (c.dups || []).filter(d => !d.spot), gxf = {...(c.gxf || {})};
+  for(const d of c.dups || []) if(d.spot) delete gxf['dup:' + d.k];
+  let k = kept.reduce((m,d) => Math.max(m,d.k), 0);
+  const ids = riders.map(o => o.id), name = cgGroupName(gk, riders), dups = kept.slice();
+  if(!carried) gxf[gk] = {...cgGroupXf(gk), t: at(first)};
+  spots.slice(1).forEach((p,i) => { k++; dups.push({k, ids, name: name + ' ' + (i+2), spot: true}); gxf['dup:' + k] = {t: at(p), s: 1}; });
+  c.dups = dups; c.gxf = gxf;
+  toast(tt('cards.gen_riders_spots_done', {n: spots.length}));
+  cgFitChanged(); cgPaint();
+}
+/* A copy of a model, or of one object, set down beside its source. */
+function cgDuplicate(ids, name){
+  const c = cg(), k = (c.dups || []).reduce((m,d) => Math.max(m,d.k), 0)+1;
+  const base = cgAllObjects().filter(o => ids.includes(o.id));
+  const real = base.map(o => o.dupOf != null ? o.dupOf : o.id);
+  c.dups = [...(c.dups || []), {k, ids: real, name}];
+  const b = armBounds(base), w = b ? Math.max(0.3, b[1][0]-b[0][0]) : 1;
+  c.gxf = {...(c.gxf || {}), ['dup:' + k]: {t:[w*1.1,0,0], s:1}};
+  cgFitChanged(); cgPaint();
+}
+function cgDupRemove(k){
+  const c = cg(); c.dups = (c.dups || []).filter(d => d.k !== k);
+  c.gxf = {...(c.gxf || {})}; delete c.gxf['dup:' + k];
+  if(CG_WORK.grpSel === 'dup:' + k) CG_WORK.grpSel = '';
+  cgFitChanged(); cgPaint();
+}
 /* What is drawn: the objects not switched off in the card's object list and,
    with One of each part, one variant of each part (the one picked there, else
    the first). */
@@ -81,11 +196,20 @@ async function cgGear(mode){
 /* An object as the card draws it: moved, turned and scaled by the card's own
    transform for it (c.oxf), never the Armory project's. */
 function cgXf(o){
-  const x = (cg().oxf || {})[o.id];
-  if(!x) return o;
-  const sig = JSON.stringify([o.t, o.r, o.s, x]), hit = CG_WORK.xfObjs.get(o);
+  const x = (cg().oxf || {})[o.id], gk = cgGroupOf(o), g = (cg().gxf || {})[gk];
+  if(!x && !g) return o;
+  const sig = JSON.stringify([o.t, o.r, o.s, x, g]), hit = CG_WORK.xfObjs.get(o);
   if(hit && hit.sig === sig) return hit.obj;
-  const obj = {...o, t: o.t.map((v,k) => v + x.t[k]), r: o.r.map((v,k) => v + x.r[k]), s: o.s.map((v,k) => v * x.s[k])};
+  // 2026-11-24: a matrix on top of the object as it is drawn (armRender's
+  // o.post), after its pose: added to o.t before the skinning, a move was
+  // turned with the bones and a rider set on a mumak's spot flew off
+  let post = null;
+  if(x){ const p = armPivot(o).map((v,i) => v + o.t[i]);
+    post = armMul(armTrans(p[0]+x.t[0],p[1]+x.t[1],p[2]+x.t[2]),armMul(armRot(...x.r),armMul(armScale(...x.s),armTrans(-p[0],-p[1],-p[2])))); }
+  if(g){ const k = Number(g.s) || 1, P = cgGroupPivot(gk);
+    const m = armMul(armTrans(P[0]+g.t[0],P[1]+g.t[1],P[2]+g.t[2]),armMul(armScale(k,k,k),armTrans(-P[0],-P[1],-P[2])));
+    post = post ? armMul(m,post) : m; }
+  const obj = {...o, post};
   CG_WORK.xfObjs.set(o, {sig, obj});
   return obj;
 }
@@ -143,7 +267,7 @@ async function cgUnitLoad(type, model){
   const mod = state.src, units = (CG_UNIT.units || {}).list || [];
   const u = units.find(x => x.type === type);
   if(!u) return;
-  const entry = (model || u.soldier || '').toLowerCase(), c = cg();
+  const entry = (model || cgUnitModel(u)).toLowerCase(), c = cg();
   CG_UNIT.unit = type; CG_UNIT.entry = entry; CG_UNIT.mod = mod; CG_UNIT.objects = []; CG_UNIT.picking = false; CG_WORK.view = null;
   c.unit = type; c.name = type.replace(/[^A-Za-z0-9_\-]/g, '_'); c.saved = null; c.givePlan = null; c.err = ''; c.off = []; c.pick = {}; c.oxf = {};
   c.rig.autoFor = '';
@@ -163,7 +287,7 @@ async function cgUnitLoad(type, model){
   // its own animations, in the held-aside state
   cgUnitAnimIn();
   ARM.anim = null; const an = armAnim(); CG_UNIT.anim = an; an.fromMod = mod;
-  try{ an.list = await api.get(`/api/model/anims?mod=${enc(mod)}&entry=${enc(entry)}`); }catch(e){ an.list = {error: errText(e)}; }
+  try{ an.list = await cgGet(`/api/model/anims?mod=${enc(mod)}&entry=${enc(entry)}`); }catch(e){ an.list = {error: errText(e)}; }
   if(ARM.anim !== an) return;
   const set = (an.list.sets || [])[0];
   an.skel = set ? ((c.gear === 'secondary' && set.secondary) || set.primary || set.secondary || '') : Object.keys(an.list.skeletons || {})[0] || '';
@@ -194,7 +318,7 @@ async function cgEngineLoad(mod, name){
   const key = 'engine|' + mod + '|' + name.toLowerCase();
   CG_WORK.engines = CG_WORK.engines || new Map();
   if(!CG_WORK.engines.has(key)) CG_WORK.engines.set(key, (async () => {
-    const sc = await api.get(`/api/model/engine?mod=${enc(mod)}&engine=${enc(name)}`);
+    const sc = await cgGet(`/api/model/engine?mod=${enc(mod)}&engine=${enc(name)}`);
     if(!sc.mesh || !sc.mesh_exists) return null;
     const r = await fetch(`/api/model/engine_geometry?mod=${enc(mod)}&rel=${enc(sc.mesh)}`);
     if(!r.ok) return null;
@@ -213,10 +337,10 @@ async function cgEngineLoad(mod, name){
 function cgMountFor(mod, rider, mount){
   let rows = null, list = null;
   return async slot => {
-    if(!rows){ try{ rows = (await api.get(`/api/model/mounts?mod=${enc(mod)}&entry=${enc(rider)}`)).mounts || []; }catch(e){ rows = []; } }
+    if(!rows){ try{ rows = (await cgGet(`/api/model/mounts?mod=${enc(mod)}&entry=${enc(rider)}`)).mounts || []; }catch(e){ rows = []; } }
     const row = rows.find(r => (r.entry || '').toLowerCase() === mount);
     if(!row) return null;
-    if(!list){ try{ list = await api.get(`/api/model/anims?mod=${enc(mod)}&entry=${enc(mount)}`); }catch(e){ return null; } }
+    if(!list){ try{ list = await cgGet(`/api/model/anims?mod=${enc(mod)}&entry=${enc(mount)}`); }catch(e){ return null; } }
     const sk = ((list && list.skeletons) || {})[(row.skeleton || '').toLowerCase()];
     const r = sk && v3aMountRow(sk.actions, slot).row;
     if(!r) return null;
@@ -227,6 +351,20 @@ function cgMountFor(mod, rider, mount){
     return {key: armAssetKey({kind: 'entry', mod, entry: mount}), data, bind: v3aBind(data), travel: v3aTravel(data),
             hub: data.bones.findIndex(b => b.parent === 0), offset: row.offset || [0, 0, 0]};
   };
+}
+/* 2026-11-24: a model that did not come ("Failed to fetch") asked for again:
+   armLoadAsset tries four times itself, this is the button after that. */
+function cgRetry(type, entry, peek){
+  for(const [key, live] of ARM.assets) if(!live.loading && !live.geo) ARM.assets.delete(key);
+  if(CG_WORK.engines) for(const [key] of CG_WORK.engines) CG_WORK.engines.delete(key);
+  if(peek) cgUnitPeek(type, entry); else cgUnitLoad(type, entry);
+}
+/* An API read tried again a few times before it counts as failed. */
+async function cgGet(url){
+  for(let i = 0; ; i++){
+    try{ return await api.get(url); }
+    catch(e){ if(i >= 3 || e && e.deliberate) throw e; await new Promise(ok => setTimeout(ok, 500 * (i + 1))); }
+  }
 }
 /* Beside the unit, on the same ground, clear of it. */
 function cgBeside(objects, extras){
@@ -253,14 +391,14 @@ function cgUnitRows(){
   const el = document.getElementById('cgUnitRows');
   if(!el) return;
   const f = CG_UNIT.f, q = (f.q || '').trim().toLowerCase();
-  const rows = ((CG_UNIT.units || {}).list || []).filter(u => (!q || u.type.toLowerCase().includes(q) || (u.soldier || '').toLowerCase().includes(q))
+  const rows = ((CG_UNIT.units || {}).list || []).filter(u => (!q || u.type.toLowerCase().includes(q) || cgUnitModel(u).toLowerCase().includes(q))
     && (!f.faction || (u.factions || []).includes(f.faction)) && (!f.category || u.category === f.category) && (!f.cls || u['class'] === f.cls));
   const peek = (CG_UNIT.peek || {}).type;
   // 2026-11-24: the unit editor's own cards, picture and all
   el.innerHTML = rows.slice(0, 400).map(u => { const t = esc(JSON.stringify(u.type));
     return `<div class="card${u.type === peek ? ' sel' : ''}" onclick="cgUnitPeek(${t})" ondblclick="cgUnitLoad(${t})" title="${esc(u.type)}">
       <img loading="lazy" onerror="iconRetry(this)" src="${iconUrl(state.src, u.type, 'card')}" alt="">
-      <div class="meta"><div class="nm">${esc(u.type)}</div><div class="sub">${esc(u.category)} · ${esc(u['class'])}</div><div class="sub">${esc(u.soldier || '')}</div></div></div>`; }).join('')
+      <div class="meta"><div class="nm">${esc(u.type)}</div><div class="sub">${esc(u.category)} · ${esc(u['class'])}</div><div class="sub">${esc(cgUnitModel(u))}</div></div></div>`; }).join('')
     || `<div class="count">${tt('armory.nothing_matches')}</div>`;
 }
 const cgPicking = () => cgSrc() === 'unit' && (CG_UNIT.picking || !CG_UNIT.unit);
@@ -269,9 +407,10 @@ const cgPicking = () => cgSrc() === 'unit' && (CG_UNIT.picking || !CG_UNIT.unit)
 async function cgUnitPeek(type, model){
   const u = ((CG_UNIT.units || {}).list || []).find(x => x.type === type);
   if(!u) return;
-  const mod = state.src, entry = (model || u.soldier || '').toLowerCase(), a = {kind: 'entry', mod, entry}, key = armAssetKey(a);
+  const mod = state.src, entry = (model || cgUnitModel(u)).toLowerCase(), a = {kind: 'entry', mod, entry}, key = armAssetKey(a);
   const old = CG_UNIT.peek || {};
-  const pk = CG_UNIT.peek = {type, entry, info: u, objects: [], yaw: old.yaw != null ? old.yaw : 0.5, pitch: old.pitch != null ? old.pitch : 0.12, loading: true, err: ''};
+  const pk = CG_UNIT.peek = {type, entry, info: u, objects: [], yaw: old.yaw != null ? old.yaw : 0.5, pitch: old.pitch != null ? old.pitch : 0.12, loading: true, err: '',
+    zoom: old.type === type ? old.zoom : 1, pan: old.type === type ? old.pan : null};
   cgUnitRows(); cgPeekPaint();
   const live = await armLoadAsset(a);
   if(CG_UNIT.peek !== pk) return;
@@ -298,6 +437,7 @@ function cgPeekPaint(){
   const t = pk && esc(JSON.stringify(pk.type));
   head.innerHTML = pk ? `<b>${esc(pk.type)}</b><span class="count">${esc(u.category)} · ${esc(u['class'])} · ${esc(pk.entry)}</span>
       ${cgUgSelect(u, pk.entry, `cgUnitPeek(${t},this.value)`)}<span style="flex:1"></span>
+      ${pk.err ? `<button class="mini" onclick="cgRetry(${t},${esc(JSON.stringify(pk.entry))},true)">${tt('cards.gen_retry')}</button>` : ''}
       ${CG_UNIT.unit ? `<button class="mini" onclick="CG_UNIT.picking=false;cgPaint()">${tt('cards.gen_peek_cancel')}</button>` : ''}
       <button class="primary" onclick="cgUnitLoad(${t},${esc(JSON.stringify(pk.entry))})">${tt('cards.gen_peek_use')}</button>`
     : `<span class="count">${tt('cards.gen_peek_none')}</span>`;
@@ -313,10 +453,11 @@ function cgPeekPaint(){
   if(pk.err) return say(pk.err);
   const b = armBounds(pk.objects);
   if(!b) return;
-  const [lo, hi] = b, target = [-(lo[0] + hi[0]) / 2, (lo[1] + hi[1]) / 2, (lo[2] + hi[2]) / 2];
+  const [lo, hi] = b, pan = pk.pan || [0, 0, 0], target = [-(lo[0] + hi[0]) / 2 + pan[0], (lo[1] + hi[1]) / 2 + pan[1], (lo[2] + hi[2]) / 2 + pan[2]];
   // across the ground its diagonal, so a mount or engine beside it fits at any turn
   const size = Math.max(hi[1] - lo[1], Math.hypot(hi[0] - lo[0], hi[2] - lo[2]) * h / w) * 0.62 / 0.42;
   const dist = Math.max(0.05, size * 1.1 / (pk.zoom || 1));
+  pk.span = 2 * dist * Math.tan(0.375) / h * ratio;      // the world across one CSS pixel, for a pan
   const eye = [target[0] + dist * Math.cos(pk.pitch) * Math.sin(pk.yaw), target[1] + dist * Math.sin(pk.pitch), target[2] + dist * Math.cos(pk.pitch) * Math.cos(pk.yaw)];
   const cam = {proj: v3Perspective(0.75, w / h, dist / 100, dist * 10), view: v3LookAt(eye, target, [0, 1, 0])};
   if(!armRender(pk.objects, w, h, cam, {plain: true, bg: [0.21, 0.24, 0.28]})) return;
@@ -329,16 +470,25 @@ function cgTexturesIn(){
 function cgPeekWire(canvas){
   if(canvas.dataset.wired) return;
   canvas.dataset.wired = '1';
-  let last = null;
-  canvas.addEventListener('pointerdown', e => { last = [e.clientX, e.clientY]; canvas.setPointerCapture(e.pointerId); });
+  let last = null, pan = false;
+  // 2026-11-24: a left drag turns it, a right (or middle) drag moves it
+  canvas.addEventListener('pointerdown', e => { last = [e.clientX, e.clientY]; pan = e.button !== 0; canvas.setPointerCapture(e.pointerId); });
   canvas.addEventListener('pointermove', e => {
     const pk = CG_UNIT.peek;
     if(!last || !pk) return;
-    // Armory Studio's turn: a drag right swings the eye left round the model
-    pk.yaw -= (e.clientX - last[0]) * 0.0035;
-    pk.pitch = Math.max(-1.4, Math.min(1.4, pk.pitch + (e.clientY - last[1]) * 0.0035));
+    const dx = e.clientX - last[0], dy = e.clientY - last[1];
+    if(pan){
+      const s = pk.span || 0.005, right = [Math.cos(pk.yaw), 0, -Math.sin(pk.yaw)];
+      const up = [-Math.sin(pk.pitch) * Math.sin(pk.yaw), Math.cos(pk.pitch), -Math.sin(pk.pitch) * Math.cos(pk.yaw)];
+      pk.pan = (pk.pan || [0, 0, 0]).map((v, k) => v - right[k] * dx * s + up[k] * dy * s);
+    }else{
+      // Armory Studio's turn: a drag right swings the eye left round the model
+      pk.yaw -= dx * 0.0035;
+      pk.pitch = Math.max(-1.4, Math.min(1.4, pk.pitch + dy * 0.0035));
+    }
     last = [e.clientX, e.clientY]; cgPeekPaint();
   });
+  canvas.addEventListener('dblclick', () => { const pk = CG_UNIT.peek; if(pk){ pk.pan = null; pk.zoom = 1; cgPeekPaint(); } });
   canvas.addEventListener('pointerup', () => { last = null; });
   canvas.addEventListener('contextmenu', e => e.preventDefault());
   canvas.addEventListener('wheel', e => { const pk = CG_UNIT.peek; if(!pk) return; e.preventDefault(); pk.zoom = Math.max(0.3, Math.min(8, (pk.zoom || 1) * Math.exp(-e.deltaY * 0.0015))); cgPeekPaint(); }, {passive: false});
@@ -364,12 +514,14 @@ function cgUgHtml(){
   if(!u || CG_UNIT.picking) return '';
   return cgUgSelect(u, CG_UNIT.entry, `cgUnitLoad(${esc(JSON.stringify(u.type))},this.value)`);
 }
-/* armour_ug_models lists a model per upgrade level from 0; the soldier model
-   is offered too when that list leaves it out. One model at every level: the
-   list greyed out, and said so. Also in the unit picker's 3D view. */
+/* armour_ug_models lists a model per upgrade level from 0. 2026-11-24: only
+   those are offered and loaded; the soldier line's model only for a unit with
+   no such list. One model at every level: the list greyed out, and said so.
+   Also in the unit picker's 3D view. */
+const cgUnitModel = u => ((u.ug || [])[0] || u.soldier || '');
 function cgUgSelect(u, current, onchange){
   const ug = (u.ug || []).map(m => m.toLowerCase()), soldier = (u.soldier || '').toLowerCase();
-  const models = [...(soldier && !ug.includes(soldier) ? [[soldier, tt('cards.gen_ug_base')]] : []), ...ug.map((m,i) => [m, tt('cards.gen_ug_level',{level:i})])];
+  const models = ug.length ? ug.map((m,i) => [m, tt('cards.gen_ug_level',{level:i})]) : soldier ? [[soldier, tt('cards.gen_ug_base')]] : [];
   if(!models.length) return '';
   const same = new Set(models.map(m => m[0])).size < 2, at = models.findIndex(m => m[0] === current);
   return cgField(tt('cards.gen_ug'), `<select${same ? ' disabled' : ''} onchange="${onchange}">${models.map(([m,label],i) =>
@@ -452,7 +604,7 @@ function cgRigHtml(){
   const r = cg().rig;
   return `<div class="cgrig">${cgField(tt('cards.gen_rig'), cgSelectHtml('rig','type',[['auto',tt('cards.gen_rig_auto',{rig:cgRigType()})],...['infantry','archer','dwarf'].map(t => [t,t])]))}
     <label class="armcheck" title="${ttA('cards.gen_two_hands_title')}"><input type="checkbox" ${((r.basis.Switch || {}).l || [0,0])[1] > 0 ? 'checked' : ''} onchange="cgTwoHands(this.checked)">${tt('cards.gen_two_hands')}</label>
-    ${cgCheckHtml('rig','handles','cards.gen_handles')}<button class="mini" onclick="cg().rig.basis={};cgFitChanged();cgPaint()">${tt('cards.gen_rig_reset')}</button>
+    <button class="mini" onclick="cg().rig.basis={};cgFitChanged();cgPaint()">${tt('cards.gen_rig_reset')}</button>
     <div id="cgBone">${cgBoneHtml()}</div></div>`;
 }
 /* 2026-11-23: the pose library as pictures, each pose drawn on this model
@@ -498,7 +650,7 @@ function cgCameraHtml(){
     ${cgField(tt('cards.gen_framing'), cgSelectHtml('fit','part',['whole','knees','thighs','waist'].map(x => [x,tt(CG_FRAME_KEYS[x])])), tt('cards.gen_framing_hint'))}
     ${cgCheckHtml('fit','auto','cards.gen_fit_auto')}
     ${cgIsInfo() ? '' : `<div title="${ttA('cards.gen_guide_title')}">${cgCheckHtml('','guide','cards.gen_guide')}</div>`}
-    <button class="mini" id="cgReset" ${cgPlacementReset() ? 'disabled' : ''} onclick="cg().xf={t:[0,0,0],r:[0,0,0]};cg().cam.pan=0;cgPaint()">${tt('cards.gen_place_reset')}</button>
+    <button class="mini" id="cgReset" ${cgPlacementReset() ? 'disabled' : ''} onclick="cg().xf={t:[0,0,0],r:[0,0,0],s:1};cg().cam.pan=0;cgPaint()">${tt('cards.gen_place_reset')}</button>
     <span class="armnav" title="${esc(tt('armory.nav_title'))}">${tt('armory.nav')}
       <button class="mini${armNav() === 'simple' ? ' on' : ''}" onclick="armNavSet('simple');cgPaint()">${tt('armory.nav_simple')}</button>
       <button class="mini${armNav() === 'blender' ? ' on' : ''}" onclick="armNavSet('blender');cgPaint()">${tt('armory.nav_blender')}</button></span>
@@ -513,10 +665,22 @@ function cgGroundHtml(){
     <p class="count">${tt('cards.gen_ground_none_note')}</p>${cgIsInfo() ? cgCheckHtml('','gframe','cards.gen_game_frame') : ''}`);
 }
 function cgLightHtml(){
-  const c = cg();
-  return cgSec('light', tt('cards.gen_light'), `<div>${['sun','point'].map(x => `<label><input type="radio" name="cgLight" ${c.light.type === x ? 'checked' : ''} onchange="cgSet('light','type','${x}',false)">${tt(CG_LIGHT_KEYS[x])}</label>`).join('')}</div>
-    ${[['azimuth','cards.gen_azimuth',-180,180,1],['elevation','cards.gen_elevation',-60,89,1],['amount','cards.gen_amount',0,2,0.01],['level','cards.gen_level',0.2,2.5,0.01],['ambient','cards.gen_ambient',0,1,0.01]].map(x => cgRange('light',...x)).join('')}`);
+  const c = cg(), flat = !!c.light.flat, extra = c.lights || [];
+  const lamp = ['azimuth','cards.gen_azimuth',-180,180,1], tilt = ['elevation','cards.gen_elevation',-60,89,1], amount = ['amount','cards.gen_amount',0,2,0.01];
+  const more = extra.map((x,i) => `<div class="cglamp"><div class="armexprow"><b>${tt('cards.gen_light_n',{n:i+2})}</b>
+      <select onchange="cgLamp(${i},'type',this.value)">${['sun','point'].map(k => `<option value="${k}"${x.type === k ? ' selected' : ''}>${tt(CG_LIGHT_KEYS[k])}</option>`).join('')}</select>
+      <span style="flex:1"></span><button class="mini" title="${ttA('cards.gen_light_remove')}" onclick="cgLampRemove(${i})">✕</button></div>
+    ${[lamp,tilt,amount].map(([k,label,min,max,step]) => `<label class="cgrange"><span>${tt(label)}</span><input type="range" min="${min}" max="${max}" step="${step}" value="${x[k]}" oninput="cgLamp(${i},'${k}',+this.value);this.nextElementSibling.textContent=Math.round(this.value*100)/100"><span>${Math.round(x[k]*100)/100}</span></label>`).join('')}</div>`).join('');
+  return cgSec('light', tt('cards.gen_light'), `<div class="armexprow" title="${ttA('cards.gen_light_flat_title')}">
+      <button class="mini${flat ? '' : ' on'}" onclick="cgSet('light','flat',false,true)">${tt('cards.gen_light_lit')}</button>
+      <button class="mini${flat ? ' on' : ''}" onclick="cgSet('light','flat',true,true)">${tt('cards.gen_light_flat')}</button></div>
+    ${flat ? '' : `<div>${['sun','point'].map(x => `<label><input type="radio" name="cgLight" ${c.light.type === x ? 'checked' : ''} onchange="cgSet('light','type','${x}',false)">${tt(CG_LIGHT_KEYS[x])}</label>`).join('')}</div>
+    ${[lamp,tilt,amount,['level','cards.gen_level',0.2,2.5,0.01],['ambient','cards.gen_ambient',0,1,0.01]].map(x => cgRange('light',...x)).join('')}
+    ${more}${extra.length < CG_LIGHTS_MAX-1 ? `<button class="mini" onclick="cgLampAdd()">${tt('cards.gen_light_add')}</button>` : ''}`}`);
 }
+function cgLampAdd(){ const c = cg(); c.lights = [...(c.lights || []),{type:'sun',azimuth:-120,elevation:25,amount:0.5}].slice(0,CG_LIGHTS_MAX-1); cgPaint(); }
+function cgLampRemove(i){ const c = cg(); c.lights = (c.lights || []).filter((x,k) => k !== i); cgPaint(); }
+function cgLamp(i,key,value){ const c = cg(); c.lights = (c.lights || []).map((x,k) => k === i ? {...x,[key]:value} : x); cgDraw(); }
 function cgFinishHtml(){
   return cgSec('painted', tt('cards.gen_painted'), `${cgCheckHtml('paint','on','cards.gen_painted_on')}
     <div title="${ttA('cards.gen_painted_title')}">${cgRange('paint','strength','cards.gen_painted_strength',0.3,2,0.05)}</div>`)
@@ -528,7 +692,7 @@ function cgPaint(){
   const nav = bmdbTabsHtml(tt('cards.data_ui_units_data_ui_unit')) + cardsSubTabsHtml();
   if(!picking && !cgAllObjects().length){
     main.innerHTML = nav + `<div class="cggrid"><div class="cgctl">${cgSourceHtml()}<div class="armexperr" id="cgError">${esc(c.err || '')}</div></div>
-      <div class="armempty">${cgSrc() === 'unit' ? (CG_UNIT.unit ? tt('armory.reading') : tt('cards.gen_pick_unit_first'))
+      <div class="armempty">${cgSrc() === 'unit' ? (CG_UNIT.unit ? (c.err ? `<button class="btn" onclick="cgRetry(${esc(JSON.stringify(CG_UNIT.unit))},${esc(JSON.stringify(CG_UNIT.entry))})">${tt('cards.gen_retry')}</button>` : tt('armory.reading')) : tt('cards.gen_pick_unit_first'))
         : `${tt('cards.gen_no_model')}<br><button class="btn" onclick="setAppMode('armory')">${tt('core.armory_studio')}</button>`}</div></div>`;
     cgLayout(); keep();
     return;
@@ -542,7 +706,7 @@ function cgPaint(){
     ${cgSec('save', tt('cards.gen_save_legend'), `${cgSrc() === 'unit' ? '' : `<input value="${esc(c.name)}" placeholder="${ttA('cards.gen_name_hint')}" oninput="cg().name=this.value">`}
     <div class="armexprow"><button class="primary" onclick="cgSave(false)">${tt('cards.gen_save')}</button><button onclick="cgSave(true)">${tt('cards.gen_save_hd')}</button></div>
     <div id="cgSaveResult">${cgSavedHtml()}</div>`)}`;
-  const right = picking ? cgPeekHtml() : `<div class="cgout"><div class="cghd"><span class="count">${tt('cards.gen_hd',{w:hw,h:hh})}</span><div class="cghdview" id="cgHdView"><canvas id="cgHd" tabindex="0" width="${hw}" height="${hh}"></canvas><canvas id="cgHdUi"></canvas></div></div>
+  const right = picking ? cgPeekHtml() : `<div class="cgout"><div class="cghd"><div class="armexprow cgviewbar" id="cgViewBar">${cgViewBarHtml(hw,hh)}</div><div class="cghdview" id="cgHdView"><canvas id="cgHd" tabindex="0" width="${hw}" height="${hh}"></canvas><canvas id="cgHdUi"></canvas>${cgKeysHtml()}</div></div>
     <div class="cgcard"><span class="count">${tt('cards.gen_card',{w,h})}</span><canvas id="cgCard" width="${w}" height="${h}" style="image-rendering:pixelated;width:${w*3}px;max-width:100%;height:auto"></canvas>
     <div id="cgObjs">${cgObjListHtml()}</div></div></div>`;
   main.innerHTML = nav + `<div class="cggrid"><div class="cgctl">${cgSourceHtml()}${controls}<div class="armexperr" id="cgError">${esc(c.err || '')}</div></div>${right}</div>`;
@@ -585,8 +749,24 @@ function cgObjListHtml(){
         <span class="armotilename">${esc(o.mesh)}</span>${eye}</div>`
       : `<div class="armrow${cls}" onclick="cgObjPick(${o.id})">${eye}<span class="armrowname">${esc(o.mesh)}${o.flag ? ` <i class="count">${tt('armory.opt')}</i>` : ''}</span></div>`;
   };
-  const body = [...groups].map(([k, objs]) => `<div class="armfoldbox"><div class="armfoldhead"><b class="armfoldname">${esc(objs[0].name)}</b><span class="count">${objs.length}</span></div>
-      ${gal ? `<div class="armotiles">${objs.map(row).join('')}</div>` : `<div class="armrows">${objs.map(row).join('')}</div>`}</div>`).join('');
+  const part = ([k, objs]) => `<div class="armfoldbox"><div class="armfoldhead"><b class="armfoldname">${esc(objs[0].name)}</b><span class="count">${objs.length}</span>
+      <span style="flex:1"></span><button class="mini" title="${ttA('cards.gen_dup_part')}" onclick="cgDuplicate(${esc(JSON.stringify(objs.map(o => o.id)))},${esc(JSON.stringify(objs[0].name))})">⧉</button></div>
+      ${gal ? `<div class="armotiles">${objs.map(row).join('')}</div>` : `<div class="armrows">${objs.map(row).join('')}</div>`}</div>`;
+  // 2026-11-24: a fold per model, its parts' folds inside
+  const body = [...cgGroups()].map(([gk, objs]) => {
+    const name = cgGroupName(gk, objs), g = cgGroupXf(gk), dup = gk.startsWith('dup:') ? +gk.slice(4) : 0, q = esc(JSON.stringify(gk));
+    const shown = objs.filter(o => drawn.has(o.id)).length, parts = new Map();
+    for(const o of objs){ const k = cgPartKey(o); if(!parts.has(k)) parts.set(k, []); parts.get(k).push(o); }
+    return `<details class="cggroup"${CG_SHUT.has('grp:' + gk) ? '' : ' open'} ontoggle="cgSecToggle(${esc(JSON.stringify('grp:' + gk))},this.open)">
+      <summary><b>${esc(name)}</b> <span class="count">${shown} / ${objs.length}</span></summary>
+      <div class="armexprow"><button class="mini${CG_WORK.grpSel === gk ? ' on' : ''}" title="${ttA('cards.gen_grp_pick_title')}" onclick="cgGroupPick(${q})">${tt('cards.gen_grp_pick')}</button>
+        <button class="mini" title="${ttA('armory.hide_show')}" onclick="cgGroupHide(${q})">${objs.every(o => off.has(o.id)) ? '◌' : '●'}</button>
+        <button class="mini" title="${ttA('cards.gen_dup_model_title')}" onclick="cgDuplicate(${esc(JSON.stringify(objs.map(o => o.id)))},${esc(JSON.stringify(name))})">${tt('cards.gen_dup_model')}</button>
+        ${cgRiderSpotsHtml(gk, objs)}
+        ${dup ? `<button class="mini" title="${ttA('cards.gen_dup_remove')}" onclick="cgDupRemove(${dup})">✕</button>` : ''}</div>
+      <label class="cgrange"><span>${tt('cards.gen_grp_scale')}</span><input type="range" min="0.2" max="3" step="0.01" value="${Number(g.s) || 1}" oninput="cgGroupScale(${q},+this.value)"><span data-cggs="${esc(gk)}">${Math.round((Number(g.s) || 1)*100)/100}</span></label>
+      ${[...parts].map(part).join('')}</details>`;
+  }).join('');
   return cgSec('objects', `${tt('armory.objects')} <span class="count">${drawn.size} / ${all.length}</span>`, `<div class="armexprow"><span style="flex:1"></span>
       <button class="mini${gal ? '' : ' on'}" onclick="cgObjView('list')">${tt('armory.as_list')}</button>
       <button class="mini${gal ? ' on' : ''}" onclick="cgObjView('gallery')">${tt('armory.as_gallery')}</button></div>
@@ -638,7 +818,7 @@ function cgObjPick(id){
   const c = cg(), o = cgAllObjects().find(x => x.id === id);
   if(!o) return;
   if(cgGearOff(o)) c.gear = 'custom';
-  CG_WORK.objSel = id;
+  CG_WORK.objSel = id; CG_WORK.mode = 'object'; CG_WORK.selAll = false; CG_WORK.grpSel = '';
   c.pick = {...c.pick, [cgPartKey(o)]: id}; c.off = (c.off || []).filter(x => x !== id);
   cgFitChanged(); cgPaint();
 }
@@ -659,7 +839,7 @@ function cgRandom(){
   }
   c.pick = pick; c.oneEach = true; cgFitChanged(); cgPaint();
 }
-function cgPlacementReset(){ const c = cg(); return !c.cam.pan && [...c.xf.t,...c.xf.r].every(v => !v); }
+function cgPlacementReset(){ const c = cg(); return !c.cam.pan && (c.xf.s || 1) === 1 && [...c.xf.t,...c.xf.r].every(v => !v); }
 function cgSet(group,key,value,redraw){
   const c = cg(); (group ? c[group] : c)[key] = value;
   const out = document.getElementById('cgv_' + group + '_' + key); if(out) out.textContent = typeof value === 'number' ? Math.round(value*100)/100 : value;
@@ -720,7 +900,7 @@ function cgLibraryPose(index,auto){
    default turn, tilt and size, nothing moved. */
 function cgCamDefault(){
   const c = cg();
-  c.cam = {yaw:20,pitch:4,scale:1.2,height:0,pan:0}; c.xf = {t:[0,0,0],r:[0,0,0]};
+  c.cam = {yaw:20,pitch:4,scale:1.2,height:0,pan:0,persp:!!c.cam.persp}; c.xf = {t:[0,0,0],r:[0,0,0],s:1};
   CG_WORK.view = null; CG_WORK.fit = null;
 }
 /* 2026-11-24: the library opens on the folder for the skeleton played (a spear
@@ -730,11 +910,13 @@ function cgCamDefault(){
 function cgPoseFolder(){
   const a = armAnim(), skel = (a.skel || '').toLowerCase(), cats = new Set(cgLibPoses().map(p => p.c));
   // a rider's set names his mount (modeldb's mount line), whatever its skeletons are called
-  const riding = !!(a.set && a.set.mount && a.set.mount.toLowerCase() !== 'none');
+  // 2026-11-24: an elephant's crew stand in a howdah: posed as men on foot
+  const beast = /elephant|mumak|oliphaunt|howdah|crew/;
+  const riding = !!(a.set && a.set.mount && a.set.mount.toLowerCase() !== 'none') && !beast.test(((a.set || {}).mount || '').toLowerCase() + ' ' + skel);
   const base = cgRigType() === 'dwarf' ? 'IK Dwarves Full' : /orc|goblin|uruk|snaga/.test(skel) ? 'IK Orcs Full' : 'IK Full';
   // the subfolder by its name in the kit's library, any case
   const sub = /crossbow/.test(skel) ? 'crossbow' : /bow|archer|sling/.test(skel) ? 'archer' : /javelin/.test(skel) ? 'javelin'
-    : riding || /cavalry|mounted|horse|lance|camel|elephant|_cav|rider/.test(skel) ? 'mounted'
+    : riding || !beast.test(skel) && /cavalry|mounted|horse|lance|camel|_cav|rider/.test(skel) ? 'mounted'
     : /pike|halberd|polearm|poleaxe|glaive|bill|partisan|voulge/.test(skel) ? 'polearm' : /spear/.test(skel) ? 'spears'
     : /2h|two_?hand|2handed|great|maul|zweihand/.test(skel) ? '2h' : '1h';
   const under = top => [...cats].find(x => x.toLowerCase() === (top + '/' + sub).toLowerCase());
@@ -755,8 +937,9 @@ function cgBounds(objects){
   const a = armAnim();
   if(a.data){
     const lo = [Infinity,Infinity,Infinity], hi = [-Infinity,-Infinity,-Infinity];
-    for(const o of objects){ const g = a.geos.get(o.id); if(cgStill(o) || !g || !g.posed) continue; const p = g.outPos;
-      for(let i=0;i<p.length;i+=3) for(let k=0;k<3;k++){ lo[k]=Math.min(lo[k],p[i+k]); hi[k]=Math.max(hi[k],p[i+k]); }
+    for(const o of objects){ const g = a.geos.get(o.id); if(cgStill(o) || !g || !g.posed) continue; const p = g.outPos, m = o.post;
+      for(let i=0;i<p.length;i+=3){ const q = m ? cgMatrixPoint(m,[p[i],p[i+1],p[i+2]]) : [p[i],p[i+1],p[i+2]];
+        for(let k=0;k<3;k++){ lo[k]=Math.min(lo[k],q[k]); hi[k]=Math.max(hi[k],q[k]); } }
     }
     // a mount or engine beside the unit stands as it is
     const still = objects.some(cgStill) && armBounds(objects.filter(cgStill));
@@ -766,10 +949,23 @@ function cgBounds(objects){
   return b || [[-0.5,0,-0.5],[0.5,2,0.5]];
 }
 function cgMatrixPoint(m,p){ return [0,1,2].map(k => m[k]*p[0]+m[k+4]*p[1]+m[k+8]*p[2]+m[k+12]); }
+/* Through a projection: divided by w, so a perspective camera's points land too. */
+function cgProject(m,p){ const q = cgMatrixPoint(m,p), w = m[3]*p[0]+m[7]*p[1]+m[11]*p[2]+m[15] || 1; return q.map(v => v/w); }
+/* 2026-11-24: Orthographic (the game's cards) or Perspective, for the view and
+   the card alike. A perspective eye stands where the same height fills the
+   frame at the model's middle. */
+const CG_FOV = 0.6;
+function cgLens(target,yaw,pitch,height,width){
+  const persp = !!cg().cam.persp, dist = persp ? height/2/Math.tan(CG_FOV/2) : 10;
+  const eye = [target[0]+dist*Math.cos(pitch)*Math.sin(yaw),target[1]+dist*Math.sin(pitch),target[2]+dist*Math.cos(pitch)*Math.cos(yaw)];
+  const proj = persp ? v3Perspective(CG_FOV,width/height,dist/50,dist*20) : [2/width,0,0,0,0,2/height,0,0,0,0,-0.01,0,0,0,0,1];
+  return {eye,proj,view:v3LookAt(eye,target,[0,1,0])};
+}
 function cgCamera(objects,w,h){
   const c = cg(), [lo,hi] = cgBounds(objects), center = lo.map((v,i) => (v+hi[i])/2);
   const r = c.xf.r, t = c.xf.t;
-  const pre = armMul(armTrans(center[0]+t[0],center[1]+t[1],center[2]+t[2]),armMul(armRot(...r),armTrans(-center[0],-center[1],-center[2])));
+  const k = Number(c.xf.s) || 1;
+  const pre = armMul(armTrans(center[0]+t[0],center[1]+t[1],center[2]+t[2]),armMul(armRot(...r),armMul(armScale(k,k,k),armTrans(-center[0],-center[1],-center[2]))));
   if(!CG_WORK.fit){
     const fraction = {whole:1,knees:0.78,thighs:0.64,waist:0.5}[c.fit.part] || 1;
     const height = Math.max(0.1,hi[1]-lo[1]);
@@ -778,15 +974,22 @@ function cgCamera(objects,w,h){
   }
   const fit = CG_WORK.fit, height = fit.height * c.cam.scale, width = height*w/h;
   const target = [...fit.target]; target[0] += c.cam.pan; target[1] += c.cam.height;
-  const yaw = c.cam.yaw*Math.PI/180, pitch = c.cam.pitch*Math.PI/180, dist = 10;
-  const eye = [target[0]+dist*Math.cos(pitch)*Math.sin(yaw),target[1]+dist*Math.sin(pitch),target[2]+dist*Math.cos(pitch)*Math.cos(yaw)];
-  const proj = [2/width,0,0,0,0,2/height,0,0,0,0,-0.01,0,0,0,0,1];
-  return {proj,view:v3LookAt(eye,target,[0,1,0]),eye,pre,height,width,target};
+  const {eye,proj,view} = cgLens(target,c.cam.yaw*Math.PI/180,c.cam.pitch*Math.PI/180,height,width);
+  return {proj,view,eye,pre,height,width,target};
 }
+/* 2026-11-24: the main lamp and up to three more (c.lights), each a sun or a
+   point turning with the camera; Flat is no lamp and a full ambient, Blender's
+   Flat lighting with the texture's own colour. */
+const CG_LIGHTS_MAX = 4;
 function cgLight(camera,yaw){
-  const c = cg(), l = c.light, az = (Number(l.azimuth)+Number(yaw != null ? yaw : c.cam.yaw))*Math.PI/180, el = l.elevation*Math.PI/180;
-  const dir = [Math.sin(az)*Math.cos(el),Math.sin(el),Math.cos(az)*Math.cos(el)];
-  return {...l,point:l.type === 'point',dir,pos:camera.target.map((v,i) => v+dir[i]*4)};
+  const c = cg(), l = c.light;
+  if(l.flat) return {ambient:1,level:1,list:[]};
+  const lamp = x => {
+    const az = (Number(x.azimuth)+Number(yaw != null ? yaw : c.cam.yaw))*Math.PI/180, el = Number(x.elevation)*Math.PI/180;
+    const dir = [Math.sin(az)*Math.cos(el),Math.sin(el),Math.cos(az)*Math.cos(el)];
+    return {point:x.type === 'point',amount:Number(x.amount),dir,pos:camera.target.map((v,i) => v+dir[i]*4)};
+  };
+  return {ambient:l.ambient,level:l.level,list:[l,...(c.lights || [])].slice(0,CG_LIGHTS_MAX).map(lamp)};
 }
 /* 2026-11-23: the HD view is a viewport of its own, as Armory Studio's is: it
    turns about a fixed point (the model's middle, set when the model is
@@ -802,13 +1005,13 @@ function cgViewCamera(card,w,h){
   if(!v.pivot){ v.pivot = fit.center.slice(); v.full = Math.max(fit.full,2*(Math.abs(card.target[1]-fit.center[1])+card.height/2),card.width*h/w); }
   const yaw = c.cam.yaw*Math.PI/180, pitch = c.cam.pitch*Math.PI/180;
   const height = v.full*1.1/v.zoom, width = height*w/h;
-  const target = v.pivot.slice(), dist = 10;
-  const eye = [target[0]+dist*Math.cos(pitch)*Math.sin(yaw),target[1]+dist*Math.sin(pitch),target[2]+dist*Math.cos(pitch)*Math.cos(yaw)];
-  const proj = [2/width,0,0,0,0,2/height,0,0,0,0,-0.01,0,0,0,0,1], view = v3LookAt(eye,target,[0,1,0]);
-  // the card's frame: its camera looks the same way, so its middle and size are enough
-  const q = cgMatrixPoint(armMul(proj,view),card.target), cx = (q[0]+1)*w/2, cy = (1-q[1])*h/2;
-  const fw = card.width/width*w, fh = card.height/height*h;
-  return {camera:{proj,view,eye,pre:card.pre,height,width,target},cut:{x:cx-fw/2,y:cy-fh/2,w:fw,h:fh}};
+  const target = v.pivot.slice(), {eye,proj,view} = cgLens(target,yaw,pitch,height,width);
+  // the card's frame: its camera looks the same way, so its corners, upright
+  // across the line of sight at its middle, are enough
+  const right = [Math.cos(yaw),0,-Math.sin(yaw)], up = [-Math.sin(pitch)*Math.sin(yaw),Math.cos(pitch),-Math.sin(pitch)*Math.cos(yaw)], m = armMul(proj,view);
+  const corner = (a,b) => { const q = cgProject(m,card.target.map((x,k) => x+right[k]*a*card.width/2+up[k]*b*card.height/2)); return [(q[0]+1)*w/2,(1-q[1])*h/2]; };
+  const p0 = corner(-1,1), p1 = corner(1,-1);
+  return {camera:{proj,view,eye,pre:card.pre,height,width,target},cut:{x:Math.min(p0[0],p1[0]),y:Math.min(p0[1],p1[1]),w:Math.abs(p1[0]-p0[0]),h:Math.abs(p1[1]-p0[1])}};
 }
 /* A pan moves the point the view turns about (Blender's Shift + middle drag). */
 function cgViewPan(dx,dy){
@@ -835,13 +1038,100 @@ function cgView(){
   if(hd.width !== w || hd.height !== h){ hd.width = w; hd.height = h; }
   const c = cg(), objects = cgObjects(), [cw,ch] = CG_WORK.hdSize || [480,640];
   try{
-    if(CG_WORK.posed !== CG_WORK.poseGen){ armAnimPose(cgMoving(objects)); CG_WORK.posed = CG_WORK.poseGen; }
+    if(CG_WORK.posed !== CG_WORK.poseGen){ cgPose(cgMoving(objects)); CG_WORK.posed = CG_WORK.poseGen; }
     const card = cgCamera(objects,cw,ch), seen = cgViewCamera(card,w,h);
     CG_WORK.camera = seen.camera; CG_WORK.cut = seen.cut; CG_WORK.cardCam = card;
-    if(!armRender(objects,w,h,seen.camera,{plain:true,card:true,pre:card.pre,light:cgLight(card),bg:[0.2,0.22,0.26]})) return;
+    // the objects picked in Object mode lit up, as Armory Studio's hover is
+    const hi = cgMode() === 'object' ? new Set(cgSelected()) : null;
+    if(!armRender(objects,w,h,seen.camera,{plain:true,card:true,pre:card.pre,light:cgLight(card),bg:[0.2,0.22,0.26],hi})) return;
     const ctx = hd.getContext('2d'); ctx.drawImage(ARM.glCanvas,0,0,w,h,0,0,w,h);
     cgOverlay();
   }catch(e){ c.err = errText(e); const error = document.getElementById('cgError'); if(error) error.textContent = c.err; }
+}
+/* --- 2026-11-24: the HD view's own bar, as Blender's header is -------------
+   Object mode picks the model's objects (a click, A for all) and G, R and S
+   move, turn and scale them; Pose mode the rig's controllers; Rest shows the
+   rig at rest. On the right: the card's frame and guide (Overlay), the rig's
+   handles (Bones) and the lens. */
+function cgMode(){ const m = CG_WORK.mode || 'pose'; return m === 'pose' && !cgRigActive() ? 'object' : m; }
+function cgViewBarHtml(hw,hh){
+  const c = cg(), mode = cgMode(), rig = cgRigActive(), b = (on,label,title,click,off) =>
+    `<button class="mini${on ? ' on' : ''}" title="${ttA(title)}" onclick="${click}"${off ? ' disabled' : ''}>${tt(label)}</button>`;
+  return `${b(mode === 'object','cards.gen_mode_object','cards.gen_mode_object_title',"cgModeSet('object')")}
+    ${b(mode === 'pose','cards.gen_mode_pose','cards.gen_mode_pose_title',"cgModeSet('pose')",!rig)}
+    ${b(CG_WORK.rest && rig,'cards.gen_mode_rest','cards.gen_mode_rest_title','cgRestToggle()',!rig)}
+    <span class="count">${tt('cards.gen_hd',{w:hw,h:hh})}</span><span style="flex:1"></span>
+    ${b(c.overlay,'cards.gen_overlay','cards.gen_overlay_title',"cgToggle('overlay')")}
+    ${b(rig && c.rig.handles,'cards.gen_bones','cards.gen_bones_title',"cgToggle('handles')",!rig)}
+    ${b(false,c.cam.persp ? 'cards.gen_lens_persp' : 'cards.gen_lens_ortho','cards.gen_lens_title',"cgToggle('persp')")}`;
+}
+function cgViewBarPaint(){ const el = document.getElementById('cgViewBar'); if(el) el.innerHTML = cgViewBarHtml(...(CG_WORK.hdSize || [480,640])); }
+function cgKeysHtml(){
+  return `<details class="cgkeys"${CG_SHUT.has('keys') ? ' open' : ''} ontoggle="cgSecToggle('keys',!this.open)"><summary>${tt('cards.gen_keys')}</summary>
+    <div>${['cards.gen_keys_turn','cards.gen_keys_select','cards.gen_keys_all','cards.gen_keys_gsr','cards.gen_keys_axis','cards.gen_keys_keep'].map(k => `<div>${tt(k)}</div>`).join('')}</div></details>`;
+}
+function cgModeSet(mode){
+  CG_WORK.mode = mode; CG_WORK.selAll = false; CG_WORK.op = null;
+  if(mode === 'object') CG_WORK.boneSel = ''; else CG_WORK.objSel = 0;
+  cgViewBarPaint(); cgBoneRefresh(); cgObjsRefresh(); cgViewAsk();
+}
+function cgRestToggle(){ CG_WORK.rest = !CG_WORK.rest; cgViewBarPaint(); cgDraw(); }
+function cgToggle(what){
+  const c = cg();
+  if(what === 'overlay') c.overlay = !c.overlay;
+  else if(what === 'handles') c.rig.handles = !c.rig.handles;
+  else if(what === 'persp'){ c.cam.persp = !c.cam.persp; CG_WORK.view = null; }
+  cgViewBarPaint();
+  if(what === 'persp') cgMoved(); else cgViewAsk();
+}
+/* Rest: the rig's controllers all at rest, for the view and the card alike. */
+function cgPose(objects){
+  if(!CG_WORK.rest || !cgRigActive()){ armAnimPose(objects); return; }
+  const r = cg().rig, keep = r.basis;
+  r.basis = {};
+  try{ armAnimPose(objects); }finally{ r.basis = keep; }
+}
+function cgObjsRefresh(){ const el = document.getElementById('cgObjs'); if(el){ el.innerHTML = cgObjListHtml(); if(armObjGallery()) armThumbsPaint(); } }
+/* The objects G, R and S act on: every one (A), the one picked, or none, when
+   they act on the whole model. */
+function cgSelected(){
+  if(CG_WORK.selAll) return cgObjects().map(o => o.id);
+  if(CG_WORK.grpSel) return (cgGroups().get(CG_WORK.grpSel) || []).map(o => o.id);
+  return CG_WORK.objSel ? [CG_WORK.objSel] : [];
+}
+function cgSelectAll(){
+  CG_WORK.selAll = !CG_WORK.selAll; CG_WORK.objSel = 0; CG_WORK.boneSel = ''; CG_WORK.grpSel = '';
+  cgBoneRefresh(); cgObjsRefresh(); cgViewAsk();
+}
+/* The object under a point of the view: each drawn in a colour of its own
+   and the pixel there read back. */
+function cgPickObject(point){
+  const cam = CG_WORK.camera, hd = document.getElementById('cgHd'), gl = armGl();
+  if(!cam || !hd || !gl) return 0;
+  const objects = cgObjects(), w = hd.width, h = hd.height;
+  objects.forEach((o,i) => armRender([o],w,h,cam,{plain:true,card:true,pre:cam.pre,mask:true,noClear:i > 0,bg:[0,0,0],
+    maskCol:[((i+1)&255)/255,((i+1)>>8&255)/255,0]}));
+  const px = new Uint8Array(4), x = Math.round(point[0]), y = Math.round(point[1]);
+  if(x < 0 || y < 0 || x >= w || y >= h) return 0;
+  gl.readPixels(x,ARM.glCanvas.height-1-y,1,1,gl.RGBA,gl.UNSIGNED_BYTE,px);
+  cgViewAsk();
+  const i = px[0]+px[1]*256-1;
+  return i >= 0 && objects[i] ? objects[i].id : 0;
+}
+function cgGroupPick(gk){
+  CG_WORK.grpSel = CG_WORK.grpSel === gk ? '' : gk; CG_WORK.objSel = 0; CG_WORK.selAll = false;
+  CG_WORK.mode = 'object'; cgViewBarPaint(); cgObjsRefresh(); cgViewAsk();
+}
+function cgObjClick(point){
+  const id = cgPickObject(point);
+  CG_WORK.objSel = id; CG_WORK.selAll = false; CG_WORK.grpSel = '';
+  cgObjsRefresh(); cgViewAsk();
+}
+/* The picked object's numbers kept up with a G, R or S under way. */
+function cgObjXfSync(){
+  const x = (cg().oxf || {})[CG_WORK.objSel];
+  if(!x) return;
+  for(const k of 'trs') for(let i=0;i<3;i++){ const el = document.querySelector(`[data-cgxf="${k}${i}"]`); if(el) el.value = Math.round(x[k][i]*1000)/1000; }
 }
 /* Something changed: the view now, the card once the changes stop. */
 function cgDraw(){
@@ -862,7 +1152,7 @@ async function cgCardDraw(){
   const c = cg(), objects = cgObjects(), [w,h] = CG_WORK.hdSize || [480,640];
   const hd = CG_WORK.hdCanvas && CG_WORK.hdCanvas.width === w && CG_WORK.hdCanvas.height === h ? CG_WORK.hdCanvas : (CG_WORK.hdCanvas = cgCanvas(w,h));
   try{
-    armAnimPose(cgMoving(objects)); CG_WORK.posed = CG_WORK.poseGen;
+    cgPose(cgMoving(objects)); CG_WORK.posed = CG_WORK.poseGen;
     const camera = cgCamera(objects,w,h);
     const options = {plain:true,card:true,pre:camera.pre,light:cgLight(camera),bg:[0,0,0]};
     if(!armRender(objects,w,h,camera,options)) return;
@@ -1043,7 +1333,7 @@ async function cgGive(apply){
 function cgScreenPoint(p){
   const camera = CG_WORK.camera, hd = document.getElementById('cgHd');
   const world = cgMatrixPoint(camera.pre,p); world[0] = -world[0];
-  const clip = cgMatrixPoint(armMul(camera.proj,camera.view),world);
+  const clip = cgProject(armMul(camera.proj,camera.view),world);
   return [(clip[0]+1)*hd.width/2,(1-clip[1])*hd.height/2];
 }
 function cgOverlay(){
@@ -1056,7 +1346,8 @@ function cgOverlay(){
   overlay.width = hd.width; overlay.height = hd.height;
   const ctx = overlay.getContext('2d'), pref = typeof look === 'function' ? look() : {}, cut = CG_WORK.cut;
   // what lies outside the card dimmed, and the card's edge drawn plain
-  if(cut){
+  // (2026-11-24: the view's Overlay toggle)
+  if(cut && cg().overlay){
     const lw = Math.max(2,hd.width/200);
     ctx.fillStyle = 'rgba(8,10,14,0.5)'; ctx.beginPath(); ctx.rect(0,0,hd.width,hd.height); ctx.rect(cut.x,cut.y,cut.w,cut.h); ctx.fill('evenodd');
     ctx.lineWidth = lw*3; ctx.strokeStyle = 'rgba(0,0,0,0.85)'; ctx.strokeRect(cut.x-lw,cut.y-lw,cut.w+lw*2,cut.h+lw*2);
@@ -1064,7 +1355,9 @@ function cgOverlay(){
     if(cg().guide && !cgIsInfo()) cgGuideDraw(ctx,cut);
   }
   CG_WORK.handles = [];
-  if(!cgRigActive() || !cg().rig.handles || !armAnim().data) return;
+  // 2026-11-24: drawn before the view's first draw (a picture landing, a hover)
+  // there is no camera yet to put the handles through
+  if(!CG_WORK.camera || CG_WORK.rest || cgMode() !== 'pose' || !cgRigActive() || !cg().rig.handles || !armAnim().data) return;
   const rig = cgRigLayout(), W = crSolve(rig,cg().rig.basis,cgRigType()), anim = armAnim().data;
   const pelvis = rig.bones.findIndex(b => b.c === 'm' && /pelvis/i.test(b.n));
   const ai = anim.bones.findIndex(b => /pelvis/i.test(b.name));
@@ -1181,8 +1474,30 @@ function cgWire(){
       // the first move after a G or R from a button only finds the mouse
       if(op.fresh){ op.fresh = false; return; }
       if(op.bone) cgOpBone(op,p,dx,dy);
-      else{
-        if(op.kind === 'r'){
+      else if(op.grp){
+        // a whole model: moved, or scaled about its middle (cgXf)
+        const f = Math.exp((dx-dy)*0.006), movement = cgMoveWorld(dx,dy), i = op.axis ? 'xyz'.indexOf(op.axis) : -1;
+        c.gxf = {...(c.gxf || {})};
+        const g = c.gxf[op.grp] = JSON.parse(JSON.stringify(cgGroupXf(op.grp)));
+        if(op.kind === 's') g.s = Math.max(0.05,Math.min(20,(Number(g.s) || 1)*f));
+        else if(i >= 0) g.t[i] += (dx-dy)*CG_WORK.camera.height/hd.height;
+        else g.t = g.t.map((v,k) => v+movement[k]);
+        const out = document.querySelector(`[data-cggs="${CSS.escape(op.grp)}"]`); if(out) out.textContent = Math.round(g.s*100)/100;
+      }else if(op.objs){
+        // each picked object by the card's own transform for it (c.oxf)
+        c.oxf = {...(c.oxf || {})};
+        const f = Math.exp((dx-dy)*0.006), movement = cgMoveWorld(dx,dy), i = op.axis ? 'xyz'.indexOf(op.axis) : -1;
+        for(const id of op.objs){
+          const x = c.oxf[id] = JSON.parse(JSON.stringify(c.oxf[id] || {t:[0,0,0],r:[0,0,0],s:[1,1,1]}));
+          if(op.kind === 's'){ if(i >= 0) x.s[i] = Math.max(0.01,x.s[i]*f); else x.s = x.s.map(v => Math.max(0.01,v*f)); }
+          else if(op.kind === 'r'){ if(i >= 0) x.r[i] += dx*0.3; else{ x.r[1] += dx*0.3; x.r[0] += dy*0.3; } }
+          else if(i >= 0) x.t[i] += (dx-dy)*CG_WORK.camera.height/hd.height;
+          else x.t = x.t.map((v,k) => v+movement[k]);
+        }
+        cgObjXfSync();
+      }else{
+        if(op.kind === 's') c.xf.s = Math.max(0.05,Math.min(20,(Number(c.xf.s) || 1)*Math.exp((dx-dy)*0.006)));
+        else if(op.kind === 'r'){
           if(op.axis) c.xf.r['xyz'.indexOf(op.axis)] += dx*0.3;
           else{ c.xf.r[1] += dx*0.3; c.xf.r[0] += dy*0.3; }
         }else{
@@ -1216,14 +1531,15 @@ function cgWire(){
   hd.addEventListener('pointerup',e => {
     const d = drag; drag = null;
     if(hd.hasPointerCapture(e.pointerId)) hd.releasePointerCapture(e.pointerId);
-    if(d && d.click && !d.moved) cgBoneSelect('');
+    if(d && d.click && !d.moved){ if(cgMode() === 'object') cgObjClick(cgPointerPoint(e)); else cgBoneSelect(''); }
   });
   hd.addEventListener('keydown',e => {
     const key = e.key.toLowerCase(), op = CG_WORK.op;
     if(key === 'escape'){ e.preventDefault(); if(op) cgOpCancel(); else cgBoneSelect(''); return; }
     if(key === 'enter'){ e.preventDefault(); cgOpAccept(); return; }
     if(op && ['x','y','z'].includes(key)){ e.preventDefault(); op.axis = op.axis === key ? '' : key; return; }
-    if(!op && ['g','r'].includes(key)){ e.preventDefault(); cgOpStart(key,false); }
+    if(!op && ['g','r','s'].includes(key)){ e.preventDefault(); cgOpStart(key,false); }
+    else if(!op && key === 'a' && !e.ctrlKey && !e.metaKey){ e.preventDefault(); cgSelectAll(); }
   });
 }
 /* --- 2026-11-23: the rig's bones picked and moved as in Blender ----------------
@@ -1256,8 +1572,13 @@ function cgBoneSet(k,i,v){
 }
 function cgBoneClear(){ const name = CG_WORK.boneSel; if(!name) return; delete cg().rig.basis[name]; cgBoneRefresh(); cgDraw(); }
 function cgOpStart(kind,fromButton){
-  const c = cg(), name = cgRigActive() && CG_WORK.boneSel;
+  // a controller is moved and turned, never scaled: S scales the model
+  const c = cg(), name = kind !== 's' && cgMode() === 'pose' && cgRigActive() && CG_WORK.boneSel;
+  const objs = cgMode() === 'object' && !CG_WORK.selAll && cgSelected(), grp = cgMode() === 'object' && !CG_WORK.selAll && CG_WORK.grpSel;
+  if(!CG_WORK.camera) return;
   CG_WORK.op = name ? {kind,bone:name,axis:'',start:JSON.parse(JSON.stringify(c.rig.basis)),fresh:!!fromButton}
+    : grp && kind !== 'r' ? {kind,grp,axis:'',start:JSON.parse(JSON.stringify(c.gxf || {})),fresh:!!fromButton}
+    : objs && objs.length ? {kind,objs,axis:'',start:JSON.parse(JSON.stringify(c.oxf || {})),fresh:!!fromButton}
     : {kind,axis:kind === 'r' ? 'y' : '',start:JSON.parse(JSON.stringify(c.xf)),fresh:!!fromButton};
   if(name){ const h = CG_WORK.handles.find(x => x.name === name); CG_WORK.op.pivot = h ? h.point : null; cgBoneRefresh(); }
   const hd = document.getElementById('cgHd'); if(hd) hd.focus();
@@ -1265,7 +1586,7 @@ function cgOpStart(kind,fromButton){
 function cgOpCancel(){
   const op = CG_WORK.op; if(!op) return;
   CG_WORK.op = null;
-  if(op.bone) cg().rig.basis = op.start; else cg().xf = op.start;
+  if(op.bone) cg().rig.basis = op.start; else if(op.grp) cg().gxf = op.start; else if(op.objs){ cg().oxf = op.start; cgObjXfSync(); } else cg().xf = op.start;
   cgSyncCamera(); cgBoneRefresh(); cgDraw();
 }
 function cgOpAccept(){ if(!CG_WORK.op) return; CG_WORK.op = null; cgSyncCamera(); cgBoneRefresh(); }

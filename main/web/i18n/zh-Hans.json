@@ -838,6 +838,15 @@
   ],
   "armory.kf_s_into_tile_title": [
    "unit"
+  ],
+  "cards.gen_overlay_title": [
+   "frame"
+  ],
+  "cards.gen_light_flat_title": [
+   "texture"
+  ],
+  "cards.gen_grp_copy": [
+   "copy"
   ]
  },
  "ancillaries.a_character_holds_one_ancillary_per": "人物每种类型只能持有一个随从，因此此项决定新随从会替换哪个随从",
@@ -3281,7 +3290,6 @@
  "cards.gen_give": "显示将写入的内容",
  "cards.gen_give_apply": "应用到部队",
  "cards.gen_given": "此卡片现已属于 {unit}，位于所有所属派系的文件夹中。",
- "cards.gen_handles": "控制项",
  "cards.gen_hd": "高清渲染，{w}×{h}",
  "cards.gen_height": "高度",
  "cards.gen_hue": "色相",
@@ -3303,7 +3311,7 @@
  "cards.gen_part_posture": "体态",
  "cards.gen_part_whole": "全身",
  "cards.gen_pick_entry": "已加载的模型条目…",
- "cards.gen_place_reset": "恢复模型与取景框位置",
+ "cards.gen_place_reset": "重置姿势和取景",
  "cards.gen_pose": "姿势",
  "cards.gen_pose_anim": "任意动画",
  "cards.gen_pose_brace": "长矛架势",
@@ -13550,5 +13558,46 @@
  "cards.gen_obj_scale": "缩放比例",
  "cards.gen_obj_size": "大小",
  "cards.gen_obj_pick": "单击对象，可在卡片上移动、旋转或缩放它。",
- "cards.gen_pose_folder_saved": "已保存的姿势"
+ "cards.gen_pose_folder_saved": "已保存的姿势",
+ "cards.gen_mode_object": "Object",
+ "cards.gen_mode_object_title": "Object 模式：单击视图中的物体以选中它。A 选中所有物体。G、R 和 S 可移动、旋转和缩放选中项；如果没有选中项，则操作整个模型。",
+ "cards.gen_mode_pose": "Pose",
+ "cards.gen_mode_pose_title": "Pose 模式：单击绑定控制器以选中它。G 移动它，R 旋转它。",
+ "cards.gen_mode_rest": "Rest",
+ "cards.gen_mode_rest_title": "显示静止状态的绑定。每个控制器都回到起始位置，但会保留当前姿势。",
+ "cards.gen_overlay": "叠加层",
+ "cards.gen_bones": "骨骼",
+ "cards.gen_bones_title": "视图中 IK 绑定的控制器。",
+ "cards.gen_lens_ortho": "正交",
+ "cards.gen_lens_persp": "透视",
+ "cards.gen_lens_title": "在正交摄影机和透视摄影机之间切换。游戏卡片使用正交视图绘制。",
+ "cards.gen_keys": "控制",
+ "cards.gen_keys_turn": "按住左键拖动：旋转 · 按住右键拖动：移动 · 滚轮：缩放",
+ "cards.gen_keys_select": "单击：选中物体 (Object) 或控制器 (Pose)",
+ "cards.gen_keys_all": "A：选中全部，再按一次取消选择",
+ "cards.gen_keys_gsr": "G 移动 · R 旋转 · S 缩放",
+ "cards.gen_keys_axis": "X、Y 或 Z：将操作限制在该轴上",
+ "cards.gen_keys_keep": "单击或 Enter：保留 · Esc 或右键单击：撤销",
+ "cards.gen_light_lit": "有光照",
+ "cards.gen_light_flat": "平面",
+ "cards.gen_light_add": "添加灯光",
+ "cards.gen_light_n": "灯光 {n}",
+ "cards.gen_light_remove": "移除此灯光",
+ "cards.gen_retry": "重试",
+ "cards.gen_overlay_title": "卡片的取景框、框外的暗色区域和游戏内指南。",
+ "cards.gen_light_flat_title": "平面模式会显示纹理自身的颜色，不加光照或阴影，类似 Blender 的平面实体视图。",
+ "cards.gen_grp_mount": "坐骑：{name}",
+ "cards.gen_grp_engine": "攻城器械：{name}",
+ "cards.gen_grp_pick": "选择",
+ "cards.gen_grp_pick_title": "在视图中选中整个模型组：G 移动整个模型组，S 缩放整个模型组",
+ "cards.gen_grp_scale": "缩放",
+ "cards.gen_dup_model": "复制",
+ "cards.gen_dup_model_title": "将整个模型组复制到卡片上，放在旁边",
+ "cards.gen_dup_part": "将这个部件复制到卡片上",
+ "cards.gen_dup_remove": "删除此复本",
+ "cards.gen_riders_spots": "坐骑上的骑手",
+ "cards.gen_riders_spots_title": "将骑手放在游戏为该坐骑骑手提供的每个位置（descr_mount.txt 中的 rider_offset），每个位置放一个副本",
+ "cards.gen_riders_spots_none": "该坐骑最多提供一个骑手位置。",
+ "cards.gen_riders_spots_done": "已在坐骑的位置上放置 {n} 个骑手。",
+ "cards.gen_grp_copy": "副本：{name}"
 }

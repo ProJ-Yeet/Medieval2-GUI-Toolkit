@@ -281,16 +281,23 @@ def add_weapons(data_dir, anim: casanim.Animation, weapons: Sequence[str],
 _NUM = re.compile(r"-?(?:\d+\.?\d*|\.\d+)(?:[eE][-+]?\d+)?")
 
 
-def rider_offset(raw: str) -> Optional[List[float]]:
-    """The first ``rider_offset x, y, z`` of a descr_mount.txt block (an
-    elephant lists one per rider, and the first is the driver's)."""
+def rider_offsets(raw: str) -> List[List[float]]:
+    """Every ``rider_offset x, y, z`` of a descr_mount.txt block, in order: an
+    elephant lists one per rider (``riders``), the first the driver's."""
+    out = []
     for line in raw.splitlines():
         line = line.split(";", 1)[0].strip()
         if line.lower().startswith("rider_offset"):
             nums = _NUM.findall(line[len("rider_offset"):])
             if len(nums) >= 3:
-                return [float(x) for x in nums[:3]]
-    return None
+                out.append([float(x) for x in nums[:3]])
+    return out
+
+
+def rider_offset(raw: str) -> Optional[List[float]]:
+    """The first ``rider_offset x, y, z`` of a descr_mount.txt block."""
+    offs = rider_offsets(raw)
+    return offs[0] if offs else None
 
 
 def mounts_for(mod, entry) -> dict:
@@ -320,7 +327,7 @@ def mounts_for(mod, entry) -> dict:
         skel = next((a.primary_skeleton for a in model.animations if a.primary_skeleton), "")
         rows.append({"type": m.type, "class": m.mount_class, "entry": model.name,
                      "skeleton": skel, "offset": off or [0.0, 0.0, 0.0],
-                     "offset_given": off is not None, "units": units})
+                     "offset_given": off is not None, "offsets": rider_offsets(m.raw), "units": units})
     rows.sort(key=lambda r: (not r["units"], r["type"].lower()))
     return {"mounts": rows, "classes": sorted(classes)}
 

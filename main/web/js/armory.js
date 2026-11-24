@@ -47,9 +47,11 @@ precision mediump float;
 varying vec3 vNormal; varying vec2 vUv; varying vec3 vPos;
 uniform sampler2D uTex, uNTex;
 uniform float uHasTex, uUScale, uHi, uSel, uFlip, uXray, uHasN;
-uniform float uCard, uMask, uLAmt, uAmb, uLevel, uPoint;
+uniform float uCard, uMask, uAmb, uLevel, uLN;
+uniform float uLAmt[4], uPoint[4];
 uniform float uLit, uLitAmb, uLitStr, uLitSoft;
-uniform vec3 uLDir, uLPos, uLitDir, uMaskCol;
+uniform vec3 uLDir[4], uLPos[4];
+uniform vec3 uLitDir, uMaskCol;
 uniform vec4 uCrop;
 ${V3_ENV}
 void main(){
@@ -87,10 +89,15 @@ void main(){
     col = pow(clamp(pow(base.rgb, vec3(2.2)) * lit, 0.0, 1.0), vec3(1.0 / 2.2));
   }
   if(uCard > 0.5){
-    // 95m: the card maker's one lamp, a sun or a point, and an ambient
-    vec3 L = uPoint > 0.5 ? uLPos - vPos : uLDir;
-    float att = uPoint > 0.5 ? 1.0 / (1.0 + 0.08 * dot(L, L)) : 1.0;
-    float k = max(dot(n, normalize(L)), 0.0) * uLAmt * att;
+    // 95m: the card maker's lamps (2026-11-24: up to four, each a sun or a
+    // point) and an ambient; none and a full ambient is its flat shading
+    float k = 0.0;
+    for(int i = 0; i < 4; i++){
+      if(float(i) >= uLN) break;
+      vec3 L = uPoint[i] > 0.5 ? uLPos[i] - vPos : uLDir[i];
+      float att = uPoint[i] > 0.5 ? 1.0 / (1.0 + 0.08 * dot(L, L)) : 1.0;
+      k += max(dot(n, normalize(L)), 0.0) * uLAmt[i] * att;
+    }
     col = clamp(base.rgb * (uAmb + k) * uLevel, 0.0, 1.0);
   }
   if(uMask > 0.5){ gl_FragColor = vec4(uMaskCol, 1.0); return; }
@@ -881,7 +888,7 @@ function armGl(){
   ARM.loc = {};
   for(const n of ['aPos', 'aNormal', 'aUv']) ARM.loc[n] = gl.getAttribLocation(p, n);
   for(const n of ['uProj', 'uView', 'uModel', 'uTex', 'uHasTex', 'uUScale', 'uHi', 'uSel', 'uFlip', 'uXray', 'uCrop', 'uNTex', 'uHasN',
-                  'uCard', 'uMask', 'uLAmt', 'uAmb', 'uLevel', 'uPoint', 'uLDir', 'uLPos',
+                  'uCard', 'uMask', 'uLAmt', 'uAmb', 'uLevel', 'uPoint', 'uLDir', 'uLPos', 'uLN',
                   'uLit', 'uLitAmb', 'uLitStr', 'uLitSoft', 'uLitDir', 'uMaskCol'])
     ARM.loc[n] = gl.getUniformLocation(p, n);
   gl.enable(gl.DEPTH_TEST);
@@ -1006,7 +1013,8 @@ function armCollHidden(o){
 function armBounds(objs){
   const lo = [Infinity, Infinity, Infinity], hi = [-Infinity, -Infinity, -Infinity];
   for(const o of objs){
-    const om = armObjMatrix(o, armPivot(o));
+    // o.post: the card maker's own move of an object, on top (cardgen.js, cgXf)
+    const om = o.post ? armMul(o.post, armObjMatrix(o, armPivot(o))) : armObjMatrix(o, armPivot(o));
     for(const pc of o.src || []){
       const live = ARM.assets.get(pc.asset);
       if(!live || !live.geo) continue;
@@ -1076,9 +1084,11 @@ function armRender(objs, w, h, cam, opts){
   const xray = live3d && typeof armXrayOn === 'function' && armXrayOn();
   const wire = live3d && ARM.shade === 'wire';
   if(lt){
-    gl.uniform1f(L.uLAmt, lt.amount); gl.uniform1f(L.uAmb, lt.ambient); gl.uniform1f(L.uLevel, lt.level);
-    gl.uniform1f(L.uPoint, lt.point ? 1 : 0);
-    gl.uniform3fv(L.uLDir, lt.dir); gl.uniform3fv(L.uLPos, lt.pos || [0, 0, 0]);
+    // lt.list: its lamps, at most four (one lamp given as lt itself before)
+    const list = (lt.list || [lt]).slice(0, 4), amt = new Float32Array(4), pt = new Float32Array(4), dir = new Float32Array(12), pos = new Float32Array(12);
+    list.forEach((x, i) => { amt[i] = x.amount; pt[i] = x.point ? 1 : 0; dir.set(x.dir, i * 3); pos.set(x.pos || [0, 0, 0], i * 3); });
+    gl.uniform1f(L.uAmb, lt.ambient); gl.uniform1f(L.uLevel, lt.level); gl.uniform1f(L.uLN, list.length);
+    gl.uniform1fv(L.uLAmt, amt); gl.uniform1fv(L.uPoint, pt); gl.uniform3fv(L.uLDir, dir); gl.uniform3fv(L.uLPos, pos);
   }
   // the pre-render panel's light on the objects it is about to bake (armlit.js)
   const litOf = !o.plain && typeof armLitMode === 'function' ? armLitMode : () => 0;
@@ -1114,8 +1124,8 @@ function armRender(objs, w, h, cam, opts){
     // a card (95m) is drawn plain, but posed
     const posed = (!o.plain || o.card) && typeof armAnimGeoFor === 'function' ? armAnimGeoFor(ob, o.card) : null;
     if(posed){
-      gl.uniformMatrix4fv(L.uModel, false, new Float32Array(top));
-      gl.uniform1f(L.uHi, live3d && ARM.hover === ob.id ? 1 : 0);
+      gl.uniformMatrix4fv(L.uModel, false, new Float32Array(ob.post ? armMul(top, ob.post) : top));
+      gl.uniform1f(L.uHi, (live3d && ARM.hover === ob.id) || (o.hi && o.hi.has(ob.id)) ? 1 : 0);
       gl.uniform1f(L.uSel, 0);               // selected is an outline now (armedit.js)
       gl.uniform1f(L.uXray, xray ? 1 : 0);
       gl.bindBuffer(gl.ARRAY_BUFFER, posed.glPos);
@@ -1133,7 +1143,7 @@ function armRender(objs, w, h, cam, opts){
       }
       continue;
     }
-    const om = armMul(top, armObjMatrix(ob, armPivot(ob)));
+    const om = armMul(ob.post ? armMul(top, ob.post) : top, armObjMatrix(ob, armPivot(ob)));
     for(const pc of ob.src || []){
       const live = ARM.assets.get(pc.asset);
       if(!live || !live.buf || !live.geo) continue;
@@ -1141,7 +1151,7 @@ function armRender(objs, w, h, cam, opts){
       if(!g) continue;
       gl.uniformMatrix4fv(L.uModel, false, new Float32Array(pc.xf ? armMul(om, pc.xf) : om));
       bindTex(live, pc, ob);
-      gl.uniform1f(L.uHi, live3d && ARM.hover === ob.id ? 1 : 0);
+      gl.uniform1f(L.uHi, (live3d && ARM.hover === ob.id) || (o.hi && o.hi.has(ob.id)) ? 1 : 0);
       gl.uniform1f(L.uSel, 0);
       gl.uniform1f(L.uXray, xray ? 1 : 0);
       gl.bindBuffer(gl.ARRAY_BUFFER, live.buf.pos);

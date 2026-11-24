@@ -3919,6 +3919,14 @@ body.look-editing :is(button,label,legend,h1,h2,h3,.trsechead,.mftab):hover{outl
   .cghdview,.cghdview canvas,.armview,.armview canvas,.cgpeek canvas{user-select:none;-webkit-user-select:none}
   .cghdview #cgHd:focus,.cghdview #cgHd:focus-visible,.armview canvas:focus{outline:none;box-shadow:none}
   .cghd #cgHdUi{position:absolute;pointer-events:none;background:none;border:none;max-height:none}
+  .cgviewbar{flex-wrap:nowrap;overflow-x:auto;min-height:26px}
+  .cgviewbar .count{white-space:nowrap}
+  .cgkeys{position:absolute;left:8px;top:8px;max-width:min(320px,60%);background:rgba(14,17,22,.78);border:1px solid var(--edge);border-radius:6px;padding:3px 8px;font-size:12px;color:#c9d1d9;z-index:2}
+  .cgkeys summary{cursor:pointer;user-select:none}
+  .cgkeys>div{display:flex;flex-direction:column;gap:2px;padding:4px 0 2px}
+  .cggroup{border:1px solid var(--edge);border-radius:6px;padding:4px 6px;margin:4px 0}
+  .cggroup>summary{cursor:pointer;user-select:none}
+  .cglamp{border-top:1px solid var(--edge);padding-top:4px;margin-top:4px}
   .cgrig{display:flex;flex-direction:column;gap:5px}
   .cgbonegrid{display:grid;grid-template-columns:auto repeat(3,minmax(0,1fr));gap:4px;align-items:center}
   .cgbonegrid .armnum{width:100%}
