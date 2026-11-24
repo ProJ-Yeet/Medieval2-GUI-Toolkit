@@ -16,6 +16,8 @@ The edits, applied in this order whatever order they are given in::
     in_place  true                    take a cycle's travel out of the pelvis
     scale     [sx, sy, sz]            every pivot and position key, per axis
     offsets   [{bone, euler}]         turn a bone by [x, y, z] degrees at every key
+    hide      [bone, ...]             move each bone 100 m down at every key, out
+                                      of sight (:func:`animconvert.hide_bone`)
 
 Angles are degrees about the bone's own X, then Y, then Z. A bone that had no
 rotation keys gets one; a bone with one key that is set at a later key is
@@ -202,6 +204,13 @@ def apply_edits(anim: casanim.Animation, edits: Optional[Dict]) -> casanim.Anima
         for k in range(t.rot_keys):
             q = _qmul(tuple(t.rot[k * 4:k * 4 + 4]), d)
             t.rot[k * 4:k * 4 + 4] = array("f", _norm(q))
+
+    for bone in e.get("hide") or []:
+        from . import animconvert
+        try:
+            animconvert.hide_bone(a, str(bone))
+        except animconvert.ConvertError as exc:
+            raise EditError(str(exc)) from exc
 
     return a
 

@@ -14541,5 +14541,20 @@
  "eng.animconvert.parent_after": "{bone} précède son os parent {parent} : listez d’abord les parents",
  "eng.animconvert.parent_left_out": "L’os {bone} a pour parent {parent}, qui ne figure pas parmi les os écrits ; ajoutez-le avec --keep",
  "eng.server.no_kit_change_to_preview": "Aucun changement dans l’aperçu",
- "eng.animconvert.name_too_long": "Le nom de l’os {name} dépasse les 31 caractères de MilkShape"
+ "eng.animconvert.name_too_long": "Le nom de l’os {name} dépasse les 31 caractères de MilkShape",
+ "v3ms3d.load": "Charger .ms3d",
+ "v3ms3d.load_title": "Convertir une animation MilkShape .ms3d en .cas pour l'emplacement choisi. Les os de l'arme et du bouclier sont conservés (GOAT 1.1 les supprime). Elle est d'abord lue ici. Enregistrer l'ajoute au pack. Tu peux aussi déposer le fichier sur la liste.",
+ "v3ms3d.not_ms3d": "{name} n'est pas un fichier MilkShape .ms3d.",
+ "v3ms3d.pick_slot": "Choisis d'abord l'emplacement où l'ajouter. Le pack de ce mod doit pouvoir le lire.",
+ "v3ms3d.playing": "Lecture de {name}, convertie pour cet emplacement. Rien ne sera enregistré avant que tu cliques sur Enregistrer.",
+ "v3ms3d.discard": "Revenir à l'animation du pack",
+ "v3ms3d.hide": "Masquer {bone}",
+ "v3ms3d.hide_title": "Déplacer cet os de 100 m vers le bas à chaque clé de {action} du {skeleton}, afin que tout ce qui lui est associé disparaisse de la vue (un fichier .cas n'a pas d'échelle). L'animation est enregistrée dans le pack comme nouvelle animation. Annuler dans le journal permet de revenir en arrière.",
+ "v3ms3d.hide_confirm": "Masquer {bone} dans {action} du {skeleton} ?\n\n{v3AnimPackMsg}",
+ "v3ms3d.hid_a_bone": "Un os d'arme a été masqué",
+ "v3ms3d.weapon_drop_title": "Dépose un fichier MilkShape .ms3d ici pour l'enregistrer dans {action} du {skeleton}. Les os de l'arme sont conservés.",
+ "v3ms3d.weapon_confirm": "Ajouter {name} à {action} du {skeleton}, dans le pack de {mod} ?\n\n{v3AnimPackMsg}",
+ "v3ms3d.put_into_pack": "Ajouter une animation MilkShape au pack",
+ "eng.animslot.ms3d_no_bone_of_skeleton": "{name} ne contient aucun des os de ce squelette ({bones}) : l'animation a été créée pour un autre squelette",
+ "eng.animslot.ms3d_bones_held": "{missing_n} des os de {name} ne sont pas dans {name2} et gardent leur pose de liaison : {missing}{x}"
 }

@@ -504,9 +504,13 @@ function v3AnimPanelBody(){
   }else{
     body = `<label class="v3f"><span>${tt('common.find')}</span><input type="search" value="${esc(a.find)}"
         placeholder="${ttA('v3anim.walk_charge_die_a_file_name')}" oninput="v3AnimFind(this.value)"></label>
-      <select id="v3alist" class="v3alist" size="11" onchange="v3AnimPick(this.value)">${v3AnimListHtml()}</select>
+      <select id="v3alist" class="v3alist" size="11" onchange="v3AnimPick(this.value)"
+        ondragover="v3AnimMs3dOver(event)" ondrop="v3AnimMs3dDrop(event)">${v3AnimListHtml()}</select>
       <div class="v3btns"><button onclick="v3AnimPick('')" ${a.key || a.seqOn ? '' : 'disabled'}>${tt('v3anim.still')}</button>
-        <button onclick="v3AnimSeqAdd()" ${a.key ? '' : 'disabled'} title="${ttA('v3anim.add_this_action_to_the_end')}">${tt('v3anim.sequence')}</button></div>`
+        <button onclick="v3AnimSeqAdd()" ${a.key ? '' : 'disabled'} title="${ttA('v3anim.add_this_action_to_the_end')}">${tt('v3anim.sequence')}</button>
+        <button onclick="document.getElementById('v3ams3d').click()" ${v3AnimPackable(v3AnimRow(a.key)) ? '' : 'disabled'}
+          title="${ttA('v3ms3d.load_title')}">${tt('v3ms3d.load')}</button>
+        <input type="file" id="v3ams3d" accept=".ms3d" style="display:none" onchange="v3AnimMs3dFile(this.files[0]); this.value=''"></div>`
       + v3AnimSeqHtml()
       + (a.data ? v3AnimPlayHtml() : '')
       + `<div class="count">${sk.packed
@@ -560,12 +564,107 @@ function v3AnimWeaponsHtml(set){
     if(r && r.error) what = ` - ${esc(r.error)}`;
     else if(r) what = tt('v3anim.bones_on_hangs_off_its_action',{bones:r.bones.length ? r.bones.map(esc).join(', ') : tt('v3anim.no_new_bone'),
       hangs_off:esc(r.hangs_off),action:r.slot === 686 ? tt('v3anim.slot_default') : esc(r.action)});
-    return `<code>${esc(n)}</code>${what}`;
+    // 128f: hide a weapon bone in the action the weapon plays, or drop an .ms3d on it
+    const own = r && !r.error && s.packed && L.packs && L.packs !== 'vanilla';
+    const act = r ? (r.slot === 686 ? tt('v3anim.slot_default') : r.action) : '';
+    const hide = own ? r.bones.map(b => ` <button class="v3ahide" onclick="v3AnimHideBone(${esc(JSON.stringify(n))}, ${r.slot}, ${esc(JSON.stringify(b))}, ${esc(JSON.stringify((r.path || '').replace(/^.*[\\/]/, '').replace(/\.cas$/i, '')))})"
+      title="${ttA('v3ms3d.hide_title',{skeleton:n,action:act})}">${tt('v3ms3d.hide',{bone:esc(b)})}</button>`).join('') : '';
+    const open = own ? `<span ondragover="v3AnimMs3dOver(event)" ondrop="v3AnimMs3dDrop(event, ${esc(JSON.stringify(n))}, ${r.slot})"
+      title="${ttA('v3ms3d.weapon_drop_title',{skeleton:n,action:act})}">` : '<span>';
+    return `${open}<code>${esc(n)}</code>${what}${hide}</span>`;
   }).join('; ');
   return `<label class="count" title="${ttA('v3anim.the_weapon_skeletons_move_the_weapon')}"><input type="checkbox" ${
       a.weapons ? 'checked' : ''} onchange="v3AnimWeaponsOn(this.checked)"> ${tt('v3anim.weapon_skeletons')}</label>
     <div class="count">${said}.</div>`;
 }
+/* 128f: a MilkShape .ms3d animation put into a slot, converted to .cas with
+   its weapon and shield bones kept (GOAT 1.1 drops them). Dropped on the slot
+   list it plays in the slot picked and opens in the editor, and Save puts it
+   into the pack; dropped on a weapon skeleton it is saved into the action that
+   weapon plays, after a confirm. */
+function v3AnimMs3dBody(){
+  const m = v3 && v3.anim && v3.anim.ms3d;
+  return m ? {ms3d: m.b64, ms3d_name: m.name} : {};
+}
+function v3AnimMs3dOver(ev){
+  const dt = ev.dataTransfer;
+  if(dt && [...(dt.types || [])].includes('Files')){ ev.preventDefault(); dt.dropEffect = 'copy'; }
+}
+function v3AnimMs3dRead(file){
+  return new Promise((ok, bad) => {
+    const r = new FileReader();
+    r.onload = () => { const u = new Uint8Array(r.result); let s = '';
+      for(let i = 0; i < u.length; i += 0x8000) s += String.fromCharCode.apply(null, u.subarray(i, i + 0x8000));
+      ok(btoa(s)); };
+    r.onerror = () => bad(r.error);
+    r.readAsArrayBuffer(file);
+  });
+}
+function v3AnimMs3dDrop(ev, skeleton, slot){
+  const f = ev.dataTransfer && ev.dataTransfer.files && ev.dataTransfer.files[0];
+  if(!f) return;
+  ev.preventDefault(); ev.stopPropagation();
+  if(skeleton) return v3AnimWeaponMs3d(f, skeleton, slot);
+  return v3AnimMs3dFile(f);
+}
+async function v3AnimMs3dFile(f){
+  const a = v3 && v3.anim;
+  if(!a || !f) return;
+  if(!/\.ms3d$/i.test(f.name)){ a.err = tt('v3ms3d.not_ms3d',{name:f.name}); return v3AnimPanel(); }
+  const row = v3AnimRow(a.key);
+  if(!v3AnimPackable(row)){ a.err = tt('v3ms3d.pick_slot'); return v3AnimPanel(); }
+  const mine = v3, key = a.key;
+  const ms3d = {name: f.name, b64: await v3AnimMs3dRead(f)};
+  let data;
+  try{ data = await api.post('/api/model/anim/pack_preview', {mod: v3AnimMod(), skeleton: a.skel, slot: a.slot, edits: {},
+                                                             weapons: v3AnimWeapons(), ms3d: ms3d.b64, ms3d_name: ms3d.name}); }
+  catch(err){ data = {error: '' + err}; }
+  if(v3 !== mine || v3.anim !== a || a.key !== key) return;
+  if(data.error){ a.err = data.error; return v3AnimPanel(); }
+  a.err = '';
+  a.ms3d = ms3d;
+  a.data = a.orig = data;
+  a.edit = v3AnimEditNew(data, row);
+  a.edit.packName = f.name.replace(/\.ms3d$/i, '');
+  a.edit.open = true;
+  a.bind = v3aBind(data);
+  a.travel = v3aTravel(data);
+  a.carried = v3aCarried(data);
+  a.geo = null;
+  a.t = 0; a.playing = true; a.dirty = true;
+  v3AnimPanel();
+}
+async function v3AnimWeaponMs3d(f, skeleton, slot){
+  const a = v3 && v3.anim;
+  if(!a) return;
+  if(!/\.ms3d$/i.test(f.name)){ a.err = tt('v3ms3d.not_ms3d',{name:f.name}); return v3AnimPanel(); }
+  const body = {mod: v3AnimMod(), skeleton, slot, edits: {}, keep_rebuildable: true,
+                ms3d: await v3AnimMs3dRead(f), ms3d_name: f.name};
+  await v3AnimPackDirect(body, p => tt('v3ms3d.weapon_confirm',{name:f.name,skeleton,action:p.action,mod:v3AnimMod(),
+                                                                 v3AnimPackMsg:v3AnimPackMsg(p)}), tt('v3ms3d.put_into_pack'));
+}
+async function v3AnimHideBone(skeleton, slot, bone, stem){
+  const body = {mod: v3AnimMod(), skeleton, slot, edits: {hide: [bone]}, keep_rebuildable: true,
+                name: stem ? `${stem}_hidden` : ''};
+  await v3AnimPackDirect(body, p => tt('v3ms3d.hide_confirm',{bone,skeleton,action:p.action,v3AnimPackMsg:v3AnimPackMsg(p)}),
+                         tt('v3ms3d.hid_a_bone'));
+}
+/* Plan, confirm, write: a save into the pack with no editor in between. */
+async function v3AnimPackDirect(body, ask, what){
+  const a = v3.anim;
+  let r;
+  try{ r = await api.post('/api/model/anim/pack_plan', body); }
+  catch(err){ r = {error: '' + err}; }
+  const p = r.plan;
+  if(r.error || !p || !p.ok){ a.err = r.error || tt('v3anim.nothing_to_save'); return v3AnimPanel(); }
+  if(!confirm(ask(p))) return;
+  let w;
+  try{ w = await api.post('/api/model/anim/pack_apply', body); }
+  catch(err){ w = {error: '' + err}; }
+  if(w.error){ a.err = w.error; return v3AnimPanel(); }
+  await v3AnimPackAfter(w, what);
+}
+
 function v3AnimWeaponsOn(on){
   const a = v3 && v3.anim;
   if(!a) return;
@@ -659,7 +758,7 @@ async function v3AnimFetch(row, mod, skel, weapons){
 async function v3AnimPick(key){
   if(!v3 || !v3.anim) return;
   const a = v3.anim;
-  a.key = key; a.err = ''; a.t = 0; a.seqOn = false;
+  a.key = key; a.err = ''; a.t = 0; a.seqOn = false; a.ms3d = null;
   const row = key ? v3AnimRow(key) : null;
   if(!row || !row.playable){
     a.data = null; a.rel = '';
@@ -1218,6 +1317,8 @@ function v3AnimEditHtml(){
     style="width:${w || 58}px" onchange="${on}">`;
   const turn = e.offsets[bone] || [0, 0, 0];
   return `<div class="v3btns">${head}</div>
+  ${a.ms3d ? `<div class="count">${tt('v3ms3d.playing',{name:esc(a.ms3d.name)})}
+    <button onclick="v3AnimPick(v3.anim.key)">${tt('v3ms3d.discard')}</button></div>` : ''}
   <div class="v3aed">
     <div class="v3aedrow">${tt('v3anim.keep_keys_to_of_0_to',{num:num(e.trim[0], 'v3AnimEditSet(\'trim0\', this.value)', 1),num2:num(e.trim[1], 'v3AnimEditSet(\'trim1\', this.value)', 1),x:keys - 1})}</div>
     <div class="v3aedrow">${tt('v3anim.speed',{x:num(e.speed, 'v3AnimEditSet(\'speed\', this.value)', 0.05)})}
@@ -1301,8 +1402,8 @@ async function v3AnimEditPreview(){
     data = a.rel ? await api.post('/api/model/anim/preview', {mod: v3AnimMod(), rel: a.rel, edits: v3AnimEdits(),
                                                               skeleton: a.skel || ''})
       // 86: the bytes a save into the pack would write, read back
-      : await api.post('/api/model/anim/pack_preview', {mod: v3AnimMod(), skeleton: a.skel, slot: a.slot,
-                                                        edits: v3AnimEdits(), weapons: v3AnimWeapons()});
+      : await api.post('/api/model/anim/pack_preview', Object.assign({mod: v3AnimMod(), skeleton: a.skel, slot: a.slot,
+                                                        edits: v3AnimEdits(), weapons: v3AnimWeapons()}, v3AnimMs3dBody()));
   }
   catch(err){ data = {error: '' + err}; }
   if(v3 !== mine || v3.anim !== a) return;
@@ -1380,8 +1481,8 @@ async function v3AnimPackAfter(w, what){
 
 async function v3AnimPackSave(){
   const a = v3.anim, e = a.edit;
-  const body = {mod: v3AnimMod(), skeleton: a.skel, slot: a.slot, edits: v3AnimEdits(), name: e.packName,
-                rel: a.rel || '', keep_rebuildable: e.keep};
+  const body = Object.assign({mod: v3AnimMod(), skeleton: a.skel, slot: a.slot, edits: v3AnimEdits(), name: e.packName,
+                rel: a.rel || '', keep_rebuildable: e.keep}, v3AnimMs3dBody());
   let r;
   try{ r = await api.post('/api/model/anim/pack_plan', body); }
   catch(err){ r = {error: '' + err}; }

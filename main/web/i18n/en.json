@@ -13179,5 +13179,20 @@
 "armory.uv_editmode": "Edit Mode",
 "armory.uv_editmode_title": "Open this object in the 3D view's Edit Mode (the detail view), with the UV editor still open",
 "armory.lib_add_obj_title": "Keep this object alone in the library: loading it pulls only this object from its model",
-"core.gplv3": "GPLv3"
+"core.gplv3": "GPLv3",
+"v3ms3d.load": "Load .ms3d",
+"v3ms3d.load_title": "Convert a MilkShape .ms3d animation to .cas for the slot picked, weapon and shield bones kept (GOAT 1.1 drops them). It plays here first; Save puts it into the pack. You can also drop the file on the list.",
+"v3ms3d.not_ms3d": "{name} is not a MilkShape .ms3d file.",
+"v3ms3d.pick_slot": "Pick the slot to put it in first. It has to be one this mod's own pack plays.",
+"v3ms3d.playing": "Playing {name}, converted for this slot. Nothing is saved until you press Save.",
+"v3ms3d.discard": "Back to the pack's animation",
+"v3ms3d.hide": "Hide {bone}",
+"v3ms3d.hide_title": "Move this bone 100 m down at every key of {skeleton}'s {action}, so whatever is weighted to it is out of sight (a .cas has no scale). It is saved into the pack as a new animation, and Undo in the log takes it back.",
+"v3ms3d.hide_confirm": "Hide {bone} in {skeleton}'s {action}?\n\n{v3AnimPackMsg}",
+"v3ms3d.hid_a_bone": "Hid a weapon bone",
+"v3ms3d.weapon_drop_title": "Drop a MilkShape .ms3d here to save it into {skeleton}'s {action}, weapon bones kept.",
+"v3ms3d.weapon_confirm": "Put {name} into {skeleton}'s {action} in {mod}'s pack?\n\n{v3AnimPackMsg}",
+"v3ms3d.put_into_pack": "Put a MilkShape animation into the pack",
+"eng.animslot.ms3d_no_bone_of_skeleton": "{name} has none of this skeleton's bones ({bones}): it was made for another skeleton",
+"eng.animslot.ms3d_bones_held": "{missing_n} of {name}'s bones are not in {name2} and hold their bind pose: {missing}{x}"
 }

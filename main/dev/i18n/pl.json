@@ -15151,5 +15151,20 @@
  "eng.animconvert.parent_after": "{bone} znajduje się przed kością nadrzędną {parent}: najpierw wymień kości nadrzędne",
  "eng.animconvert.parent_left_out": "Kość {bone} ma kość nadrzędną {parent}, której nie ma wśród zapisanych kości; dodaj ją za pomocą --keep",
  "eng.server.no_kit_change_to_preview": "Brak zmian w podglądzie",
- "eng.animconvert.name_too_long": "Nazwa kości {name} przekracza limit 31 znaków MilkShape"
+ "eng.animconvert.name_too_long": "Nazwa kości {name} przekracza limit 31 znaków MilkShape",
+ "v3ms3d.load": "Wczytaj .ms3d",
+ "v3ms3d.load_title": "Konwertuj animację MilkShape .ms3d do .cas dla wybranego slotu. Kości broni i tarczy zostaną zachowane (GOAT 1.1 je usuwa). Najpierw animacja zostanie odtworzona tutaj. Zapisz dodaje ją do paczki. Możesz też przeciągnąć plik na listę.",
+ "v3ms3d.not_ms3d": "{name} nie jest plikiem MilkShape .ms3d.",
+ "v3ms3d.pick_slot": "Najpierw wybierz slot, do którego chcesz dodać animację. Własna paczka tego moda musi umieć ją odtworzyć.",
+ "v3ms3d.playing": "Odtwarzanie {name}, przekonwertowanej dla tego slotu. Nic nie zostanie zapisane, dopóki nie klikniesz Zapisz.",
+ "v3ms3d.discard": "Wróć do animacji z paczki",
+ "v3ms3d.hide": "Ukryj {bone}",
+ "v3ms3d.hide_title": "Przesuń tę kość o 100 m w dół przy każdym kluczu {action} szkieletu {skeleton}, aby wszystko, co jest do niej przypisane, zniknęło z widoku (plik .cas nie ma skali). Animacja zostanie zapisana w paczce jako nowa. Cofnij w dzienniku pozwala cofnąć zmianę.",
+ "v3ms3d.hide_confirm": "Ukryć {bone} w {action} szkieletu {skeleton}?\n\n{v3AnimPackMsg}",
+ "v3ms3d.hid_a_bone": "Ukryto kość broni",
+ "v3ms3d.weapon_drop_title": "Upuść tutaj plik MilkShape .ms3d, aby zapisać go w {action} szkieletu {skeleton}. Kości broni zostaną zachowane.",
+ "v3ms3d.weapon_confirm": "Dodać {name} do {action} szkieletu {skeleton} w paczce moda {mod}?\n\n{v3AnimPackMsg}",
+ "v3ms3d.put_into_pack": "Dodaj animację MilkShape do paczki",
+ "eng.animslot.ms3d_no_bone_of_skeleton": "{name} nie zawiera żadnej kości tego szkieletu ({bones}): animacja została utworzona dla innego szkieletu",
+ "eng.animslot.ms3d_bones_held": "{missing_n} kości z {name} nie ma w {name2}, więc zachowują swoją pozę wiązania: {missing}{x}"
 }

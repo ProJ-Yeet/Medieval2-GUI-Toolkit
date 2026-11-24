@@ -13878,5 +13878,20 @@
  "eng.animconvert.parent_after": "{bone}, üst kemiği {parent} öğesinden önce geliyor: önce üst kemikleri listeleyin",
  "eng.animconvert.name_too_long": "{name} kemik adı MilkShape içindeki 31 karakter sınırını aşıyor",
  "eng.animconvert.parent_left_out": "{bone} kemiğinin üst kemiği {parent}, yazılan kemikler arasında değil; --keep ile ekleyin",
- "eng.server.no_kit_change_to_preview": "Önizlemede değişiklik yok"
+ "eng.server.no_kit_change_to_preview": "Önizlemede değişiklik yok",
+ "v3ms3d.load": ".ms3d yükle",
+ "v3ms3d.load_title": "Seçilen yuva için bir MilkShape .ms3d animasyonunu .cas biçimine dönüştür. Silah ve kalkan kemikleri korunur (GOAT 1.1 bunları siler). Önce burada oynatılır; Kaydet pakete ekler. Dosyayı listeye de bırakabilirsin.",
+ "v3ms3d.not_ms3d": "{name} bir MilkShape .ms3d dosyası değil.",
+ "v3ms3d.pick_slot": "Önce animasyonu koyacağın yuvayı seç. Bu modun kendi paketi bu yuvayı oynatabilmeli.",
+ "v3ms3d.playing": "{name} oynatılıyor, bu yuva için dönüştürüldü. Kaydet'e basana kadar hiçbir şey kaydedilmez.",
+ "v3ms3d.discard": "Paketteki animasyona dön",
+ "v3ms3d.hide": "{bone} gizle",
+ "v3ms3d.hide_title": "Bu kemiği, {skeleton} iskeletinin {action} eylemindeki her anahtar karede 100 m aşağı taşı. Böylece ona ağırlık atanmış her şey görünmez olur (.cas dosyasında ölçek yoktur). Animasyon pakete yeni bir animasyon olarak kaydedilir. Günlükteki Geri Al işlemi bunu geri alır.",
+ "v3ms3d.hide_confirm": "{skeleton} iskeletinin {action} eyleminde {bone} gizlensin mi?\n\n{v3AnimPackMsg}",
+ "v3ms3d.hid_a_bone": "Bir silah kemiği gizlendi",
+ "v3ms3d.weapon_drop_title": "Bir MilkShape .ms3d dosyasını buraya bırakarak {skeleton} iskeletinin {action} eylemine kaydet. Silah kemikleri korunur.",
+ "v3ms3d.weapon_confirm": "{name}, {mod} modunun paketindeki {skeleton} iskeletinin {action} eylemine eklensin mi?\n\n{v3AnimPackMsg}",
+ "v3ms3d.put_into_pack": "Pakete bir MilkShape animasyonu ekle",
+ "eng.animslot.ms3d_no_bone_of_skeleton": "{name} dosyasında bu iskelete ait hiçbir kemik yok ({bones}): başka bir iskelet için oluşturulmuş",
+ "eng.animslot.ms3d_bones_held": "{name} dosyasındaki {missing_n} kemik {name2} içinde yok ve bağlama pozlarında kalıyor: {missing}{x}"
 }

@@ -14431,5 +14431,20 @@
  "eng.animconvert.parent_after": "{bone} steht vor seinem übergeordneten Knochen {parent}: Eltern zuerst auflisten",
  "eng.animconvert.parent_left_out": "Der Knochen {bone} hat den übergeordneten Knochen {parent}, der nicht zu den geschriebenen Knochen gehört; mit --keep hinzufügen",
  "eng.server.no_kit_change_to_preview": "Keine Änderung an der Vorschau",
- "eng.animconvert.name_too_long": "Der Knochenname {name} ist länger als 31 Zeichen in MilkShape"
+ "eng.animconvert.name_too_long": "Der Knochenname {name} ist länger als 31 Zeichen in MilkShape",
+ "v3ms3d.load": ".ms3d laden",
+ "v3ms3d.load_title": "Eine MilkShape-.ms3d-Animation für den gewählten Slot in .cas umwandeln. Waffen- und Schildknochen bleiben erhalten (GOAT 1.1 entfernt sie). Die Animation wird zuerst hier abgespielt. Mit Speichern wird sie ins Paket übernommen. Du kannst die Datei auch auf die Liste ziehen.",
+ "v3ms3d.not_ms3d": "{name} ist keine MilkShape-.ms3d-Datei.",
+ "v3ms3d.pick_slot": "Wähle zuerst den Slot aus, in den die Animation eingefügt werden soll. Das Paket dieser Mod muss ihn abspielen können.",
+ "v3ms3d.playing": "{name} wird abgespielt, umgewandelt für diesen Slot. Gespeichert wird erst, wenn du auf Speichern klickst.",
+ "v3ms3d.discard": "Zurück zur Animation im Paket",
+ "v3ms3d.hide": "{bone} ausblenden",
+ "v3ms3d.hide_title": "Diesen Knochen bei jedem Key von {skeleton}s {action} um 100 m nach unten verschieben, damit alles, was daran gewichtet ist, nicht mehr zu sehen ist (eine .cas-Datei hat keine Skalierung). Die Animation wird als neue Animation im Paket gespeichert. Mit Rückgängig im Protokoll kannst du das zurücknehmen.",
+ "v3ms3d.hide_confirm": "{bone} in {skeleton}s {action} ausblenden?\n\n{v3AnimPackMsg}",
+ "v3ms3d.hid_a_bone": "Einen Waffen-Knochen ausgeblendet",
+ "v3ms3d.weapon_drop_title": "Eine MilkShape-.ms3d-Datei hier ablegen, um sie in {skeleton}s {action} zu speichern. Waffen-Knochen bleiben erhalten.",
+ "v3ms3d.weapon_confirm": "{name} in {skeleton}s {action} im Paket von {mod} einfügen?\n\n{v3AnimPackMsg}",
+ "v3ms3d.put_into_pack": "Eine MilkShape-Animation ins Paket einfügen",
+ "eng.animslot.ms3d_no_bone_of_skeleton": "{name} enthält keinen Knochen dieses Skeletts ({bones}): Die Animation wurde für ein anderes Skelett erstellt",
+ "eng.animslot.ms3d_bones_held": "{missing_n} Knochen von {name} sind nicht in {name2} vorhanden und behalten ihre Bindepose bei: {missing}{x}"
 }

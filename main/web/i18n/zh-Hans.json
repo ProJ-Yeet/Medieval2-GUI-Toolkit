@@ -13738,5 +13738,20 @@
  "eng.animconvert.parent_after": "{bone} 排在其父骨骼 {parent} 之前：请先列出父骨骼",
  "eng.animconvert.parent_left_out": "{bone} 的父骨骼 {parent} 不在已写入的骨骼中；请用 --keep 添加",
  "eng.server.no_kit_change_to_preview": "预览没有变化",
- "eng.animconvert.name_too_long": "骨骼名称 {name} 超过 MilkShape 的 31 个字符限制"
+ "eng.animconvert.name_too_long": "骨骼名称 {name} 超过 MilkShape 的 31 个字符限制",
+ "v3ms3d.load": "加载 .ms3d",
+ "v3ms3d.load_title": "将 MilkShape .ms3d 动画转换为所选槽位的 .cas 文件。保留武器和盾牌骨骼（GOAT 1.1 会删除它们）。先在此播放；点击保存后才会放入包中。也可以将文件拖到列表上。",
+ "v3ms3d.not_ms3d": "{name} 不是 MilkShape .ms3d 文件。",
+ "v3ms3d.playing": "正在播放 {name}，已针对此槽位转换。点击保存前不会保存任何内容。",
+ "v3ms3d.discard": "返回包中的动画",
+ "v3ms3d.hide": "隐藏 {bone}",
+ "v3ms3d.hide_title": "在 {skeleton} 的 {action} 每个关键帧将此骨骼向下移动 100 米，使绑定到它的内容不可见（.cas 没有缩放属性）。这会作为新动画保存到包中。可在日志中点击撤销恢复。",
+ "v3ms3d.hide_confirm": "要在 {skeleton} 的 {action} 中隐藏 {bone} 吗？\n\n{v3AnimPackMsg}",
+ "v3ms3d.hid_a_bone": "已隐藏一个武器骨骼",
+ "v3ms3d.weapon_drop_title": "将 MilkShape .ms3d 文件拖到此处，以保存到 {skeleton} 的 {action} 中。保留武器骨骼。",
+ "v3ms3d.weapon_confirm": "要将 {name} 放入 {mod} 的包中 {skeleton} 的 {action} 吗？\n\n{v3AnimPackMsg}",
+ "v3ms3d.put_into_pack": "将 MilkShape 动画放入包中",
+ "eng.animslot.ms3d_no_bone_of_skeleton": "{name} 不包含此骨架的任何骨骼 ({bones})：这是为另一骨架制作的",
+ "eng.animslot.ms3d_bones_held": "{name} 中的 {missing_n} 个骨骼不存在于 {name2} 中，因此保持绑定姿势：{missing}{x}",
+ "v3ms3d.pick_slot": "请先选择要放入的槽位。必须是该模组自有包所播放的槽位。"
 }

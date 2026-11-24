@@ -15269,5 +15269,20 @@
  "eng.animconvert.parent_after": "{bone} указан раньше родительской кости {parent}: сначала укажите родительские кости",
  "eng.animconvert.parent_left_out": "У кости {bone} родительская кость {parent} отсутствует среди записанных костей; добавьте ее с помощью --keep",
  "eng.server.no_kit_change_to_preview": "Предварительный просмотр не изменен",
- "eng.animconvert.name_too_long": "Имя кости {name} длиннее 31 символа в MilkShape"
+ "eng.animconvert.name_too_long": "Имя кости {name} длиннее 31 символа в MilkShape",
+ "v3ms3d.load": "Загрузить .ms3d",
+ "v3ms3d.load_title": "Преобразовать анимацию MilkShape .ms3d в .cas для выбранного слота. Кости оружия и щита сохраняются (GOAT 1.1 удаляет их). Сначала анимация воспроизводится здесь. Нажми «Сохранить», чтобы добавить ее в пакет. Файл также можно перетащить на список.",
+ "v3ms3d.not_ms3d": "{name} не является файлом MilkShape .ms3d.",
+ "v3ms3d.pick_slot": "Сначала выбери слот для анимации. Пакет этого мода должен уметь воспроизводить его.",
+ "v3ms3d.playing": "Воспроизводится {name}, преобразованная для этого слота. Анимация не сохранится, пока ты не нажмешь «Сохранить».",
+ "v3ms3d.discard": "Вернуться к анимации из пакета",
+ "v3ms3d.hide": "Скрыть {bone}",
+ "v3ms3d.hide_title": "Перемести эту кость на 100 м вниз при каждом ключе {action} скелета {skeleton}, чтобы все, что к ней привязано, скрылось из вида (.cas не поддерживает масштаб). Анимация сохраняется в пакет как новая. Отменить в журнале отменяет это действие.",
+ "v3ms3d.hide_confirm": "Скрыть {bone} в {action} скелета {skeleton}?\n\n{v3AnimPackMsg}",
+ "v3ms3d.hid_a_bone": "Скрыта кость оружия",
+ "v3ms3d.weapon_drop_title": "Перетащи сюда файл MilkShape .ms3d, чтобы сохранить его в {action} скелета {skeleton}. Кости оружия сохраняются.",
+ "v3ms3d.weapon_confirm": "Добавить {name} в {action} скелета {skeleton} в пакет {mod}?\n\n{v3AnimPackMsg}",
+ "v3ms3d.put_into_pack": "Добавить анимацию MilkShape в пакет",
+ "eng.animslot.ms3d_no_bone_of_skeleton": "В {name} нет ни одной кости этого скелета ({bones}): анимация создана для другого скелета",
+ "eng.animslot.ms3d_bones_held": "{missing_n} костей из {name} отсутствуют в {name2} и сохраняют свою позу привязки: {missing}{x}"
 }

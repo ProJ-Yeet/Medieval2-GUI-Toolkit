@@ -14898,5 +14898,20 @@
  "eng.animconvert.parent_after": "{bone} aparece antes que su hueso padre {parent}: enumere primero los padres",
  "eng.animconvert.parent_left_out": "El hueso {bone} tiene como padre {parent}, que no está entre los huesos escritos; añádalo con --keep",
  "eng.server.no_kit_change_to_preview": "Sin cambios en la vista previa",
- "eng.animconvert.name_too_long": "El nombre del hueso {name} supera los 31 caracteres de MilkShape"
+ "eng.animconvert.name_too_long": "El nombre del hueso {name} supera los 31 caracteres de MilkShape",
+ "v3ms3d.load": "Cargar .ms3d",
+ "v3ms3d.load_title": "Convertir una animación MilkShape .ms3d a .cas para la ranura seleccionada. Se conservan los huesos del arma y del escudo (GOAT 1.1 los elimina). Primero se reproduce aquí; Guardar la añade al paquete. También puedes arrastrar el archivo a la lista.",
+ "v3ms3d.not_ms3d": "{name} no es un archivo MilkShape .ms3d.",
+ "v3ms3d.pick_slot": "Primero elige la ranura donde quieres ponerla. El paquete propio de este mod debe poder reproducirla.",
+ "v3ms3d.playing": "Reproduciendo {name}, convertida para esta ranura. No se guardará nada hasta que pulses Guardar.",
+ "v3ms3d.discard": "Volver a la animación del paquete",
+ "v3ms3d.hide": "Ocultar {bone}",
+ "v3ms3d.hide_title": "Mover este hueso 100 m hacia abajo en cada clave de {action} del {skeleton}, para que lo que tenga asignado quede fuera de la vista (un .cas no tiene escala). Se guarda en el paquete como una animación nueva. Deshacer en el registro revierte el cambio.",
+ "v3ms3d.hide_confirm": "¿Ocultar {bone} en {action} del {skeleton}?\n\n{v3AnimPackMsg}",
+ "v3ms3d.hid_a_bone": "Se ocultó un hueso del arma",
+ "v3ms3d.weapon_drop_title": "Suelta aquí un archivo MilkShape .ms3d para guardarlo en {action} del {skeleton}. Se conservan los huesos del arma.",
+ "v3ms3d.weapon_confirm": "¿Poner {name} en {action} del {skeleton}, en el paquete de {mod}?\n\n{v3AnimPackMsg}",
+ "v3ms3d.put_into_pack": "Poner una animación MilkShape en el paquete",
+ "eng.animslot.ms3d_no_bone_of_skeleton": "{name} no tiene ninguno de los huesos de este esqueleto ({bones}): se creó para otro esqueleto",
+ "eng.animslot.ms3d_bones_held": "{missing_n} de los huesos de {name} no están en {name2} y mantienen su pose de reposo: {missing}{x}"
 }

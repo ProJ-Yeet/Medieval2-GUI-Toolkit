@@ -4786,11 +4786,19 @@ class Handler(BaseHTTPRequestHandler):
         except (TypeError, ValueError):
             slot = -1
         keep = bool(body.get("keep_rebuildable", True))
+        # 128f: a MilkShape animation dropped on the slot, as base64
+        ms3d, ms3d_name = b"", str(body.get("ms3d_name") or "")
+        if body.get("ms3d"):
+            import base64
+            try:
+                ms3d = base64.b64decode(str(body["ms3d"]), validate=True)
+            except ValueError as e:
+                return {"error": str(e)}
         try:
             if action == "pack_preview":
                 anim = animslot.preview_edit(
                     mod, skel, slot, body.get("edits") if isinstance(body.get("edits"), dict) else {},
-                    rel=str(body.get("rel") or ""))
+                    rel=str(body.get("rel") or ""), ms3d=ms3d, ms3d_name=ms3d_name)
                 # the weapon skeletons hung on the hands, as the action was played
                 weapons = [w for w in (body.get("weapons") or []) if isinstance(w, str) and w]
                 added = animview.add_weapons(mod.data, anim, weapons, slot) if weapons else []
@@ -4800,7 +4808,8 @@ class Handler(BaseHTTPRequestHandler):
             if action in ("pack_plan", "pack_apply"):
                 plan = animslot.plan_edit(
                     mod, skel, slot, body.get("edits") if isinstance(body.get("edits"), dict) else {},
-                    name=str(body.get("name") or ""), rel=str(body.get("rel") or ""), keep_rebuildable=keep)
+                    name=str(body.get("name") or ""), rel=str(body.get("rel") or ""), keep_rebuildable=keep,
+                    ms3d=ms3d, ms3d_name=ms3d_name)
             elif action in ("bring_plan", "bring_apply"):
                 plan = animslot.plan_bring(mod, skel, slot, self.registry.get(str(body.get("source") or "")),
                                            str(body.get("source_skeleton") or ""), keep_rebuildable=keep)

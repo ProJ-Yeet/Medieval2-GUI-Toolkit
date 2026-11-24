@@ -282,15 +282,35 @@ def _finish(p: SlotPlan, packs: animpack.Packs, sk_entry: animpack.PackEntry,
     return p
 
 
+def from_ms3d(data: bytes, template: casanim.Animation, name: str = "") -> Tuple[casanim.Animation, List[str]]:
+    """A MilkShape animation (128f) as a .cas on ``template``'s bones, the
+    slot's own action as the pack plays it: weapon and shield bones kept, as
+    GOAT does not (:mod:`unittransfer.animconvert`). Returns it and the
+    template's bones the .ms3d has no joint for, which hold their bind pose."""
+    from . import animconvert
+    m = animconvert.read_ms3d(data, name or "animation.ms3d")
+    joints = {j.name.lower() for j in m.joints}
+    bones = [t.name for t in template.tracks[1:] if t.name.lower() in joints]
+    missing = [t.name for t in template.tracks[1:] if t.name.lower() not in joints]
+    if not bones:
+        raise SlotError(_i18n.msg("eng.animslot.ms3d_no_bone_of_skeleton",
+                                  "{name} has none of this skeleton's bones ({bones}): it was made for another skeleton",
+                                  name=name or "the .ms3d", bones=", ".join(t.name for t in template.tracks[1:4])))
+    return animconvert.ms3d_to_anim(m, template, bones=bones, source=name or "animation.cas"), missing
+
+
 def plan_edit(mod, skeleton: str, slot: int, edits: Optional[Dict], name: str = "",
-              rel: str = "", keep_rebuildable: bool = True) -> SlotPlan:
+              rel: str = "", keep_rebuildable: bool = True, ms3d: bytes = b"",
+              ms3d_name: str = "") -> SlotPlan:
     """Save the editor's ``edits`` to ``skeleton``'s ``slot`` into the mod's
-    own pack. The action edited is the pack's (what the game plays), or the
-    loose file ``rel`` under ``data/`` when the editor opened one. ``name`` is
-    the new file's name; it goes under ``animations/edited/<skeleton>/``."""
+    own pack. The action edited is the pack's (what the game plays), the
+    loose file ``rel`` under ``data/`` when the editor opened one, or a
+    MilkShape animation dropped on the slot (``ms3d``, its bytes, 128f).
+    ``name`` is the new file's name; it goes under
+    ``animations/edited/<skeleton>/``."""
     p = SlotPlan(kind="edit", mod=mod, skeleton=skeleton, slot=int(slot),
                  action=skelslots.label(int(slot)) if 0 <= int(slot) < animpack.SKELETON_SLOTS else "")
-    if not rel and not any((v not in (None, "", 1) if k == "speed" else v not in (None, "", [], {}, False))
+    if not rel and not ms3d and not any((v not in (None, "", 1) if k == "speed" else v not in (None, "", [], {}, False))
                            for k, v in (edits or {}).items()):
         p.errors.append(_i18n.msg("eng.animslot.nothing_is_edited_the_slot_would", "nothing is edited: the slot would play what it plays now"))
         return p
@@ -322,6 +342,12 @@ def plan_edit(mod, skeleton: str, slot: int, edits: Optional[Dict], name: str = 
             base = animloose.to_cas(packs.anims.read_entry(e), sk.bone_table(), e.scale, cur.path,
                                     bone_scale=sk.scale)
             p.source = cur.path
+            if ms3d:
+                conv, missing = from_ms3d(ms3d, base, ms3d_name)
+                base, _gone = onto(conv, sk, nq)
+                if missing:
+                    p.notes.append(_i18n.msg("eng.animslot.ms3d_bones_held", "{missing_n} of {name}'s bones are not in {name2} and hold their bind pose: {missing}{x}", missing_n=len(missing), name=sk_entry.name, name2=ms3d_name or ".ms3d", missing=", ".join(missing[:6]), x="..." if len(missing) > 6 else ""))
+                p.source = ms3d_name or ".ms3d"
         edited = animedit.apply_edits(base, edits)
         p.data, p.scale = pack_for(packs, sk, p.slot, edited), sk.scale or 1.0
     except (SlotError, animpack.PackError, casanim.AnimError, animedit.EditError,
@@ -331,8 +357,9 @@ def plan_edit(mod, skeleton: str, slot: int, edits: Optional[Dict], name: str = 
     e = edits or {}
     trim = e.get("trim") or [0]
     nf = animpack.PackedAnimation(p.data).frames
-    p.new_slot = _retime(cur, int(trim[0]), float(e.get("speed") or 1.0), nf) if not rel else _retime(cur, 0, 1.0, nf)
-    stem = (name or Path(cur.path.replace("\\", "/")).stem + "_edited").strip().replace("\\", "/")
+    p.new_slot = _retime(cur, int(trim[0]), float(e.get("speed") or 1.0), nf) if not (rel or ms3d) else _retime(cur, 0, 1.0, nf)
+    default = Path(ms3d_name.replace("\\", "/")).stem if ms3d and ms3d_name else Path(cur.path.replace("\\", "/")).stem + "_edited"
+    stem = (name or default).strip().replace("\\", "/")
     stem = stem.rsplit("/", 1)[-1]
     if stem.lower().endswith(".cas"):
         stem = stem[:-4]
@@ -344,10 +371,12 @@ def plan_edit(mod, skeleton: str, slot: int, edits: Optional[Dict], name: str = 
     return _finish(p, packs, sk_entry, sk, want, on_frames(edited), keep_rebuildable)
 
 
-def preview_edit(mod, skeleton: str, slot: int, edits: Optional[Dict], rel: str = "") -> casanim.Animation:
+def preview_edit(mod, skeleton: str, slot: int, edits: Optional[Dict], rel: str = "",
+                 ms3d: bytes = b"", ms3d_name: str = "") -> casanim.Animation:
     """What :func:`plan_edit` would write, read back as the viewer plays a
     pack entry: the preview is the bytes the game would get."""
-    p = plan_edit(mod, skeleton, slot, edits, name="preview", rel=rel, keep_rebuildable=False)
+    p = plan_edit(mod, skeleton, slot, edits, name="preview", rel=rel, keep_rebuildable=False,
+                  ms3d=ms3d, ms3d_name=ms3d_name)
     if p.errors and not p.data:
         raise SlotError("; ".join(p.errors))
     packs = _own(mod.data)
