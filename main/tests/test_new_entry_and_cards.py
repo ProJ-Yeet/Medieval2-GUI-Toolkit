@@ -235,6 +235,24 @@ check("a folder outside ownership is written, but said out loud",
       == [f"ui/units/not_an_owner/#{unit3.dictionary}.tga"]
       and any("ownership" in w for w in plan.warnings))
 
+# 2026-11-24: the card maker's "only these": the unit's card leaves every
+# folder the save does not write to; mercs alone is one card for every faction
+others = [f for f in own if f != own[0]]
+for f in others[:2]:
+    (mod.data / f"ui/units/{f}/#{unit3.dictionary}.tga").parent.mkdir(parents=True, exist_ok=True)
+    (mod.data / f"ui/units/{f}/#{unit3.dictionary}.tga").write_bytes(b"AN OLD CARD")
+req = edit.request_from_dict({"unit": unit3.type, "card_src": rel, "card_folders": ["mercs"], "card_only": True})
+plan = edit.plan_edit(mod, req)
+check("mercs alone: the card goes to mercs and leaves every faction folder",
+      req.card_only and [r for _s, r in plan.icon_copies] == [f"ui/units/mercs/#{unit3.dictionary}.tga"]
+      and f"ui/units/{own[0]}/#{unit3.dictionary}.tga" in plan.deletes
+      and all(f"ui/units/{f}/#{unit3.dictionary}.tga" in plan.deletes for f in others[:2]))
+req = edit.request_from_dict({"unit": unit3.type, "card_src": rel, "card_folders": others[:1]})
+plan = edit.plan_edit(mod, req)
+check("without it the folders left out keep their card", not plan.deletes)
+for f in others[:2]:
+    (mod.data / f"ui/units/{f}/#{unit3.dictionary}.tga").unlink()
+
 # ---------------------------------------------------------------------------
 print("\n5) a file this tool writes carries the time it wrote it")
 # A mod's files come out of one archive sharing a timestamp to the second, and

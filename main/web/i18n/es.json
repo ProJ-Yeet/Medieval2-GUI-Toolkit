@@ -1193,6 +1193,9 @@
   ],
   "cards.gen_overlay_title": [
    "frame"
+  ],
+  "cards.gen_peek_mounted": [
+   "mount"
   ]
  },
  "ancillaries.a_character_holds_one_ancillary_per": "Un personaje solo puede tener un séquito de cada tipo, así que este es el que sustituiría uno nuevo",
@@ -11506,9 +11509,8 @@
  "cards.gen_exposure": "Exposición",
  "cards.gen_finish": "Reducir y acabar",
  "cards.gen_gamma": "Gamma",
- "cards.gen_give": "Mostrar lo que escribe",
- "cards.gen_give_apply": "Dársela a la unidad",
- "cards.gen_given": "La tarjeta es ahora de {unit}, en la carpeta de cada facción propietaria.",
+ "cards.gen_give": "Vista previa",
+ "cards.gen_give_apply": "Aplicar a las unidades marcadas",
  "cards.gen_hd": "Render HD, {w}×{h}",
  "cards.gen_height": "Altura",
  "cards.gen_hue": "Tono",
@@ -11551,7 +11553,6 @@
   "other": "Dibuja {count} objetos del modelo de Armory Studio."
  },
  "cards.gen_tilt": "Inclinación",
- "cards.gen_unit": "Unidad",
  "cards.gen_unit_first": "Guarde la tarjeta y elija antes una unidad.",
  "eng.armory.card_needs_name": "dé un nombre a la tarjeta",
  "eng.armory.card_not_png": "la tarjeta no llegó como PNG",
@@ -14757,5 +14758,22 @@
  "cards.gen_riders_spots": "Jinetes en la montura",
  "cards.gen_riders_spots_title": "Coloca al jinete en cada puesto que el juego asigna a los jinetes de esta montura (rider_offset en descr_mount.txt), una copia por puesto",
  "cards.gen_riders_spots_none": "Esta montura ofrece como máximo un puesto para jinete.",
- "cards.gen_riders_spots_done": "Se colocaron {n} jinetes en los puestos de la montura."
+ "cards.gen_riders_spots_done": "Se colocaron {n} jinetes en los puestos de la montura.",
+ "cards.gen_tex": "Texturas",
+ "cards.gen_tex_default": "Las primeras texturas del modelo",
+ "cards.gen_tex_n": "Texturas {n}",
+ "cards.gen_tex_title": "Las texturas de qué facción lleva el modelo en la carta. Esa facción aparece primero al guardar la carta.",
+ "cards.gen_give_head": "Usar esta carta para",
+ "cards.gen_give_info_head": "Usar esta carta informativa para",
+ "cards.gen_give_note": "Todas las unidades que usan este modelo, con sus facciones. Las facciones marcadas reciben la carta en su carpeta. Una facción marcada con + todavía no posee la unidad y se añade a las facciones que la poseen.",
+ "cards.gen_give_adds_owner": "Esta facción tiene texturas en el modelo, pero no posee la unidad. Al marcarla, se añade a las facciones que poseen la unidad.",
+ "cards.gen_give_add": "Añadir otra unidad",
+ "cards.gen_give_all": "Reemplazar todas las existentes",
+ "cards.gen_give_all_title": "Marcar todas las facciones a las que ya pertenece cada unidad marcada",
+ "cards.gen_give_mercs": "Una carta de mercenarios para cada facción",
+ "cards.gen_give_mercs_title": "Colocar la carta en la carpeta de mercenarios, que usa cada facción que no tiene una carta propia.",
+ "cards.gen_give_mercs_only": "Eliminar las cartas propias de las facciones para estas unidades, para que todas muestren esta carta.",
+ "cards.gen_given_n": "La carta se asignó a {n} unidad(es).",
+ "cards.gen_peek_mounted_title": "Ver al jinete sobre la montura de su unidad con las animaciones en curso en el visor de modelos",
+ "cards.gen_peek_mounted": "A caballo"
 }

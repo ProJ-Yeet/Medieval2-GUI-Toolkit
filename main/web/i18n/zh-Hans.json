@@ -847,6 +847,9 @@
   ],
   "cards.gen_grp_copy": [
    "copy"
+  ],
+  "cards.gen_peek_mounted": [
+   "mount"
   ]
  },
  "ancillaries.a_character_holds_one_ancillary_per": "人物每种类型只能持有一个随从，因此此项决定新随从会替换哪个随从",
@@ -3287,9 +3290,8 @@
  "cards.gen_exposure": "曝光",
  "cards.gen_finish": "缩小并完成",
  "cards.gen_gamma": "伽马",
- "cards.gen_give": "显示将写入的内容",
- "cards.gen_give_apply": "应用到部队",
- "cards.gen_given": "此卡片现已属于 {unit}，位于所有所属派系的文件夹中。",
+ "cards.gen_give": "预览",
+ "cards.gen_give_apply": "应用到已勾选的部队",
  "cards.gen_hd": "高清渲染，{w}×{h}",
  "cards.gen_height": "高度",
  "cards.gen_hue": "色相",
@@ -3345,7 +3347,6 @@
  "cards.gen_turn": "旋转",
  "cards.gen_two_hands": "双手持握",
  "cards.gen_two_hands_title": "左手在右手的 Pole 位置与右手共同握持武器，与工具包中的 Switch 骨骼作用一致",
- "cards.gen_unit": "部队",
  "cards.gen_unit_first": "请先保存卡片并选择部队。",
  "cards.gen_view_hint": "高清视图中：按中键拖动旋转相机，按 Shift 平移，滚轮缩放；G 移动模型，R 旋转模型，X、Y 或 Z 约束轴向，点击或按 Enter 确认，Esc 恢复。",
  "cards.identical_copies": {
@@ -13599,5 +13600,22 @@
  "cards.gen_riders_spots_title": "将骑手放在游戏为该坐骑骑手提供的每个位置（descr_mount.txt 中的 rider_offset），每个位置放一个副本",
  "cards.gen_riders_spots_none": "该坐骑最多提供一个骑手位置。",
  "cards.gen_riders_spots_done": "已在坐骑的位置上放置 {n} 个骑手。",
- "cards.gen_grp_copy": "副本：{name}"
+ "cards.gen_grp_copy": "副本：{name}",
+ "cards.gen_give_head": "将此卡片用于",
+ "cards.gen_give_info_head": "将此信息卡用于",
+ "cards.gen_give_all": "替换所有现有卡片",
+ "cards.gen_give_mercs": "为每个派系提供一张雇佣兵卡片",
+ "cards.gen_give_mercs_title": "将卡片放入雇佣兵文件夹，没有专属卡片的派系会使用该文件夹。",
+ "cards.gen_tex": "贴图",
+ "cards.gen_tex_default": "模型的第一组贴图",
+ "cards.gen_tex_n": "贴图 {n}",
+ "cards.gen_tex_title": "模型在卡片上使用哪个派系的贴图。保存卡片时，该派系会排在首位。",
+ "cards.gen_give_note": "所有使用此模型的部队及其派系。勾选的派系会在自己的文件夹中获得此卡片。标记 + 的派系尚不拥有该部队，勾选后会被添加到该部队的拥有者中。",
+ "cards.gen_give_adds_owner": "此派系在模型中有贴图，但尚不拥有该部队；勾选后会将其添加到该部队的拥有者中。",
+ "cards.gen_give_add": "添加另一个部队",
+ "cards.gen_give_all_title": "勾选每个已勾选部队已属于的所有派系",
+ "cards.gen_give_mercs_only": "删除各派系这些部队的专属卡片，使所有派系都显示此卡片。",
+ "cards.gen_given_n": "此卡片已分配给 {n} 个部队。",
+ "cards.gen_peek_mounted": "骑乘状态",
+ "cards.gen_peek_mounted_title": "在模型查看器中查看骑在其部队坐骑上的骑手，并播放他们的动作"
 }

@@ -1108,6 +1108,9 @@
   ],
   "cards.gen_grp_copy": [
    "copy"
+  ],
+  "cards.gen_peek_mounted": [
+   "mount"
   ]
  },
  "ancillaries.a_character_holds_one_ancillary_per": "Ein Charakter hat pro Typ ein Gefolgsmitglied; das ist also das, was ein neues ersetzt",
@@ -11054,9 +11057,8 @@
  "cards.gen_exposure": "Belichtung",
  "cards.gen_finish": "Verkleinern und fertigstellen",
  "cards.gen_gamma": "Gamma",
- "cards.gen_give": "Anzeigen, was geschrieben wird",
- "cards.gen_give_apply": "Der Einheit geben",
- "cards.gen_given": "Die Karte gehört jetzt {unit}, im Ordner jeder besitzenden Fraktion.",
+ "cards.gen_give": "Vorschau",
+ "cards.gen_give_apply": "Auf markierte Einheiten anwenden",
  "cards.gen_hd": "HD-Bild, {w}×{h}",
  "cards.gen_height": "Höhe",
  "cards.gen_hue": "Farbton",
@@ -11096,7 +11098,6 @@
   "other": "Zeichnet {count} Objekte des Modells aus Armory Studio."
  },
  "cards.gen_tilt": "Neigung",
- "cards.gen_unit": "Einheit",
  "cards.gen_unit_first": "Speichern Sie zuerst die Karte und wählen Sie eine Einheit.",
  "eng.armory.card_needs_name": "der Karte einen Namen geben",
  "eng.armory.card_not_png": "die Karte kam nicht als PNG",
@@ -14291,5 +14292,22 @@
  "cards.gen_riders_spots_title": "Den Reiter auf jeden Platz setzen, den das Spiel den Reitern dieses Reittiers zuweist (rider_offset in descr_mount.txt), eine Kopie pro Platz",
  "cards.gen_riders_spots_none": "Dieses Reittier bietet höchstens einen Reiterplatz.",
  "cards.gen_riders_spots_done": "{n} Reiter auf den Plätzen des Reittiers gesetzt.",
- "cards.gen_grp_copy": "Kopie: {name}"
+ "cards.gen_grp_copy": "Kopie: {name}",
+ "cards.gen_tex": "Texturen",
+ "cards.gen_tex_default": "Die ersten Texturen des Modells",
+ "cards.gen_tex_n": "Texturen {n}",
+ "cards.gen_tex_title": "Welche Fraktionstexturen das Modell auf der Karte trägt. Diese Fraktion steht beim Speichern der Karte an erster Stelle.",
+ "cards.gen_give_head": "Diese Karte verwenden für",
+ "cards.gen_give_info_head": "Diese Infokarte verwenden für",
+ "cards.gen_give_note": "Alle Einheiten, die dieses Modell verwenden, mit ihren Fraktionen. Markierte Fraktionen erhalten die Karte in ihrem Ordner. Eine mit + markierte Fraktion besitzt die Einheit noch nicht und wird zu ihrer Eigentümerschaft hinzugefügt.",
+ "cards.gen_give_adds_owner": "Diese Fraktion hat Texturen auf dem Modell, besitzt die Einheit aber nicht. Wenn du sie markierst, wird sie zur Eigentümerschaft der Einheit hinzugefügt.",
+ "cards.gen_give_add": "Weitere Einheit hinzufügen",
+ "cards.gen_give_all": "Alle vorhandenen ersetzen",
+ "cards.gen_give_all_title": "Alle Fraktionen markieren, zu denen jede markierte Einheit bereits gehört",
+ "cards.gen_give_mercs": "Eine Söldnerkarte für jede Fraktion",
+ "cards.gen_give_mercs_title": "Die Karte im Söldnerordner ablegen. Auf diesen greift jede Fraktion zurück, die keine eigene Karte hat.",
+ "cards.gen_give_mercs_only": "Die eigenen Karten der Fraktionen für diese Einheiten entfernen, damit jede Fraktion diese Karte anzeigt.",
+ "cards.gen_given_n": "Die Karte wurde {n} Einheit(en) zugewiesen.",
+ "cards.gen_peek_mounted_title": "Den Reiter auf dem Reittier seiner Einheit mit laufenden Animationen im Modellbetrachter ansehen",
+ "cards.gen_peek_mounted": "Aufgesessen"
 }

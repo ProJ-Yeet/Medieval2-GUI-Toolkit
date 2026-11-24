@@ -803,6 +803,9 @@
   ],
   "cards.gen_overlay_title": [
    "frame"
+  ],
+  "cards.gen_peek_mounted": [
+   "mount"
   ]
  },
  "ancillaries.a_character_holds_one_ancillary_per": "Un personnage détient un accessoire par type ; c’est donc celui que remplace un nouvel accessoire",
@@ -3482,9 +3485,8 @@
  "cards.gen_exposure": "Exposition",
  "cards.gen_finish": "Réduire et finaliser",
  "cards.gen_gamma": "Gamma",
- "cards.gen_give": "Afficher le résultat écrit",
- "cards.gen_give_apply": "Attribuer à l’unité",
- "cards.gen_given": "La carte appartient maintenant à {unit}, dans le dossier de chaque faction possédant l’unité.",
+ "cards.gen_give": "Aperçu",
+ "cards.gen_give_apply": "Appliquer aux unités cochées",
  "cards.gen_hd": "Rendu HD, {w}×{h}",
  "cards.gen_height": "Hauteur",
  "cards.gen_hue": "Teinte",
@@ -3542,7 +3544,6 @@
  "cards.gen_turn": "Rotation",
  "cards.gen_two_hands": "Deux mains",
  "cards.gen_two_hands_title": "La main gauche tient l’arme avec la droite, au niveau du Pole de la main droite, comme le fait l’os Switch du kit",
- "cards.gen_unit": "Unité",
  "cards.gen_unit_first": "Enregistrez la carte et choisissez d’abord une unité.",
  "cards.gen_view_hint": "Dans la vue HD : faites glisser avec le bouton du milieu pour tourner la caméra, avec Shift pour déplacer la vue, et utilisez la molette pour zoomer ; G déplace le modèle et R le fait tourner, X, Y ou Z contraint le mouvement à un axe, un clic ou Enter confirme, Esc rétablit la position.",
  "cards.identical_copies": {
@@ -14403,5 +14404,22 @@
  "cards.gen_riders_spots": "Cavaliers sur la monture",
  "cards.gen_riders_spots_title": "Placer le cavalier sur chaque emplacement que le jeu attribue aux cavaliers de cette monture (rider_offset dans descr_mount.txt), une copie par emplacement",
  "cards.gen_riders_spots_none": "Cette monture fournit au maximum un emplacement pour cavalier.",
- "cards.gen_riders_spots_done": "{n} cavaliers placés sur les emplacements de la monture."
+ "cards.gen_riders_spots_done": "{n} cavaliers placés sur les emplacements de la monture.",
+ "cards.gen_tex": "Textures",
+ "cards.gen_tex_default": "Premières textures du modèle",
+ "cards.gen_tex_n": "Textures {n}",
+ "cards.gen_tex_title": "Les textures de quelle faction le modèle porte sur la carte. Cette faction apparaît en premier lors de l'enregistrement de la carte.",
+ "cards.gen_give_head": "Utiliser cette carte pour",
+ "cards.gen_give_info_head": "Utiliser cette fiche d'information pour",
+ "cards.gen_give_note": "Toutes les unités qui utilisent ce modèle, avec leurs factions. Les factions cochées reçoivent la carte dans leur dossier. Une faction marquée d'un + ne possède pas encore l'unité et sera ajoutée aux factions qui la possèdent.",
+ "cards.gen_give_adds_owner": "Cette faction a des textures sur le modèle, mais ne possède pas l'unité. La cocher l'ajoute aux factions qui possèdent l'unité.",
+ "cards.gen_give_add": "Ajouter une autre unité",
+ "cards.gen_give_all": "Remplacer toutes les cartes existantes",
+ "cards.gen_give_all_title": "Cocher toutes les factions auxquelles chaque unité cochée appartient déjà",
+ "cards.gen_give_mercs": "Une carte de mercenaires pour chaque faction",
+ "cards.gen_give_mercs_title": "Placer la carte dans le dossier des mercenaires, utilisé par toute faction qui n'a pas sa propre carte.",
+ "cards.gen_give_mercs_only": "Supprimer les cartes propres aux factions pour ces unités, afin que chaque faction affiche celle-ci.",
+ "cards.gen_given_n": "La carte a été attribuée à {n} unité(s).",
+ "cards.gen_peek_mounted_title": "Voir le cavalier sur la monture de son unité avec les animations en cours dans le visualiseur de modèles",
+ "cards.gen_peek_mounted": "En selle"
 }

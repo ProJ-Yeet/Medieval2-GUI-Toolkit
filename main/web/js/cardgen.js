@@ -269,7 +269,8 @@ async function cgUnitLoad(type, model){
   if(!u) return;
   const entry = (model || cgUnitModel(u)).toLowerCase(), c = cg();
   CG_UNIT.unit = type; CG_UNIT.entry = entry; CG_UNIT.mod = mod; CG_UNIT.objects = []; CG_UNIT.picking = false; CG_WORK.view = null;
-  c.unit = type; c.name = type.replace(/[^A-Za-z0-9_\-]/g, '_'); c.saved = null; c.givePlan = null; c.err = ''; c.off = []; c.pick = {}; c.oxf = {};
+  c.unit = type; c.name = type.replace(/[^A-Za-z0-9_\-]/g, '_'); c.saved = null; c.give = null; c.err = ''; c.off = []; c.pick = {}; c.oxf = {};
+  c.gxf = {}; c.dups = []; c.texFaction = '';
   c.rig.autoFor = '';
   CG_WORK.boneSel = ''; CG_WORK.objSel = 0;
   cgPaint();
@@ -277,6 +278,7 @@ async function cgUnitLoad(type, model){
   const live = await armLoadAsset(a);
   if(CG_UNIT.unit !== type) return;
   if(!live || !live.view){ c.err = (live && live.err) || tt('cards.gen_unit_unreadable', {entry}); cgPaint(); return; }
+  CG_UNIT.skins = live.view.skins || [];
   const objects = live.view.objects.map((ob, i) => ({id: -1 - i, src: [{asset: key, group: ob.index}], name: ob.name, mesh: ob.mesh,
     flag: ob.flag, t: [0, 0, 0], r: [0, 0, 0], s: [1, 1, 1]}));
   const extras = await cgExtras(u, mod, -5000);
@@ -427,9 +429,37 @@ async function cgUnitPeek(type, model){
   cgPeekPaint();
 }
 function cgPeekHtml(){
-  return `<div class="cgpeek"><div class="armexprow" id="cgPeekHead"></div><canvas id="cgPeek"></canvas>
+  return `<div class="cgpeek"><div class="armexprow" id="cgPeekHead"></div><canvas id="cgPeek"></canvas><div id="cgPeekV3" class="cgpeekv3" hidden></div>
     <p class="count">${tt('cards.gen_peek_hint')}</p></div>`;
 }
+/* 2026-11-24: a cavalry unit seen Mounted: the rider on his mount, playing
+   their actions, in the Models viewer (viewer3d.js) docked where the turning
+   view stands; its own "On his mount", with the mount the unit rides. */
+function cgPeekMounted(){ const pk = CG_UNIT.peek; return !!(CG_UNIT.mounted && pk && pk.info && pk.info.mount && !pk.err); }
+async function cgPeekV3(pk){
+  if(typeof v3Mount !== 'function') return;
+  await v3Mount('cgPeekV3', state.src, pk.entry);
+  const want = (pk.info.mount || '').toLowerCase();
+  // its mount list comes a moment after the model; the unit's own mount picked from it
+  for(let i = 0; i < 60 && CG_UNIT.peek === pk && cgPeekMounted(); i++){
+    const m = typeof v3 !== 'undefined' && v3 && v3.host === 'cgPeekV3' && v3.anim && v3.anim.mount;
+    if(m && m.list){
+      const rows = m.list.mounts || [], at = rows.findIndex(r => (r.type || '').toLowerCase() === want || (r.entry || '').toLowerCase() === want);
+      if(at >= 0 && at !== m.pick){ m.pick = at; m.x = null; m.data = null; }
+      // the viewer carries him only while a riding action plays: his mounted
+      // skeleton set and its standing idle
+      const a = v3.anim, si = (a.list.sets || []).findIndex(x => (x.mount || 'none').toLowerCase() !== 'none');
+      if(si >= 0 && si !== a.set) v3AnimSet(si);
+      const acts = ((v3AnimSk() || {}).actions || []).filter(x => x.playable);
+      const row = ['stand_a_idle', 'stand_idle', 'idle'].map(n => acts.find(x => x.action.toLowerCase() === n)).find(Boolean) || acts[0];
+      if(row && !a.data) await v3AnimPick(v3AnimKey(row));
+      if(!m.on) v3AnimMountOn(true);
+      return;
+    }
+    await new Promise(ok => setTimeout(ok, 250));
+  }
+}
+function cgPeekMount(on){ CG_UNIT.mounted = !!on; cgPeekPaint(); }
 function cgPeekPaint(){
   const head = document.getElementById('cgPeekHead'), canvas = document.getElementById('cgPeek');
   if(!head || !canvas) return;
@@ -438,9 +468,17 @@ function cgPeekPaint(){
   head.innerHTML = pk ? `<b>${esc(pk.type)}</b><span class="count">${esc(u.category)} · ${esc(u['class'])} · ${esc(pk.entry)}</span>
       ${cgUgSelect(u, pk.entry, `cgUnitPeek(${t},this.value)`)}<span style="flex:1"></span>
       ${pk.err ? `<button class="mini" onclick="cgRetry(${t},${esc(JSON.stringify(pk.entry))},true)">${tt('cards.gen_retry')}</button>` : ''}
+      ${u.mount ? `<button class="mini${CG_UNIT.mounted ? ' on' : ''}" title="${ttA('cards.gen_peek_mounted_title')}" onclick="cgPeekMount(${!CG_UNIT.mounted})">${tt('cards.gen_peek_mounted')}</button>` : ''}
       ${CG_UNIT.unit ? `<button class="mini" onclick="CG_UNIT.picking=false;cgPaint()">${tt('cards.gen_peek_cancel')}</button>` : ''}
       <button class="primary" onclick="cgUnitLoad(${t},${esc(JSON.stringify(pk.entry))})">${tt('cards.gen_peek_use')}</button>`
     : `<span class="count">${tt('cards.gen_peek_none')}</span>`;
+  const dock = document.getElementById('cgPeekV3'), mounted = cgPeekMounted();
+  if(dock){
+    canvas.hidden = mounted; dock.hidden = !mounted;
+    if(mounted && dock.dataset.entry !== pk.entry){ dock.dataset.entry = pk.entry; cgPeekV3(pk); }
+    if(!mounted && dock.dataset.entry){ dock.dataset.entry = ''; if(typeof v3 !== 'undefined' && v3 && v3.host === 'cgPeekV3'){ v3Stop(); v3 = null; } dock.innerHTML = ''; }
+    if(mounted) return;
+  }
   const box = canvas.getBoundingClientRect(), ratio = Math.min(2, devicePixelRatio || 1);
   const w = Math.max(64, Math.round(box.width * ratio)), h = Math.max(64, Math.round(box.height * ratio));
   if(canvas.width !== w || canvas.height !== h){ canvas.width = w; canvas.height = h; }
@@ -512,7 +550,25 @@ function cgSourceHtml(){
 function cgUgHtml(){
   const u = ((CG_UNIT.units || {}).list || []).find(x => x.type === CG_UNIT.unit);
   if(!u || CG_UNIT.picking) return '';
-  return cgUgSelect(u, CG_UNIT.entry, `cgUnitLoad(${esc(JSON.stringify(u.type))},this.value)`);
+  return cgUgSelect(u, CG_UNIT.entry, `cgUnitLoad(${esc(JSON.stringify(u.type))},this.value)`) + cgTexHtml();
+}
+/* 2026-11-24: whose textures the model wears. A model lists a texture per
+   group of factions (its modeldb skins); the faction picked here wears its
+   own, and comes first when the card is saved. */
+function cgTexHtml(){
+  const skins = (CG_UNIT.skins || []).filter(k => k.exists !== false);
+  if(skins.length < 2) return '';
+  const c = cg();
+  return cgField(tt('cards.gen_tex'), `<select onchange="cgTexPick(this.value)"><option value="">${tt('cards.gen_tex_default')}</option>
+    ${(CG_UNIT.skins || []).map((k,i) => k.exists === false ? '' : `<optgroup label="${esc(tt('cards.gen_tex_n',{n:i+1}))}">${(k.factions || []).map(f =>
+      `<option value="${esc(f)}"${c.texFaction === f ? ' selected' : ''}>${esc(f)}</option>`).join('')}</optgroup>`).join('')}</select>`, tt('cards.gen_tex_title'));
+}
+const cgSkinOf = f => f ? Math.max(0, (CG_UNIT.skins || []).findIndex(k => (k.factions || []).includes(f))) : 0;
+async function cgTexPick(f){
+  const c = cg(); c.texFaction = f; c.give = null;
+  const a = {kind: 'entry', mod: CG_UNIT.mod, entry: CG_UNIT.entry}, live = ARM.assets.get(armAssetKey(a));
+  if(live) await armLoadSkin({...a, skin: cgSkinOf(f)}, live);
+  cgDraw();
 }
 /* armour_ug_models lists a model per upgrade level from 0. 2026-11-24: only
    those are offered and loaded; the soldier line's model only for a unit with
@@ -1283,14 +1339,111 @@ function cgFrame(ctx,image,w,h){
 }
 function cgPickGround(file){
   if(!file) return; const c = cg(), r = new FileReader();
-  r.onload = () => { if(state.cg === c){ c.ground.pic = String(r.result); cgDraw(); } }; r.onerror = () => toast(errText(r.error)); r.readAsDataURL(file);
+  r.onload = () => { if(cg() === c){ c.ground.pic = String(r.result); cgDraw(); } }; r.onerror = () => toast(errText(r.error)); r.readAsDataURL(file);
+}
+/* --- 2026-11-24: the Save menu --------------------------------------------
+   A saved card is given to units from here: every unit that uses the model
+   (its soldier or armour upgrade line) is listed, the one the card was made
+   for first and ticked, each with its factions. Ticked are the factions it
+   owns that wear the textures drawn; a faction the model has textures for but
+   the unit does not own can be ticked too, and is then added to its
+   ownership. Replace all ticks every faction it owns; One mercs card puts the
+   card in the mercenary folder, and with Remove the factions' own takes it
+   out of every faction folder, so all of them show that one card. Preview
+   plans each unit's edit (/api/edit/plan), Apply writes them, Undo as usual. */
+const cgGiveMerc = kind => kind === 'info' ? 'merc' : 'mercs';
+function cgGiveUnits(){ return ((CG_UNIT.units || {}).list || []); }
+/* The factions the model has textures for, and those of the texture drawn. */
+function cgSkinFactions(){
+  const skins = cgSrc() === 'unit' ? CG_UNIT.skins || [] : [], k = skins[cgSkinOf(cg().texFaction)];
+  const low = l => (l || []).map(f => f.toLowerCase());
+  return {all: [...new Set(skins.flatMap(x => low(x.factions)))], drawn: low(k && k.factions)};
+}
+function cgGiveOpen(){
+  const c = cg(), entry = cgSrc() === 'unit' ? (CG_UNIT.entry || '').toLowerCase() : '', units = cgGiveUnits();
+  const uses = u => [u.soldier, ...(u.ug || [])].some(m => (m || '').toLowerCase() === entry);
+  const list = [...new Set([cgSrc() === 'unit' ? CG_UNIT.unit : '', ...(entry ? units.filter(uses).map(u => u.type) : [])].filter(Boolean))];
+  const g = c.give = {rows: {}, order: list, mercs: false, only: false, plans: null};
+  for(const type of list) g.rows[type] = cgGiveRow(type, type === CG_UNIT.unit);
+}
+function cgGiveRow(type, on){
+  const u = cgGiveUnits().find(x => x.type === type) || {factions: []}, owned = (u.factions || []).map(f => f.toLowerCase());
+  const tf = cg().texFaction, drawn = new Set(cgSkinFactions().drawn);
+  // what the card shows: the picked texture's faction, else the factions it owns wearing that texture
+  let ticked = tf && owned.includes(tf) ? [tf] : owned.filter(f => !drawn.size || drawn.has(f));
+  if(!ticked.length) ticked = owned.slice();
+  return {on, owned, picked: new Set(ticked)};
+}
+function cgGiveFactions(type){
+  const r = cg().give.rows[type], sk = cgSkinFactions(), tf = cg().texFaction;
+  const list = [...new Set([...r.owned, ...sk.all.filter(f => f !== 'merc')])];
+  // the texture picked first, then the factions it is drawn for, then the rest
+  const rank = f => f === tf ? 0 : sk.drawn.includes(f) ? 1 : r.owned.includes(f) ? 2 : 3;
+  return list.sort((x,y) => rank(x)-rank(y) || x.localeCompare(y));
 }
 function cgSavedHtml(){
   const c = cg(), s = c.saved; if(!s) return '';
-  const p = c.givePlan;
-  return `<p class="ok">${tt('cards.gen_saved',{path:esc(s.path)})} <button class="mini" onclick="cgReveal(${esc(JSON.stringify(s.path))})">${tt('editor.open_file_location')}</button></p><label>${tt('cards.gen_unit')}<input list="cgUnits" value="${esc(c.unit)}" oninput="cg().unit=this.value;cg().givePlan=null"></label>
-    <datalist id="cgUnits">${(c.units || []).map(u => `<option value="${esc(u)}"></option>`).join('')}</datalist><button onclick="cgGive(false)">${tt('cards.gen_give')}</button>
-    ${p ? (p.errors || []).length ? p.errors.map(e => `<div class="armissue">${esc(e)}</div>`).join('') : (p.changes || []).map(e => `<div>${esc(e)}</div>`).join('') + (p.warnings || []).map(e => `<div class="w-warn">${esc(e)}</div>`).join('') + `<button class="primary" onclick="cgGive(true)">${tt('cards.gen_give_apply')}</button>` : ''}`;
+  if(!c.give) cgGiveOpen();
+  const g = c.give, q = v => esc(JSON.stringify(v)), tf = c.texFaction;
+  const rows = g.order.map(type => {
+    const r = g.rows[type];
+    const chips = cgGiveFactions(type).map(f => { const own = r.owned.includes(f);
+      return `<label class="armchip${r.picked.has(f) ? ' on' : ''}${f === tf ? ' cgtexf' : ''}"${own ? '' : ` title="${ttA('cards.gen_give_adds_owner')}"`}><input type="checkbox"${r.picked.has(f) ? ' checked' : ''}${g.mercs ? ' disabled' : ''}
+        onchange="cgGiveTick(${q(type)},${q(f)},this.checked)">${esc(f)}${own ? '' : ' +'}</label>`; }).join('');
+    return `<div class="cggive"><label class="armcheck"><input type="checkbox"${r.on ? ' checked' : ''} onchange="cgGiveUnit(${q(type)},this.checked)"><b>${esc(type)}</b></label>
+      <div class="armchips">${chips}</div></div>`;
+  }).join('');
+  const others = cgGiveUnits().filter(u => !g.order.includes(u.type));
+  const plans = g.plans ? g.plans.map(p => `<div class="cggiveplan"><b>${esc(p.unit)}</b>${p.error ? `<div class="armissue">${esc(p.error)}</div>`
+      : (p.errors || []).map(e => `<div class="armissue">${esc(e)}</div>`).join('') + (p.changes || []).map(e => `<div>${esc(e)}</div>`).join('') + (p.warnings || []).map(e => `<div class="w-warn">${esc(e)}</div>`).join('')}</div>`).join('') : '';
+  const ok = g.plans && g.plans.length && g.plans.every(p => !p.error && !(p.errors || []).length);
+  return `<p class="ok">${tt('cards.gen_saved',{path:esc(s.path)})} <button class="mini" onclick="cgReveal(${q(s.path)})">${tt('editor.open_file_location')}</button></p>
+    <div class="cggivemenu"><b>${tt(s.kind === 'info' ? 'cards.gen_give_info_head' : 'cards.gen_give_head')}</b>
+    <p class="count">${tt('cards.gen_give_note')}</p>${rows}
+    <div class="armexprow"><select onchange="if(this.value)cgGiveAdd(this.value)"><option value="">${tt('cards.gen_give_add')}</option>${others.map(u => `<option value="${esc(u.type)}">${esc(u.type)}</option>`).join('')}</select>
+      <button class="mini" title="${ttA('cards.gen_give_all_title')}" onclick="cgGiveAll()">${tt('cards.gen_give_all')}</button></div>
+    <label class="armcheck" title="${ttA('cards.gen_give_mercs_title')}"><input type="checkbox"${g.mercs ? ' checked' : ''} onchange="cgGiveSet('mercs',this.checked)">${tt('cards.gen_give_mercs')}</label>
+    ${g.mercs ? `<label class="armcheck cggivesub"><input type="checkbox"${g.only ? ' checked' : ''} onchange="cgGiveSet('only',this.checked)">${tt('cards.gen_give_mercs_only')}</label>` : ''}
+    <div class="armexprow"><button onclick="cgGive(false)">${tt('cards.gen_give')}</button>${ok ? `<button class="primary" onclick="cgGive(true)">${tt('cards.gen_give_apply')}</button>` : ''}</div>
+    ${plans}</div>`;
+}
+function cgGiveRepaint(){ const c = cg(); if(c.give) c.give.plans = null; const el = document.getElementById('cgSaveResult'); if(el) el.innerHTML = cgSavedHtml(); }
+function cgGiveTick(type, f, on){ const r = cg().give.rows[type]; if(on){ r.picked.add(f); r.on = true; } else r.picked.delete(f); cgGiveRepaint(); }
+function cgGiveUnit(type, on){ cg().give.rows[type].on = on; cgGiveRepaint(); }
+function cgGiveAdd(type){ const g = cg().give; g.order.push(type); g.rows[type] = cgGiveRow(type, true); cgGiveRepaint(); }
+function cgGiveAll(){ for(const r of Object.values(cg().give.rows)) if(r.on) r.picked = new Set(r.owned); cgGiveRepaint(); }
+function cgGiveSet(k, v){ const g = cg().give; g[k] = v; if(k === 'mercs' && !v) g.only = false; cgGiveRepaint(); }
+/* One unit's edit request from the menu. */
+function cgGiveBody(type){
+  const c = cg(), g = c.give, r = g.rows[type], kind = c.saved.kind === 'info' ? 'info' : 'card';
+  const body = {mod: state.src, unit: type, [kind + '_src']: c.saved.path};
+  if(g.mercs){ body[kind + '_folders'] = [cgGiveMerc(kind)]; if(g.only) body[kind + '_only'] = true; return body; }
+  body[kind + '_folders'] = [...r.picked];
+  // a faction the model is textured for, given ownership of the unit
+  const adds = [...r.picked].filter(f => !r.owned.includes(f));
+  if(adds.length) body.field_overrides = {ownership: [...r.owned, ...adds].join(', ')};
+  return body;
+}
+async function cgGive(apply){
+  const c = cg(), g = c.give;
+  if(!c.saved || !g) return;
+  const types = g.order.filter(t => g.rows[t].on && (g.mercs || g.rows[t].picked.size));
+  if(!types.length){ toast(tt('cards.gen_unit_first')); return; }
+  if(apply && !(g.plans && g.plans.length)) return;
+  const out = [];
+  for(const type of types){
+    try{
+      const r = await api.post('/api/edit/' + (apply ? 'apply' : 'plan'), cgGiveBody(type));
+      out.push(r.error ? {unit: type, error: r.error} : {unit: type, ...r});
+    }catch(e){ out.push({unit: type, error: errText(e)}); }
+  }
+  if(cg() !== c || c.give !== g) return;
+  if(apply){
+    const bad = out.filter(p => p.error);
+    toast(bad.length ? bad.map(p => p.unit + ': ' + p.error).join('; ') : tt('cards.gen_given_n', {n: out.length}));
+    g.plans = null;
+  }else g.plans = out;
+  const el = document.getElementById('cgSaveResult'); if(el) el.innerHTML = cgSavedHtml();
 }
 /* 2026-11-24: Open file location for a card just saved, in its message too */
 function cgReveal(path){ api.post('/api/armory/cards/reveal',{path}).then(r => { if(!r.ok) toast(tt('cards.gen_reveal_failed')); }).catch(e => toast(errText(e))); }
@@ -1312,23 +1465,14 @@ async function cgSave(hd){
     const r = await api.post('/api/armory/cards/save',{name,kind,size:[canvas.width,canvas.height],png:canvas.toDataURL('image/png')});
     if(r.error) throw new Error(r.error);
     if(hd){ toast(tt('cards.gen_saved',{path:r.path})); cgToastReveal(r.path); return; }
-    if(state.cg !== c) return;
-    c.saved = r; c.givePlan = null; c.units = [];
-    try{ const units = await api.get('/api/armory/templates?mod=' + enc(mod)); c.units = (units.units || []).map(u => u.type); }catch(e){ c.units = []; }
-    if(cgHere() && state.src === mod && state.cg === c) cgPaint();
+    if(cg() !== c) return;
+    c.saved = r; c.give = null;
+    // the units the menu offers: the unit picker's list, read here for Armory Studio's model
+    if(!CG_UNIT.units || CG_UNIT.units.mod !== mod){
+      try{ CG_UNIT.units = {mod, list: (await cgGet('/api/armory/templates?mod=' + enc(mod))).units || []}; }catch(e){ CG_UNIT.units = {mod, list: []}; }
+    }
+    if(cgHere() && state.src === mod && cg() === c) cgPaint();
   }catch(e){ c.err = errText(e); const el = document.getElementById('cgError'); if(el) el.textContent = c.err; }
-}
-async function cgGive(apply){
-  const c = cg();
-  if(!c.saved || !c.unit.trim()){ toast(tt('cards.gen_unit_first')); return; }
-  const body = {mod:state.src,unit:c.unit.trim(),[c.saved.kind === 'info' ? 'info_src' : 'card_src']:c.saved.path};
-  if(apply && (!c.givePlan || (c.givePlan.errors || []).length || CG_WORK.giveBody !== JSON.stringify(body))) return;
-  try{
-    const r = await api.post('/api/edit/' + (apply ? 'apply' : 'plan'),body); if(r.error) throw new Error(r.error);
-    if(apply){ toast(tt('cards.gen_given',{unit:body.unit})); c.givePlan = null; }
-    else{ c.givePlan = r; CG_WORK.giveBody = JSON.stringify(body); }
-    if(state.cg === c && cgHere()) cgPaint();
-  }catch(e){ toast(errText(e)); }
 }
 function cgScreenPoint(p){
   const camera = CG_WORK.camera, hd = document.getElementById('cgHd');

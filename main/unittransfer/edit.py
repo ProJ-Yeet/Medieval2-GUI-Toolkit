@@ -184,6 +184,11 @@ class EditRequest:
     # ships different art per faction is not always wrong to.
     card_folders: List[str] = field(default_factory=list)
     info_folders: List[str] = field(default_factory=list)
+    # 2026-11-24: the card maker's "only these folders": the unit's picture is
+    # taken out of every other folder it is in, so those factions fall back
+    # (with mercs alone picked, one card for every faction)
+    card_only: bool = False
+    info_only: bool = False
     remove_old_icons: bool = False               # after a dictionary rename
     delete: bool = False
     delete_options: DeleteOptions = field(default_factory=DeleteOptions)
@@ -299,6 +304,8 @@ def request_from_dict(d: dict) -> EditRequest:
         info_src=(d.get("info_src") or "").strip(),
         card_folders=_folder_list(d.get("card_folders")),
         info_folders=_folder_list(d.get("info_folders")),
+        card_only=bool(d.get("card_only", False)),
+        info_only=bool(d.get("info_only", False)),
         remove_old_icons=bool(d.get("remove_old_icons", False)),
         delete=bool(d.get("delete", False)),
         delete_options=DeleteOptions(
@@ -528,6 +535,11 @@ def _plan_icon_import(plan: "EditPlan", mod: Mod, unit, req: "EditRequest") -> N
         ext = src.suffix.lower() if native else ".tga"
         fname = stem_fmt.format(plan.resolved_dict) + ext
         dests = [f"{base_dir}/{folder}/{fname}" for folder in dict.fromkeys(want)]
+        if chosen and (req.card_only if kind == "card" else req.info_only):
+            for _abs, old, k in _unit_icon_files(mod, plan.resolved_dict):
+                if k == kind and old.split("/")[2] not in want and old not in plan.deletes:
+                    plan.deletes.append(old)
+                    plan.changes.append(f"{kind} removed from {old.split('/')[2]}: only the chosen folders keep it")
         if not dests:
             plan.warnings.append(
                 _i18n.msg("eng.edit.has_no_ownership_so_there_is", "'{type}' has no ownership, so there is no faction folder to put the {kind} in", type=unit.type, kind=kind))

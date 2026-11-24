@@ -3926,6 +3926,11 @@ body.look-editing :is(button,label,legend,h1,h2,h3,.trsechead,.mftab):hover{outl
   .cgkeys>div{display:flex;flex-direction:column;gap:2px;padding:4px 0 2px}
   .cggroup{border:1px solid var(--edge);border-radius:6px;padding:4px 6px;margin:4px 0}
   .cggroup>summary{cursor:pointer;user-select:none}
+  .cggivemenu{border-top:1px solid var(--edge);margin-top:6px;padding-top:6px;display:flex;flex-direction:column;gap:6px}
+  .cggive .armchips{display:flex;flex-wrap:wrap;gap:4px;margin:2px 0 0 18px}
+  .cggive .cgtexf{outline:2px solid var(--accent,#f4ce61)}
+  .cggivesub{margin-left:18px}
+  .cggiveplan{font-size:12px;border-left:2px solid var(--edge);padding-left:6px}
   .cglamp{border-top:1px solid var(--edge);padding-top:4px;margin-top:4px}
   .cgrig{display:flex;flex-direction:column;gap:5px}
   .cgbonegrid{display:grid;grid-template-columns:auto repeat(3,minmax(0,1fr));gap:4px;align-items:center}
@@ -3941,6 +3946,7 @@ body.look-editing :is(button,label,legend,h1,h2,h3,.trsechead,.mftab):hover{outl
   .cgpose.on{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
   /* the unit picker's 3D look at the unit */
   .cgpeek{display:flex;flex-direction:column;gap:6px;min-width:0;min-height:0}
+  .cgpeekv3{flex:1;min-height:240px;overflow:auto}
   .cgpeek canvas{flex:1;min-height:200px;width:100%;border:1px solid var(--edge);border-radius:6px;cursor:grab;touch-action:none}
   @container page (max-width:1250px){.cgout{grid-template-columns:1fr}}
   .cgcard canvas{image-rendering:pixelated;background:repeating-conic-gradient(#2a2f37 0 25%,#323844 0 50%) 0 0/16px 16px;border:1px solid var(--edge)}
