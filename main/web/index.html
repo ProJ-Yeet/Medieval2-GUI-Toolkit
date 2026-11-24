@@ -136,7 +136,9 @@
   .buildtag:hover{color:var(--ink)}
   /* 50px of header, then 30px of crumb bar. Both are above the scrollport and
      neither scrolls, so both come off the height the layout gets. */
-  .layout{display:flex;height:calc(calc(100vh / var(--uiz)) - 80px)}
+  /* --laytop: where the layout really starts (core.js, layoutTopFit); the bar
+     wraps to two rows in a narrow window, and 80px then ran every page over */
+  .layout{display:flex;height:calc(calc(100vh / var(--uiz)) - var(--laytop,80px))}
   .crumbs{display:flex;align-items:center;gap:6px;height:30px;padding:0 12px;
     background:var(--panel);border-bottom:1px solid var(--edge);font-size:12px;
     position:sticky;top:50px;z-index:9}

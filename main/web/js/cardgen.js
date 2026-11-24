@@ -786,6 +786,10 @@ function cgLayout(){
   // one column (a narrow window): the page scrolls as any other
   const one = getComputedStyle(grid).gridTemplateColumns.trim().split(/\s+/).length < 2;
   grid.style.height = one ? '' : h + 'px'; grid.style.setProperty('--cgh', h + 'px');
+  // 2026-11-24: what the page still runs over by (margins, a border) taken
+  // off, so it never gets a second scroll bar that moves a few pixels
+  const over = one ? 0 : Math.max(main.scrollHeight - main.clientHeight, document.documentElement.scrollHeight - innerHeight);
+  if(over > 0){ const fit = Math.max(320, h - over - 1); grid.style.height = fit + 'px'; grid.style.setProperty('--cgh', fit + 'px'); }
   if(!CG_WORK.layoutWired){
     CG_WORK.layoutWired = true;
     addEventListener('resize', () => { if(cgHere()){ cgLayout(); if(cgPicking()) cgPeekPaint(); } });
@@ -968,7 +972,11 @@ function cgPoseFolder(){
   // a rider's set names his mount (modeldb's mount line), whatever its skeletons are called
   // 2026-11-24: an elephant's crew stand in a howdah: posed as men on foot
   const beast = /elephant|mumak|oliphaunt|howdah|crew/;
-  const riding = !!(a.set && a.set.mount && a.set.mount.toLowerCase() !== 'none') && !beast.test(((a.set || {}).mount || '').toLowerCase() + ' ' + skel);
+  // 2026-11-24: or the unit's own mount (EDU mount line): a cavalry model may
+  // carry foot skeletons only, and was posed from Spears
+  const u = cgSrc() === 'unit' ? ((CG_UNIT.units || {}).list || []).find(x => x.type === CG_UNIT.unit) : null;
+  const rides = (a.set && a.set.mount && a.set.mount.toLowerCase() !== 'none') ? a.set.mount : u && u.mount && !u.engine ? u.mount : '';
+  const riding = !!rides && !beast.test(rides.toLowerCase() + ' ' + skel);
   const base = cgRigType() === 'dwarf' ? 'IK Dwarves Full' : /orc|goblin|uruk|snaga/.test(skel) ? 'IK Orcs Full' : 'IK Full';
   // the subfolder by its name in the kit's library, any case
   const sub = /crossbow/.test(skel) ? 'crossbow' : /bow|archer|sling/.test(skel) ? 'archer' : /javelin/.test(skel) ? 'javelin'
@@ -1677,14 +1685,27 @@ function cgWire(){
     if(hd.hasPointerCapture(e.pointerId)) hd.releasePointerCapture(e.pointerId);
     if(d && d.click && !d.moved){ if(cgMode() === 'object') cgObjClick(cgPointerPoint(e)); else cgBoneSelect(''); }
   });
-  hd.addEventListener('keydown',e => {
-    const key = e.key.toLowerCase(), op = CG_WORK.op;
-    if(key === 'escape'){ e.preventDefault(); if(op) cgOpCancel(); else cgBoneSelect(''); return; }
-    if(key === 'enter'){ e.preventDefault(); cgOpAccept(); return; }
-    if(op && ['x','y','z'].includes(key)){ e.preventDefault(); op.axis = op.axis === key ? '' : key; return; }
-    if(!op && ['g','r','s'].includes(key)){ e.preventDefault(); cgOpStart(key,false); }
-    else if(!op && key === 'a' && !e.ctrlKey && !e.metaKey){ e.preventDefault(); cgSelectAll(); }
-  });
+  hd.addEventListener('keydown',e => cgViewKey(e,false));
+  // 2026-11-24: the keys work after a Pick in the object list too, not only
+  // once the view itself has been clicked
+  if(!CG_WORK.keysWired){
+    CG_WORK.keysWired = true;
+    document.addEventListener('keydown',e => {
+      const t = e.target, hd = document.getElementById('cgHd');
+      if(!cgHere() || cgPicking() || !hd || t === hd || e.ctrlKey || e.metaKey || e.altKey) return;
+      if(t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName))) return;
+      cgViewKey(e,true);
+    });
+  }
+}
+function cgViewKey(e,outside){
+  const key = e.key.toLowerCase(), op = CG_WORK.op;
+  if(key === 'escape'){ if(!op && outside) return; e.preventDefault(); if(op) cgOpCancel(); else cgBoneSelect(''); return; }
+  if(key === 'enter'){ if(!op) return; e.preventDefault(); cgOpAccept(); return; }
+  if(op && ['x','y','z'].includes(key)){ e.preventDefault(); op.axis = op.axis === key ? '' : key; return; }
+  // from outside the view, the first move only finds the mouse (op.fresh)
+  if(!op && ['g','r','s'].includes(key)){ e.preventDefault(); cgOpStart(key,outside); }
+  else if(!op && key === 'a' && !e.ctrlKey && !e.metaKey){ e.preventDefault(); cgSelectAll(); }
 }
 /* --- 2026-11-23: the rig's bones picked and moved as in Blender ----------------
    A click on a handle selects that controller; G moves it, R turns it (about

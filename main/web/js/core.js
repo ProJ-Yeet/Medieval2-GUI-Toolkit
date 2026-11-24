@@ -497,10 +497,25 @@ function startHeartbeat(){
 /* 99e: the top bar and the tab strip under it fold away and come back, in
    every mode, remembered as a setting. */
 function topFoldApply(){document.body.classList.toggle('topshut',!!(state.settings||{}).top_shut);}
+/* 2026-11-24: the layout's height is the window less what really stands above
+   it, measured: a fixed 80px was short whenever the top bar wrapped, and every
+   page ran over by the difference with a second scroll bar that moved a little. */
+function layoutTopFit(){
+  const lay=document.querySelector('.layout');
+  if(!lay)return;
+  // offsetTop rounds a fractional header down, which left the page 1px over
+  const top=lay.offsetTop+1;
+  if(top>0&&document.documentElement.style.getPropertyValue('--laytop')!==top+'px')document.documentElement.style.setProperty('--laytop',top+'px');
+}
+addEventListener('resize',layoutTopFit);
+if(typeof ResizeObserver==='function')addEventListener('DOMContentLoaded',()=>{const ro=new ResizeObserver(layoutTopFit);for(const el of document.querySelectorAll('header,.crumbs'))ro.observe(el);layoutTopFit();});
 function topFold(shut){
   state.settings.top_shut=shut;api.post('/api/settings',{top_shut:shut}).catch(()=>{});
-  topFoldApply();
+  topFoldApply();layoutTopFit();
   if(state.mode==='armory'&&typeof armFrame==='function')armFrame();
+  // 2026-11-24: a page that fits itself to the window (the card maker) measures
+  // again, or the room the bar left stayed a black band under it
+  window.dispatchEvent(new Event('resize'));
 }
 async function init(){
   try{
