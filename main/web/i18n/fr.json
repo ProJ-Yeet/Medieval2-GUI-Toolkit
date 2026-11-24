@@ -3488,15 +3488,9 @@
  "cards.gen_hue": "Teinte",
  "cards.gen_level": "Niveau",
  "cards.gen_library": "Bibliothèque de poses",
- "cards.gen_library_note": {
-  "one": "{count} pose de la bibliothèque du kit Blender ; un clic l’applique.",
-  "many": "{count} poses de la bibliothèque du kit Blender ; un clic en applique une.",
-  "other": "{count} poses de la bibliothèque du kit Blender ; un clic en applique une."
- },
  "cards.gen_light": "Lumière",
  "cards.gen_light_point": "Lampe ponctuelle",
  "cards.gen_light_sun": "Soleil",
- "cards.gen_name": "Nom",
  "cards.gen_name_first": "Donnez d’abord un nom à la carte.",
  "cards.gen_name_hint": "le nom de dictionnaire de l’unité",
  "cards.gen_no_entry": "Chargez une entrée de modèle dans Armory Studio pour utiliser ses animations.",
@@ -3526,8 +3520,6 @@
  "cards.gen_render_at": "Rendu à",
  "cards.gen_rig": "Rig",
  "cards.gen_rig_auto": "Pour le squelette ({rig})",
- "cards.gen_rig_hint": "Faites glisser les points dans la vue HD : mains, pieds, bassin et torse bougent, les losanges orientent les coudes et les genoux, et la tête tourne.",
- "cards.gen_rig_on": "{rig} sur le squelette {skeleton}",
  "cards.gen_rig_reset": "Revenir au repos",
  "cards.gen_saturation": "Saturation",
  "cards.gen_save": "Enregistrer la carte",
@@ -12421,7 +12413,7 @@
  "cards.gen_size_modcard": "Cartes de ce mod",
  "cards.gen_size_modinfo": "Images d’information de ce mod",
  "cards.gen_size_mod_title": "La taille la plus courante des cartes d’unité ou des images d’information de ce mod, lue dans ses fichiers",
- "cards.gen_size_mod_none": "(aucune dans ce mod)",
+ "cards.gen_size_mod_none": "{size} (aucune dans ce mod)",
  "cards.gen_mult": "Agrandissement :",
  "cards.gen_mult_title": "Créer une image deux à quatre fois plus grande que la taille choisie pour des cartes plus nettes. Le jeu réduit les grandes cartes à la taille voulue.",
  "cards.gen_framing": "Cadrage",
@@ -14367,5 +14359,6 @@
  "cards.gen_obj_reset": "Réinitialiser",
  "cards.gen_obj_scale": "Échelle",
  "cards.gen_obj_size": "Taille",
- "cards.gen_obj_pick": "Cliquez sur un objet pour le déplacer, le faire pivoter ou le redimensionner sur la carte."
+ "cards.gen_obj_pick": "Cliquez sur un objet pour le déplacer, le faire pivoter ou le redimensionner sur la carte.",
+ "cards.gen_pose_folder_saved": "Poses enregistrées"
 }

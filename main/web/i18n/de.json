@@ -872,9 +872,6 @@
   "cards.gen_place_reset": [
    "frame"
   ],
-  "cards.gen_rig_hint": [
-   "turn"
-  ],
   "eng.gamelog.howto": [
    "level"
   ],
@@ -11060,7 +11057,6 @@
  "cards.gen_light": "Licht",
  "cards.gen_light_point": "Punktlicht",
  "cards.gen_light_sun": "Sonne",
- "cards.gen_name": "Name",
  "cards.gen_name_first": "Geben Sie der Karte zuerst einen Namen.",
  "cards.gen_name_hint": "der Wörterbuchname der Einheit",
  "cards.gen_no_entry": "Laden Sie einen Modelleintrag in Armory Studio, wegen seiner Animationen.",
@@ -11119,7 +11115,6 @@
  "armory.tpose_title": "Animation aus: jedes Teil steht in seiner Bindepose. Erneut drücken, um dort weiterzuspielen, wo sie war.",
  "armory.key_redo": "Wiederholen",
  "cards.gen_pose_rig": "IK-Rig",
- "cards.gen_rig_on": "{rig} auf dem Skelett {skeleton}",
  "cards.gen_rig": "Rig",
  "cards.gen_rig_auto": "Passend zum Skelett ({rig})",
  "cards.gen_two_hands": "Zwei Hände",
@@ -11128,10 +11123,6 @@
  "cards.gen_rig_reset": "Zurück in die Ruhepose",
  "cards.gen_library": "Posen-Bibliothek",
  "cards.gen_apply_to": "Anwenden auf",
- "cards.gen_library_note": {
-  "one": "{count} Pose aus der Bibliothek des Blender-Kits; ein Klick wendet sie an.",
-  "other": "{count} Posen aus der Bibliothek des Blender-Kits; ein Klick wendet eine an."
- },
  "cards.gen_part_whole": "Den ganzen Körper",
  "cards.gen_part_arms": "Die Arme",
  "cards.gen_part_legs": "Die Beine",
@@ -11139,7 +11130,6 @@
  "cards.gen_part_posture": "Die Haltung",
  "cards.gen_view_hint": "Im HD-Bild: Ziehen mit der mittleren Taste dreht die Kamera, Umschalt verschiebt, das Mausrad zoomt; G verschiebt und R dreht das Modell, X, Y oder Z hält es an einer Achse, ein Klick oder Enter behält es, Esc stellt es zurück.",
  "cards.gen_place_reset": "Modell und Bildausschnitt zurücksetzen",
- "cards.gen_rig_hint": "Ziehen Sie die Punkte im HD-Bild: Hände, Füße, Becken und Oberkörper bewegen sich, die Rauten richten Ellbogen und Knie aus, der Kopf dreht sich.",
  "eng.armory.no_such_session": "keine gespeicherte Sitzung heißt {sid}",
  "eng.armory.session_needs_name": "eine Sitzung braucht einen Namen",
  "eng.armory.no_such_backup": "keine Sicherung heißt {file}",
@@ -12335,7 +12325,7 @@
  "cards.gen_size_modcard": "Einheitenkarten dieser Mod",
  "cards.gen_size_modinfo": "Infobilder dieser Mod",
  "cards.gen_size_mod_title": "Die Größe der meisten Einheitenkarten oder Infobilder dieser Mod, aus ihren Dateien ermittelt",
- "cards.gen_size_mod_none": "(keine in dieser Mod)",
+ "cards.gen_size_mod_none": "{size} (in dieser Mod nicht verfügbar)",
  "cards.gen_mult": "Größer:",
  "cards.gen_mult_title": "Das Bild für schärfere Karten zwei- bis viermal so groß wie ausgewählt erzeugen. Das Spiel verkleinert größere Karten auf die passende Größe.",
  "cards.gen_framing": "Bildausschnitt",
@@ -14254,5 +14244,6 @@
  "cards.gen_obj_reset": "Zurücksetzen",
  "cards.gen_obj_scale": "Skalierung",
  "cards.gen_obj_size": "Größe",
- "cards.gen_obj_pick": "Klicke auf ein Objekt, um es auf der Karte zu verschieben, zu drehen oder zu skalieren."
+ "cards.gen_obj_pick": "Klicke auf ein Objekt, um es auf der Karte zu verschieben, zu drehen oder zu skalieren.",
+ "cards.gen_pose_folder_saved": "Gespeicherte Posen"
 }

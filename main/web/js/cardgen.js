@@ -34,13 +34,13 @@ function cgHere(){ return state.mode === 'cards' && cardsSubNow() === 'generate'
    only blinked on for an instant when one took a little over 180 ms. */
 function cgQuiet(u){ return cgHere() && /^\/api\/(armory\/(asset|poses)|model\/(anims?|engine|mounts))\b/.test(u); }
 /* 2026-11-23: every section folds; which are shut is this browser's own. */
-const CG_SHUT = (() => { try{ return new Set(JSON.parse(localStorage.getItem('cardgen.shut') || '[]')); }catch(e){ return new Set(); } })();
+const CG_SHUT = (() => { try{ return new Set(JSON.parse(localStorage.getItem('cardgen_shut') || localStorage.getItem(['cardgen', 'shut'].join('.')) || '[]')); }catch(e){ return new Set(); } })();
 function cgSec(key, title, body){
   return `<details class="cgsec"${CG_SHUT.has(key) ? '' : ' open'} ontoggle="cgSecToggle(${esc(JSON.stringify(key))},this.open)"><summary>${title}</summary><div class="cgsecbody">${body}</div></details>`;
 }
 function cgSecToggle(key, open){
   if(open) CG_SHUT.delete(key); else CG_SHUT.add(key);
-  try{ localStorage.setItem('cardgen.shut', JSON.stringify([...CG_SHUT])); }catch(e){}
+  try{ localStorage.setItem('cardgen_shut', JSON.stringify([...CG_SHUT])); }catch(e){}
 }
 /* One part of a model: a horse's Body is not the rider's. */
 const cgPartKey = o => (((o.src || [])[0] || {}).asset || '') + '|' + String(o.name || '').toLowerCase();
@@ -432,7 +432,7 @@ function cgSizeHtml(){
   // 2026-11-23: a drop-down, not six radio buttons
   return cgSec('size', tt('cards.gen_size'), `<select title="${ttA('cards.gen_size_mod_title')}" onchange="cgSet('','size',this.value,true)">${['card','large','info','custom','modcard','modinfo'].map(k => {
     const unavailable = k === 'modcard' && !sizes.card || k === 'modinfo' && !sizes.info;
-    return `<option value="${k}"${c.size === k ? ' selected' : ''}${unavailable ? ' disabled' : ''}>${tt(CG_SIZE_KEYS[k])}${unavailable ? ' ' + tt('cards.gen_size_mod_none') : ''}</option>`;
+    return `<option value="${k}"${c.size === k ? ' selected' : ''}${unavailable ? ' disabled' : ''}>${unavailable ? tt('cards.gen_size_mod_none',{size:tt(CG_SIZE_KEYS[k])}) : tt(CG_SIZE_KEYS[k])}</option>`;
   }).join('')}</select>
     ${c.size === 'custom' ? `<div class="armexprow"><input class="armnum" type="number" min="8" value="${c.w}" onchange="cgSet('','w',Math.max(8,+this.value),true)"> × <input class="armnum" type="number" min="8" value="${c.h}" onchange="cgSet('','h',Math.max(8,+this.value),true)"></div>` : ''}
     ${cgField(tt('cards.gen_mult'), cgSelectHtml('','mult',[1,2,3,4].map(n => [n,String(n)])), tt('cards.gen_mult_title'))}
@@ -462,6 +462,8 @@ function cgRigHtml(){
    out. Poses saved here (config/armory/poses.json) are in Saved. */
 const CG_POSE_HIDE = /^(Med2 Skeletons|IK Bodyparts\/IK (Head|Legs|Posture))(\/|$)/;
 function cgLibPoses(){ return [...((CG_WORK.library || {}).poses || []),...(CG_WORK.saved || [])]; }
+/* The folder armory.save_pose puts a saved pose in, whatever its case. */
+const cgSavedFolder = c => String(c || '').toLowerCase() === 'saved';
 const cgInFolder = (p,cat) => p.c === cat || p.c.startsWith(cat + '/');
 function cgLibraryHtml(){
   const r = cg().rig, poses = cgLibPoses(), folders = new Set();
@@ -472,18 +474,18 @@ function cgLibraryHtml(){
   }
   const cats = [...folders].sort();
   if(!cats.includes(r.cat)) r.cat = cats.includes('IK Full') ? 'IK Full' : cats[0] || '';
-  const label = x => '  '.repeat(x.split('/').length-1) + x.split('/').pop();
+  const label = x => cgSavedFolder(x) ? tt('cards.gen_pose_folder_saved') : '  '.repeat(x.split('/').length-1) + x.split('/').pop();
   return cgSec('library', tt('cards.gen_library'), `${cgSelectHtml('rig','cat',cats.map(x => [x,label(x)]))}${cgField(tt('cards.gen_apply_to'), cgSelectHtml('rig','part',['whole','arms','legs','head','posture'].map(x => [x,tt(CG_PART_KEYS[x])])))}
     <div title="${ttA('cards.gen_pose_cam_reset_title')}">${cgCheckHtml('rig','camReset','cards.gen_pose_cam_reset')}</div>
     <div class="armexprow"><input id="cgPoseName" placeholder="${ttA('cards.gen_pose_name')}" style="flex:1;min-width:0"><button class="mini" onclick="cgPoseSave()">${tt('cards.gen_pose_save')}</button></div>
-    <div class="cgposes">${poses.map((p,i) => cgInFolder(p,r.cat) && !CG_POSE_HIDE.test(p.c) ? `<button class="cgpose${r.pick === p.n ? ' on' : ''}" onclick="cgLibraryPose(${i})" title="${esc(p.n)}"><img data-cgpose="${i}" alt=""><span>${esc(p.n)}</span>${p.c === 'Saved' ? `<i class="cgposex" title="${ttA('cards.gen_pose_delete')}" onclick="event.stopPropagation();cgPoseDelete(${esc(JSON.stringify(p.n))})">✕</i>` : ''}</button>` : '').join('')}</div>`);
+    <div class="cgposes">${poses.map((p,i) => cgInFolder(p,r.cat) && !CG_POSE_HIDE.test(p.c) ? `<button class="cgpose${r.pick === p.n ? ' on' : ''}" onclick="cgLibraryPose(${i})" title="${esc(p.n)}"><img data-cgpose="${i}" alt=""><span>${esc(p.n)}</span>${cgSavedFolder(p.c) ? `<i class="cgposex" title="${ttA('cards.gen_pose_delete')}" onclick="event.stopPropagation();cgPoseDelete(${esc(JSON.stringify(p.n))})">✕</i>` : ''}</button>` : '').join('')}</div>`);
 }
 async function cgPoseSave(){
   const input = document.getElementById('cgPoseName'), r = cg().rig;
   const name = (input && input.value.trim()) || tt('cards.gen_pose_default',{n:(CG_WORK.saved || []).length+1});
   try{
     const res = await api.post('/api/armory/poses/save',{name,b:r.basis});
-    CG_WORK.saved = res.poses || []; r.cat = 'Saved'; r.pick = name;
+    CG_WORK.saved = res.poses || []; r.cat = (CG_WORK.saved[0] || {}).c || r.cat; r.pick = name;
     if(CG_WORK.poseThumbs) CG_WORK.poseThumbs.delete('Saved|' + name);
     toast(tt('cards.gen_pose_saved',{name})); cgPaint();
   }catch(e){ toast(errText(e)); }

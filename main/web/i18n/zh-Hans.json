@@ -150,9 +150,6 @@
   "cards.gen_place_reset": [
    "frame"
   ],
-  "cards.gen_rig_hint": [
-   "turn"
-  ],
   "cards.gen_turn": [
    "turn"
   ],
@@ -3290,13 +3287,9 @@
  "cards.gen_hue": "色相",
  "cards.gen_level": "等级",
  "cards.gen_library": "姿势库",
- "cards.gen_library_note": {
-  "other": "来自 Blender 工具包姿势库的 {count} 个姿势，点击即可应用。"
- },
  "cards.gen_light": "灯光",
  "cards.gen_light_point": "点光源",
  "cards.gen_light_sun": "太阳光",
- "cards.gen_name": "名称",
  "cards.gen_name_first": "请先为卡片命名。",
  "cards.gen_name_hint": "部队的字典名称",
  "cards.gen_no_entry": "将模型条目加载到 Armory Studio，以使用其动画。",
@@ -3326,8 +3319,6 @@
  "cards.gen_render_at": "渲染分辨率",
  "cards.gen_rig": "绑定",
  "cards.gen_rig_auto": "适配骨架（{rig}）",
- "cards.gen_rig_hint": "拖动高清视图中的圆点可移动手、脚、骨盆及躯干；菱形用于指定肘部和膝盖方向，头部也可转动。",
- "cards.gen_rig_on": "骨架 {skeleton} 使用 {rig}",
  "cards.gen_rig_reset": "恢复静止姿势",
  "cards.gen_saturation": "饱和度",
  "cards.gen_save": "保存卡片",
@@ -11666,7 +11657,7 @@
  "cards.gen_size_modcard": "此模组的部队卡片",
  "cards.gen_size_modinfo": "此模组的详情图片",
  "cards.gen_size_mod_title": "从此模组的文件中读取大多数部队卡片或详情图片使用的尺寸",
- "cards.gen_size_mod_none": "（此模组中没有）",
+ "cards.gen_size_mod_none": "{size} (此模组中没有)",
  "cards.gen_mult": "放大：",
  "cards.gen_mult_title": "将图片生成为所选尺寸的两至四倍，让卡片更清晰。游戏会将较大的卡片缩小到合适尺寸。",
  "cards.gen_framing": "取景",
@@ -13558,5 +13549,6 @@
  "cards.gen_obj_reset": "重置",
  "cards.gen_obj_scale": "缩放比例",
  "cards.gen_obj_size": "大小",
- "cards.gen_obj_pick": "单击对象，可在卡片上移动、旋转或缩放它。"
+ "cards.gen_obj_pick": "单击对象，可在卡片上移动、旋转或缩放它。",
+ "cards.gen_pose_folder_saved": "已保存的姿势"
 }

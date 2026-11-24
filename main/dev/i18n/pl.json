@@ -248,9 +248,6 @@
   "campnew.this_mod_ships_only_the_compiled": [
    "ship"
   ],
-  "cards.gen_rig_hint": [
-   "turn"
-  ],
   "cards.gen_view_hint": [
    "turn"
   ],
@@ -3799,16 +3796,9 @@
  "cards.gen_hue": "Odcień",
  "cards.gen_level": "Poziom",
  "cards.gen_library": "Biblioteka póz",
- "cards.gen_library_note": {
-  "one": "Pozy z biblioteki zestawu narzędzi Blendera: {count}. Kliknięcie stosuje wybraną pozę.",
-  "few": "Pozy z biblioteki zestawu narzędzi Blendera: {count}. Kliknięcie stosuje wybraną pozę.",
-  "many": "Pozy z biblioteki zestawu narzędzi Blendera: {count}. Kliknięcie stosuje wybraną pozę.",
-  "other": "Pozy z biblioteki zestawu narzędzi Blendera: {count}. Kliknięcie stosuje wybraną pozę."
- },
  "cards.gen_light": "Światło",
  "cards.gen_light_point": "Światło punktowe",
  "cards.gen_light_sun": "Słońce",
- "cards.gen_name": "Nazwa",
  "cards.gen_name_first": "Najpierw nadaj karcie nazwę.",
  "cards.gen_name_hint": "nazwę słownika jednostki",
  "cards.gen_no_entry": "Załaduj wpis modelu do Armory Studio, aby zobaczyć jego animacje.",
@@ -3838,8 +3828,6 @@
  "cards.gen_render_at": "Renderuj w",
  "cards.gen_rig": "Układ kości",
  "cards.gen_rig_auto": "Dla szkieletu ({rig})",
- "cards.gen_rig_hint": "Przeciągaj punkty w widoku HD: poruszają dłońmi, stopami, miednicą i tułowiem; romby wyznaczają kierunek łokci i kolan, a głowa się obraca.",
- "cards.gen_rig_on": "{rig} na szkielecie {skeleton}",
  "cards.gen_rig_reset": "Przywróć pozę spoczynkową",
  "cards.gen_saturation": "Nasycenie",
  "cards.gen_save": "Zapisz kartę",
@@ -13005,7 +12993,7 @@
  "cards.gen_size_modcard": "Karty tego moda",
  "cards.gen_size_modinfo": "Obrazy informacyjne tego moda",
  "cards.gen_size_mod_title": "Najczęstszy rozmiar kart jednostek lub obrazów informacyjnych tego moda, odczytany z jego plików",
- "cards.gen_size_mod_none": "(brak w tym modzie)",
+ "cards.gen_size_mod_none": "{size} (brak w tym modzie)",
  "cards.gen_mult": "Powiększenie:",
  "cards.gen_mult_title": "Utwórz obraz od dwóch do czterech razy większy od wybranego rozmiaru, aby karty były ostrzejsze. Gra zmniejsza większą kartę do wymaganego rozmiaru.",
  "cards.gen_framing": "Kadrowanie",
@@ -14980,5 +14968,6 @@
  "cards.gen_obj_reset": "Resetuj",
  "cards.gen_obj_scale": "Skala",
  "cards.gen_obj_size": "Rozmiar",
- "cards.gen_obj_pick": "Kliknij obiekt, aby przesunąć go, obrócić lub zmienić jego skalę na karcie."
+ "cards.gen_obj_pick": "Kliknij obiekt, aby przesunąć go, obrócić lub zmienić jego skalę na karcie.",
+ "cards.gen_pose_folder_saved": "Zapisane pozy"
 }

@@ -1026,9 +1026,6 @@
   "cards.gen_place_reset": [
    "frame"
   ],
-  "cards.gen_rig_hint": [
-   "turn"
-  ],
   "armory.sess_open_now": [
    "open"
   ],
@@ -11516,7 +11513,6 @@
  "cards.gen_light": "Luz",
  "cards.gen_light_point": "Lámpara puntual",
  "cards.gen_light_sun": "Sol",
- "cards.gen_name": "Nombre",
  "cards.gen_name_first": "Dé primero un nombre a la tarjeta.",
  "cards.gen_name_hint": "el nombre de diccionario de la unidad",
  "cards.gen_no_entry": "Cargue una entrada de modelo en Armory Studio por sus animaciones.",
@@ -11575,7 +11571,6 @@
  "armory.tpose": "Pose en T",
  "armory.tpose_title": "Animación desactivada: cada parte queda en su pose base. Pulse de nuevo para seguir desde donde estaba.",
  "cards.gen_pose_rig": "Rig IK",
- "cards.gen_rig_on": "{rig} sobre el esqueleto {skeleton}",
  "cards.gen_rig": "Rig",
  "cards.gen_rig_auto": "Según el esqueleto ({rig})",
  "cards.gen_two_hands": "Dos manos",
@@ -11591,12 +11586,6 @@
  "cards.gen_part_posture": "La postura",
  "cards.gen_view_hint": "En el render HD: arrastrar con el botón central gira la cámara, Mayús desplaza, la rueda acerca; G mueve y R gira el modelo, X, Y o Z lo sujeta a un eje, un clic o Intro lo deja, Esc lo devuelve.",
  "cards.gen_place_reset": "Devolver el modelo y el encuadre a su sitio",
- "cards.gen_rig_hint": "Arrastre los puntos en el render HD: manos, pies, pelvis y torso se mueven, los rombos orientan codos y rodillas, la cabeza gira.",
- "cards.gen_library_note": {
-  "one": "{count} pose de la biblioteca del kit de Blender; un clic la aplica.",
-  "other": "{count} poses de la biblioteca del kit de Blender; un clic aplica una.",
-  "many": "{count} poses de la biblioteca del kit de Blender; un clic aplica una."
- },
  "eng.armory.no_such_session": "ninguna sesión guardada se llama {sid}",
  "eng.armory.session_needs_name": "una sesión necesita un nombre",
  "eng.armory.no_such_backup": "ninguna copia de seguridad se llama {file}",
@@ -12821,7 +12810,7 @@
  "cards.gen_size_modcard": "Tarjetas de este mod",
  "cards.gen_size_modinfo": "Imágenes de información de este mod",
  "cards.gen_size_mod_title": "El tamaño de la mayoría de las tarjetas de unidad o imágenes de información de este mod, leído de sus archivos",
- "cards.gen_size_mod_none": "(ninguna en este mod)",
+ "cards.gen_size_mod_none": "{size} (ninguna en este mod)",
  "cards.gen_mult": "Más grande:",
  "cards.gen_mult_title": "Crear la imagen con un tamaño entre dos y cuatro veces mayor que el elegido, para obtener tarjetas más nítidas. El juego reduce las tarjetas más grandes para que encajen.",
  "cards.gen_framing": "Encuadre",
@@ -14724,5 +14713,6 @@
  "cards.gen_obj_reset": "Restablecer",
  "cards.gen_obj_scale": "Escala",
  "cards.gen_obj_size": "Tamaño",
- "cards.gen_obj_pick": "Haz clic en un objeto para moverlo, girarlo o cambiar su escala en la tarjeta."
+ "cards.gen_obj_pick": "Haz clic en un objeto para moverlo, girarlo o cambiar su escala en la tarjeta.",
+ "cards.gen_pose_folder_saved": "Poses guardadas"
 }

@@ -78,9 +78,6 @@
   "cards.data_ui_units_data_ui_unit": [
    "unit"
   ],
-  "cards.gen_rig_hint": [
-   "turn"
-  ],
   "cards.gen_turn": [
    "turn"
   ],
@@ -3132,14 +3129,9 @@
  "cards.gen_hue": "renk tonu",
  "cards.gen_level": "Seviye",
  "cards.gen_library": "Poz kütüphanesi",
- "cards.gen_library_note": {
-  "one": "Blender kitinin kütüphanesinden {count} pozu; bir tıklama bir tanesini uygular.",
-  "other": "{count}, Blender kitinin kitaplığından pozlar; bir tıklama bir tanesini uygular."
- },
  "cards.gen_light": "Işık",
  "cards.gen_light_point": "Nokta lambası",
  "cards.gen_light_sun": "Güneş",
- "cards.gen_name": "Ad",
  "cards.gen_name_first": "Önce karta bir isim verin.",
  "cards.gen_name_hint": "birimin sözlük adı",
  "cards.gen_no_entry": "animasyon için Armory Studio'ya bir model girdi yükleyin.",
@@ -3169,8 +3161,6 @@
  "cards.gen_render_at": "İşleme yeri",
  "cards.gen_rig": "teçhizat",
  "cards.gen_rig_auto": "İskelet için ({rig})",
- "cards.gen_rig_hint": "HD görünümde noktaları sürükleyin: eller, ayaklar, pelvis ve gövde hareket eder, elmaslar dirsekleri ve dizleri işaret eder, baş döner.",
- "cards.gen_rig_on": "{rig} {skeleton} iskeleti üzerinde",
  "cards.gen_rig_reset": "Dinlenmeye geri dön",
  "cards.gen_saturation": "Doygunluk",
  "cards.gen_save": "Kartı kaydet",
@@ -11788,7 +11778,7 @@
  "cards.gen_size_modcard": "Bu modun kartları",
  "cards.gen_size_modinfo": "Bu modun bilgi görselleri",
  "cards.gen_size_mod_title": "Bu modun dosyalarından okunan, birim kartlarının veya bilgi görsellerinin çoğunun kullandığı boyut",
- "cards.gen_size_mod_none": "(bu modda yok)",
+ "cards.gen_size_mod_none": "{size} (bu modda yok)",
  "cards.gen_mult": "Daha büyük:",
  "cards.gen_mult_title": "Daha net kartlar için görseli seçilen boyutun iki ila dört katı büyüklüğünde oluşturun. Oyun büyük kartı sığacak şekilde küçültür.",
  "cards.gen_framing": "Kadraj",
@@ -13707,5 +13697,6 @@
  "cards.gen_obj_reset": "Sıfırla",
  "cards.gen_obj_scale": "Ölçek",
  "cards.gen_obj_size": "Boyut",
- "cards.gen_obj_pick": "Kartta taşımak, döndürmek veya ölçeğini değiştirmek için bir nesneye tıklayın."
+ "cards.gen_obj_pick": "Kartta taşımak, döndürmek veya ölçeğini değiştirmek için bir nesneye tıklayın.",
+ "cards.gen_pose_folder_saved": "Kaydedilen pozlar"
 }

@@ -716,9 +716,6 @@
   "cards.gen_place_reset": [
    "frame"
   ],
-  "cards.gen_rig_hint": [
-   "turn"
-  ],
   "cards.gen_turn": [
    "turn"
   ],
@@ -8677,7 +8674,6 @@
  "cards.gen_light": "Свет",
  "cards.gen_light_point": "Точечный источник света",
  "cards.gen_light_sun": "Солнце",
- "cards.gen_name": "Имя",
  "cards.gen_name_first": "Сначала задайте имя карточки.",
  "cards.gen_name_hint": "имя отряда в словаре",
  "cards.gen_no_entry": "Загрузите элемент модели в Armory Studio, чтобы использовать его анимации.",
@@ -8707,8 +8703,6 @@
  "cards.gen_render_at": "Разрешение отрисовки",
  "cards.gen_rig": "Риг",
  "cards.gen_rig_auto": "Для скелета ({rig})",
- "cards.gen_rig_hint": "Перетаскивайте точки в HD-представлении: кисти, стопы, таз и туловище перемещаются, ромбы задают направление локтей и коленей, голова поворачивается.",
- "cards.gen_rig_on": "{rig} на скелете {skeleton}",
  "cards.gen_rig_reset": "Вернуть исходную позу",
  "cards.gen_saturation": "Насыщенность",
  "cards.gen_save": "Сохранить карточку",
@@ -8806,12 +8800,6 @@
   "few": "{count} файла",
   "many": "{count} файлов",
   "other": "{count} файла"
- },
- "cards.gen_library_note": {
-  "one": "{count} поза из библиотеки набора Blender; нажмите, чтобы применить позу.",
-  "few": "{count} позы из библиотеки набора Blender; нажмите, чтобы применить позу.",
-  "many": "{count} поз из библиотеки набора Blender; нажмите, чтобы применить позу.",
-  "other": "{count} позы из библиотеки набора Blender; нажмите, чтобы применить позу."
  },
  "cards.gen_source": {
   "one": "Отрисовывается {count} объект модели Armory Studio.",
@@ -13110,7 +13098,7 @@
  "cards.gen_size_modcard": "Карточки этого мода",
  "cards.gen_size_modinfo": "Изображения описаний этого мода",
  "cards.gen_size_mod_title": "Размер большинства карточек отрядов или изображений описаний этого мода, определенный по его файлам",
- "cards.gen_size_mod_none": "(в этом моде нет)",
+ "cards.gen_size_mod_none": "{size} (нет в этом моде)",
  "cards.gen_mult": "Увеличить:",
  "cards.gen_mult_title": "Сделать изображение в два-четыре раза больше выбранного размера для более четких карточек. Игра уменьшит большую карточку до нужного размера.",
  "cards.gen_framing": "Кадрирование",
@@ -15092,5 +15080,6 @@
  "cards.gen_obj_reset": "Сбросить",
  "cards.gen_obj_scale": "Масштаб",
  "cards.gen_obj_size": "Размер",
- "cards.gen_obj_pick": "Нажмите на объект, чтобы переместить его, повернуть или изменить его масштаб на карточке."
+ "cards.gen_obj_pick": "Нажмите на объект, чтобы переместить его, повернуть или изменить его масштаб на карточке.",
+ "cards.gen_pose_folder_saved": "Сохранённые позы"
 }
