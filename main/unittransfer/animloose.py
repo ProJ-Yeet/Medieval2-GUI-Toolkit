@@ -484,12 +484,15 @@ def _game_root(data: Path) -> Optional[Path]:
 
 def build(dest_data, skeletons: List[Tuple[str, str]], source_data=None, tag: str = "ported",
           packs: Optional[animpack.Packs] = None,
-          read_anim: Optional[Callable[[str, float], Optional[Tuple[bytes, float]]]] = None) -> Rebuild:
+          read_anim: Optional[Callable[[str, float], Optional[Tuple[bytes, float]]]] = None,
+          again: bool = False) -> Rebuild:
     """What keeps ``skeletons`` (``(name in the destination, name in the
     source)``) rebuildable in the mod at ``dest_data``: read from its packs as
     they are (so call it after the port is written), or from ``packs`` and
     ``read_anim(path, scale)`` (an entry's bytes and its own scale) when
-    given. Nothing is written."""
+    given. ``again`` writes a block for a type descr_skeleton.txt has
+    already, for :func:`replace_block` (a kit added to, 128g). Nothing is
+    written."""
     data = Path(dest_data)
     dest_mod = data.parent.name
     out = Rebuild()
@@ -514,7 +517,7 @@ def build(dest_data, skeletons: List[Tuple[str, str]], source_data=None, tag: st
     written: Dict[str, LooseFile] = {}
     cues: Dict[str, str] = {}              # an .evt file's text -> its path, written once
     for dest_name, source_name in skeletons:
-        if dest_name.lower() in types:
+        if dest_name.lower() in types and not again:
             out.notes.append(_i18n.msg("eng.animloose.descr_skeleton_txt_already_has_a", "{dest_name}: descr_skeleton.txt already has a type of that name, so no second block is written", dest_name=dest_name))
             continue
         skel = packs.skeleton(dest_name)
@@ -585,6 +588,26 @@ def append_blocks(text: str, blocks: Dict[str, str], why: str) -> str:
     if text and not text.endswith(("\n", "\r")):
         text += nl
     return text + body
+
+
+def replace_block(text: str, name: str, block: str, why: str) -> str:
+    """``descr_skeleton.txt`` with type ``name``'s block (from its ``type``
+    line to the next) replaced by ``block``, in the file's own line endings;
+    appended as :func:`append_blocks` does when it has none."""
+    rx = re.compile(r"^[ \t]*type[ \t]+(\S+)", re.M | re.I)
+    starts = [(m.start(), m.group(1)) for m in rx.finditer(text)]
+    for i, (at, n) in enumerate(starts):
+        if n.lower() == name.lower():
+            end = starts[i + 1][0] if i + 1 < len(starts) else len(text)
+            # a comment line just above the next type is that type's, not ours
+            body = text[at:end]
+            tail = re.search(r"(?:\r?\n[ \t]*;[^\n]*)+\r?\n?\s*$", body)
+            if tail is not None and i + 1 < len(starts):
+                end = at + tail.start()
+            crlf = text.count("\r\n")
+            nl = "\r\n" if crlf and crlf >= text.count("\n") - crlf else "\n"
+            return text[:at] + block.replace("\n", nl) + text[end:]
+    return append_blocks(text, {name: block}, why)
 
 
 def for_port(port: "animpack.PortPlan", source_data) -> Rebuild:

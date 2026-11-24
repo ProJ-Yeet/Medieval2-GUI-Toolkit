@@ -567,6 +567,21 @@
   ],
   "cards.gen_rig_hint": [
    "turn"
+  ],
+  "v3kit.turn": [
+   "turn"
+  ],
+  "v3kit.turn_title": [
+   "turn"
+  ],
+  "v3kit.timing_turn": [
+   "turn"
+  ],
+  "eng.animkit.timing_numbers": [
+   "turn"
+  ],
+  "eng.animkit.turn_outside": [
+   "turn"
   ]
  },
  "ancillaries.a_character_holds_one_ancillary_per": "Bir karakter'de tür başına bir ancillary bulunur; dolayısıyla yenisi bunun yerini alır",
@@ -13855,7 +13870,7 @@
  "v3kit.clear_it": "Hiçbir şey: yuvayı temizle",
  "v3kit.its_slot": "Onun yuvası",
  "v3kit.bone_map": "Kemik haritası",
- "v3kit.map_title": "Farklı kemik adları için yapılmış animasyonda: source=this, virgülle ayırın, örn. bone_E_platform=bone_pelvis. Adı eşleşen kemikler için girdi gerekmez; ulaşılamayan kemik bağlama pozunu korur.",
+ "v3kit.map_title": "Farklı kemik adları için hazırlanmış bir animasyonda: kaynak iskeletin bir kemiğini ve bu iskelette onun hareket ettirdiği kemiği seç, sonra Eşleştir'e tıkla. Adları aynı olan kemikler için eşleştirme gerekmez; hiçbir şeyin ulaşmadığı kemik bağlama pozunu korur.",
  "v3kit.mapped": "{n} kemik eşleşti",
  "v3kit.cleared": "temizlendi",
  "v3kit.preview": "Önizleme",
@@ -13893,5 +13908,26 @@
  "v3ms3d.weapon_confirm": "{name}, {mod} modunun paketindeki {skeleton} iskeletinin {action} eylemine eklensin mi?\n\n{v3AnimPackMsg}",
  "v3ms3d.put_into_pack": "Pakete bir MilkShape animasyonu ekle",
  "eng.animslot.ms3d_no_bone_of_skeleton": "{name} dosyasında bu iskelete ait hiçbir kemik yok ({bones}): başka bir iskelet için oluşturulmuş",
- "eng.animslot.ms3d_bones_held": "{name} dosyasındaki {missing_n} kemik {name2} içinde yok ve bağlama pozlarında kalıyor: {missing}{x}"
+ "eng.animslot.ms3d_bones_held": "{name} dosyasındaki {missing_n} kemik {name2} içinde yok ve bağlama pozlarında kalıyor: {missing}{x}",
+ "v3kit.target": "Kit",
+ "v3kit.target_title": "Yeni bir iskelet oluştur ya da bu değişiklikleri bu modda daha önce oluşturulmuş bir kite ekle. Kit doğrudan değiştirilir; onu oynatan her model girdisi bu değişiklikleri alır.",
+ "v3kit.target_new": "yeni bir iskelet",
+ "v3kit.target_add": "{name} kitine ekle",
+ "v3kit.write_add": "Değişiklikleri yaz",
+ "v3kit.confirm_add": "{mod} paketlerindeki {name} kitine {n} yuva değişikliği yazılsın mı?\n\nÖnce oyunu kapat. {name} kitini oynatan her model girdisi bu değişiklikleri alır. Günlükten geri alınabilir.",
+ "v3kit.map_from": "{skeleton} iskeletinin kemiği",
+ "v3kit.map_to": "{skeleton} iskeletinin bu kemiğini hareket ettirir",
+ "v3kit.map_add": "Eşleştir",
+ "v3kit.map_drop_title": "Bu çifti kemik eşlemesinden kaldır",
+ "v3kit.impact": "Darbe karesi",
+ "v3kit.impact_title": "Darbe vuruşunun gerçekleştiği kare; sayım 0'dan başlar. Yuvanın kendi değerini korumak için boş bırak.",
+ "v3kit.turn": "Dönüş sınırları",
+ "v3kit.turn_title": "Birim bu hareketi oynatırken ne kadar dönebilir: önce en düşük, sonra en yüksek değer; -180 ile 180 derece arasında. Yuvanın değerlerini korumak için iki alanı da boş bırak.",
+ "v3kit.keep": "koru",
+ "v3kit.timing_impact": "{n}. karede darbe",
+ "v3kit.timing_turn": "{lo} ile {hi} derece arasında döner",
+ "eng.animkit.timing_numbers": "darbe karesi ve dönüş sınırları sayı olmalıdır",
+ "eng.animkit.impact_outside": "{n} darbe karesi, animasyonun 0 ile {last} arasındaki karelerinin dışında",
+ "eng.animkit.turn_outside": "{lo:g} ile {hi:g} dönüş sınırları: önce en düşük değeri gir; ikisi de -180 ile 180 derece arasında olmalıdır",
+ "eng.animkit.extend_no_change": "{name} bunun tamamını zaten oynatıyor: hiçbir şey değişmez"
 }

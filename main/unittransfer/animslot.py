@@ -617,31 +617,50 @@ def plan_skeleton(mod, source_mod, name: str, entry: str = "", entry_skeleton: s
         out.loose = animloose.for_port(out.port, source_mod.data)
         out.notes += out.loose.notes
     if entry:
-        e = mod.modeldb.by_name().get(entry.lower())
-        if e is None:
-            out.errors.append(_i18n.msg("eng.animslot.no_model_entry", "no model entry {entry}", entry=repr(entry)))
-            return out
-        old = entry_skeleton or (e.skeletons() or [""])[0]
-        if old.lower() not in {x.lower() for x in e.skeletons() + e.weapon_skeletons()}:
-            out.errors.append(_i18n.msg("eng.animslot.names_no_skeleton", "{name} names no skeleton {old}", name=e.name, old=repr(old)))
-            return out
-        out.entry, out.entry_skeleton = e.name, old
-        if old == row.dest_name:
-            out.notes.append(_i18n.msg("eng.animslot.asks_for_already", "{name} asks for {old} already", name=e.name, old=old))
-        else:
-            # the whole file from its parse with the one entry's text changed,
-            # as the model editor writes it (Phase 15)
-            db = mod.modeldb
-            original = list(db.entries)
-            import copy
-            changed = copy.copy(e)
-            changed.raw = modeldb.rename_skeletons(e.raw, {old: row.dest_name}, pad=e.first_entry_pad)
-            try:
-                db.entries = [changed if x is e else x for x in original]
-                out.modeldb_text = db.to_text()
-            finally:
-                db.entries = original
+        out.entry, out.entry_skeleton, out.modeldb_text, notes, errors = point_entry(
+            mod, entry, entry_skeleton, row.dest_name)
+        out.notes += notes
+        out.errors += errors
     return out
+
+
+def point_entry(mod, entry: str, entry_skeleton: str, new_name: str) -> Tuple[str, str, str, List[str], List[str]]:
+    """Model entry ``entry``'s skeleton ``entry_skeleton`` (its first body
+    skeleton when not given; a weapon skeleton works too) renamed to
+    ``new_name``: ``(entry, old name, the whole modeldb text, notes, errors)``.
+    The text is "" when there is nothing to change. Writes nothing."""
+    e = mod.modeldb.by_name().get(entry.lower())
+    if e is None:
+        return "", "", "", [], [_i18n.msg("eng.animslot.no_model_entry", "no model entry {entry}", entry=repr(entry))]
+    old = entry_skeleton or (e.skeletons() or [""])[0]
+    if old.lower() not in {x.lower() for x in e.skeletons() + e.weapon_skeletons()}:
+        return e.name, old, "", [], [_i18n.msg("eng.animslot.names_no_skeleton", "{name} names no skeleton {old}", name=e.name, old=repr(old))]
+    if old == new_name:
+        return e.name, old, "", [_i18n.msg("eng.animslot.asks_for_already", "{name} asks for {old} already", name=e.name, old=old)], []
+    # the whole file from its parse with the one entry's text changed,
+    # as the model editor writes it (Phase 15)
+    db = mod.modeldb
+    original = list(db.entries)
+    import copy
+    changed = copy.copy(e)
+    changed.raw = modeldb.rename_skeletons(e.raw, {old: new_name}, pad=e.first_entry_pad)
+    try:
+        db.entries = [changed if x is e else x for x in original]
+        text = db.to_text()
+    finally:
+        db.entries = original
+    return e.name, old, text, [], []
+
+
+def write_modeldb(mod, keep, text: str) -> str:
+    """``text`` written as the mod's modeldb through ``keep`` (the job's
+    backup), or as descr_model_battle.txt on M2EX's text models (92a).
+    Returns the path written, under ``data/``."""
+    data = Path(mod.data)
+    rel = Path(mod.modeldb_path).relative_to(data).as_posix()
+    rel, db_text, db_enc = modeltext.redirect(mod, rel, text, modeldb.ENCODING)
+    keep(rel).write_text(db_text, encoding=db_enc)
+    return rel
 
 
 def apply_skeleton(sp: SkeletonPort, mod, source_mod) -> dict:
@@ -688,10 +707,7 @@ def apply_skeleton(sp: SkeletonPort, mod, source_mod) -> dict:
             keep(loose.text_rel).write_bytes(animloose.append_blocks(
                 old, loose.blocks, f"brought from {source_mod.name} by Unit Transfer ({tid})").encode("latin-1"))
     if sp.modeldb_text:
-        rel = Path(mod.modeldb_path).relative_to(data).as_posix()
-        # 92a: a mod on M2EX's text models gets descr_model_battle.txt instead
-        rel, db_text, db_enc = modeltext.redirect(mod, rel, sp.modeldb_text, modeldb.ENCODING)
-        keep(rel).write_text(db_text, encoding=db_enc)
+        rel = write_modeldb(mod, keep, sp.modeldb_text)
         file_op("WRITE", data / rel, f"{sp.entry}: {sp.entry_skeleton} -> {sp.dest_name}")
     summary = (f"skeleton {sp.port.skeletons[0].name} from {source_mod.name} into {mod.name}"
                + (f" as {sp.dest_name}" if sp.dest_name != sp.port.skeletons[0].name else "")

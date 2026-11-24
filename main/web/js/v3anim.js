@@ -1601,9 +1601,12 @@ async function v3AnimPortApply(){
 /* --- kitbash a skeleton (unittransfer/animkit.py) ----------------------------
    A NEW skeleton in this mod's pack: a copy of the one being played, with
    slots taken from any skeleton (this mod's or another's, any of its slots)
-   and slots cleared. A bone map ("from=to, from=to") forces an animation made
-   for other bone names onto this skeleton. Each change previews on the model
-   as the game would get it; the whole kit is one job and one Undo. */
+   and slots cleared, or (128g) a kit made earlier added to in place. A bone
+   map, picked from the two skeletons' bone lists, forces an animation made
+   for other bone names onto this skeleton; a change can set the slot's impact
+   frame and turn limits; the model entry being viewed can be pointed at the
+   kit. Each change previews on the model as the game would get it; the whole
+   kit is one job and one Undo. */
 function v3AnimKitHtml(){
   const a = v3.anim, L = a.list, sk = v3AnimSk();
   if(!L || !L.packs || L.packs === 'vanilla' || v3.cas || !sk || !sk.packed) return '';
@@ -1619,14 +1622,26 @@ function v3AnimKitHtml(){
     esc(r.action)}${v3AnimStats(r) ? ' · ' + v3AnimStats(r) : ''}</option>`).join('');
   const rows = k.changes.map((c, i) => `<div class="v3aedrow"><span style="flex:1;min-width:0">${esc(c.label)} ${c.clear
       ? tt('v3kit.cleared') : `&larr; ${esc(c.source || here)} / ${esc(c.skeleton)} / ${esc(c.source_label)}${
-        Object.keys(c.bone_map).length ? ` · ${tt('v3kit.mapped',{n:Object.keys(c.bone_map).length})}` : ''}`}</span>
+        Object.keys(c.bone_map).length ? ` · ${tt('v3kit.mapped',{n:Object.keys(c.bone_map).length})}` : ''}`}${
+        v3AnimKitTiming(c)}</span>
       ${c.clear ? '' : `<button onclick="v3AnimKitPreview(${i})" ${k.busy ? 'disabled' : ''}>${tt('v3kit.preview')}</button>`}
       <button onclick="v3AnimKitDrop(${i})" title="${ttA('v3kit.drop_title')}">✕</button></div>`).join('');
   const p = k.plan;
   const ready = d.slot !== '' && (d.clear || (d.mod && d.skel && d.src !== ''));
+  const bodies = [...new Set(((L.sets || []).flatMap(x => [x.primary, x.secondary])).filter(Boolean))];
+  const pairs = Object.entries(d.pairs || {});
+  const num = (key, val, w, ph) => `<input type="number" step="1" value="${esc(val)}" placeholder="${ph || ''}"
+    style="width:${w}px" onchange="v3AnimKitAdd('${key}', this.value)">`;
   return `<div class="v3aed"><div class="k">${tt('v3kit.heading',{skeleton:esc(k.base)})}</div>
-    <div class="v3aedrow"><span>${tt('v3kit.new_name')}</span><input type="text" value="${esc(k.name)}" style="flex:1;min-width:0"
-      spellcheck="false" onchange="v3AnimKitSet('name', this.value)"></div>
+    ${(k.kitNames || []).length ? `<div class="v3aedrow" title="${ttA('v3kit.target_title')}"><span>${tt('v3kit.target')}</span>
+      <select style="flex:1;min-width:0" onchange="v3AnimKitSet('target', this.value)">
+      <option value="">${tt('v3kit.target_new')}</option>${k.kitNames.map(n =>
+        `<option value="${esc(n)}" ${n === k.target ? 'selected' : ''}>${tt('v3kit.target_add',{name:esc(n)})}</option>`).join('')}</select></div>` : ''}
+    ${k.target ? '' : `<div class="v3aedrow"><span>${tt('v3kit.new_name')}</span><input type="text" value="${esc(k.name)}" style="flex:1;min-width:0"
+      spellcheck="false" onchange="v3AnimKitSet('name', this.value)"></div>`}
+    ${bodies.length && v3.entry ? `<div class="v3aedrow"><span>${tt('v3anim.then')}</span><select style="flex:1;min-width:0" onchange="v3AnimKitSet('point', this.value)">
+      <option value="">${tt('v3anim.leave_as_it_is',{entry:esc(v3.entry)})}</option>${bodies.map(n =>
+        `<option value="${esc(n)}" ${n === k.point ? 'selected' : ''}>${tt('v3anim.point_s_at_it',{entry:esc(v3.entry),x:esc(n)})}</option>`).join('')}</select></div>` : ''}
     ${rows || `<div class="count">${tt('v3kit.no_changes')}</div>`}
     <div class="v3aedrow"><span>${tt('v3kit.slot')}</span><select style="flex:1;min-width:0" onchange="v3AnimKitAdd('slot', this.value)">
       <option value="">${tt('v3kit.pick_slot')}</option>${slotOpts}</select></div>
@@ -1639,13 +1654,22 @@ function v3AnimKitHtml(){
       <datalist id="v3akitnames">${(d.names || []).map(n => `<option value="${esc(n)}">`).join('')}</datalist></div>` : ''}
     ${!d.clear && d.slots ? `<div class="v3aedrow"><span>${tt('v3kit.its_slot')}</span><select style="flex:1;min-width:0" onchange="v3AnimKitAdd('src', this.value)">
       <option value="">${tt('v3kit.pick_slot')}</option>${srcOpts}</select></div>
-      <div class="v3aedrow" title="${ttA('v3kit.map_title')}"><span>${tt('v3kit.bone_map')}</span><input type="text" value="${esc(d.map)}"
-      style="flex:1;min-width:0" spellcheck="false" placeholder="bone_E_platform=bone_pelvis" onchange="v3AnimKitAdd('map', this.value)"></div>` : ''}
+      <div class="v3aedrow" title="${ttA('v3kit.map_title')}"><span>${tt('v3kit.bone_map')}</span>
+      <select style="flex:1;min-width:0" onchange="v3AnimKitAdd('mapFrom', this.value)"><option value="">${tt('v3kit.map_from',{skeleton:esc(d.skel)})}</option>${
+        (d.fromBones || []).map(b => `<option ${b === d.mapFrom ? 'selected' : ''}>${esc(b)}</option>`).join('')}</select>
+      <select style="flex:1;min-width:0" onchange="v3AnimKitAdd('mapTo', this.value)"><option value="">${tt('v3kit.map_to',{skeleton:esc(k.target || k.base)})}</option>${
+        (k.baseBones || []).map(b => `<option ${b === d.mapTo ? 'selected' : ''}>${esc(b)}</option>`).join('')}</select>
+      <button onclick="v3AnimKitMapAdd()" ${d.mapFrom && d.mapTo ? '' : 'disabled'}>${tt('v3kit.map_add')}</button></div>
+      ${pairs.length ? `<div class="count">${pairs.map(([f, t]) => `<code>${esc(f)}</code> &rarr; <code>${esc(t)}</code>
+        <button onclick="v3AnimKitMapDrop(${esc(JSON.stringify(f))})" title="${ttA('v3kit.map_drop_title')}">✕</button>`).join(' ')}</div>` : ''}
+      <div class="v3aedrow" title="${ttA('v3kit.impact_title')}"><span>${tt('v3kit.impact')}</span>${num('impact', d.impact, 64, tt('v3kit.keep'))}</div>
+      <div class="v3aedrow" title="${ttA('v3kit.turn_title')}"><span>${tt('v3kit.turn')}</span>${num('turnLo', d.turnLo, 64, tt('v3kit.keep'))}${
+        num('turnHi', d.turnHi, 64, tt('v3kit.keep'))}</div>` : ''}
     <div class="v3btns">${d.clear ? '' : `<button onclick="v3AnimKitPreview(-1)" ${ready && !k.busy ? '' : 'disabled'}>${tt('v3kit.preview')}</button>`}
       <button onclick="v3AnimKitPush()" ${ready ? '' : 'disabled'}>${tt('v3kit.add')}</button></div>
     <div class="v3btns"><button onclick="v3.anim.kit = null; v3AnimPanel()">${tt('common.cancel')}</button>
       <button onclick="v3AnimKitPlan()" ${k.changes.length && !k.busy ? '' : 'disabled'}>${tt('v3anim.check')}</button>
-      <button class="primary" onclick="v3AnimKitApply()" ${p && p.ok && !k.busy ? '' : 'disabled'}>${tt('v3kit.write')}</button></div>
+      <button class="primary" onclick="v3AnimKitApply()" ${p && p.ok && !k.busy ? '' : 'disabled'}>${k.target ? tt('v3kit.write_add') : tt('v3kit.write')}</button></div>
     ${k.msg ? `<div class="${k.bad ? 'w-bad' : 'count'}">${esc(k.msg)}</div>` : ''}
     ${p ? `<div class="count">${tt('v3kit.plan_totals',{n:p.rows.length,appends:p.appends,kb:(p.bytes / 1024).toFixed(0)})}</div>
       ${p.rows.map(r => (r.notes || []).map(n => `<div class="count">${esc(r.action)}: ${esc(n)}</div>`).join('')).join('')}
@@ -1656,11 +1680,25 @@ function v3AnimKitHtml(){
 async function v3AnimKitOpen(){
   const a = v3.anim;
   a.kit = {base: a.skel, name: a.skel + '_kit', changes: [], slotNames: null, plan: null, msg: '', bad: false, busy: false,
-           add: {slot: '', mod: '', clear: false, skel: '', names: null, slots: null, src: '', map: ''}};
+           target: '', kitNames: [], point: '', baseBones: [],
+           add: v3AnimKitAddNew()};
+  const k = a.kit, mod = v3AnimMod();
   v3AnimPanel();
-  try{ a.kit.slotNames = (await api.get('/api/model/slot_names')).slots || []; }
-  catch(e){ a.kit.msg = '' + e; a.kit.bad = true; }
+  try{
+    k.slotNames = (await api.get('/api/model/slot_names')).slots || [];
+    k.kitNames = (await api.get(`/api/model/kit_names?mod=${enc(mod)}`)).names || [];
+    k.baseBones = (await api.get(`/api/model/skeleton_bones?mod=${enc(mod)}&skeleton=${enc(k.base)}`)).bones || [];
+    // a kit being played is the one to add to
+    const mine = k.kitNames.find(n => n.toLowerCase() === (k.base || '').toLowerCase());
+    if(mine) k.target = mine;
+  }catch(e){ k.msg = '' + e; k.bad = true; }
   v3AnimPanel();
+}
+
+function v3AnimKitAddNew(keep){
+  const d = keep || {};
+  return {slot: '', mod: d.mod || '', clear: false, skel: d.skel || '', names: d.names || null, slots: d.slots || null,
+          src: '', pairs: {}, fromBones: d.fromBones || [], mapFrom: '', mapTo: '', impact: '', turnLo: '', turnHi: ''};
 }
 
 function v3AnimKitSet(key, v){
@@ -1669,14 +1707,25 @@ function v3AnimKitSet(key, v){
   v3AnimPanel();
 }
 
-/* "a=b, c=d" as {a: b, c: d}. */
-function v3AnimKitMap(text){
-  const out = {};
-  (text || '').split(',').forEach(bit => {
-    const [from, to] = bit.split('=').map(s => (s || '').trim());
-    if(from && to) out[from] = to;
-  });
-  return out;
+/* 128g: the bone map, one pair at a time from the two bone lists. */
+function v3AnimKitMapAdd(){
+  const d = v3.anim.kit.add;
+  if(!d.mapFrom || !d.mapTo) return;
+  d.pairs[d.mapFrom] = d.mapTo;
+  d.mapFrom = ''; d.mapTo = '';
+  v3AnimPanel();
+}
+function v3AnimKitMapDrop(from){
+  delete v3.anim.kit.add.pairs[from];
+  v3AnimPanel();
+}
+
+/* The impact frame and turn limits a change sets, said in its row. */
+function v3AnimKitTiming(c){
+  const bits = [];
+  if(c.impact_frame != null) bits.push(tt('v3kit.timing_impact',{n:c.impact_frame}));
+  if(c.turn) bits.push(tt('v3kit.timing_turn',{lo:c.turn[0],hi:c.turn[1]}));
+  return bits.length ? ' · ' + bits.join(', ') : '';
 }
 
 async function v3AnimKitAdd(key, v){
@@ -1692,7 +1741,7 @@ async function v3AnimKitAdd(key, v){
       if(d.mod === v3AnimMod() && d.names && d.names.includes(k.base)) return v3AnimKitAdd('skel', k.base);
     }
   }else if(key === 'skel'){
-    d.skel = v; d.slots = null; d.src = '';
+    d.skel = v; d.slots = null; d.src = ''; d.fromBones = []; d.pairs = {};
     if(v){
       v3AnimPanel();
       try{
@@ -1701,6 +1750,7 @@ async function v3AnimKitAdd(key, v){
         d.slots = (s.actions || []).filter(x => x.slot != null && x.playable);
         if(!d.slots.length){ k.msg = tt('v3kit.no_slots',{skeleton:v,mod:d.mod}); k.bad = true; }
         else if(d.slots.some(x => String(x.slot) === String(d.slot))) d.src = String(d.slot);
+        d.fromBones = (await api.get(`/api/model/skeleton_bones?mod=${enc(d.mod)}&skeleton=${enc(v)}`)).bones || [];
       }catch(e){ k.msg = '' + e; k.bad = true; }
     }
   }else{
@@ -1716,14 +1766,17 @@ function v3AnimKitChange(){
   const label = ((k.slotNames || []).find(s => String(s.slot) === String(d.slot)) || {}).label || String(d.slot);
   if(d.clear) return {slot: +d.slot, clear: true, label, bone_map: {}};
   const src = (d.slots || []).find(x => String(x.slot) === String(d.src)) || {};
+  const n = v => v === '' || v == null || isNaN(+v) ? null : +v;
+  const lo = n(d.turnLo), hi = n(d.turnHi);
   return {slot: +d.slot, clear: false, label, source: d.mod === v3AnimMod() ? '' : d.mod, skeleton: d.skel,
-          source_slot: +d.src, source_label: src.action || String(d.src), bone_map: v3AnimKitMap(d.map)};
+          source_slot: +d.src, source_label: src.action || String(d.src), bone_map: Object.assign({}, d.pairs),
+          impact_frame: n(d.impact), turn: lo != null || hi != null ? [lo != null ? lo : -180, hi != null ? hi : 180] : null};
 }
 
 function v3AnimKitPush(){
   const k = v3.anim.kit, c = v3AnimKitChange();
   k.changes = k.changes.filter(x => x.slot !== c.slot).concat([c]);
-  k.add = {slot: '', mod: k.add.mod, clear: false, skel: k.add.skel, names: k.add.names, slots: k.add.slots, src: '', map: k.add.map};
+  k.add = v3AnimKitAddNew(k.add);
   k.plan = null; k.msg = ''; k.bad = false;
   v3AnimPanel();
 }
@@ -1740,7 +1793,7 @@ async function v3AnimKitPreview(i){
   const c = i >= 0 ? k.changes[i] : v3AnimKitChange();
   k.busy = true; k.msg = tt('common.reading_2'); k.bad = false; v3AnimPanel();
   let data;
-  try{ data = await api.post('/api/model/skeleton/kit_preview', {mod: v3AnimMod(), base: k.base, change: c,
+  try{ data = await api.post('/api/model/skeleton/kit_preview', {mod: v3AnimMod(), base: k.target || k.base, change: c,
                                                                   weapons: v3AnimWeapons()}); }
   catch(e){ data = {error: '' + e}; }
   if(v3 !== mine || v3.anim !== a || a.kit !== k) return;
@@ -1759,9 +1812,11 @@ async function v3AnimKitPreview(i){
 
 function v3AnimKitBody(){
   const k = v3.anim.kit;
-  return {mod: v3AnimMod(), base: k.base, name: k.name, keep_rebuildable: true,
+  return {mod: v3AnimMod(), base: k.target || k.base, name: k.target || k.name, keep_rebuildable: true,
+          extend: !!k.target, entry: k.point ? v3.entry : '', entry_skeleton: k.point || '',
           changes: k.changes.map(c => ({slot: c.slot, clear: c.clear, source: c.source || '', skeleton: c.skeleton || '',
-                                        source_slot: c.source_slot, bone_map: c.bone_map}))};
+                                        source_slot: c.source_slot, bone_map: c.bone_map,
+                                        impact_frame: c.impact_frame, turn: c.turn}))};
 }
 
 async function v3AnimKitPlan(){
@@ -1776,7 +1831,8 @@ async function v3AnimKitPlan(){
 
 async function v3AnimKitApply(){
   const k = v3.anim.kit;
-  if(!confirm(tt('v3kit.confirm',{name:k.name,base:k.base,mod:v3AnimMod(),n:k.changes.length}))) return;
+  if(!confirm(k.target ? tt('v3kit.confirm_add',{name:k.target,mod:v3AnimMod(),n:k.changes.length})
+                        : tt('v3kit.confirm',{name:k.name,base:k.base,mod:v3AnimMod(),n:k.changes.length}))) return;
   k.busy = true; k.msg = tt('common.writing'); v3AnimPanel();
   let w;
   try{ w = await api.post('/api/model/skeleton/kit_apply', v3AnimKitBody()); }
@@ -1785,6 +1841,7 @@ async function v3AnimKitApply(){
   if(w.error){ k.msg = w.error; k.bad = true; return v3AnimPanel(); }
   if(typeof activity === 'function') activity(tt('v3kit.made'), w.summary);
   k.plan = null; k.msg = tt('v3kit.written',{name:w.name}); k.bad = false;
+  if(!k.target && w.name && !k.kitNames.includes(w.name)) k.kitNames.push(w.name);
   v3AnimPanel();
 }
 

@@ -21,6 +21,7 @@ holding vanilla's MTW2_Swordsman, so nothing copies DaC's 356 MB pack.
    shape (a cleared slot refused), kit_apply writes and Undo takes it out.
 """
 import hashlib
+import re
 import shutil
 import sys
 from pathlib import Path
@@ -243,6 +244,73 @@ check("and Undo takes it out again", shas(dest) == before)
 r = h._anim_kit("kit_apply", dict(body, name="MTW2_Mace"))
 check("kit_apply refuses a plan with errors and writes nothing",
       "already" in r.get("error", "") and shas(dest) == before)
+
+# ---- 6) 128g: timing, an entry pointed at it, a kit added to -------------------------
+print("\n6) 128g: impact frame and turn limits, a model entry, a kit added to")
+from unittransfer import animloose  # noqa: E402
+
+idle_frames = animpack.PackedAnimation(packs.anims.read_entry(
+    animpack.resolve_slot(packs.anims, spear.slots[IDLE].path, spear.scale))).frames
+p = animkit.plan_kit(dest, "MTW2_Spear", "Kit_Time", [C(IDLE, impact_frame=2, turn=(-30, 45))])
+check("a slot's own animation retimed: planned, its bytes reused", p.ok and p.rows[0].reuse and not p.appends)
+sk_t = animpack.PackedSkeleton(p.skeleton_bytes, "Kit_Time")
+check("its impact frame is 2 and its turn limits -30 and 45 degrees",
+      sk_t.slots[IDLE].impact_frame == 2 and sk_t.slots[IDLE].min_turn == animkit._turn(-30)
+      and sk_t.slots[IDLE].max_turn == animkit._turn(45) and animkit._turn(45) == 8192)
+check("the path is the base's", sk_t.slots[IDLE].path == spear.slots[IDLE].path)
+p = animkit.plan_kit(dest, "MTW2_Spear", "Kit_Time", [C(IDLE, impact_frame=idle_frames)])
+check("an impact frame past the last frame: refused", not p.ok and "outside" in "; ".join(p.payload()["errors"]))
+p = animkit.plan_kit(dest, "MTW2_Spear", "Kit_Time", [C(IDLE, turn=(50, -50))])
+check("turn limits the wrong way round: refused", not p.ok and "least first" in "; ".join(p.payload()["errors"]))
+check("from_dict reads impact_frame and turn",
+      animkit.Change.from_dict({"slot": IDLE, "impact_frame": "3", "turn": [-10, 10]}).impact_frame == 3)
+
+entry = next(e.name for e in dest.modeldb.entries if any(s.lower() == "mtw2_spear" for s in e.skeletons()))
+db_path = Path(dest.modeldb_path)
+db_before = hashlib.sha1(db_path.read_bytes()).hexdigest()
+p = animkit.plan_kit(dest, "MTW2_Spear", "Kit_Grow", [C(WALK, skeleton="MTW2_Mace")], entry=entry)
+check(f"a kit with {entry} pointed at it: planned, the entry and its old skeleton said",
+      p.ok and p.entry == entry and p.entry_skeleton.lower() == "mtw2_spear" and "Kit_Grow" in p.modeldb_text)
+before = shas(dest)
+res = animkit.apply_kit(p)
+dest = Mod(dest.root)
+check(f"written: {entry} now names Kit_Grow",
+      any(s == "Kit_Grow" for s in dest.modeldb.by_name()[entry.lower()].skeletons()))
+check("kit_names lists Kit_Grow", "Kit_Grow" in animkit.kit_names(dest))
+grown = shas(dest)
+n_skels = len(animpack.for_data(dest.data).skels.entries)
+p = animkit.plan_kit(dest, "", "Kit_Grow", [C(OTHER, source="Other", skeleton="MTW2_Swordsman"),
+                                            C(IDLE, impact_frame=1)], sources, extend=True)
+check("added to: planned, the kit is its own base", p.ok and p.extend and p.base == "Kit_Grow" and p.appends)
+types_before = len(re.findall(r"(?im)^\s*type\s+\S+", (Path(dest.data) / "descr_skeleton.txt").read_bytes().decode("latin-1")))
+res2 = animkit.apply_kit(p)
+after = animpack.for_data(dest.data)
+kg = after.skeleton("Kit_Grow")
+check("no second Kit_Grow in the skeleton pack", len(after.skels.entries) == n_skels
+      and len(after.skels.find("Kit_Grow")) == 1)
+check("its new slot plays the appended animation, the walk it had stays",
+      animpack._key(kg.slots[OTHER].path) == animpack._key(p.rows[0].new_path)
+      and kg.slots[WALK].path == animpack.PackedSkeleton(p.skeleton_bytes, "x").slots[WALK].path
+      and kg.slots[IDLE].impact_frame == 1)
+text = (Path(dest.data) / "descr_skeleton.txt").read_bytes().decode("latin-1")
+check("descr_skeleton.txt still has one Kit_Grow block, naming the new animation",
+      len(re.findall(r"(?im)^\s*type\s+Kit_Grow\s*$", text)) == 1
+      and animloose.loose_rel(Path(dest.data).parent.name, p.rows[0].new_path).split("/")[-1].lower() in text.lower())
+check("and every other type block is still there",
+      len(re.findall(r"(?im)^\s*type\s+\S+", text)) == types_before)
+transfer.undo(res2["id"])
+check("Undo of the addition: back to the kit as it was made", shas(dest) == grown)
+p = animkit.plan_kit(dest, "", "Kit_Grow", [C(WALK, skeleton="MTW2_Mace")], extend=True)
+check("an addition that changes nothing: refused", not p.ok and "nothing would change" in "; ".join(p.payload()["errors"]))
+p = animkit.plan_kit(dest, "", "Kit_Nowhere", [C(WALK, skeleton="MTW2_Mace")], extend=True)
+check("adding to a skeleton that is not there: refused", not p.ok)
+transfer.undo(res["id"])
+dest = Mod(dest.root)
+check("Undo of the kit: packs, descr_skeleton.txt and the modeldb back byte for byte",
+      shas(dest) == before and hashlib.sha1(db_path.read_bytes()).hexdigest() == db_before)
+r = h._anim_kit("kit_plan", {"mod": "Dest", "name": "Kit_Api2", "base": "MTW2_Spear", "entry": entry,
+                             "changes": [{"slot": IDLE, "impact_frame": 2, "turn": [-20, 20]}]})
+check("kit_plan takes entry, impact_frame and turn", r.get("plan", {}).get("ok") and r["plan"]["entry"] == entry)
 
 print(f"\n{sum(ok)}/{len(ok)} checks passed")
 sys.exit(0 if all(ok) else 1)

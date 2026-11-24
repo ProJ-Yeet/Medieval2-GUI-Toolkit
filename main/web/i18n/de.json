@@ -1120,6 +1120,21 @@
   ],
   "eng.animconvert.name_too_long": [
    "character"
+  ],
+  "v3kit.turn": [
+   "turn"
+  ],
+  "v3kit.turn_title": [
+   "turn"
+  ],
+  "v3kit.timing_turn": [
+   "turn"
+  ],
+  "eng.animkit.timing_numbers": [
+   "turn"
+  ],
+  "eng.animkit.turn_outside": [
+   "turn"
   ]
  },
  "ancillaries.a_character_holds_one_ancillary_per": "Ein Charakter hat pro Typ ein Gefolgsmitglied; das ist also das, was ein neues ersetzt",
@@ -14408,7 +14423,7 @@
  "v3kit.clear_it": "Nichts: Slot leeren",
  "v3kit.its_slot": "Dessen Slot",
  "v3kit.bone_map": "Knochenkarte",
- "v3kit.map_title": "Für Animationen mit anderen Knochennamen: source=this, durch Kommas getrennt, z. B. bone_E_platform=bone_pelvis. Knochen mit übereinstimmendem Namen benötigen keinen Eintrag; nicht erreichte Knochen behalten ihre Bindepose.",
+ "v3kit.map_title": "Für eine Animation mit anderen Knochennamen: Wähle einen Knochen des Quellskeletts und den Knochen dieses Skeletts, den er bewegt, und klicke dann auf Zuordnen. Knochen mit gleichem Namen brauchen kein Paar; ein Knochen, den nichts erreicht, behält seine Bindepose.",
  "v3kit.mapped": "{n} Knochen zugeordnet",
  "v3kit.cleared": "geleert",
  "v3kit.preview": "Vorschau",
@@ -14446,5 +14461,26 @@
  "v3ms3d.weapon_confirm": "{name} in {skeleton}s {action} im Paket von {mod} einfügen?\n\n{v3AnimPackMsg}",
  "v3ms3d.put_into_pack": "Eine MilkShape-Animation ins Paket einfügen",
  "eng.animslot.ms3d_no_bone_of_skeleton": "{name} enthält keinen Knochen dieses Skeletts ({bones}): Die Animation wurde für ein anderes Skelett erstellt",
- "eng.animslot.ms3d_bones_held": "{missing_n} Knochen von {name} sind nicht in {name2} vorhanden und behalten ihre Bindepose bei: {missing}{x}"
+ "eng.animslot.ms3d_bones_held": "{missing_n} Knochen von {name} sind nicht in {name2} vorhanden und behalten ihre Bindepose bei: {missing}{x}",
+ "v3kit.target": "Kit",
+ "v3kit.target_title": "Erstelle ein neues Skelett oder füge diese Änderungen zu einem Kit hinzu, das zuvor in diesem Mod erstellt wurde. Ein Kit, zu dem Änderungen hinzugefügt werden, wird direkt geändert. Jeder Modelleintrag, der es abspielt, erhält die Änderungen.",
+ "v3kit.target_new": "ein neues Skelett",
+ "v3kit.target_add": "zu {name} hinzufügen",
+ "v3kit.write_add": "Änderungen schreiben",
+ "v3kit.confirm_add": "{n} Slot-Änderung(en) in {name} in den Packs von {mod} schreiben?\n\nSchließe zuerst das Spiel. Jeder Modelleintrag, der {name} abspielt, erhält die Änderungen. Das Protokoll kann sie rückgängig machen.",
+ "v3kit.map_from": "Knochen von {skeleton}",
+ "v3kit.map_to": "bewegt diesen Knochen von {skeleton}",
+ "v3kit.map_add": "Zuordnen",
+ "v3kit.map_drop_title": "Dieses Paar aus der Knochenzuordnung entfernen",
+ "v3kit.impact": "Aufprall-Frame",
+ "v3kit.impact_title": "Der Frame, in dem der Schlag trifft, ab 0 gezählt. Leer lassen, um den Wert des Slots beizubehalten.",
+ "v3kit.keep": "beibehalten",
+ "v3kit.timing_impact": "Aufprall bei Frame {n}",
+ "eng.animkit.impact_outside": "Aufprall-Frame {n} liegt außerhalb der Animations-Frames von 0 bis {last}",
+ "eng.animkit.extend_no_change": "{name} spielt bereits alles davon ab: Es würde sich nichts ändern",
+ "v3kit.turn": "Drehgrenzen",
+ "v3kit.turn_title": "Wie weit sich die Einheit während dieser Aktion drehen darf, zuerst der kleinste, dann der größte Wert, in Grad von -180 bis 180. Beide Felder leer lassen, um die Werte des Slots beizubehalten.",
+ "v3kit.timing_turn": "Drehung von {lo} bis {hi} Grad",
+ "eng.animkit.timing_numbers": "Aufprall-Frame und Drehgrenzen müssen Zahlen sein",
+ "eng.animkit.turn_outside": "Drehgrenzen {lo:g} bis {hi:g}: Gib zuerst den kleineren Wert an; beide müssen zwischen -180 und 180 Grad liegen"
 }

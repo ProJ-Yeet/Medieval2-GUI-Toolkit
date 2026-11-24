@@ -64,6 +64,9 @@ class Change:
     skeleton: str = ""
     source_slot: int = -1
     bone_map: Dict[str, str] = field(default_factory=dict)
+    #: 128g: the slot's impact frame and turn limits (degrees), when set
+    impact_frame: Optional[int] = None
+    turn: Optional[Tuple[float, float]] = None
 
     @classmethod
     def from_dict(cls, d: dict) -> "Change":
@@ -74,9 +77,17 @@ class Change:
         except (TypeError, ValueError):
             raise KitError(_i18n.msg("eng.animkit.a_change_needs_a_slot_number", "a change needs a slot number")) from None
         bm = d.get("bone_map") if isinstance(d.get("bone_map"), dict) else {}
+        try:
+            imp = d.get("impact_frame")
+            imp = int(imp) if imp not in (None, "") else None
+            turn = d.get("turn")
+            turn = (float(turn[0]), float(turn[1])) if isinstance(turn, (list, tuple)) and len(turn) == 2 else None
+        except (TypeError, ValueError):
+            raise KitError(_i18n.msg("eng.animkit.timing_numbers", "the impact frame and turn limits are numbers")) from None
         return cls(slot=slot, clear=bool(d.get("clear")), source=str(d.get("source") or ""),
                    skeleton=str(d.get("skeleton") or ""), source_slot=ss,
-                   bone_map={str(k): str(v) for k, v in bm.items() if k and v})
+                   bone_map={str(k): str(v) for k, v in bm.items() if k and v},
+                   impact_frame=imp, turn=turn)
 
 
 @dataclass
@@ -112,6 +123,12 @@ class KitPlan:
     skeleton_bytes: bytes = b""
     stamp: tuple = ()
     keep_rebuildable: bool = True
+    #: 128g: ``name`` is a skeleton there already, changed in place
+    extend: bool = False
+    #: 128g: a model entry pointed at the skeleton
+    entry: str = ""
+    entry_skeleton: str = ""
+    modeldb_text: str = ""
     notes: List[str] = field(default_factory=list)
     errors: List[str] = field(default_factory=list)
 
@@ -125,6 +142,7 @@ class KitPlan:
 
     def payload(self) -> dict:
         return {"base": self.base, "name": self.name, "rows": [r.payload() for r in self.rows],
+                "extend": self.extend, "entry": self.entry, "entry_skeleton": self.entry_skeleton,
                 "appends": len(self.appends), "bytes": sum(len(r.data) for r in self.appends),
                 "notes": list(self.notes),
                 "errors": list(self.errors) + [f"{r.action or r.slot}: {e}" for r in self.rows for e in r.errors],
@@ -212,20 +230,38 @@ def _base(packs: animpack.Packs, name: str) -> animpack.PackedSkeleton:
     return sk
 
 
+def _turn(deg: float) -> int:
+    """Degrees as a slot stores a turn limit: int16, times pi/32768 radians."""
+    return max(-32768, min(32767, int(round(float(deg) * 32768.0 / 180.0))))
+
+
 def plan_kit(mod, base: str, name: str, changes: List[Change], sources: Optional[Dict[str, object]] = None,
-             keep_rebuildable: bool = True) -> KitPlan:
+             keep_rebuildable: bool = True, extend: bool = False, entry: str = "",
+             entry_skeleton: str = "") -> KitPlan:
     """The new skeleton ``name``: ``base`` with ``changes`` made, in order.
-    ``sources`` maps a change's ``source`` mod name to its mod. Writes nothing."""
-    p = KitPlan(mod=mod, base=base, name=name, keep_rebuildable=keep_rebuildable)
+    With ``extend`` (128g), ``name`` is a skeleton of the mod's own pack
+    already, a kit made earlier, and the changes are made to it in place:
+    ``base`` is ignored. With ``entry``, that model entry's
+    ``entry_skeleton`` (its first body skeleton when not given) is pointed at
+    ``name``, as a port does. ``sources`` maps a change's ``source`` mod name
+    to its mod. Writes nothing."""
+    if extend:
+        base = name
+    p = KitPlan(mod=mod, base=base, name=name, keep_rebuildable=keep_rebuildable, extend=extend)
     sources = sources or {}
     try:
         packs = animslot._own(mod.data)
         sk = _base(packs, base)
         p.base = base_name_of(sk)
+        if extend:
+            p.name = name = p.base
     except (animslot.SlotError, animpack.PackError) as e:
         p.errors.append(str(e))
         return p
-    if not _NAME.match(name or ""):
+    if extend:
+        if len(packs.skels.find(name)) > 1:
+            p.notes.append(_i18n.msg("eng.animslot.the_skeleton_pack_lists_more_than", "the skeleton pack lists {name} more than once; the first copy, the one the game plays, is the one changed", name=name))
+    elif not _NAME.match(name or ""):
         p.errors.append(_i18n.msg("eng.animkit.name_the_skeleton", "{name}: name the new skeleton with letters, digits, _ and -", name=repr(name)))
     elif packs.skels.first(name) is not None or name.lower() in casanim.skeleton_types(mod.data):
         p.errors.append(_i18n.msg("eng.animkit.already_a_skeleton", "{name} is a skeleton in this mod already: pick a new name", name=name))
@@ -294,13 +330,34 @@ def plan_kit(mod, base: str, name: str, changes: List[Change], sources: Optional
                 row.notes.append(_i18n.msg("eng.animkit.cues_left_out", "{n} sound or effect cue(s) of the source slot are left out: their names are the other mod's", n=len(new.events)))
                 new.events = []
         new.path = row.new_path
+        ch = next(c for c in reversed(changes) if c.slot == row.slot)
+        if ch.impact_frame is not None:
+            if not 0 <= ch.impact_frame < nf:
+                row.errors.append(_i18n.msg("eng.animkit.impact_outside", "an impact frame of {n} is outside the animation's frames, 0 to {last}", n=ch.impact_frame, last=nf - 1))
+            new.impact_frame = ch.impact_frame
+        if ch.turn is not None:
+            lo, hi = ch.turn
+            if not -180 <= lo <= hi <= 180:
+                row.errors.append(_i18n.msg("eng.animkit.turn_outside", "turn limits {lo:g} to {hi:g}: give the least first, both inside -180 to 180 degrees", lo=lo, hi=hi))
+            new.min_turn, new.max_turn = _turn(lo), _turn(hi)
         sk.slots[row.slot] = new
+    if any(r.errors for r in p.rows):
+        return p
     if sk.slots[DEFAULT_SLOT] is None:
         p.errors.append(_i18n.msg("eng.animkit.default_stays", "default cannot be cleared: the engine plays it whenever a slot is empty"))
         return p
     p.skeleton_bytes = sk.to_bytes()
+    if extend and p.skeleton_bytes == packs.skels.read_entry(packs.skels.first(name)) and not p.appends:
+        p.errors.append(_i18n.msg("eng.animkit.extend_no_change", "{name} plays all of this already: nothing would change", name=name))
+        return p
     p.stamp = animpack._stamp(packs.dir)
-    p.notes.append(_i18n.msg("eng.animkit.nothing_plays_it", "nothing plays {name} until a model entry names it", name=name))
+    if entry:
+        p.entry, p.entry_skeleton, p.modeldb_text, notes, errors = animslot.point_entry(
+            mod, entry, entry_skeleton, name)
+        p.notes += notes
+        p.errors += errors
+    elif not extend:
+        p.notes.append(_i18n.msg("eng.animkit.nothing_plays_it", "nothing plays {name} until a model entry names it", name=name))
     return p
 
 
@@ -323,6 +380,27 @@ def preview(mod, base: str, change: Change, sources: Optional[Dict[str, object]]
         return casanim.read_packed_bytes(row.data, row.action, sk.bone_table(), base_name_of(sk),
                                          rescale=(sk.scale or 1.0) / row.scale)
     return casanim.read_packed_bytes(row.data, row.action, sk.bone_table(), base_name_of(sk))
+
+
+def kit_names(mod) -> List[str]:
+    """The skeletons kitbashed in ``mod`` (the transfer log's kits, not
+    undone) that its own pack still holds, to add to (128g)."""
+    from . import config
+    try:
+        packs = animslot._own(mod.data)
+    except (animslot.SlotError, animpack.PackError):
+        return []
+    out: List[str] = []
+    for rec in config.load_log():
+        if rec.get("action") != "skeleton kit" or rec.get("undone") or not rec.get("applied"):
+            continue
+        if str(rec.get("dest_root") or "") != str(mod.root):
+            continue
+        name = str(rec.get("resolved_type") or "")
+        e = packs.skels.first(name) if name else None
+        if e is not None and e.name not in out:
+            out.append(e.name)
+    return out
 
 
 def apply_kit(p: KitPlan) -> dict:
@@ -370,10 +448,16 @@ def apply_kit(p: KitPlan) -> dict:
             blobs.append((animpack.PackEntry(r.new_path, 0, len(r.data), r.scale, c.frames,
                                              c.rot_bones, c.pos_bones), r.data))
         jobs.append((packs.anims, "pack", blobs))
-    jobs.append((packs.skels, "skeletons", [(animpack.PackEntry(p.name, 0, len(p.skeleton_bytes)),
-                                             p.skeleton_bytes)]))
+    if not p.extend:
+        jobs.append((packs.skels, "skeletons", [(animpack.PackEntry(p.name, 0, len(p.skeleton_bytes)),
+                                                 p.skeleton_bytes)]))
     for idx, stem, _b in jobs:
         keep(f"{rel_dir}/{stem}.idx")
+    if p.extend:
+        # the skeleton's entry written again in place (a second copy under
+        # its name would never play), so its pair is backed up whole
+        keep(f"{rel_dir}/skeletons.idx")
+        keep(f"{rel_dir}/skeletons.dat")
     done = []
     try:
         for idx, stem, blobs in jobs:
@@ -382,14 +466,20 @@ def apply_kit(p: KitPlan) -> dict:
             manifest["appended"].append(rec)
             done.append((idx, old))
             file_op("APPEND", idx.dat_path, f"+{rec['added']} bytes (skeleton kit {p.name})")
+        if p.extend:
+            animpack.replace_entry(packs.skels, packs.skels.first(p.name), p.skeleton_bytes)
+            file_op("WRITE", packs.skels.dat_path, f"skeleton kit {p.name}, added to")
     except BaseException:
         for (idx, old), rec in zip(reversed(done), reversed(manifest["appended"])):
             animpack._put_back(rec, idx.dat_path, idx.path, old)
+        if p.extend:
+            for n in ("skeletons.idx", "skeletons.dat"):
+                shutil.copy2(backup_root / "data" / rel_dir / n, packs.dir / n)
         raise
     files: List[str] = []
     notes = list(p.notes) + [n for r in p.rows for n in r.notes]
     if p.keep_rebuildable:
-        built = animloose.build(data, [(p.name, p.base)], data, f"kit_{animslot._tag(p.name)}")
+        built = animloose.build(data, [(p.name, p.base)], data, f"kit_{animslot._tag(p.name)}", again=p.extend)
         notes += built.notes + built.errors
         for f in built.files:
             if (data / f.rel).exists():
@@ -399,20 +489,30 @@ def apply_kit(p: KitPlan) -> dict:
             files.append(f.rel)
         if built.blocks and (data / built.text_rel).is_file():
             old = (data / built.text_rel).read_bytes().decode("latin-1")
-            keep(built.text_rel).write_bytes(animloose.append_blocks(
-                old, built.blocks, f"skeleton kit {p.name} from {p.base} by Unit Transfer ({tid})").encode("latin-1"))
+            why = f"skeleton kit {p.name} from {p.base} by Unit Transfer ({tid})"
+            new = (animloose.replace_block(old, p.name, built.blocks[p.name], why) if p.extend
+                   else animloose.append_blocks(old, built.blocks, why))
+            keep(built.text_rel).write_bytes(new.encode("latin-1"))
             files.append(built.text_rel)
+    if p.modeldb_text:
+        rel = animslot.write_modeldb(p.mod, keep, p.modeldb_text)
+        file_op("WRITE", data / rel, f"{p.entry}: {p.entry_skeleton} -> {p.name}")
+        files.append(rel)
     mod = p.mod
     taken = sum(1 for r in p.rows if not r.clear)
     cleared = sum(1 for r in p.rows if r.clear)
-    summary = f"skeleton {p.name} in {mod.name}: {p.base} with {taken} slot(s) taken and {cleared} cleared"
+    summary = (f"skeleton {p.name} in {mod.name}: {p.base} with {taken} slot(s) taken and {cleared} cleared"
+               if not p.extend else
+               f"skeleton kit {p.name} in {mod.name}: {taken} slot(s) changed and {cleared} cleared")
+    if p.modeldb_text:
+        summary += f"; {p.entry} plays it"
     rec = {
         "id": tid, "when": time.strftime("%Y-%m-%d %H:%M:%S"),
         "mode": "models", "action": "skeleton kit",
         "source": mod.name, "source_root": str(mod.root),
         "dest": mod.name, "dest_root": str(mod.root),
         "unit_type": p.base, "resolved_type": p.name,
-        "options": {"rows": [r.payload() for r in p.rows]},
+        "options": {"rows": [r.payload() for r in p.rows], "extend": p.extend, "entry": p.entry},
         "applied": True, "undone": False, "note": "", "summary": summary,
         "warnings": notes, "manifest": manifest, "backup_root": str(backup_root),
     }

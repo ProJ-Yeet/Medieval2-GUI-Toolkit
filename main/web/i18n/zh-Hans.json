@@ -859,6 +859,21 @@
   ],
   "eng.animconvert.name_too_long": [
    "character"
+  ],
+  "v3kit.turn": [
+   "turn"
+  ],
+  "v3kit.timing_turn": [
+   "turn"
+  ],
+  "eng.animkit.timing_numbers": [
+   "turn"
+  ],
+  "eng.animkit.turn_outside": [
+   "turn"
+  ],
+  "v3kit.turn_title": [
+   "turn"
   ]
  },
  "ancillaries.a_character_holds_one_ancillary_per": "人物每种类型只能持有一个随从，因此此项决定新随从会替换哪个随从",
@@ -13727,7 +13742,7 @@
  "v3kit.confirm": "将{name}写入{mod}的包中：基础骨架{base}，更改{n}个槽位？\n\n请先关闭游戏。模型条目指定新骨架名称后才会播放。日志可以撤销此更改。",
  "v3kit.made": "骨架已拼装",
  "v3kit.written": "{name}已写入。请在模型条目中引用它以供使用；日志可以撤销此更改。",
- "v3kit.map_title": "用于骨骼名称不同的动画：source=this，使用逗号分隔，例如bone_E_platform=bone_pelvis。名称匹配的骨骼无需条目；未触及的骨骼会保留绑定姿势。",
+ "v3kit.map_title": "针对骨骼名称不同的动画：选择源骨架的一根骨骼，以及它在本骨架中带动的骨骼，然后点击“映射”。名称相同的骨骼无需配对；没有其他骨骼带动的骨骼会保持绑定姿势。",
  "eng.animconvert.not_ms3d": "{name}: 不是 MilkShape .ms3d 文件",
  "eng.animconvert.ms3d_version": "{name}: MilkShape 格式版本为 {version}，仅支持 3 和 4",
  "eng.animconvert.no_animation": "{name}: 没有动画段",
@@ -13753,5 +13768,26 @@
  "v3ms3d.put_into_pack": "将 MilkShape 动画放入包中",
  "eng.animslot.ms3d_no_bone_of_skeleton": "{name} 不包含此骨架的任何骨骼 ({bones})：这是为另一骨架制作的",
  "eng.animslot.ms3d_bones_held": "{name} 中的 {missing_n} 个骨骼不存在于 {name2} 中，因此保持绑定姿势：{missing}{x}",
- "v3ms3d.pick_slot": "请先选择要放入的槽位。必须是该模组自有包所播放的槽位。"
+ "v3ms3d.pick_slot": "请先选择要放入的槽位。必须是该模组自有包所播放的槽位。",
+ "v3kit.target": "Kit",
+ "v3kit.target_add": "添加到 {name}",
+ "v3kit.write_add": "写入更改",
+ "v3kit.confirm_add": "将 {n} 项槽位更改写入 {mod} 的数据包中的 {name} 吗？\n\n请先关闭游戏。所有播放 {name} 的模型条目都会应用更改。可通过日志撤销。",
+ "v3kit.map_from": "{skeleton} 的骨骼",
+ "v3kit.map_to": "带动 {skeleton} 的这根骨骼",
+ "v3kit.map_add": "映射",
+ "v3kit.map_drop_title": "从骨骼映射中移除此配对",
+ "v3kit.impact": "命中帧",
+ "v3kit.impact_title": "攻击命中的帧，从 0 开始计数。留空即保留槽位自身的值。",
+ "v3kit.turn": "转向限制",
+ "v3kit.keep": "保留",
+ "v3kit.timing_impact": "在第 {n} 帧命中",
+ "v3kit.timing_turn": "转动 {lo} 到 {hi} 度",
+ "eng.animkit.timing_numbers": "命中帧和转向限制必须为数字",
+ "eng.animkit.impact_outside": "命中帧 {n} 超出动画帧范围，动画帧范围为 0 到 {last}",
+ "eng.animkit.turn_outside": "转向限制 {lo:g} 到 {hi:g}：请先填较小的值；两者都必须在 -180 到 180 度之间",
+ "eng.animkit.extend_no_change": "{name} 已经播放了全部内容：不会有任何更改",
+ "v3kit.target_title": "新建一个骨架，或将这些更改添加到此模组中之前创建的 kit。添加更改时会直接修改该 kit，所有播放它的模型条目都会应用更改。",
+ "v3kit.target_new": "新骨架",
+ "v3kit.turn_title": "部队播放此动作时可转动的角度：先填最小值，再填最大值，范围为 -180 到 180 度。两个字段都留空即保留槽位自身的值。"
 }

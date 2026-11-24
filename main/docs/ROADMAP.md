@@ -1043,7 +1043,7 @@ writes the original parent table over fewer node records. Then the user asked
 for kitbashing: a skeleton built from slots of other skeletons, with bones
 forced to match, slots removed, and a preview.
 
-Built, uncommitted on 2026-11-24 (worktree `epic-lichterman-dabf16`):
+Built 2026-11-24, on master since then:
 
 * **128a, the converter.** `unittransfer/animconvert.py`, a command line
   (`python -m unittransfer.animconvert to-cas | to-ms3d | hide | info`):
@@ -1065,22 +1065,40 @@ Built, uncommitted on 2026-11-24 (worktree `epic-lichterman-dabf16`):
   Check and Write. Looked at in the app on DaC's `orc_band`: MTW2_Mace's walk
   and lotr_troll's run (mapped `bone_E_platform=bone_pelvis`) previewed and
   planned; Write not pressed. Strings in all seven started languages.
+* **128f, the converter in the app.** *Load .ms3d* under the slot list, or
+  an .ms3d dropped on the list: converted onto the slot's own action as the
+  template (`animslot.from_ms3d`, `plan_edit(ms3d=...)`), weapon and shield
+  bones kept, bones the file lacks held at their bind pose and named. It plays
+  in the slot and opens in the editor, and Save puts it into the pack as any
+  edit does. Beside each weapon skeleton: *Hide <bone>*, the editor's new
+  `hide` edit (`animedit`, through `animconvert.hide_bone`) saved into the
+  action that weapon plays, and an .ms3d dropped on the weapon line goes
+  straight into that action. `tests/test_animslot_ms3d.py` 28/28 on a small
+  pack cut from DaC (MTW2_Mace and `mtw2_2hswordsman_primary`). Looked at in
+  the app on `orc_band`: the Hide plan for MTW2_Spear_primary's idle and a
+  two-joint .ms3d played and planned; Write not pressed.
+* **128g, the kit, next steps.** The panel's *Kit* picker adds to a kit made
+  earlier (`plan_kit(extend=True)`: the skeleton entry written again in place,
+  its `descr_skeleton.txt` block replaced by `animloose.replace_block`);
+  *Then* points the model entry being viewed at the kit
+  (`animslot.point_entry`, shared with the port); the bone map is picked a
+  pair at a time from the two skeletons' bone lists
+  (`GET /api/model/skeleton_bones`); a change can set the slot's impact frame
+  and turn limits. `GET /api/model/kit_names` lists the kits from the
+  transfer log. `tests/test_animkit.py` 50/50. Looked at in the app: lotr_troll's
+  idle, `bone_E_platform` mapped to `bone_pelvis`, impact 7, turns -40 to 40,
+  `orc_band` pointed at the kit, planned; Write not pressed.
 
 Still to do:
 
-* **128d, .dae input** to the converter. It needs one animation exported to
-  .dae by the modder's tool to fix the axes (Y or Z up, and which X mirror).
-* **128e, in the game.** A hidden weapon bone (`hide` on a weapon .cas) and a
-  kitbashed skeleton played by a unit. Vanilla's crossbow moves weapon bones by
-  position keys, so they should play; not yet seen.
-* **128f, the converter in the app.** An .ms3d dropped on a slot saved into
-  the pack (through `animslot`), and a *Hide this bone* button beside the
-  weapon skeletons.
-* **128g, the kit, next steps.** Point a model entry at the new skeleton from
-  the panel, as the port does; add to an existing kit skeleton instead of only
-  making new ones; pick the bone map from the two bone lists instead of typing
-  it; edit a slot's impact frame and turn limits.
-* Commit 128a-c to master with the full suite run.
+* **128d, .dae input** to the converter. Needs from the modder: one
+  animation exported to .dae by their tool (with the skeleton it was made on),
+  to fix the axes (Y or Z up, and which X mirror).
+* **128e, in the game.** Needs the game run by the user: a unit whose weapon
+  idle has `bone_weapon01` hidden (the *Hide* button) and a unit on a
+  kitbashed skeleton, played in a battle. Vanilla's crossbow moves weapon bones
+  by position keys, so they should play; not yet seen. Undo in the log puts
+  the packs back afterwards.
 
 ## Phase 118 - pre-render lighting, what is left
 

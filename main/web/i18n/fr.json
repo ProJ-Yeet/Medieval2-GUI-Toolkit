@@ -812,6 +812,21 @@
   ],
   "eng.animconvert.name_too_long": [
    "character"
+  ],
+  "v3kit.turn": [
+   "turn"
+  ],
+  "v3kit.turn_title": [
+   "turn"
+  ],
+  "v3kit.timing_turn": [
+   "turn"
+  ],
+  "eng.animkit.timing_numbers": [
+   "turn"
+  ],
+  "eng.animkit.turn_outside": [
+   "turn"
   ]
  },
  "ancillaries.a_character_holds_one_ancillary_per": "Un personnage détient un accessoire par type ; c’est donc celui que remplace un nouvel accessoire",
@@ -14518,7 +14533,7 @@
  "v3kit.clear_it": "Rien : effacer l’emplacement",
  "v3kit.its_slot": "Son emplacement",
  "v3kit.bone_map": "Carte des os",
- "v3kit.map_title": "Pour les animations conçues pour d’autres noms d’os : source=this, séparés par des virgules, p. ex. bone_E_platform=bone_pelvis. Aucune entrée pour les os de même nom ; les os non atteints gardent leur pose de repos.",
+ "v3kit.map_title": "Pour une animation conçue pour d'autres noms d'os : choisissez un os du squelette source et l'os de celui-ci qu'il déplace, puis cliquez sur Associer. Les os de même nom n'ont pas besoin de paire ; un os qu'aucun autre n'atteint garde sa pose de repos.",
  "v3kit.mapped": "{n} os associés",
  "v3kit.cleared": "effacé",
  "v3kit.preview": "Aperçu",
@@ -14556,5 +14571,26 @@
  "v3ms3d.weapon_confirm": "Ajouter {name} à {action} du {skeleton}, dans le pack de {mod} ?\n\n{v3AnimPackMsg}",
  "v3ms3d.put_into_pack": "Ajouter une animation MilkShape au pack",
  "eng.animslot.ms3d_no_bone_of_skeleton": "{name} ne contient aucun des os de ce squelette ({bones}) : l'animation a été créée pour un autre squelette",
- "eng.animslot.ms3d_bones_held": "{missing_n} des os de {name} ne sont pas dans {name2} et gardent leur pose de liaison : {missing}{x}"
+ "eng.animslot.ms3d_bones_held": "{missing_n} des os de {name} ne sont pas dans {name2} et gardent leur pose de liaison : {missing}{x}",
+ "v3kit.target": "Kit",
+ "v3kit.target_title": "Créez un nouveau squelette ou ajoutez ces modifications à un kit créé auparavant dans ce mod. Le kit est modifié directement ; chaque entrée de modèle qui le joue reçoit les modifications.",
+ "v3kit.target_new": "un nouveau squelette",
+ "v3kit.target_add": "ajouter à {name}",
+ "v3kit.write_add": "Enregistrer les modifications",
+ "v3kit.confirm_add": "Enregistrer {n} modification(s) d'emplacement dans {name}, dans les packs de {mod} ?\n\nFermez d'abord le jeu. Chaque entrée de modèle qui joue {name} recevra les modifications. Le journal permet de les annuler.",
+ "v3kit.map_from": "os de {skeleton}",
+ "v3kit.map_to": "déplace cet os de {skeleton}",
+ "v3kit.map_add": "Associer",
+ "v3kit.map_drop_title": "Retirer cette paire de la carte des os",
+ "v3kit.impact": "Frame d'impact",
+ "v3kit.impact_title": "La frame où le coup porte, en comptant à partir de 0. Laissez vide pour conserver la valeur de l'emplacement.",
+ "v3kit.turn_title": "Jusqu'où l'unité peut tourner pendant cette action : d'abord la valeur minimale, puis la maximale, en degrés de -180 à 180. Laissez les deux champs vides pour conserver les valeurs de l'emplacement.",
+ "v3kit.keep": "conserver",
+ "v3kit.timing_impact": "impact à la frame {n}",
+ "v3kit.timing_turn": "tourne de {lo} à {hi} degrés",
+ "eng.animkit.impact_outside": "la frame d'impact {n} est en dehors des frames de l'animation, de 0 à {last}",
+ "eng.animkit.extend_no_change": "{name} joue déjà tout cela : rien ne changerait",
+ "v3kit.turn": "Limites de rotation",
+ "eng.animkit.timing_numbers": "la frame d'impact et les limites de rotation doivent être des nombres",
+ "eng.animkit.turn_outside": "limites de rotation {lo:g} à {hi:g} : indiquez d'abord la valeur minimale ; les deux doivent être comprises entre -180 et 180 degrés"
 }

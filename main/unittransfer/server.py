@@ -3004,6 +3004,14 @@ class Handler(BaseHTTPRequestHandler):
                 packs, whose = animpack.packs_for(self.registry.get((q.get("mod") or [""])[0]).data)
                 return self._json({"packs": whose, "names": packs.skeleton_names()
                                    if packs is not None and packs.skels is not None else []})
+            if u.path == "/api/model/skeleton_bones":
+                # 128g: a skeleton's bones, for the kitbash panel's bone map
+                packs, whose = animpack.packs_for(self.registry.get((q.get("mod") or [""])[0]).data)
+                sk = packs.skeleton((q.get("skeleton") or [""])[0]) if packs is not None and packs.skels is not None else None
+                return self._json({"bones": [b.name for b in sk.bones] if sk is not None else []})
+            if u.path == "/api/model/kit_names":
+                # 128g: the kits made in this mod, to add to
+                return self._json({"names": animkit.kit_names(self.registry.get((q.get("mod") or [""])[0]))})
             if u.path == "/api/model/slot_names":
                 # every action slot a skeleton has, named, for the kitbash panel
                 from . import skelslots
@@ -4871,7 +4879,9 @@ class Handler(BaseHTTPRequestHandler):
                 out["weapons"] = added
                 return out
             plan = animkit.plan_kit(mod, base, str(body.get("name") or ""), changes, sources,
-                                    keep_rebuildable=bool(body.get("keep_rebuildable", True)))
+                                    keep_rebuildable=bool(body.get("keep_rebuildable", True)),
+                                    extend=bool(body.get("extend")), entry=str(body.get("entry") or ""),
+                                    entry_skeleton=str(body.get("entry_skeleton") or ""))
         except (animkit.KitError, animslot.SlotError, animpack.PackError, casanim.AnimError) as e:
             return {"error": str(e)}
         out = {"plan": plan.payload()}

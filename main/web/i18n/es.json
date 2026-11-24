@@ -1205,6 +1205,21 @@
   ],
   "eng.animconvert.name_too_long": [
    "character"
+  ],
+  "v3kit.turn": [
+   "turn"
+  ],
+  "v3kit.turn_title": [
+   "turn"
+  ],
+  "v3kit.timing_turn": [
+   "turn"
+  ],
+  "eng.animkit.timing_numbers": [
+   "turn"
+  ],
+  "eng.animkit.turn_outside": [
+   "turn"
   ]
  },
  "ancillaries.a_character_holds_one_ancillary_per": "Un personaje solo puede tener un séquito de cada tipo, así que este es el que sustituiría uno nuevo",
@@ -14874,7 +14889,7 @@
  "v3kit.take": "Tomar de",
  "v3kit.clear_it": "Nada: borrar la ranura",
  "v3kit.its_slot": "Su ranura",
- "v3kit.map_title": "Para animaciones creadas para otros nombres de huesos: source=this, separados por comas, p. ej. bone_E_platform=bone_pelvis. Los huesos con el mismo nombre no requieren entrada; los no alcanzados conservan su pose de reposo.",
+ "v3kit.map_title": "Para una animación creada para otros nombres de hueso: elige un hueso del esqueleto de origen y el hueso de este esqueleto que mueve; después, pulsa Asignar. Los huesos con el mismo nombre no necesitan pareja; un hueso al que no llega nada conserva su pose de reposo.",
  "v3kit.mapped": "{n} huesos asignados",
  "v3kit.cleared": "borrada",
  "v3kit.preview": "Vista previa",
@@ -14913,5 +14928,26 @@
  "v3ms3d.weapon_confirm": "¿Poner {name} en {action} del {skeleton}, en el paquete de {mod}?\n\n{v3AnimPackMsg}",
  "v3ms3d.put_into_pack": "Poner una animación MilkShape en el paquete",
  "eng.animslot.ms3d_no_bone_of_skeleton": "{name} no tiene ninguno de los huesos de este esqueleto ({bones}): se creó para otro esqueleto",
- "eng.animslot.ms3d_bones_held": "{missing_n} de los huesos de {name} no están en {name2} y mantienen su pose de reposo: {missing}{x}"
+ "eng.animslot.ms3d_bones_held": "{missing_n} de los huesos de {name} no están en {name2} y mantienen su pose de reposo: {missing}{x}",
+ "v3kit.target": "Kit",
+ "v3kit.target_new": "un esqueleto nuevo",
+ "v3kit.target_add": "añadir a {name}",
+ "v3kit.write_add": "Escribir los cambios",
+ "v3kit.map_from": "hueso de {skeleton}",
+ "v3kit.map_to": "mueve este hueso de {skeleton}",
+ "v3kit.map_add": "Asignar",
+ "v3kit.map_drop_title": "Quitar esta pareja del mapa de huesos",
+ "v3kit.impact": "Fotograma del impacto",
+ "v3kit.impact_title": "El fotograma en el que impacta el golpe, contando desde 0. Déjalo vacío para conservar el valor de la ranura.",
+ "v3kit.keep": "conservar",
+ "v3kit.timing_impact": "impacto en el fotograma {n}",
+ "eng.animkit.impact_outside": "el fotograma de impacto {n} queda fuera de los fotogramas de la animación, de 0 a {last}",
+ "eng.animkit.extend_no_change": "{name} ya reproduce todo esto: no cambiaría nada",
+ "v3kit.turn": "Límites de giro",
+ "v3kit.turn_title": "Cuánto puede girar la unidad al ejecutar esta acción: primero el menor valor y luego el mayor, en grados de -180 a 180. Deja ambos campos vacíos para conservar los valores de la ranura.",
+ "v3kit.timing_turn": "gira de {lo} a {hi} grados",
+ "eng.animkit.timing_numbers": "el fotograma del impacto y los límites de giro deben ser números",
+ "eng.animkit.turn_outside": "límites de giro {lo:g} a {hi:g}: indica primero el menor valor; ambos deben estar entre -180 y 180 grados",
+ "v3kit.target_title": "Crea un esqueleto nuevo o añade estos cambios a un kit creado antes en este mod. El kit se modifica directamente; todas las entradas de modelo que lo reproduzcan recibirán los cambios.",
+ "v3kit.confirm_add": "¿Escribir {n} cambio(s) de ranura en {name}, dentro de los archivos del mod {mod}?\n\nCierra el juego primero. Todas las entradas de modelo que reproduzcan {name} recibirán los cambios. El registro permite deshacerlos."
 }

@@ -988,6 +988,21 @@
   ],
   "eng.animconvert.name_too_long": [
    "character"
+  ],
+  "v3kit.turn": [
+   "turn"
+  ],
+  "v3kit.turn_title": [
+   "turn"
+  ],
+  "v3kit.timing_turn": [
+   "turn"
+  ],
+  "eng.animkit.timing_numbers": [
+   "turn"
+  ],
+  "eng.animkit.turn_outside": [
+   "turn"
   ]
  },
  "ancillaries.a_character_holds_one_ancillary_per": "Postać może mieć po jednym akcesorium każdego typu. Nowe akcesorium zastąpi więc właśnie to.",
@@ -15128,7 +15143,7 @@
  "v3kit.clear_it": "Nic: wyczyść slot",
  "v3kit.its_slot": "Jego slot",
  "v3kit.bone_map": "Mapa kości",
- "v3kit.map_title": "Dla animacji przygotowanej dla innych nazw kości: source=this, oddzielone przecinkami, np. bone_E_platform=bone_pelvis. Kości o zgodnej nazwie nie wymagają wpisu; nieosiągnięta kość zachowuje pozę spoczynkową.",
+ "v3kit.map_title": "Dla animacji przygotowanej dla innych nazw kości: wybierz kość szkieletu źródłowego i kość tego szkieletu, którą porusza, a następnie kliknij Przypisz. Kości o tej samej nazwie nie wymagają pary; kość, do której nic nie dociera, zachowuje pozę spoczynkową.",
  "v3kit.mapped": "Zmapowano kości: {n}",
  "v3kit.cleared": "wyczyszczono",
  "v3kit.preview": "Podgląd",
@@ -15166,5 +15181,26 @@
  "v3ms3d.weapon_confirm": "Dodać {name} do {action} szkieletu {skeleton} w paczce moda {mod}?\n\n{v3AnimPackMsg}",
  "v3ms3d.put_into_pack": "Dodaj animację MilkShape do paczki",
  "eng.animslot.ms3d_no_bone_of_skeleton": "{name} nie zawiera żadnej kości tego szkieletu ({bones}): animacja została utworzona dla innego szkieletu",
- "eng.animslot.ms3d_bones_held": "{missing_n} kości z {name} nie ma w {name2}, więc zachowują swoją pozę wiązania: {missing}{x}"
+ "eng.animslot.ms3d_bones_held": "{missing_n} kości z {name} nie ma w {name2}, więc zachowują swoją pozę wiązania: {missing}{x}",
+ "v3kit.target": "Kit",
+ "v3kit.target_title": "Utwórz nowy szkielet lub dodaj te zmiany do kitu utworzonego wcześniej w tym modzie. Kit jest zmieniany bezpośrednio, a zmiany obejmą każdy wpis modelu, który go odtwarza.",
+ "v3kit.target_new": "nowy szkielet",
+ "v3kit.target_add": "dodaj do {name}",
+ "v3kit.write_add": "Zapisz zmiany",
+ "v3kit.confirm_add": "Zapisać {n} zmian slotów w {name}, w paczkach moda {mod}?\n\nNajpierw zamknij grę. Zmiany obejmą każdy wpis modelu odtwarzający {name}. Dziennik pozwala je cofnąć.",
+ "v3kit.map_from": "kość z {skeleton}",
+ "v3kit.map_to": "porusza tę kość z {skeleton}",
+ "v3kit.map_add": "Przypisz",
+ "v3kit.map_drop_title": "Usuń tę parę z mapy kości",
+ "v3kit.impact": "Klatka uderzenia",
+ "v3kit.impact_title": "Klatka, w której trafia cios, licząc od 0. Pozostaw puste, aby zachować wartość slotu.",
+ "v3kit.keep": "zachowaj",
+ "v3kit.timing_impact": "uderzenie w klatce {n}",
+ "eng.animkit.impact_outside": "klatka uderzenia {n} wykracza poza klatki animacji, od 0 do {last}",
+ "eng.animkit.extend_no_change": "{name} już odtwarza całość: nic by się nie zmieniło",
+ "v3kit.turn": "Limity obrotu",
+ "v3kit.turn_title": "Jak daleko jednostka może się obrócić podczas tej akcji: najpierw mniejsza, potem większa wartość, w stopniach od -180 do 180. Pozostaw oba pola puste, aby zachować wartości slotu.",
+ "v3kit.timing_turn": "obraca się od {lo} do {hi} stopni",
+ "eng.animkit.timing_numbers": "klatka uderzenia i limity obrotu muszą być liczbami",
+ "eng.animkit.turn_outside": "limity obrotu {lo:g} do {hi:g}: najpierw podaj mniejszą wartość; obie muszą mieścić się w zakresie od -180 do 180 stopni"
 }
