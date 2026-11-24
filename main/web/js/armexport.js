@@ -1078,31 +1078,10 @@ function armExpSrcSet(v){
   armExpModSet('src', v);
 }
 
-/* The unit, picked as the unit editor picks one: a search and its faction,
-   category and class filters, the rows under them repainted alone. */
+/* The unit, picked with the shared unit picker (unitpick.js). */
 function armExpPickerHtml(){
-  const m = armExpMod(), units = (m.data || {}).units || [];
-  const f = m.pick = m.pick || {q: '', faction: '', category: '', cls: ''};
-  const uniq = list => [...new Set(list.filter(Boolean))].sort((x, y) => x.localeCompare(y));
-  const sel = (k, label, list) => `<select onchange="armExpMod().pick.${k}=this.value;armExpPickRows()"><option value="">${label}</option>
-    ${list.map(v => `<option${f[k] === v ? ' selected' : ''}>${esc(v)}</option>`).join('')}</select>`;
-  setTimeout(armExpPickRows, 0);
-  return `<div class="armexppick"><div class="armexprow">
-      <input id="armExpPickQ" placeholder="${esc(tt('armory.find'))}" value="${esc(f.q)}" oninput="armExpMod().pick.q=this.value;armExpPickRows()">
-      ${sel('faction', tt('armory.exp_all_factions'), uniq(units.flatMap(u => u.factions || [])))}
-      ${sel('category', tt('armory.exp_all_categories'), uniq(units.map(u => u.category)))}
-      ${sel('cls', tt('armory.exp_all_classes'), uniq(units.map(u => u['class'])))}</div>
-    <div class="armexplist" id="armExpPickRows"></div></div>`;
-}
-function armExpPickRows(){
-  const el = document.getElementById('armExpPickRows');
-  if(!el) return;
-  const m = armExpMod(), f = m.pick, q = (f.q || '').trim().toLowerCase();
-  const rows = ((m.data || {}).units || []).filter(u => (!q || u.type.toLowerCase().includes(q) || (u.soldier || '').toLowerCase().includes(q))
-    && (!f.faction || (u.factions || []).includes(f.faction)) && (!f.category || u.category === f.category) && (!f.cls || u['class'] === f.cls));
-  el.innerHTML = rows.slice(0, 400).map(u => `<button class="armexprowbtn${u.type === m.unit ? ' on' : ''}" onclick="armExpPickUnit(${esc(JSON.stringify(u.type))})">
-      <b>${esc(u.type)}</b> <span class="count">${esc(u.category)} · ${esc(u['class'])} · ${esc(u.soldier || '')}</span></button>`).join('')
-    || `<div class="count">${tt('armory.nothing_matches')}</div>`;
+  const m = armExpMod();
+  return `<div class="armexppick">${upkHtml('armExp', (m.data || {}).units || [], {current: m.unit, onPick: armExpPickUnit})}</div>`;
 }
 function armExpPickUnit(type){ const m = armExpMod(); m.picking = false; armExpModSet('unit', type); }
 function armExpRoleRowsHtml(){

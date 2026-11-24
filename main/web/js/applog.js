@@ -41,7 +41,9 @@ function appLog(kind, what, extra){
   wrap('get'); wrap('post');
   const realToast = toast;
   toast = function(m, ms){ appLog('toast', m); return realToast.apply(this, arguments); };
-  window.addEventListener('error', e => { if(e.message){ appLog('error', e.message, {at: `${(e.filename || '').split('/').pop()}:${e.lineno}`}); uiBugBar(e.message); } });
+  // 2026-11-24: "ResizeObserver loop ..." is the browser saying a layout took
+  // two frames to settle (a page fitting itself to the window), not a fault
+  window.addEventListener('error', e => { if(e.message && !/ResizeObserver loop/.test(e.message)){ appLog('error', e.message, {at: `${(e.filename || '').split('/').pop()}:${e.lineno}`}); uiBugBar(e.message); } });
   window.addEventListener('unhandledrejection', e => {
     appLog('error', (e.reason && (e.reason.stack || e.reason.message)) || e.reason);
     // a request that failed has its own message where it was asked; a page

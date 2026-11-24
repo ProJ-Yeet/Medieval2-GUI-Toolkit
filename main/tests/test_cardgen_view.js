@@ -59,26 +59,37 @@ assert.notStrictEqual(vm.runInContext('cgPartKey', ctx)(copies[0]), vm.runInCont
   'a copy picks its own variant of a part');
 assert.strictEqual(vm.runInContext('cgCopies(base)', ctx)[0], copies[0], 'the same copy object each time, so caches hold');
 
-// 5: the Save menu's requests. A faction the model is textured for but the
-// unit does not own is added to its ownership; mercs alone, with "only",
-// takes the card out of every faction folder.
-vm.runInContext(`CG_UNIT.units = {list: [{type: 'Mumakil', soldier: 'Turkish_Archers', ug: ['Elephant_Crew2'], factions: ['spain', 'slave']},
-    {type: 'Other', soldier: 'x', ug: ['elephant_crew2'], factions: ['khand']}, {type: 'Far', soldier: 'y', factions: ['spain']}]};
+// 5: the Save menu. A card is for its unit: the menu opens on it alone, the
+// picked texture's faction marked; slave beside real owners is not (the game
+// never looks there). + adds a faction as a new owner; mercs alone, with
+// "only", takes the card out of every faction folder.
+vm.runInContext(`cgGet = async () => ({icon_variants: {card: [{rel: 'ui/units/spain/#m.tga', factions: ['spain']}]}});
+  CG_UNIT.units = {list: [{type: 'Mumakil', soldier: 'Turkish_Archers', ug: ['Elephant_Crew2'], factions: ['spain', 'slave']},
+    {type: 'Other', soldier: 'x', ug: ['elephant_crew2'], factions: ['khand', 'slave']}]};
   CG_UNIT.unit = 'Mumakil'; CG_UNIT.entry = 'elephant_crew2';
   CG_UNIT.skins = [{factions: ['england']}, {factions: ['spain', 'khand']}];
-  cg().texFaction = 'spain'; cg().saved = {path: 'C:/cards/#Mumakil.tga', kind: 'card'}; cg().give = null; cgGiveOpen();`, ctx);
-const g = vm.runInContext('cg().give', ctx);
-assert.strictEqual(JSON.stringify(g.order), JSON.stringify(['Mumakil', 'Other']), 'every unit using the model, the one the card was made for first');
-assert.strictEqual(JSON.stringify([...g.rows.Mumakil.picked]), JSON.stringify(['spain']), 'the faction whose textures were picked');
-assert.strictEqual(g.rows.Other.on, false, 'another unit is offered, not ticked');
-assert.strictEqual(vm.runInContext(`cgGiveFactions('Mumakil')[0]`, ctx), 'spain', 'the picked texture\'s faction comes first');
-let body = vm.runInContext(`cgGiveTick('Mumakil', 'khand', true); cgGiveBody('Mumakil')`, ctx);
+  cg().texFaction = ''; cg().saved = {path: 'C:/cards/#Mumakil.tga', kind: 'card'}; cg().give = null; cgGiveOpen();`, ctx);
+let g = vm.runInContext('cg().give', ctx);
+assert.strictEqual(JSON.stringify(g.order), JSON.stringify(['Mumakil']), 'only the unit the card was made for');
+assert.strictEqual(JSON.stringify([...g.rows.Mumakil.picked]), JSON.stringify(['spain']), 'its owners, slave left out beside a real one');
+vm.runInContext(`cgGiveAdd('Other')`, ctx);
+assert.strictEqual(JSON.stringify(vm.runInContext('cg().give.order', ctx)), JSON.stringify(['Mumakil', 'Other']), 'another unit, from the picker');
+let body = vm.runInContext(`cgGiveOwner('Mumakil', 'khand'); cgGiveBody('Mumakil')`, ctx);
 assert.strictEqual(JSON.stringify(body.card_folders), JSON.stringify(['spain', 'khand']));
-assert.strictEqual(body.field_overrides.ownership, 'spain, slave, khand', 'khand is given ownership');
+assert.strictEqual(body.field_overrides.ownership, 'spain, slave, khand', '+ gives khand ownership');
+body = vm.runInContext(`cgGiveTick('Mumakil', 'khand'); cgGiveBody('Mumakil')`, ctx);
+assert.strictEqual(body.field_overrides, undefined, 'a + faction unmarked again changes no ownership');
 body = vm.runInContext(`cgGiveSet('mercs', true); cgGiveSet('only', true); cgGiveBody('Mumakil')`, ctx);
 assert.strictEqual(JSON.stringify(body.card_folders), JSON.stringify(['mercs'])); assert.strictEqual(body.card_only, true);
-assert.strictEqual(body.field_overrides, undefined, 'a mercs card changes no ownership');
 body = vm.runInContext(`cg().saved.kind = 'info'; cgGiveBody('Mumakil')`, ctx);
 assert.strictEqual(JSON.stringify(body.info_folders), JSON.stringify(['merc']), "an info card's mercenary folder is merc");
 
-console.log('PASS: card maker view waits for its camera, offers upgrade models only, lights, copies, and the Save menu');
+// 6: the pose library: the kit's Mounted folder split by the poses' names,
+// and the folders in the kit's order
+const sub = vm.runInContext(`[cgPoseSub({c: 'IK Full/Mounted', n: 'IK Mounted Crossbow Full 2'}).c, cgPoseSub({c: 'IK Full/Mounted', n: 'IK Mounted Spear Full 1'}).c,
+  cgPoseSub({c: 'IK Full/1H', n: 'IK Spear Full 1'}).c]`, ctx);
+assert.strictEqual(JSON.stringify(sub), JSON.stringify(['IK Full/Mounted/crossbow', 'IK Full/Mounted/spears', 'IK Full/1H']));
+const order = vm.runInContext(`['IK Bodyparts/IK Arms', 'IK Orcs Full', 'Saved', 'IK Dwarves Full', 'IK Full/2H', 'IK Full'].sort((x,y) => cgFolderRank(x)-cgFolderRank(y) || x.localeCompare(y))`, ctx);
+assert.strictEqual(JSON.stringify(order), JSON.stringify(['IK Full', 'IK Full/2H', 'IK Dwarves Full', 'IK Orcs Full', 'IK Bodyparts/IK Arms', 'Saved']));
+
+console.log('PASS: card maker view waits for its camera, offers upgrade models only, lights, copies, the Save menu and the pose folders');

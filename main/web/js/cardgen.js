@@ -406,34 +406,13 @@ function cgBeside(objects, extras){
   const t = [a[1][0] - b[0][0] + 0.3, a[0][1] - b[0][1], (a[0][2] + a[1][2] - b[0][2] - b[1][2]) / 2];
   for(const o of extras) o.t = t.slice();
 }
-/* The unit picker: a search and the unit editor's faction, category and
-   class filters, its rows repainted alone. */
+/* The unit picker: the shared one (unitpick.js), as the unit editor's cards;
+   a click shows the unit, a double click takes it. */
 function cgUnitPickHtml(){
-  const L = (CG_UNIT.units || {}).list || [], f = CG_UNIT.f = CG_UNIT.f || {q: '', faction: '', category: '', cls: ''};
-  const uniq = list => [...new Set(list.filter(Boolean))].sort((x, y) => x.localeCompare(y));
-  const sel = (k, label, list) => `<select onchange="CG_UNIT.f.${k}=this.value;cgUnitRows()"><option value="">${label}</option>
-    ${list.map(v => `<option${f[k] === v ? ' selected' : ''}>${esc(v)}</option>`).join('')}</select>`;
-  setTimeout(cgUnitRows, 0);
-  return `<div class="armexprow"><input placeholder="${ttA('armory.find')}" value="${esc(f.q)}" oninput="CG_UNIT.f.q=this.value;cgUnitRows()">
-      ${sel('faction', tt('armory.exp_all_factions'), uniq(L.flatMap(u => u.factions || [])))}
-      ${sel('category', tt('armory.exp_all_categories'), uniq(L.map(u => u.category)))}
-      ${sel('cls', tt('armory.exp_all_classes'), uniq(L.map(u => u['class'])))}</div>
-    <div class="grid cgunitcards" id="cgUnitRows"></div>`;
+  return upkHtml('cgUnit', (CG_UNIT.units || {}).list || [], {tiles: true, model: cgUnitModel, current: (CG_UNIT.peek || {}).type,
+    onPeek: type => cgUnitPeek(type), onPick: type => cgUnitLoad(type)});
 }
-function cgUnitRows(){
-  const el = document.getElementById('cgUnitRows');
-  if(!el) return;
-  const f = CG_UNIT.f, q = (f.q || '').trim().toLowerCase();
-  const rows = ((CG_UNIT.units || {}).list || []).filter(u => (!q || u.type.toLowerCase().includes(q) || cgUnitModel(u).toLowerCase().includes(q))
-    && (!f.faction || (u.factions || []).includes(f.faction)) && (!f.category || u.category === f.category) && (!f.cls || u['class'] === f.cls));
-  const peek = (CG_UNIT.peek || {}).type;
-  // 2026-11-24: the unit editor's own cards, picture and all
-  el.innerHTML = rows.slice(0, 400).map(u => { const t = esc(JSON.stringify(u.type));
-    return `<div class="card${u.type === peek ? ' sel' : ''}" onclick="cgUnitPeek(${t})" ondblclick="cgUnitLoad(${t})" title="${esc(u.type)}">
-      <img loading="lazy" onerror="iconRetry(this)" src="${iconUrl(state.src, u.type, 'card')}" alt="">
-      <div class="meta"><div class="nm">${esc(u.type)}</div><div class="sub">${esc(u.category)} · ${esc(u['class'])}</div><div class="sub">${esc(cgUnitModel(u))}</div></div></div>`; }).join('')
-    || `<div class="count">${tt('armory.nothing_matches')}</div>`;
-}
+function cgUnitRows(){ const st = UPK.get('cgUnit'); if(st) st.opts.current = (CG_UNIT.peek || {}).type; upkRows('cgUnit'); }
 const cgPicking = () => cgSrc() === 'unit' && (CG_UNIT.picking || !CG_UNIT.unit);
 /* 2026-11-23: a unit picked from the list is shown first, turning in 3D where
    the HD view stands, and taken with Use this unit (or a double click). */
@@ -581,8 +560,37 @@ function cgSourceHtml(){
       ${cgUgHtml()}`;
     if(cgPicking()) html += cgUnitPickHtml();
   }else html += `<div class="count">${tt('cards.gen_src_armory_note')}</div>`;
-  return cgSec('source', tt('cards.gen_source_legend'), html);
+  return cgSec('source', tt('cards.gen_source_legend'), html) + (src === 'unit' ? cgSessHtml() : '');
 }
+/* 2026-11-24: the sessions, in sight: Save session for the unit shown (it is
+   saved as the card is drawn too), and this mod's recent ones, newest first,
+   each continued with a click or forgotten. */
+function cgSessList(){
+  const pre = cgSessKey(state.src, ''), out = [];
+  try{
+    for(let i = 0; i < localStorage.length; i++){
+      const k = localStorage.key(i);
+      if(!k || !k.startsWith(pre)) continue;
+      const v = JSON.parse(localStorage.getItem(k) || 'null');
+      if(v) out.push({type: k.slice(pre.length), entry: v.entry || '', when: v.when || 0});
+    }
+  }catch(e){}
+  return out.sort((a, b) => b.when - a.when);
+}
+function cgSessHtml(){
+  const list = cgSessList(), q = v => esc(JSON.stringify(v));
+  const ago = t => { const m = Math.round((Date.now() - t) / 60000); return m < 60 ? tt('cards.gen_sess_min', {n: Math.max(1, m)}) : m < 1440 ? tt('cards.gen_sess_hours', {n: Math.round(m / 60)}) : tt('cards.gen_sess_days', {n: Math.round(m / 1440)}); };
+  const rows = list.slice(0, 12).map(x => `<div class="cgsessrow${x.type === CG_UNIT.unit ? ' on' : ''}">
+      <img loading="lazy" onerror="iconRetry(this)" src="${iconUrl(state.src, x.type, 'card')}" alt="">
+      <span class="cgsessname"><b>${esc(x.type)}</b><span class="count">${esc(x.entry)} · ${ago(x.when)}</span></span>
+      <button class="mini" onclick="cgUnitLoad(${q(x.type)},null,'continue')">${tt('cards.gen_sess_continue')}</button>
+      <button class="mini" title="${ttA('cards.gen_sess_forget')}" onclick="cgSessForget(${q(x.type)})">✕</button></div>`).join('');
+  return cgSec('sessions', tt('cards.gen_sess_head'), `${CG_UNIT.unit && CG_UNIT.objects.length ? `<div class="armexprow"><button class="mini" onclick="cgSessSaveNow()">${tt('cards.gen_sess_save')}</button>
+      <span class="count">${tt('cards.gen_sess_auto')}</span></div>` : ''}
+    ${rows || `<p class="count">${tt('cards.gen_sess_none')}</p>`}`);
+}
+function cgSessSaveNow(){ cgSessSave(); toast(tt('cards.gen_sess_saved', {unit: CG_UNIT.unit})); cgPaint(); }
+function cgSessForget(type){ cgSessDrop(state.src, type); cgPaint(); }
 /* 2026-11-24: which of the unit's armour upgrade models the card is of. */
 function cgUgHtml(){
   const u = ((CG_UNIT.units || {}).list || []).find(x => x.type === CG_UNIT.unit);
@@ -706,7 +714,28 @@ function cgRigHtml(){
    the first shown; the head, legs, posture and Med2 skeleton folders are left
    out. Poses saved here (config/armory/poses.json) are in Saved. */
 const CG_POSE_HIDE = /^(Med2 Skeletons|IK Bodyparts\/IK (Head|Legs|Posture))(\/|$)/;
-function cgLibPoses(){ return [...((CG_WORK.library || {}).poses || []),...(CG_WORK.saved || [])]; }
+/* 2026-11-24: the kit's Mounted folder is one long list (archers, crossbows,
+   spears and the rest); it is split here by each pose's name, so a spear rider
+   is not offered the bowmen's. */
+const CG_MOUNT_SUB = [[/crossbow/i,'crossbow'],[/archer|bow/i,'archer'],[/javelin/i,'javelin'],[/spear|lance/i,'spears'],[/2h/i,'2h'],[/1h/i,'1h']];
+function cgPoseSub(p){
+  if(!/(^|\/)mounted$/i.test(p.c)) return p;
+  const hit = CG_MOUNT_SUB.find(([re]) => re.test(p.n));
+  return hit ? {...p, c: p.c + '/' + hit[1]} : p;
+}
+function cgLibPoses(){
+  const lib = (CG_WORK.library || {}).poses || [], saved = CG_WORK.saved || [], m = CG_WORK.libMemo;
+  if(m && m.lib === lib && m.saved === saved) return m.out;
+  const out = [...lib.map(cgPoseSub),...saved];
+  CG_WORK.libMemo = {lib, saved, out};
+  return out;
+}
+/* The folders in the kit's order: IK Full, the dwarves', the orcs', then the
+   body parts, the saved poses last. */
+function cgFolderRank(c){
+  const top = c.split('/')[0];
+  return cgSavedFolder(top) ? 9 : /^IK Full$/i.test(top) ? 0 : /dwar/i.test(top) ? 1 : /orc/i.test(top) ? 2 : /body/i.test(top) ? 8 : 5;
+}
 /* The folder armory.save_pose puts a saved pose in, whatever its case. */
 const cgSavedFolder = c => String(c || '').toLowerCase() === 'saved';
 const cgInFolder = (p,cat) => p.c === cat || p.c.startsWith(cat + '/');
@@ -717,9 +746,11 @@ function cgLibraryHtml(){
     const parts = p.c.split('/');
     for(let i=1;i<=parts.length;i++) folders.add(parts.slice(0,i).join('/'));
   }
-  const cats = [...folders].sort();
+  const cats = [...folders].sort((x,y) => cgFolderRank(x)-cgFolderRank(y) || x.localeCompare(y));
   if(!cats.includes(r.cat)) r.cat = cats.includes('IK Full') ? 'IK Full' : cats[0] || '';
-  const label = x => cgSavedFolder(x) ? tt('cards.gen_pose_folder_saved') : '  '.repeat(x.split('/').length-1) + x.split('/').pop();
+  // the split Mounted folder's names are lower case (cgPoseSub): shown as the kit's are
+  const name = x => { const n = x.split('/').pop(); return /^\dh$/.test(n) ? n.toUpperCase() : n.charAt(0).toUpperCase() + n.slice(1); };
+  const label = x => cgSavedFolder(x) ? tt('cards.gen_pose_folder_saved') : '  '.repeat(x.split('/').length-1) + name(x);
   return cgSec('library', tt('cards.gen_library'), `${cgSelectHtml('rig','cat',cats.map(x => [x,label(x)]))}${cgField(tt('cards.gen_apply_to'), cgSelectHtml('rig','part',['whole','arms','legs','head','posture'].map(x => [x,tt(CG_PART_KEYS[x])])))}
     <div title="${ttA('cards.gen_pose_cam_reset_title')}">${cgCheckHtml('rig','camReset','cards.gen_pose_cam_reset')}</div>
     <div class="armexprow"><input id="cgPoseName" placeholder="${ttA('cards.gen_pose_name')}" style="flex:1;min-width:0"><button class="mini" onclick="cgPoseSave()">${tt('cards.gen_pose_save')}</button></div>
@@ -1036,7 +1067,11 @@ function cgPoseFolder(){
     : riding || !beast.test(skel) && /cavalry|mounted|horse|lance|camel|_cav|rider/.test(skel) ? 'mounted'
     : /pike|halberd|polearm|poleaxe|glaive|bill|partisan|voulge/.test(skel) ? 'polearm' : /spear/.test(skel) ? 'spears'
     : /2h|two_?hand|2handed|great|maul|zweihand/.test(skel) ? '2h' : '1h';
-  const under = top => [...cats].find(x => x.toLowerCase() === (top + '/' + sub).toLowerCase());
+  // a rider: Mounted, in the subfolder of his weapon (cgPoseSub), the 1H when it has none
+  const weapon = /crossbow/.test(skel) ? 'crossbow' : /bow|archer/.test(skel) ? 'archer' : /javelin/.test(skel) ? 'javelin'
+    : /spear|lance|pike/.test(skel) ? 'spears' : /2h|two_?hand|great|maul/.test(skel) ? '2h' : '1h';
+  const want = riding ? ['mounted/' + weapon, 'mounted/1h', 'mounted'] : [sub];
+  const under = top => { for(const w of want){ const f = [...cats].find(x => x.toLowerCase() === (top + '/' + w).toLowerCase()); if(f) return f; } return ''; };
   return under(base) || under('IK Full') || [base, 'IK Full'].find(x => cats.has(x)) || '';
 }
 function cgPoseAuto(){
@@ -1078,8 +1113,12 @@ function cgLens(target,yaw,pitch,height,width){
   const proj = persp ? v3Perspective(CG_FOV,width/height,dist/50,dist*20) : [2/width,0,0,0,0,2/height,0,0,0,0,-0.01,0,0,0,0,1];
   return {eye,proj,view:v3LookAt(eye,target,[0,1,0])};
 }
+/* 2026-11-24: framed on the men and the mount, not on what they carry: a
+   lance held up made the frame twice as tall and the rider small in it. */
+const cgCarried = o => /^(primary|secondary|weapon|ramrod)/i.test(o.name || '');
+function cgBody(objects){ const body = objects.filter(o => !cgCarried(o)); return body.length ? body : objects; }
 function cgCamera(objects,w,h){
-  const c = cg(), [lo,hi] = cgBounds(objects), center = lo.map((v,i) => (v+hi[i])/2);
+  const c = cg(), [lo,hi] = cgBounds(cgBody(objects)), center = lo.map((v,i) => (v+hi[i])/2);
   const r = c.xf.r, t = c.xf.t;
   const k = Number(c.xf.s) || 1;
   const pre = armMul(armTrans(center[0]+t[0],center[1]+t[1],center[2]+t[2]),armMul(armRot(...r),armMul(armScale(k,k,k),armTrans(-center[0],-center[1],-center[2]))));
@@ -1404,15 +1443,15 @@ function cgPickGround(file){
   r.onload = () => { if(cg() === c){ c.ground.pic = String(r.result); cgDraw(); } }; r.onerror = () => toast(errText(r.error)); r.readAsDataURL(file);
 }
 /* --- 2026-11-24: the Save menu --------------------------------------------
-   A saved card is given to units from here: every unit that uses the model
-   (its soldier or armour upgrade line) is listed, the one the card was made
-   for first and ticked, each with its factions. Ticked are the factions it
-   owns that wear the textures drawn; a faction the model has textures for but
-   the unit does not own can be ticked too, and is then added to its
-   ownership. Replace all ticks every faction it owns; One mercs card puts the
-   card in the mercenary folder, and with Remove the factions' own takes it
-   out of every faction folder, so all of them show that one card. Preview
-   plans each unit's edit (/api/edit/plan), Apply writes them, Undo as usual. */
+   A card is for its unit: the menu opens on that unit alone, each faction that
+   owns it shown with the card it has now (its own picture, or what it falls
+   back to). A click on one marks it to be replaced by this card; the + tile
+   adds a faction as a new owner (one the model has textures for first), with
+   this card. More units come from the shared unit picker. Replace all marks
+   every owner; One mercenary card puts it in the mercenary folder, and with
+   Remove the factions' own takes it out of every faction folder, so every
+   faction shows that one card. Preview plans each unit's edit
+   (/api/edit/plan), Apply writes them, Undo as usual. */
 const cgGiveMerc = kind => kind === 'info' ? 'merc' : 'mercs';
 function cgGiveUnits(){ return ((CG_UNIT.units || {}).list || []); }
 /* The factions the model has textures for, and those of the texture drawn. */
@@ -1422,66 +1461,84 @@ function cgSkinFactions(){
   return {all: [...new Set(skins.flatMap(x => low(x.factions)))], drawn: low(k && k.factions)};
 }
 function cgGiveOpen(){
-  const c = cg(), entry = cgSrc() === 'unit' ? (CG_UNIT.entry || '').toLowerCase() : '', units = cgGiveUnits();
-  const uses = u => [u.soldier, ...(u.ug || [])].some(m => (m || '').toLowerCase() === entry);
-  const list = [...new Set([cgSrc() === 'unit' ? CG_UNIT.unit : '', ...(entry ? units.filter(uses).map(u => u.type) : [])].filter(Boolean))];
-  const g = c.give = {rows: {}, order: list, mercs: false, only: false, plans: null};
-  for(const type of list) g.rows[type] = cgGiveRow(type, type === CG_UNIT.unit);
+  const c = cg(), type = cgSrc() === 'unit' ? CG_UNIT.unit : '';
+  const g = c.give = {rows: {}, order: type ? [type] : [], mercs: false, only: false, plans: null, adding: false};
+  if(type) g.rows[type] = cgGiveRow(type);
 }
-function cgGiveRow(type, on){
+function cgGiveRow(type){
   const u = cgGiveUnits().find(x => x.type === type) || {factions: []}, owned = (u.factions || []).map(f => f.toLowerCase());
   const tf = cg().texFaction, drawn = new Set(cgSkinFactions().drawn);
-  // what the card shows: the picked texture's faction, else the factions it owns wearing that texture
+  // what the card shows: the picked texture's faction, else the owners wearing that texture
   let ticked = tf && owned.includes(tf) ? [tf] : owned.filter(f => !drawn.size || drawn.has(f));
   if(!ticked.length) ticked = owned.slice();
-  return {on, owned, picked: new Set(ticked)};
+  // slave beside real owners: the game never looks in its folder (edit.py)
+  if(ticked.some(f => f !== 'slave')) ticked = ticked.filter(f => f !== 'slave');
+  const r = {on: true, owned, added: [], picked: new Set(ticked), pics: null, plus: false};
+  cgGivePics(type, r);
+  return r;
 }
-function cgGiveFactions(type){
-  const r = cg().give.rows[type], sk = cgSkinFactions(), tf = cg().texFaction;
-  const list = [...new Set([...r.owned, ...sk.all.filter(f => f !== 'merc')])];
-  // the texture picked first, then the factions it is drawn for, then the rest
-  const rank = f => f === tf ? 0 : sk.drawn.includes(f) ? 1 : r.owned.includes(f) ? 2 : 3;
-  return list.sort((x,y) => rank(x)-rank(y) || x.localeCompare(y));
+/* Which faction folders hold a card of their own (the unit editor's
+   icon_variants), so a tile can say whether its picture is its own. */
+async function cgGivePics(type, r){
+  try{
+    const d = await cgGet(`/api/edit/unit?mod=${enc(state.src)}&type=${enc(type)}`), kind = cg().saved && cg().saved.kind === 'info' ? 'info' : 'card';
+    r.pics = {};
+    for(const row of (d.icon_variants || {})[kind] || []) for(const f of row.factions || []) r.pics[f.toLowerCase()] = row.rel;
+  }catch(e){ r.pics = {}; }
+  cgGiveRepaint(true);
+}
+function cgGiveTile(type, f, r, kind){
+  const own = r.pics && r.pics[f], on = r.picked.has(f), q = v => esc(JSON.stringify(v)), isNew = r.added.includes(f), g = cg().give;
+  const src = own ? `/icon?mod=${enc(state.src)}&kind=modfile&rel=${enc(own)}${iconBust()}` : kind === 'info' ? iconUrl(state.src, type, 'info') : iconUrl(state.src, type, 'card', f);
+  return `<button class="cggivetile${on ? ' on' : ''}${f === cg().texFaction ? ' cgtexf' : ''}${g.mercs ? ' off' : ''}" ${g.mercs ? 'disabled' : ''}
+      title="${esc(isNew ? tt('cards.gen_give_new_owner') : own ? own : tt('cards.gen_give_fallback'))}" onclick="cgGiveTick(${q(type)},${q(f)})">
+    <img loading="lazy" onerror="iconRetry(this)" src="${src}" alt=""><span>${esc(f)}${isNew ? ' +' : ''}</span>
+    ${on ? `<i>${tt('cards.gen_give_replace')}</i>` : own ? '' : `<i class="count">${tt('cards.gen_give_none')}</i>`}</button>`;
 }
 function cgSavedHtml(){
   const c = cg(), s = c.saved; if(!s) return '';
   if(!c.give) cgGiveOpen();
-  const g = c.give, q = v => esc(JSON.stringify(v)), tf = c.texFaction;
+  const g = c.give, q = v => esc(JSON.stringify(v)), kind = s.kind === 'info' ? 'info' : 'card', sk = cgSkinFactions();
   const rows = g.order.map(type => {
-    const r = g.rows[type];
-    const chips = cgGiveFactions(type).map(f => { const own = r.owned.includes(f);
-      return `<label class="armchip${r.picked.has(f) ? ' on' : ''}${f === tf ? ' cgtexf' : ''}"${own ? '' : ` title="${ttA('cards.gen_give_adds_owner')}"`}><input type="checkbox"${r.picked.has(f) ? ' checked' : ''}${g.mercs ? ' disabled' : ''}
-        onchange="cgGiveTick(${q(type)},${q(f)},this.checked)">${esc(f)}${own ? '' : ' +'}</label>`; }).join('');
-    return `<div class="cggive"><label class="armcheck"><input type="checkbox"${r.on ? ' checked' : ''} onchange="cgGiveUnit(${q(type)},this.checked)"><b>${esc(type)}</b></label>
-      <div class="armchips">${chips}</div></div>`;
+    const r = g.rows[type], tiles = [...r.owned, ...r.added].map(f => cgGiveTile(type, f, r, kind)).join('');
+    // + : a faction that does not own it yet, the model's textured ones first
+    const rest = [...new Set([...sk.all, ...cgGiveUnits().flatMap(u => u.factions || []).map(f => f.toLowerCase())])]
+      .filter(f => f !== 'merc' && f !== 'mercs' && !r.owned.includes(f) && !r.added.includes(f))
+      .sort((x,y) => Number(sk.all.includes(y)) - Number(sk.all.includes(x)) || x.localeCompare(y));
+    return `<div class="cggive"><div class="armexprow"><b>${esc(type)}</b>${type !== CG_UNIT.unit ? `<button class="mini" title="${ttA('cards.gen_give_drop')}" onclick="cgGiveDrop(${q(type)})">✕</button>` : ''}</div>
+      <div class="cggivetiles">${tiles}<button class="cggivetile cggiveplus${r.plus ? ' on' : ''}" title="${ttA('cards.gen_give_adds_owner')}" onclick="cgGivePlus(${q(type)})"${g.mercs ? ' disabled' : ''}><b>+</b><span>${tt('cards.gen_give_add_owner')}</span></button></div>
+      ${r.plus ? `<div class="armchips">${rest.map(f => `<button class="mini${sk.all.includes(f) ? ' cgtexf' : ''}" onclick="cgGiveOwner(${q(type)},${q(f)})">${esc(f)}</button>`).join('')}</div>` : ''}</div>`;
   }).join('');
-  const others = cgGiveUnits().filter(u => !g.order.includes(u.type));
   const plans = g.plans ? g.plans.map(p => `<div class="cggiveplan"><b>${esc(p.unit)}</b>${p.error ? `<div class="armissue">${esc(p.error)}</div>`
       : (p.errors || []).map(e => `<div class="armissue">${esc(e)}</div>`).join('') + (p.changes || []).map(e => `<div>${esc(e)}</div>`).join('') + (p.warnings || []).map(e => `<div class="w-warn">${esc(e)}</div>`).join('')}</div>`).join('') : '';
   const ok = g.plans && g.plans.length && g.plans.every(p => !p.error && !(p.errors || []).length);
   return `<p class="ok">${tt('cards.gen_saved',{path:esc(s.path)})} <button class="mini" onclick="cgReveal(${q(s.path)})">${tt('editor.open_file_location')}</button></p>
-    <div class="cggivemenu"><b>${tt(s.kind === 'info' ? 'cards.gen_give_info_head' : 'cards.gen_give_head')}</b>
+    <div class="cggivemenu"><b>${tt(kind === 'info' ? 'cards.gen_give_info_head' : 'cards.gen_give_head')}</b>
     <p class="count">${tt('cards.gen_give_note')}</p>${rows}
-    <div class="armexprow"><select onchange="if(this.value)cgGiveAdd(this.value)"><option value="">${tt('cards.gen_give_add')}</option>${others.map(u => `<option value="${esc(u.type)}">${esc(u.type)}</option>`).join('')}</select>
+    <div class="armexprow"><button class="mini${g.adding ? ' on' : ''}" onclick="cgGiveSet('adding',!cg().give.adding)">${tt('cards.gen_give_add')}</button>
       <button class="mini" title="${ttA('cards.gen_give_all_title')}" onclick="cgGiveAll()">${tt('cards.gen_give_all')}</button></div>
+    ${g.adding ? upkHtml('cgGive', cgGiveUnits(), {skip: g.order, model: cgUnitModel, onPick: cgGiveAdd}) : ''}
     <label class="armcheck" title="${ttA('cards.gen_give_mercs_title')}"><input type="checkbox"${g.mercs ? ' checked' : ''} onchange="cgGiveSet('mercs',this.checked)">${tt('cards.gen_give_mercs')}</label>
     ${g.mercs ? `<label class="armcheck cggivesub"><input type="checkbox"${g.only ? ' checked' : ''} onchange="cgGiveSet('only',this.checked)">${tt('cards.gen_give_mercs_only')}</label>` : ''}
     <div class="armexprow"><button onclick="cgGive(false)">${tt('cards.gen_give')}</button>${ok ? `<button class="primary" onclick="cgGive(true)">${tt('cards.gen_give_apply')}</button>` : ''}</div>
     ${plans}</div>`;
 }
-function cgGiveRepaint(){ const c = cg(); if(c.give) c.give.plans = null; const el = document.getElementById('cgSaveResult'); if(el) el.innerHTML = cgSavedHtml(); }
-function cgGiveTick(type, f, on){ const r = cg().give.rows[type]; if(on){ r.picked.add(f); r.on = true; } else r.picked.delete(f); cgGiveRepaint(); }
-function cgGiveUnit(type, on){ cg().give.rows[type].on = on; cgGiveRepaint(); }
-function cgGiveAdd(type){ const g = cg().give; g.order.push(type); g.rows[type] = cgGiveRow(type, true); cgGiveRepaint(); }
-function cgGiveAll(){ for(const r of Object.values(cg().give.rows)) if(r.on) r.picked = new Set(r.owned); cgGiveRepaint(); }
-function cgGiveSet(k, v){ const g = cg().give; g[k] = v; if(k === 'mercs' && !v) g.only = false; cgGiveRepaint(); }
+/* quiet: a picture list come in, the plans shown kept */
+function cgGiveRepaint(quiet){ const c = cg(); if(c.give && !quiet) c.give.plans = null; const el = document.getElementById('cgSaveResult'); if(el && c.give) el.innerHTML = cgSavedHtml(); }
+function cgGiveTick(type, f){ const r = cg().give.rows[type]; if(r.picked.has(f)) r.picked.delete(f); else r.picked.add(f); cgGiveRepaint(); }
+function cgGivePlus(type){ const r = cg().give.rows[type]; r.plus = !r.plus; cgGiveRepaint(true); }
+function cgGiveOwner(type, f){ const r = cg().give.rows[type]; r.added.push(f); r.picked.add(f); r.plus = false; cgGiveRepaint(); }
+function cgGiveAdd(type){ const g = cg().give; if(g.order.includes(type)) return; g.order.push(type); g.rows[type] = cgGiveRow(type); g.adding = false; cgGiveRepaint(); }
+function cgGiveDrop(type){ const g = cg().give; g.order = g.order.filter(t => t !== type); delete g.rows[type]; cgGiveRepaint(); }
+function cgGiveAll(){ for(const r of Object.values(cg().give.rows)) r.picked = new Set([...r.owned, ...r.added]); cgGiveRepaint(); }
+function cgGiveSet(k, v){ const g = cg().give; g[k] = v; if(k === 'mercs' && !v) g.only = false; cgGiveRepaint(k === 'adding'); }
 /* One unit's edit request from the menu. */
 function cgGiveBody(type){
   const c = cg(), g = c.give, r = g.rows[type], kind = c.saved.kind === 'info' ? 'info' : 'card';
   const body = {mod: state.src, unit: type, [kind + '_src']: c.saved.path};
   if(g.mercs){ body[kind + '_folders'] = [cgGiveMerc(kind)]; if(g.only) body[kind + '_only'] = true; return body; }
   body[kind + '_folders'] = [...r.picked];
-  // a faction the model is textured for, given ownership of the unit
+  // a faction added with +, and still marked, given ownership of the unit
   const adds = [...r.picked].filter(f => !r.owned.includes(f));
   if(adds.length) body.field_overrides = {ownership: [...r.owned, ...adds].join(', ')};
   return body;
@@ -1859,7 +1916,8 @@ function cgPoseThumbs(){
   const imgs = [...document.querySelectorAll('img[data-cgpose]')];
   if(!imgs.length || !cgRigActive() || !armAnim().data) return;
   // the man alone: a horse under him is not in the picture
-  const objects = cgObjects().filter(o => !o.still), sig = [cgRigType(),armAnim().skel,objects.map(o => o.id + ':' + cgPartKey(o)).join(',')].join('|');
+  // 2026-11-24: the man and, when he rides it, his mount
+  const objects = cgObjects().filter(o => !cgStill(o)), sig = [cgRigType(),armAnim().skel,objects.map(o => o.id + ':' + cgPartKey(o)).join(',')].join('|');
   if(CG_WORK.thumbSig !== sig || !CG_WORK.poseThumbs){ CG_WORK.thumbSig = sig; CG_WORK.poseThumbs = new Map(); }
   const poses = cgLibPoses(), keyOf = img => { const p = poses[+img.dataset.cgpose] || {}; return p.c + '|' + p.n; };
   const todo = imgs.filter(img => { const url = CG_WORK.poseThumbs.get(keyOf(img)); if(url){ img.src = url; return false; } return true; });
@@ -1894,6 +1952,9 @@ function cgThumbFrame(objects){
     // As tight as the Blender kit's: head to shins, the feet just cut off.
     const body = objects.filter(o => !/^(primary|secondary|shield|weapon|equipment|ramrod)/i.test(o.name || ''));
     const [lo,hi] = cgBounds(body.length ? body : objects), tall = Math.max(0.1,hi[1]-lo[1]);
+    // a rider and his mount: the whole of the two, the horse's hooves too
+    const mounted = objects.some(o => o.still === 'mount'), wide = Math.max(hi[0]-lo[0],hi[2]-lo[2])*112/96;
+    if(mounted) return CG_WORK.thumbFrame = {sig:CG_WORK.thumbSig,height:Math.max(tall,wide*0.8)*1.05,target:[-(lo[0]+hi[0])/2,(lo[1]+hi[1])/2,(lo[2]+hi[2])/2]};
     return CG_WORK.thumbFrame = {sig:CG_WORK.thumbSig,height:tall*0.9,target:[-(lo[0]+hi[0])/2,lo[1]+tall*0.56,(lo[2]+hi[2])/2]};
   }finally{ r.basis = keep; }
 }

@@ -3893,8 +3893,8 @@ body.look-editing :is(button,label,legend,h1,h2,h3,.trsechead,.mftab):hover{outl
   .cgsec[open]>summary{margin-bottom:4px}
   .cgsecbody{display:flex;flex-direction:column;gap:4px;min-width:0;padding-bottom:4px}
   .cgctl .armexplist{min-width:0;max-height:55vh;flex:none}
-  .cgunitcards{max-height:60vh;overflow-y:auto;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));padding-right:4px}
-  .cgunitcards .card{cursor:pointer}
+  .upktiles{max-height:60vh;overflow-y:auto;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));padding-right:4px}
+  .upktiles .card{cursor:pointer}
   .cgctl .armexplist>*{flex:none}
   .cgctl .armexprowbtn{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:left}
   .cgctl .armexprow{flex-wrap:wrap;min-width:0}
@@ -3906,7 +3906,9 @@ body.look-editing :is(button,label,legend,h1,h2,h3,.trsechead,.mftab):hover{outl
   .cgobjxf{display:flex;flex-direction:column;gap:4px;border:1px solid var(--edge);border-radius:6px;padding:4px 6px}
   .cgobjlist .cur{outline:2px solid var(--accent);outline-offset:-2px}
   .cgrange input{min-width:0}
-  .cgout{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:12px;align-items:stretch;min-width:0;overflow:auto}
+  /* one row the column's own height: the view takes what its bar leaves (a
+     fixed 30px less was short of the bar, and the column scrolled a few pixels) */
+  .cgout{display:grid;grid-template-columns:minmax(0,1fr) 300px;grid-template-rows:minmax(0,1fr);gap:12px;align-items:stretch;min-width:0;overflow:auto}
   .cghd{display:flex;flex-direction:column;gap:4px;min-width:0}
   .cghd canvas{display:block;width:100%;height:100%;
     background:repeating-conic-gradient(#2a2f37 0 25%,#323844 0 50%) 0 0/16px 16px;border:1px solid var(--edge)}
@@ -3915,7 +3917,7 @@ body.look-editing :is(button,label,legend,h1,h2,h3,.trsechead,.mftab):hover{outl
   .cgcard>*{flex:none}
   .cgobjlist{max-height:none;overflow:visible;flex:none;min-height:0;height:auto}
   /* 99m-99n: the HD view takes the mouse, the rig's handles drawn over it */
-  .cghdview{position:relative;height:calc(var(--cgh,80vh) - 30px);min-height:240px}
+  .cghdview{position:relative;flex:1 1 auto;min-height:240px}
   .cghdview #cgHd{outline:none;touch-action:none}
   /* 2026-11-24: a Shift + click is a view control, not a text selection or a keyboard focus ring */
   .cghdview,.cghdview canvas,.armview,.armview canvas,.cgpeek canvas{user-select:none;-webkit-user-select:none}
@@ -3932,6 +3934,21 @@ body.look-editing :is(button,label,legend,h1,h2,h3,.trsechead,.mftab):hover{outl
   .cggive .armchips{display:flex;flex-wrap:wrap;gap:4px;margin:2px 0 0 18px}
   .cggive .cgtexf{outline:2px solid var(--accent,#f4ce61)}
   .cggivesub{margin-left:18px}
+  /* the Save menu's faction tiles: the card each owner has now, a click marks it to be replaced */
+  .cgsessrow{display:flex;align-items:center;gap:6px;padding:3px 4px;border-radius:6px}
+  .cgsessrow.on{background:var(--panel)}
+  .cgsessrow img{width:24px;height:32px;image-rendering:pixelated}
+  .cgsessname{flex:1;min-width:0;display:flex;flex-direction:column}
+  .cgsessname b,.cgsessname .count{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .cggivetiles{display:flex;flex-wrap:wrap;gap:6px;margin:4px 0}
+  .cggivetile{display:flex;flex-direction:column;align-items:center;gap:2px;width:72px;padding:4px;border:1px solid var(--edge);border-radius:6px;background:none;font-size:11px;line-height:1.2}
+  .cggivetile img{width:48px;height:64px;image-rendering:pixelated;background:repeating-conic-gradient(#2a2f37 0 25%,#323844 0 50%) 0 0/12px 12px}
+  .cggivetile span{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .cggivetile.on{border-color:var(--accent,#f4ce61);box-shadow:0 0 0 1px var(--accent,#f4ce61) inset}
+  .cggivetile i{font-style:normal;font-size:10px;color:var(--accent,#f4ce61)}
+  .cggivetile.off{opacity:.45}
+  .cggiveplus{justify-content:center;min-height:96px}
+  .cggiveplus b{font-size:26px;line-height:1}
   .cggiveplan{font-size:12px;border-left:2px solid var(--edge);padding-left:6px}
   .cglamp{border-top:1px solid var(--edge);padding-top:4px;margin-top:4px}
   .cgrig{display:flex;flex-direction:column;gap:5px}
@@ -3955,7 +3972,7 @@ body.look-editing :is(button,label,legend,h1,h2,h3,.trsechead,.mftab):hover{outl
   .cgpeekv3 .v3wrap{height:100%;flex-wrap:nowrap}
   .cgpeekv3 .v3stage{flex:1 1 auto;min-width:0;min-height:0;height:100%}
   .cgpeek canvas{flex:1;min-height:200px;width:100%;border:1px solid var(--edge);border-radius:6px;cursor:grab;touch-action:none}
-  @container page (max-width:1250px){.cgout{grid-template-columns:1fr}}
+  @container page (max-width:1250px){.cgout{grid-template-columns:1fr;grid-template-rows:none}.cghdview{flex:none;height:calc(var(--cgh,80vh) - 40px)}}
   .cgcard canvas{image-rendering:pixelated;background:repeating-conic-gradient(#2a2f37 0 25%,#323844 0 50%) 0 0/16px 16px;border:1px solid var(--edge)}
   @container page (max-width:900px){.cggrid{grid-template-columns:1fr}}
   .armstamp{border:1px solid var(--edge);border-radius:6px;padding:4px 6px;margin-bottom:4px}
@@ -4240,6 +4257,7 @@ body.look-editing :is(button,label,legend,h1,h2,h3,.trsechead,.mftab):hover{outl
 <script src="js/armnormal.js"></script>
 <script src="js/armview.js"></script>
 <script src="js/armanim.js"></script>
+<script src="js/unitpick.js"></script>
 <script src="js/armexport.js"></script>
 <script src="js/armlib.js"></script>
 <script src="js/armdisk.js"></script>
