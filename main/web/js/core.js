@@ -251,10 +251,15 @@ function apiFailed(e,u){
 const LOADBAR_IGNORE=[/\/api\/heartbeat/,/\/api\/bye/,/\/api\/progress/,/\/api\/settings$/];
 const LOADBAR_DELAY=180;     // ms a burst must last before the bar is worth showing
 const loadbar={
-  open:0,done:0,label:'',timer:null,shown:false,
+  open:0,done:0,label:'',timer:null,shown:false,hushed:new Map(),
+  quiet(u){return typeof cgQuiet==='function'&&cgQuiet(u);},
   ignored(u){return LOADBAR_IGNORE.some(re=>re.test(u));},
   opened(u,label){
     if(this.ignored(u))return;
+    // 2026-11-24: a screen that says what it is loading itself (the card
+    // maker's "Reading...") keeps its requests off the bar, which otherwise
+    // blinks on for an instant each time one lasts just over LOADBAR_DELAY
+    if(this.quiet(u)){this.hushed.set(u,(this.hushed.get(u)||0)+1);return;}
     if(!this.open)this.done=0;                 // a new burst
     this.open++;
     if(label)this.label=label;
@@ -263,6 +268,8 @@ const loadbar={
   },
   closed(u){
     if(this.ignored(u))return;
+    const n=this.hushed.get(u);
+    if(n){if(n>1)this.hushed.set(u,n-1);else this.hushed.delete(u);return;}
     this.open=Math.max(0,this.open-1); this.done++;
     if(!this.open)this.hide(); else this.paint();
   },

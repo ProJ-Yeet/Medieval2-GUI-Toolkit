@@ -114,7 +114,11 @@ const near = (got, want, what) => want.forEach((v, k) =>
   c.armAnimEntries = () => project.assets.filter(x => x.kind === 'entry');
   c.armAnimSkel = v => { a.skel = v; a.key = ''; a.data = null; };
   vm.runInContext(pick(cg, /const CG_POSE_KEYS = [^\n]*/).replace('const ', 'var '), c);
-  vm.runInContext(pick(cg, /async function cgPreparePose\(\)\{[\s\S]*?\n\}/), c);
+  // the card is Armory Studio's model; the pose library's own step is not this test's
+  c.cgSrc = () => 'armory';
+  c.cgPoseAuto = () => {};
+  vm.runInContext(pick(cg, /async function cgPreparePose\(\)\{[^\n]*\}/), c);
+  vm.runInContext(pick(cg, /async function cgPoseAnim\(\)\{[\s\S]*?\n\}/), c);
   await c.armAnimFrom('M|mount_h');                 // the horse was loaded first
   await c.cgPreparePose();
   assert.equal((project.anim || {}).asset, 'M|rider', 'Riding poses the rider entry');
@@ -124,6 +128,10 @@ const near = (got, want, what) => want.forEach((v, k) =>
 
   // "One of each part" is one of each part per model: the horse keeps its Body
   vm.runInContext(pick(cg, /function cgObjects\(\)\{[\s\S]*?\n\}/), c);
+  for(const re of [/const cgPartKey = [^\n]*/, /const CG_GEAR_OFF = [^\n]*/, /function cgGearOff\([^\n]*/, /function cgXf\(o\)\{[\s\S]*?\n\}/])
+    vm.runInContext(pick(cg, re).replace(/^const /, 'var '), c);
+  c.CG_WORK = {xfObjs: new WeakMap()};
+  c.cgAllObjects = () => project.objects.filter(o => !o.hidden);
   assert.deepEqual(c.cgObjects().map(o => o.id), ['h', 'r', 'm'], 'the horse Body and the rider Body are both drawn');
   console.log('PASS: Armory poses a horse by its own skeleton and carries the rider at rider_offset');
 })().catch(err => { console.error(err); process.exitCode = 1; });

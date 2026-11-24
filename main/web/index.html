@@ -3897,6 +3897,12 @@ body.look-editing :is(button,label,legend,h1,h2,h3,.trsechead,.mftab):hover{outl
   .cgctl .armexprowbtn{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:left}
   .cgctl .armexprow{flex-wrap:wrap;min-width:0}
   .cgrange{display:grid;grid-template-columns:110px minmax(0,1fr) 44px;gap:6px;align-items:center}
+  /* 2026-11-24: a label beside its drop-down, so only the drop-down opens it */
+  .cgfield{display:flex;align-items:center;gap:6px;flex-wrap:wrap;min-width:0}
+  .cgfield select{min-width:0}
+  .cgfield select:disabled{opacity:.55;cursor:not-allowed}
+  .cgobjxf{display:flex;flex-direction:column;gap:4px;border:1px solid var(--edge);border-radius:6px;padding:4px 6px}
+  .cgobjlist .cur{outline:2px solid var(--accent);outline-offset:-2px}
   .cgrange input{min-width:0}
   .cgout{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:12px;align-items:stretch;min-width:0;overflow:auto}
   .cghd{display:flex;flex-direction:column;gap:4px;min-width:0}

@@ -14710,5 +14710,19 @@
  "cards.gen_pose_saved": "Se guardó la pose {name} en Saved, dentro de la biblioteca de poses.",
  "cards.gen_pose_delete": "Eliminar esta pose guardada",
  "cards.gen_save_legend": "Guardar",
- "cards.gen_reveal_failed": "Ese archivo ya no está."
+ "cards.gen_reveal_failed": "Ese archivo ya no está.",
+ "cards.gen_ug_same": "Todos los niveles usan el mismo modelo.",
+ "cards.gen_gear": "Armas",
+ "cards.gen_gear_title": "Indica qué arma lleva la unidad. Principal muestra la primera arma en la mano; Secundaria, la que se saca después. Cada una usa su propio esqueleto. Personalizado muestra todas las partes y deja que las selecciones en la lista de objetos.",
+ "cards.gen_gear_primary": "Principal",
+ "cards.gen_gear_secondary": "Secundaria",
+ "cards.gen_gear_custom": "Personalizado",
+ "cards.gen_pose_cam_reset": "Restablecer la cámara con cada pose",
+ "cards.gen_pose_cam_reset_title": "Una pose de la biblioteca devuelve la cámara de la tarjeta al ángulo para el que se crearon las poses.",
+ "cards.gen_guide": "Indicador de experiencia y número de soldados",
+ "cards.gen_guide_title": "Muestra dónde dibuja el juego los chevrones de experiencia, el número de soldados y los iconos de armas sobre la tarjeta. Es solo una guía y nunca se guarda.",
+ "cards.gen_obj_reset": "Restablecer",
+ "cards.gen_obj_scale": "Escala",
+ "cards.gen_obj_size": "Tamaño",
+ "cards.gen_obj_pick": "Haz clic en un objeto para moverlo, girarlo o cambiar su escala en la tarjeta."
 }

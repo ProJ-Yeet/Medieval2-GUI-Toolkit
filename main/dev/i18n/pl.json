@@ -14966,5 +14966,19 @@
  "cards.gen_pose_saved": "Zapisano pozę {name} w folderze Saved w bibliotece póz.",
  "cards.gen_pose_delete": "Usuń tę zapisaną pozę",
  "cards.gen_save_legend": "Zapisz",
- "cards.gen_reveal_failed": "Tego pliku już tam nie ma."
+ "cards.gen_reveal_failed": "Tego pliku już tam nie ma.",
+ "cards.gen_ug_same": "Każdy poziom używa tego samego modelu.",
+ "cards.gen_gear": "Bronie",
+ "cards.gen_gear_title": "Określa, jaką broń trzyma jednostka. Podstawowa pokazuje pierwszą broń w dłoni, a Dodatkowa tę wyciąganą później. Każda używa własnego szkieletu. Własne ustawienie pokazuje wszystkie części i pozwala wybrać je z listy obiektów.",
+ "cards.gen_gear_primary": "Podstawowa",
+ "cards.gen_gear_secondary": "Dodatkowa",
+ "cards.gen_gear_custom": "Własne",
+ "cards.gen_pose_cam_reset": "Resetuj kamerę przy każdej pozie",
+ "cards.gen_pose_cam_reset_title": "Poza z biblioteki ustawia kamerę karty z powrotem pod kątem, dla którego przygotowano pozy.",
+ "cards.gen_guide": "Nakładka doświadczenia i liczby żołnierzy",
+ "cards.gen_guide_title": "Pokazuje, gdzie gra rysuje na karcie szewrony doświadczenia, liczbę żołnierzy i ikony broni. To tylko wskazówka i nigdy nie jest zapisywana.",
+ "cards.gen_obj_reset": "Resetuj",
+ "cards.gen_obj_scale": "Skala",
+ "cards.gen_obj_size": "Rozmiar",
+ "cards.gen_obj_pick": "Kliknij obiekt, aby przesunąć go, obrócić lub zmienić jego skalę na karcie."
 }

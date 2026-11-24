@@ -212,7 +212,9 @@ async function armAnimPick(key){
   catch(e){ a.err = errText(e); return armAnimPaint(); }
   if(a.key !== key || a.pickSerial !== pick) return;
   // a rider's action, with his horse loaded too: the horse plays its own
-  const mount = asset && v3aCarried(data) ? await armAnimMountLoad(armAssetKey(asset), row.slot) : null;
+  // (the card maker's unit, which is in no Armory project, brings its own: a.mountFor)
+  const mount = !v3aCarried(data) ? null : asset ? await armAnimMountLoad(armAssetKey(asset), row.slot)
+    : a.mountFor ? await a.mountFor(row.slot) : null;
   // a horse's action, with its rider loaded too: he plays his own on it
   const rider = asset && !mount && !v3aCarried(data) ? await armAnimRiderLoad(armAssetKey(asset), row.slot) : null;
   if(a.key !== key || a.pickSerial !== pick) return;
@@ -551,7 +553,9 @@ function armAnimPose(objs){
   // a man on foot does and carries the man at its root plus rider_offset
   const own = {key: '', data: a.data, bind: a.bind, pose, shift};
   let horse = null, man = null;
-  const m = !rig && a.mount && a.mount.hub >= 0 ? a.mount : null;
+  a.carry = null;
+  // 2026-11-24: the card maker's rig rides too: its pose is the rider's skeleton's
+  const m = a.mount && a.mount.hub >= 0 ? a.mount : null;
   const r = !rig && !m && a.rider && a.rider.hub >= 0 ? a.rider : null;
   if(m){
     const mt = m.data.times || [], ml = mt.length ? mt[mt.length - 1] : 0;
@@ -561,6 +565,8 @@ function armAnimPose(objs){
     man = own;
     man.pose = v3aCarry(pose, horse.pose[m.hub], m.offset, horse.shift);
     man.shift = [0, 0, 0];
+    // where the carry puts a point of the man's, for the card maker's rig handles
+    a.carry = {root: horse.pose[m.hub], off: m.offset, lift: horse.shift};
   }else if(r){
     const hub = a.data.bones.findIndex(b => b.parent === 0);
     horse = own;

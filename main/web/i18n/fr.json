@@ -14353,5 +14353,19 @@
  "cards.gen_pose_saved": "La pose {name} a été enregistrée dans Saved, dans la bibliothèque de poses.",
  "cards.gen_pose_delete": "Supprimer cette pose enregistrée",
  "cards.gen_save_legend": "Enregistrer",
- "cards.gen_reveal_failed": "Ce fichier n’existe plus."
+ "cards.gen_reveal_failed": "Ce fichier n’existe plus.",
+ "cards.gen_ug_same": "Tous les niveaux utilisent le même modèle.",
+ "cards.gen_gear": "Armes",
+ "cards.gen_gear_title": "Indique quelle arme l'unité tient. Principale affiche la première arme en main ; Secondaire, celle qui est tirée ensuite. Chacune utilise son propre squelette. Personnalisé affiche toutes les parties et vous laisse les choisir dans la liste des objets.",
+ "cards.gen_gear_primary": "Principale",
+ "cards.gen_gear_secondary": "Secondaire",
+ "cards.gen_gear_custom": "Personnalisé",
+ "cards.gen_pose_cam_reset": "Réinitialiser la caméra pour chaque pose",
+ "cards.gen_pose_cam_reset_title": "Une pose de la bibliothèque règle la caméra de la carte sur l'angle prévu pour les poses.",
+ "cards.gen_guide": "Repère de l'expérience et du nombre de soldats",
+ "cards.gen_guide_title": "Indique où le jeu affiche les chevrons d'expérience, le nombre de soldats et les icônes d'arme sur la carte. C'est un simple repère qui n'est jamais enregistré.",
+ "cards.gen_obj_reset": "Réinitialiser",
+ "cards.gen_obj_scale": "Échelle",
+ "cards.gen_obj_size": "Taille",
+ "cards.gen_obj_pick": "Cliquez sur un objet pour le déplacer, le faire pivoter ou le redimensionner sur la carte."
 }

@@ -13544,5 +13544,19 @@
  "cards.gen_pose_saved": "已将姿势 {name} 保存到姿势库中的 Saved 文件夹。",
  "cards.gen_pose_delete": "删除此已保存的姿势",
  "cards.gen_save_legend": "保存",
- "cards.gen_reveal_failed": "该文件已不存在。"
+ "cards.gen_reveal_failed": "该文件已不存在。",
+ "cards.gen_ug_same": "所有等级均使用同一个模型。",
+ "cards.gen_gear": "武器",
+ "cards.gen_gear_title": "选择部队手持的武器。主武器显示手中的第一件武器，副武器显示之后抽出的武器。每件武器都使用自己的骨架。自定义会显示所有部件，并由对象列表控制它们。",
+ "cards.gen_gear_primary": "主武器",
+ "cards.gen_gear_secondary": "副武器",
+ "cards.gen_gear_custom": "自定义",
+ "cards.gen_pose_cam_reset": "每次使用姿势时重置摄像机",
+ "cards.gen_pose_cam_reset_title": "从姿势库选择姿势后，卡片摄像机会恢复到为这些姿势设定的角度。",
+ "cards.gen_guide": "经验值和士兵数量叠加图层",
+ "cards.gen_guide_title": "显示游戏在卡片上绘制经验徽章、士兵数量和武器图标的位置。这只是参考图层，不会被保存。",
+ "cards.gen_obj_reset": "重置",
+ "cards.gen_obj_scale": "缩放比例",
+ "cards.gen_obj_size": "大小",
+ "cards.gen_obj_pick": "单击对象，可在卡片上移动、旋转或缩放它。"
 }

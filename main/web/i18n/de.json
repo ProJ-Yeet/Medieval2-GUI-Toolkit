@@ -14240,5 +14240,19 @@
  "cards.gen_pose_saved": "Die Pose {name} wurde unter Saved in der Posensammlung gespeichert.",
  "cards.gen_pose_delete": "Diese gespeicherte Pose löschen",
  "cards.gen_save_legend": "Speichern",
- "cards.gen_reveal_failed": "Diese Datei ist nicht mehr vorhanden."
+ "cards.gen_reveal_failed": "Diese Datei ist nicht mehr vorhanden.",
+ "cards.gen_ug_same": "Jede Stufe verwendet dasselbe Modell.",
+ "cards.gen_gear": "Waffen",
+ "cards.gen_gear_title": "Legt fest, welche Waffe die Einheit hält. Primär zeigt die erste Waffe in der Hand, Sekundär die später gezogene. Jede verwendet ihr eigenes Skelett. Benutzerdefiniert zeigt alle Teile und überlässt ihre Auswahl der Objektliste.",
+ "cards.gen_gear_primary": "Primär",
+ "cards.gen_gear_secondary": "Sekundär",
+ "cards.gen_gear_custom": "Benutzerdefiniert",
+ "cards.gen_pose_cam_reset": "Kamera bei jeder Pose zurücksetzen",
+ "cards.gen_pose_cam_reset_title": "Eine Pose aus der Bibliothek stellt die Kartenkamera wieder auf den Blickwinkel ein, für den die Posen erstellt wurden.",
+ "cards.gen_guide": "Erfahrung und Soldatenzahl als Einblendung",
+ "cards.gen_guide_title": "Zeigt, wo das Spiel die Erfahrungsabzeichen, die Soldatenzahl und die Waffensymbole auf der Karte einblendet. Dies ist nur eine Orientierungshilfe und wird nie gespeichert.",
+ "cards.gen_obj_reset": "Zurücksetzen",
+ "cards.gen_obj_scale": "Skalierung",
+ "cards.gen_obj_size": "Größe",
+ "cards.gen_obj_pick": "Klicke auf ein Objekt, um es auf der Karte zu verschieben, zu drehen oder zu skalieren."
 }

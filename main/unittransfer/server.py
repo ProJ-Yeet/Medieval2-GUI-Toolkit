@@ -2062,6 +2062,9 @@ class Handler(BaseHTTPRequestHandler):
             if u.path.startswith("/vendor/"):
                 # 125: third-party files the page loads on demand (CodeMirror 5)
                 return self._web_asset(u.path)
+            if u.path.startswith("/img/"):
+                # 2026-11-24: the card maker's experience and unit count overlay
+                return self._web_asset(u.path)
             if u.path == "/lua/guide.html":
                 # 125: the Lua scripts guide, which also opens on its own from web/lua/
                 page = WEB_DIR / "lua" / "guide.html"
@@ -6783,10 +6786,7 @@ class Handler(BaseHTTPRequestHandler):
             # 95k: each role as this mod plays it, and its units to duplicate
             return self._json({"templates": armunit.role_templates(mod),
                                "characters": armunit.character_targets(mod),
-                               "units": [{"type": u.type, "category": u.category, "class": u.class_type,
-                                          "soldier": u.soldier_model, "factions": list(u.ownership),
-                                          "ug": list(u.armour_ug_models or [])}
-                                         for u in mod.edu.units],
+                               "units": armunit.card_units(mod),
                                "entries": sorted(mod.modeldb.by_name())})
         if path == "/api/armory/card_sizes":
             # the size the mod's own unit cards and info pictures are

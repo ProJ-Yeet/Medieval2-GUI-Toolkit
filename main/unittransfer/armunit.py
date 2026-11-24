@@ -82,6 +82,18 @@ def _field(unit, key: str) -> str:
     return ""
 
 
+def card_units(mod) -> List[dict]:
+    """Every unit as the card maker's unit picker lists it: its soldier model,
+    its armour upgrade models, and (2026-11-24) what it is drawn beside: its
+    mount's descr_mount.txt model and its descr_engines.txt engine."""
+    return [{"type": u.type, "category": u.category, "class": u.class_type,
+             "soldier": u.soldier_model, "factions": list(u.ownership),
+             "ug": list(u.armour_ug_models or []),
+             "mount": (mod.mount_model(u.mount) or "") if u.mount else "",
+             "engine": u.engine or ""}
+            for u in mod.edu.units]
+
+
 def role_templates(mod) -> Dict[str, dict]:
     """Each role as this mod plays it: how many units, the entry to clone (the
     most typical soldier entry), and the EDU fields most of them share."""

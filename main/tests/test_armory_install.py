@@ -43,6 +43,21 @@ class InstallTests(unittest.TestCase):
             p.start()
             self.addCleanup(p.stop)
 
+    def test_card_units_name_mount_model_and_engine(self):
+        # 2026-11-24: the card maker draws a rider's mount and a crew's engine with them
+        data = self.root / "data"
+        with open(data / "export_descr_unit.txt", "a", encoding="latin-1") as f:
+            f.write("\ntype Riders\ndictionary riders\ncategory cavalry\nclass light\n"
+                    "soldier old, 20, 0, 1\nmount test horse\nownership england\n"
+                    "\ntype Crew\ndictionary crew\ncategory siege\nclass missile\n"
+                    "soldier old, 10, 0, 1\nengine ballista\nownership england\n")
+        (data / "descr_mount.txt").write_text("type             test horse\nclass            horse\nmodel            Fresh\n")
+        units = {u["type"]: u for u in armunit.card_units(Mod(self.root))}
+        self.assertEqual(units["Guard"]["ug"], ["old", "old_t1"])
+        self.assertEqual((units["Guard"]["mount"], units["Guard"]["engine"]), ("", ""))
+        self.assertEqual(units["Riders"]["mount"], "fresh")
+        self.assertEqual(units["Crew"]["engine"], "ballista")
+
     def request(self, **kw):
         return dict(choice="add", unit="Guard", entry="fresh", **kw)
 

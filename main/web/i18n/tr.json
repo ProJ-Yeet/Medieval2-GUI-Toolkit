@@ -13693,5 +13693,19 @@
  "cards.gen_pose_saved": "Poz {name}, poz kitaplığındaki Saved klasörüne kaydedildi.",
  "cards.gen_pose_delete": "Bu kaydedilmiş pozu sil",
  "cards.gen_save_legend": "Kaydet",
- "cards.gen_reveal_failed": "Bu dosya artık orada değil."
+ "cards.gen_reveal_failed": "Bu dosya artık orada değil.",
+ "cards.gen_ug_same": "Her seviye aynı modeli kullanır.",
+ "cards.gen_gear": "Silahlar",
+ "cards.gen_gear_title": "Birimin tuttuğu silahı belirler. Birincil, eldeki ilk silahı; İkincil ise daha sonra çekilen silahı gösterir. Her biri kendi iskeletini kullanır. Özel seçeneği tüm parçaları gösterir ve seçimi nesne listesine bırakır.",
+ "cards.gen_gear_primary": "Birincil",
+ "cards.gen_gear_secondary": "İkincil",
+ "cards.gen_gear_custom": "Özel",
+ "cards.gen_pose_cam_reset": "Her pozda kamerayı sıfırla",
+ "cards.gen_pose_cam_reset_title": "Kütüphaneden bir poz seçildiğinde kartın kamerası, pozlar için belirlenen açıya döner.",
+ "cards.gen_guide": "Deneyim ve asker sayısı katmanı",
+ "cards.gen_guide_title": "Oyunun deneyim Şvronlarını, asker sayısını ve silah simgelerini kartın neresinde çizdiğini gösterir. Yalnızca bir kılavuzdur ve kaydedilmez.",
+ "cards.gen_obj_reset": "Sıfırla",
+ "cards.gen_obj_scale": "Ölçek",
+ "cards.gen_obj_size": "Boyut",
+ "cards.gen_obj_pick": "Kartta taşımak, döndürmek veya ölçeğini değiştirmek için bir nesneye tıklayın."
 }
