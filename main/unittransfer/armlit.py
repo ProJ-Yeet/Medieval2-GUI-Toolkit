@@ -355,17 +355,31 @@ def gather(project: dict, obj_ids, mod_of, image_of=armbake.default_image_of):
     return jobs, skipped, sheets
 
 
+def _shrink(img: Optional[np.ndarray], most: int) -> Optional[np.ndarray]:
+    """``img`` no more than ``most`` pixels across, for a preview."""
+    if img is None or max(img.shape[:2]) <= most:
+        return img
+    k = most / max(img.shape[:2])
+    w, h = max(1, round(img.shape[1] * k)), max(1, round(img.shape[0] * k))
+    return np.asarray(Image.fromarray(img).resize((w, h), Image.BILINEAR))
+
+
 def bake_objects(project: dict, obj_ids, mod_of, settings: Optional[dict] = None,
-                 image_of=armbake.default_image_of, out_dir: Optional[Path] = None) -> dict:
+                 image_of=armbake.default_image_of, out_dir: Optional[Path] = None,
+                 preview: int = 0) -> dict:
     """Bake the named objects; one lit PNG per colour texture they wear.
 
     ``{"baked": [{"source", "path", "objects", "spec", "normal"}],
     "skipped": [{"id", "why"}]}``. An object drawing on two sheets at once is
     skipped (``two_sheets``), one with no texture too (``no_texture``).
+
+    ``preview`` (2026-11-24): the viewport's look at what the bake will give,
+    the same bake with each sheet shrunk to that many pixels across at most,
+    written under ``lit/preview`` and with no normal map copied beside it.
     """
     st = settings_of(settings)
     jobs, skipped, sheets = gather(project, obj_ids, mod_of, image_of)
-    out_dir = Path(out_dir) if out_dir else armory.SHEETS_DIR / "lit"
+    out_dir = Path(out_dir) if out_dir else armory.SHEETS_DIR / "lit" / ("preview" if preview else "")
     baked = []
     for job in jobs.values():
         src = Path(job["path"])
@@ -373,6 +387,8 @@ def bake_objects(project: dict, obj_ids, mod_of, settings: Optional[dict] = None
         spec_path = sibling(job["path"], "s")
         spec = sheets.image(spec_path) if spec_path else None
         normal = sheets.image(job["normal"]) if job["normal"] else None
+        if preview:
+            colour, spec, normal = (_shrink(x, int(preview)) for x in (colour, spec, normal))
         lit = bake_image(colour, spec, normal, pos=np.concatenate(job["pos"]), nrm=np.concatenate(job["nrm"]),
                          uv=np.concatenate(job["uv"]), tris=np.array(job["tris"], int),
                          island=np.array(job["island"], int), obj=np.array(job["obj"], int), settings=st)
@@ -381,7 +397,7 @@ def bake_objects(project: dict, obj_ids, mod_of, settings: Optional[dict] = None
         out_dir.mkdir(parents=True, exist_ok=True)
         out = out_dir / f"{src.stem}_lit_{tag}.png"
         Image.fromarray(lit, "RGBA").save(out)
-        if normal is not None:
+        if normal is not None and not preview:
             # the export looks for a sheet's normal map beside it
             Image.fromarray(normal, "RGBA").save(out.with_name(out.stem + "_norm.png"))
         baked.append({"source": job["path"], "path": str(out), "objects": job["objects"],

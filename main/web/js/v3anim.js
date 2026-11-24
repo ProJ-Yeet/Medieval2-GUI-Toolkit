@@ -376,7 +376,7 @@ async function v3AnimInit(){
             : v3IsFolder() ? `/api/model/anims?mod=${enc(v3AnimMod())}&folder=${enc(v3.mod)}`
                 + (v3.loose ? `&loose=${enc(v3.loose)}` : `&entry=${enc(v3.entry)}`)
                 + (v3.anim.handSkel ? `&skel=${enc(v3.anim.handSkel)}` : '')
-                     : `/api/model/anims?mod=${enc(v3AnimMod())}&entry=${enc(v3.entry)}`;
+                     : `/api/model/anims?mod=${enc(v3AnimMod())}&entry=${enc(v3.animEntry || v3.entry)}`;
   try{ list = await api.get(url); }
   catch(e){ list = {error: ''+e}; }
   if(v3 !== mine) return;
@@ -384,7 +384,7 @@ async function v3AnimInit(){
   // a rider's entry: the mounts its units ride, to show it on one
   if(!v3.cas && (list.sets || []).some(x => (x.mount || 'none').toLowerCase() !== 'none')){
     v3.anim.mount = {on: false, list: null, pick: 0, x: null, data: null, err: ''};
-    api.get(`/api/model/mounts?mod=${enc(v3AnimMod())}&entry=${enc(v3.entry)}${v3IsFolder() ? `&folder=${enc(v3.mod)}` : ''}`)
+    api.get(`/api/model/mounts?mod=${enc(v3AnimMod())}&entry=${enc(v3.animEntry || v3.entry)}${v3IsFolder() ? `&folder=${enc(v3.mod)}` : ''}`)
       .then(r => { if(v3 === mine && v3.anim.mount){ v3.anim.mount.list = r; v3AnimPanel(); } })
       .catch(e => { if(v3 === mine && v3.anim.mount){ v3.anim.mount.err = '' + e; v3AnimPanel(); } });
   }
@@ -947,12 +947,13 @@ async function v3AnimMountLoad(){
 
 /* A mount's sheets, glued as the model's are (v3Apply's rule for u). */
 function v3AnimExtraSkin(x, skin, mine){
-  const load = rel => new Promise(res => {
+  // 2026-11-24: asked for again before it counts as missing (V3_TEX_WAIT)
+  const load = (rel, n = 0) => new Promise(res => {
     if(!rel) return res(null);
     const img = new Image();
     img.onload = () => res(v3Degenerate(img) ? null : img);
-    img.onerror = () => res(null);
-    img.src = v3TexUrl(rel);
+    img.onerror = () => n < V3_TEX_WAIT.length ? setTimeout(() => load(rel, n + 1).then(res), V3_TEX_WAIT[n]) : res(null);
+    img.src = v3TexUrl(rel) + (n ? (v3TexUrl(rel).includes('?') ? '&' : '?') + 'try=' + n : '');
   });
   const same = skin.attach && skin.rel && skin.attach.toLowerCase() === skin.rel.toLowerCase();
   Promise.all([load(skin.rel), load(skin.attach_exists && !same ? skin.attach : '')]).then(([main, att]) => {

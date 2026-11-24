@@ -277,17 +277,27 @@ function armPaintBar(){
     <span style="flex:1"></span>
     <button class="mini" id="armUndoBtn" onclick="armUndo(false)" title="${esc(tt('armory.undo_title'))}"${ARM.undo && ARM.undo.past.length ? '' : ' disabled'}>↶</button>
     <button class="mini" id="armRedoBtn" onclick="armUndo(true)" title="${esc(tt('armory.redo_title'))}"${ARM.undo && ARM.undo.future.length ? '' : ' disabled'}>↷</button>
-    <span class="armshade" id="armShade">${typeof armShadeHtml === 'function' ? armShadeHtml() : ''}</span>
-    <button class="mini" onclick="armFullView()" title="${esc(tt('armory.full_view_title'))}">⛶ ${tt('armory.full_view')}</button>
+    <span class="armgrp"><span class="armshade" id="armShade">${typeof armShadeHtml === 'function' ? armShadeHtml() : ''}</span>
+      <label class="armcheck"><input type="checkbox"${ARM.stats ? ' checked' : ''} onchange="armToggle('stats')"> ${tt('armory.statistics')}</label>
+      <label class="armcheck"><input type="checkbox"${ARM.faceOrient ? ' checked' : ''} onchange="armToggle('faceOrient')"> ${tt('armory.face_orientation')}</label></span>
+    <span class="armgrp"><button class="mini" onclick="armFullView()" title="${esc(tt('armory.full_view_title'))}">⛶ ${tt('armory.full_view')}</button>
+      <button class="mini" onclick="armFrameAll()" title="${esc(tt('armory.frame_all_title'))}">${tt('armory.frame_all')}</button></span>
+    <span class="armgrp" id="armEditBox">${armEditBoxHtml()}</span>
     <button class="mini" onclick="armTexOpen()" title="${esc(tt('armory.textures_title'))}">🖼 ${tt('armory.textures')}</button>
-    <button class="mini${ARM.uvEd ? ' on' : ''}" onclick="armUvToggle()" title="${esc(tt('armory.uv_edit_title'))}">${tt('armory.uv_edit')}</button>
-    <button class="mini" onclick="armFrameAll()" title="${esc(tt('armory.frame_all_title'))}">${tt('armory.frame_all')}</button>
+    <span class="armgrp" id="armSelTools">${typeof armSelToolsHtml === 'function' ? armSelToolsHtml() : ''}</span>
+    <span class="armbarbreak"></span>
     <button class="mini primary" onclick="armSessSaveCurrent()">${tt('common.save')}</button>
     <button class="mini" onclick="armSessOpen()" title="${esc(tt('armory.sess_button_title'))}">${tt('armory.sess_button')}</button>
     <button class="mini" onclick="armLibOpen()" title="${esc(tt('armory.lib_open_title'))}">${tt('armory.lib_open')}</button>
     <button class="mini" onclick="armNew()">${tt('armory.new_project')}</button>
     <button class="mini" onclick="reportOpen('armory')" title="${esc(tt('armory.report_title'))}">🐞 ${tt('armory.report')}</button>
     <button class="mini primary" onclick="armExportOpen()"${p.objects.length ? '' : ' disabled'} title="${esc(tt('armory.export_title'))}">${tt('armory.export_button')}</button>`;
+}
+/* 2026-11-24: the object's edit modes side by side, Detail view and UV edit. */
+function armEditBoxHtml(){
+  const n = armSelected().length;
+  return `<button class="mini${ARM.detail ? ' on' : ''}" onclick="armDetailToggle()"${n === 1 || ARM.detail ? '' : ' disabled'} title="${esc(tt('armory.detail_title'))}">${tt('armory.detail')}</button>
+    <button class="mini${ARM.uvEd ? ' on' : ''}" onclick="armUvToggle()" title="${esc(tt('armory.uv_edit_title'))}">${tt('armory.uv_edit')}</button>`;
 }
 function armPaintFoot(){
   if(typeof armPaintSliders === 'function') armPaintSliders();
@@ -816,6 +826,7 @@ async function armImage(url){
 /* An entry's skin is its main and attachment sheets glued side by side, the
    way the game lays them out and the viewer draws them (viewer3d.js). An
    external model's objects each have their own sheet. */
+const ARM_TEX_WAIT = [600, 1200, 2400, 4800];
 async function armLoadSkin(a, live){
   const gl = armGl();
   if(!gl || !live.view) return;
@@ -842,13 +853,21 @@ async function armLoadSkin(a, live){
     over.attach ? {attach: over.attach, attach_exists: true} : {});
   if(!skin.exists){ armFrame(); return; }
   const url = rel => (rel === over.main || rel === over.attach) ? armSheetUrl(rel) : `/model_texture?mod=${enc(a.mod)}&rel=${enc(rel)}`;
+  // 2026-11-24: a server answering with an error for a sheet (busy converting
+  // it, or with the model) asked again four times before the model stands bare
+  const image = async rel => {
+    for(let n = 0; ; n++){
+      try{ return await armImage(url(rel) + (n ? '&try=' + n : '')); }
+      catch(e){ if(n >= ARM_TEX_WAIT.length) throw e; await new Promise(ok => setTimeout(ok, ARM_TEX_WAIT[n])); }
+    }
+  };
   try{
     await armAllow(over.main); await armAllow(over.attach);
-    const main = await armImage(url(skin.rel));
+    const main = await image(skin.rel);
     const same = skin.attach && skin.attach.toLowerCase() === skin.rel.toLowerCase();
     let img = main;
     if(skin.attach && skin.attach_exists && !same){
-      try{ img = v3Atlas(main, await armImage(url(skin.attach))); }catch(e){ img = main; }
+      try{ img = v3Atlas(main, await image(skin.attach)); }catch(e){ img = main; }
     }else if(skin.attach && !same){
       live.uScale = 1.0;       // named and not here: the game repeats the main sheet
     }
@@ -1655,6 +1674,12 @@ async function armImportRun(adds){
     added++;
     addedKeys.push(key);
   }
+  // 2026-11-24: a library item that is one object: that object pulled in
+  const pulls = ARM.libPulls || []; ARM.libPulls = null;
+  for(const [key, group] of pulls) if(p.assets.some(x => armAssetKey(x) === key) && !p.objects.some(o => armUses(o, key, group))){
+    const live = ARM.assets.get(key), ob = live && live.view && live.view.objects[group];
+    if(ob) p.objects.push(armNewObject(key, ob));
+  }
   // what Back on the start chooser puts back on the dialog
   ARM.lastImport = {tab: imp.tab, picked: new Set(imp.picked), keys: addedKeys};
   imp.picked.clear();
@@ -1668,7 +1693,7 @@ async function armImportRun(adds){
   }
   closeModal();
   if(said.length) toast(said.join(' · '), 6000);
-  if(added && !p.objects.length && p.base == null) armStartChooser();
+  if(added && !p.objects.length && p.base == null && !pulls.length) armStartChooser();
   else renderArmory();
 }
 

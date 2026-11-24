@@ -1087,6 +1087,15 @@ check("a model is kept once, with its own name", a1.get("item", {}).get("name") 
 check("the same entry again is refused as the same", a2.get("why") == "same" and a2["same"]["id"] == 1)
 check("so is another entry whose model file is byte for byte the same", a3.get("why") == "art")
 check("a file is named by its file name", a4.get("item", {}).get("name") == "Shield.glb")
+# 2026-11-24: one object of a model kept on its own (item "part")
+a5 = armlib.add(lib, {"kind": "entry", "mod": "americas", "entry": "peasants", "file_hash": "abc",
+                      "part": {"group": 2, "name": "helmet", "mesh": "helmet_01"}, "name": "Peasants: helmet_01"})
+a6 = armlib.add(lib, {"kind": "entry", "mod": "americas", "entry": "peasants", "part": {"group": 2, "name": "helmet", "mesh": "helmet_01"}})
+a7 = armlib.add(lib, {"kind": "entry", "mod": "americas", "entry": "peasants", "part": {"group": 3, "name": "shield", "mesh": "shield_01"}})
+check("one object of a model already kept is kept on its own", a5.get("item", {}).get("part", {}).get("group") == 2)
+check("the same object again is refused as the same", a6.get("why") == "same" and a6["same"]["id"] == a5["item"]["id"])
+check("another object of that model is kept too", "item" in a7)
+lib["items"] = [x for x in lib["items"] if not x.get("part")]
 lib["collections"].append({"id": 1, "name": "Elves"})
 lib["items"][0]["collections"] = [1]
 lib["items"][0]["notes"] = "good shield"

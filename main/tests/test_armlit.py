@@ -206,6 +206,14 @@ f 5/1/2 6/2/2 7/3/2 8/4/2
     check("two objects on one texture, stacked: one file, the texels one tone",
           len(two["baked"]) == 1 and sorted(two["baked"][0]["objects"]) == [1, 2]
           and np.ptp(np.asarray(Image.open(two["baked"][0]["path"]))[4:60, 2:30, 0].astype(int)) <= 1)
+    # 2026-11-24: the viewport's preview, the same bake at a small size, kept apart
+    prev = armlit.bake_objects(proj, [1], None, dict(ambient=0.3, **TOP), preview=24)
+    pp = Path(prev["baked"][0]["path"]) if prev["baked"] else Path("x")
+    pimg = np.asarray(Image.open(pp).convert("RGBA")) if pp.is_file() else GREY
+    check("a preview is the same bake, no bigger than asked, in a folder of its own",
+          pp.parent.name == "preview" and max(pimg.shape[:2]) <= 24 and armory.texture_allowed(str(pp))
+          and abs(int(pimg[12, 5, 0]) - int(img[32, 10, 0])) <= 3)
+    check("a preview leaves no normal map copy beside it", not pp.with_name(pp.stem + "_norm.png").exists())
 
 print(f"\n{sum(ok)}/{len(ok)} checks passed")
 print("ALL PASSED" if all(ok) else "FAILURES")

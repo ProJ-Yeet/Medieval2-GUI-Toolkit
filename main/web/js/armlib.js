@@ -214,6 +214,24 @@ async function armLibAddAsset(key){
   else toast(tt('armory.lib_already', {name: r.same.name}));
 }
 
+/* 2026-11-24: one object kept on its own: the model it comes from and which
+   of its objects (item.part); loading it pulls that object alone. */
+async function armLibAddObjects(ids){
+  for(const id of ids){
+    const o = armObj(id), pc = o && (o.src || [])[0];
+    const a = pc && armProj().assets.find(x => armAssetKey(x) === pc.asset);
+    if(!a) continue;
+    const live = ARM.assets.get(pc.asset) || {};
+    const item = Object.assign({}, a, {name: armAssetLabel(a) + ': ' + o.mesh, file_hash: live.view && live.view.file_hash || '',
+      part: {group: pc.group, name: o.name, mesh: o.mesh}});
+    delete item.open; delete item.show; delete item.skin; delete item.textures;
+    let r;
+    try{ r = await api.post('/api/armory/library/add', {item}); }catch(e){ toast(errText(e)); return; }
+    ARM.lib = {library: r.library, facets: r.facets};
+    toast(r.item ? tt('armory.lib_added', {name: r.item.name}) : tt('armory.lib_already', {name: r.same.name}));
+  }
+}
+
 /* --- the import dialog's tab ------------------------------------------------------- */
 
 /* Grouped, found and looked at as the Library window has them; an item is
@@ -343,7 +361,10 @@ function armLibPick(id, on){
 }
 function armLibPicked(){
   const s = (state.armImp && state.armImp.libPicked) || new Set();
-  const out = armLib().items.filter(it => s.has(it.id)).map(armLibAsset);
+  const items = armLib().items.filter(it => s.has(it.id));
+  // an item that is one object: its model loaded, that object pulled (armImportRun)
+  ARM.libPulls = items.filter(it => it.part).map(it => [armAssetKey(armLibAsset(it)), it.part.group]);
+  const seen = new Set(), out = items.map(armLibAsset).filter(a => { const k = armAssetKey(a); if(seen.has(k)) return false; seen.add(k); return true; });
   s.clear();
   return out;
 }

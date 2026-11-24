@@ -3420,7 +3420,8 @@ class Handler(BaseHTTPRequestHandler):
                 try:
                     return self._json(armlit.bake_objects(
                         body.get("project") or {}, body.get("ids") or [],
-                        self.registry.get, body.get("settings") or {}))
+                        self.registry.get, body.get("settings") or {},
+                        preview=int(body.get("preview") or 0)))
                 except (armory.ArmoryError, mesh.MeshError, KeyError, ValueError, OSError) as e:
                     return self._err(400, str(e))
             if u.path in ("/api/armory/keyforce/start", "/api/armory/keyforce/status",

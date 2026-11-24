@@ -33,7 +33,8 @@ function armAnimPaint(){
   const entries = armAnimEntries();
   // 2026-11-23: Rest sits by T-pose, and takes the action back to its first frame
   const tp = `${a.data ? `<button class="mini" onclick="armAnimToStart()" title="${esc(tt('armory.rest_title'))}">${tt('armory.rest')}</button>` : ''}
-    <button class="mini${a.tpose ? ' on' : ''}" onclick="armTpose()" title="${esc(tt('armory.tpose_title'))}">${tt('armory.tpose')}</button>`;
+    <button class="mini${a.tpose ? ' on' : ''}" onclick="armTpose()" title="${esc(tt('armory.tpose_title'))}">${tt('armory.tpose')}</button>
+    <button class="mini${ARM.bones ? ' on' : ''}" onclick="ARM.bones=!ARM.bones;armAnimPaint();armFrame()" title="${esc(tt('armory.bones_title'))}">${tt('armory.bones')}</button>`;
   el.style.height = a.open && armSize('anim_h') ? armSize('anim_h') + 'px' : '';
   if(!a.open){
     el.innerHTML = `<div class="armhead"><button class="armfold" onclick="armAnimFold()">▸ ${tt('armory.animations')}</button><span style="flex:1"></span>${tp}</div>`;
@@ -573,14 +574,28 @@ function armAnimPose(objs){
     man = {key: r.key, data: r.data, bind: r.bind, shift: [0, 0, 0],
            pose: v3aCarry(v3aPose(r.data, a.t), pose[Math.max(0, hub)], r.offset, shift)};
   }
+  // 2026-11-24: the card maker's elephant riders (cgCrewLoad), each spot's
+  // carried from the elephant's root at its own rider_offset, or standing on
+  // the ground at it while the elephant does not carry them
+  const crew = a.crew && a.crew.data ? a.crew : null, spots = new Map();
+  const crewPose = crew ? v3aPose(crew.data, a.t) : null;
+  const crewAt = k => {
+    if(!spots.has(k)){
+      const off = (crew.spots || [])[k] || [0, 0, 0];
+      spots.set(k, horse && m ? {key: '', data: crew.data, bind: crew.bind, shift: [0, 0, 0], carried: true, pose: v3aCarry(crewPose, horse.pose[m.hub], off, horse.shift)}
+        : {key: '', data: crew.data, bind: crew.bind, pose: crewPose, shift: [off[0], isFinite(low) ? low : 0, off[2]]});
+    }
+    return spots.get(k);
+  };
   const gl = armGl();
   for(const g of geos){
     const k = armAnimAssetOf(g.obj);
     // the picked action's own model is everything not the other one
-    const by = horse && horse.key && k === horse.key ? horse : man && man.key && k === man.key ? man : own;
+    const by = crew && g.obj.crew ? crewAt(g.obj.spot != null ? g.obj.spot : 1)
+      : horse && horse.key && k === horse.key ? horse : man && man.key && k === man.key ? man : own;
     if(g.unweighted){
       // with no weights a part stands still; on a horse it rides with the man
-      if(!man || by !== man){ g.posed = false; continue; }
+      if(!(man && by === man) && !by.carried){ g.posed = false; continue; }
       const hub = by.data.bones.findIndex(b => b.parent === 0);
       const W = new Float32Array(g.vertices * 2);
       for(let v = 0; v < g.vertices; v++) W[v*2] = 1;

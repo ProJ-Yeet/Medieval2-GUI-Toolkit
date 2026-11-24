@@ -3689,6 +3689,14 @@ body.look-editing :is(button,label,legend,h1,h2,h3,.trsechead,.mftab):hover{outl
   .armrow.act{background:rgba(240,170,70,.32);box-shadow:inset 2px 0 0 #ffb84d}
   .armrow{user-select:none}
   .armshade{display:inline-flex;gap:3px}
+  /* 2026-11-24: the bar's buttons in boxes by what they do, Save and the
+     project's buttons on a second line */
+  .armgrp{display:inline-flex;gap:4px;align-items:center;border:1px solid var(--edge);border-radius:6px;padding:2px 5px}
+  .armgrp .armcheck{white-space:nowrap}
+  .armbarbreak{flex-basis:100%;height:0}
+  /* the UV editor's Sheet and M2 view: one pair, a click anywhere on it swaps */
+  .armuvpair{cursor:pointer}
+  .armuvpair .count{padding:0 2px}
   .armselmode{display:inline-flex;gap:2px}
   .armsplit{display:inline-flex;gap:4px;align-items:center}
   .armsplit input{width:140px;font-size:12px;padding:1px 5px}
@@ -3941,7 +3949,13 @@ body.look-editing :is(button,label,legend,h1,h2,h3,.trsechead,.mftab):hover{outl
   .cgsessname{flex:1;min-width:0;display:flex;flex-direction:column}
   .cgsessname b,.cgsessname .count{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .cggivetiles{display:flex;flex-wrap:wrap;gap:6px;margin:4px 0}
-  .cggivetile{display:flex;flex-direction:column;align-items:center;gap:2px;width:72px;padding:4px;border:1px solid var(--edge);border-radius:6px;background:none;font-size:11px;line-height:1.2}
+  .cggivesuggest{border-top:1px dashed var(--edge);padding-top:4px}
+  .cggiveowners input{width:100%;margin:4px 0}
+  .cggiveowners .faclist{max-height:240px;overflow:auto}
+  .cggivemerc img{outline:1px dashed var(--edge)}
+  .cggivedone{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:6px}
+  .cgcrew{flex-wrap:wrap;gap:4px}
+  .cggivetile{display:flex;flex-direction:column;align-items:center;gap:2px;width:96px;padding:4px;border:1px solid var(--edge);border-radius:6px;background:none;font-size:11px;line-height:1.2}
   .cggivetile img{width:48px;height:64px;image-rendering:pixelated;background:repeating-conic-gradient(#2a2f37 0 25%,#323844 0 50%) 0 0/12px 12px}
   .cggivetile span{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .cggivetile.on{border-color:var(--accent,#f4ce61);box-shadow:0 0 0 1px var(--accent,#f4ce61) inset}
@@ -3970,7 +3984,11 @@ body.look-editing :is(button,label,legend,h1,h2,h3,.trsechead,.mftab):hover{outl
   .cgpeekv3{flex:1;min-height:240px;overflow:hidden;contain:size layout;position:relative}
   .cgpeekv3 .v3side{display:none}
   .cgpeekv3 .v3wrap{height:100%;flex-wrap:nowrap}
-  .cgpeekv3 .v3stage{flex:1 1 auto;min-width:0;min-height:0;height:100%}
+  .cgpeekv3 .v3stage{flex:1 1 auto!important;min-width:0;min-height:0!important;height:100%!important}
+  /* 2026-11-24: it fills the column to the bottom, so no grip to drag, and the
+     hint under it one small line */
+  .cgpeekv3 .v3wrap.dock .v3grip{display:none}
+  .cgpeek .cgpeekhint{margin:0;font-size:11px;line-height:1.3}
   .cgpeek canvas{flex:1;min-height:200px;width:100%;border:1px solid var(--edge);border-radius:6px;cursor:grab;touch-action:none}
   @container page (max-width:1250px){.cgout{grid-template-columns:1fr;grid-template-rows:none}.cghdview{flex:none;height:calc(var(--cgh,80vh) - 40px)}}
   .cgcard canvas{image-rendering:pixelated;background:repeating-conic-gradient(#2a2f37 0 25%,#323844 0 50%) 0 0/16px 16px;border:1px solid var(--edge)}

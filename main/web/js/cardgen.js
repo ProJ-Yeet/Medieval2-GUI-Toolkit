@@ -69,7 +69,8 @@ function cgCopies(base){
       // one copy object per source object and copy, so caches keyed by it hold
       let memo = CG_WORK.copyMemo.get(o);
       if(!memo) CG_WORK.copyMemo.set(o, memo = new Map());
-      if(!memo.has(d.k)) memo.set(d.k, {...o, id: cgDupId(d.k, o.id), grp: 'dup:' + d.k, dupOf: o.id});
+      // a copy of an elephant's riders stands on its own spot (cgCrewSpots)
+      if(!memo.has(d.k)) memo.set(d.k, {...o, id: cgDupId(d.k, o.id), grp: 'dup:' + d.k, dupOf: o.id, ...(typeof d.spot === 'number' ? {spot: d.spot} : {})});
       out.push(memo.get(d.k));
     }
   }
@@ -84,6 +85,7 @@ function cgGroupName(gk, objs){
   const o = objs[0], dup = (cg().dups || []).find(d => 'dup:' + d.k === gk);
   if(dup) return tt('cards.gen_grp_copy', {name: dup.name});
   if(gk.startsWith('coll:')){ const coll = armProj().collections.find(x => x.id === o.coll); return coll ? coll.name : gk; }
+  if(gk === 'crew') return tt('cards.gen_crew_riders', {name: (ARM.assets.get(((o.src || [])[0] || {}).asset) || {asset: {}}).asset.entry || o.mesh});
   const live = ARM.assets.get(((o.src || [])[0] || {}).asset), entry = live && live.asset ? live.asset.entry : o.mesh;
   return o.still === 'mount' ? tt('cards.gen_grp_mount', {name: entry}) : o.still === 'engine' ? tt('cards.gen_grp_engine', {name: entry}) : entry;
 }
@@ -113,36 +115,74 @@ function cgGroupHide(gk){
   for(const id of ids) if(all) off.delete(id); else off.add(id);
   c.off = [...off]; cgFitChanged(); cgPaint();
 }
-/* 2026-11-24: an elephant's riders where the game puts them: descr_mount.txt
-   lists a rider_offset per rider (a mumak fifteen), the first the driver's.
-   The rider is set on the first and a copy of him on each of the others; the
-   offsets are the game's, so they are kept relative to the driver's when the
-   mount carries him, and taken as they are when it stands. */
-function cgRiderSpotsHtml(gk, objs){
-  if(cgSrc() !== 'unit' || !objs.some(o => o.still === 'mount')) return '';
-  return `<button class="mini" title="${ttA('cards.gen_riders_spots_title')}" onclick="cgRidersOnSpots()">${tt('cards.gen_riders_spots')}</button>`;
-}
-async function cgRidersOnSpots(){
-  const c = cg(), u = ((CG_UNIT.units || {}).list || []).find(x => x.type === CG_UNIT.unit);
-  if(!u || !u.mount) return;
+/* --- 2026-11-24: an elephant's crew ------------------------------------------
+   descr_mount.txt gives an elephant a rider_offset per man it carries, from its
+   root bone (a mumak fifteen). The first is the driver's: the unit's model,
+   sat by his own crew actions (elephant_crew_idle when his skeleton has it).
+   The others are the riders': the unit's soldier model, standing, played by
+   the rider actions of a crew skeleton (er_stand_a_idle) when it has them,
+   else by his own skeleton's standing idle. The riders are their own model in
+   the object list (grp 'crew'), one copy for each further spot (a copy's
+   o.spot), and each can be hidden there or with the Crew row. */
+async function cgCrewLoad(u, mod, driver){
+  if(!u.mount || u.engine) return null;
   let rows = [];
-  try{ rows = (await cgGet(`/api/model/mounts?mod=${enc(CG_UNIT.mod)}&entry=${enc(CG_UNIT.entry)}&mount=${enc(u.mount)}`)).mounts || []; }catch(e){ toast(errText(e)); return; }
-  const row = rows.find(r => (r.type || '').toLowerCase() === u.mount.toLowerCase() || (r.entry || '').toLowerCase() === u.mount.toLowerCase());
+  try{ rows = (await cgGet(`/api/model/mounts?mod=${enc(mod)}&entry=${enc(driver)}&mount=${enc(u.mount)}`)).mounts || []; }catch(e){ return null; }
+  const want = u.mount.toLowerCase(), row = rows.find(r => (r.type || '').toLowerCase() === want || (r.entry || '').toLowerCase() === want);
   const spots = (row && row.offsets) || [];
-  if(spots.length < 2){ toast(tt('cards.gen_riders_spots_none')); return; }
-  const riders = CG_UNIT.objects.filter(o => !o.still), gk = riders.length ? cgGroupOf(riders[0]) : '';
-  if(!gk) return;
-  const carried = !!armAnim().mount, first = spots[0];
-  const at = p => carried ? p.map((v,i) => v-first[i]) : p.slice();
-  const kept = (c.dups || []).filter(d => !d.spot), gxf = {...(c.gxf || {})};
-  for(const d of c.dups || []) if(d.spot) delete gxf['dup:' + d.k];
-  let k = kept.reduce((m,d) => Math.max(m,d.k), 0);
-  const ids = riders.map(o => o.id), name = cgGroupName(gk, riders), dups = kept.slice();
-  if(!carried) gxf[gk] = {...cgGroupXf(gk), t: at(first)};
-  spots.slice(1).forEach((p,i) => { k++; dups.push({k, ids, name: name + ' ' + (i+2), spot: true}); gxf['dup:' + k] = {t: at(p), s: 1}; });
-  c.dups = dups; c.gxf = gxf;
-  toast(tt('cards.gen_riders_spots_done', {n: spots.length}));
-  cgFitChanged(); cgPaint();
+  if(!row || (row['class'] || '').toLowerCase() !== 'elephant' || spots.length < 2) return null;
+  const rider = (u.soldier || '').toLowerCase() || driver, a = {kind: 'entry', mod, entry: rider}, live = await armLoadAsset(a);
+  if(!live || !live.view || !live.geo) return null;
+  const key = armAssetKey(a);
+  const objects = live.view.objects.map((ob, i) => ({id: -9000 - i, src: [{asset: key, group: ob.index}], name: ob.name, mesh: ob.mesh,
+    flag: ob.flag, crew: true, grp: 'crew', t: [0, 0, 0], r: [0, 0, 0], s: [1, 1, 1]}));
+  return {objects, spots, rider};
+}
+async function cgCrewAnim(mod, rider, driver, driverList){
+  let list = driverList;
+  if(rider !== driver){ try{ list = await cgGet(`/api/model/anims?mod=${enc(mod)}&entry=${enc(rider)}`); }catch(e){ return null; } }
+  const skels = list.skeletons || {}, set = (list.sets || [])[0] || {};
+  const named = k => (list.sets || []).flatMap(x => [x.primary, x.secondary]).find(n => (n || '').toLowerCase() === k) || k;
+  let skel = '', row = null;
+  for(const [k, sk] of Object.entries(skels)){
+    const r = (sk.actions || []).find(x => x.playable && x.action.toLowerCase() === 'er_stand_a_idle');
+    if(r){ skel = named(k); row = r; break; }
+  }
+  if(!row){
+    skel = set.primary || Object.keys(skels)[0] || '';
+    const acts = ((skels[skel.toLowerCase()] || {}).actions || []).filter(x => x.playable);
+    row = ['stand_a_idle', 'stand_idle', 'idle'].map(n => acts.find(x => x.action.toLowerCase() === n)).find(Boolean) || acts[0];
+  }
+  if(!row) return null;
+  const w = set.primary_weapons || [], q = row.rel ? `rel=${enc(row.rel)}` : `pack=${enc(row.path)}`;
+  let data;
+  try{ data = await api.get(`/api/model/anim?mod=${enc(mod)}&${q}&skel=${enc(skel)}` + (row.slot != null ? `&slot=${row.slot}` : '') + (w.length ? `&weapons=${enc(w.join(','))}` : '')); }
+  catch(e){ return null; }
+  if(!data || data.error || !data.bones) return null;
+  return {data, bind: v3aBind(data), action: row.action, skel};
+}
+/* A copy of the riders for each spot after the first rider's. */
+function cgCrewSpots(crew){
+  const c = cg(), ids = crew.objects.map(o => o.id), kept = (c.dups || []).filter(d => typeof d.spot !== 'number');
+  let k = kept.reduce((m, d) => Math.max(m, d.k), 0);
+  c.dups = kept.concat(crew.spots.slice(2).map((p, i) => ({k: ++k, ids, name: tt('cards.gen_crew_rider', {n: i + 2}), spot: i + 2})));
+}
+function cgCrewHtml(){
+  const groups = cgGroups();
+  if(!groups.has('crew')) return '';
+  const off = new Set(cg().off || []), driver = [...groups.keys()].find(gk => (groups.get(gk) || []).some(o => !o.still && !o.crew && o.dupOf == null));
+  const riders = [...groups.keys()].filter(gk => gk === 'crew' || (groups.get(gk) || []).some(o => o.crew && o.dupOf != null));
+  const shown = gk => !(groups.get(gk) || []).every(o => off.has(o.id)), q = v => esc(JSON.stringify(v));
+  const chip = (gk, label) => `<button class="mini${shown(gk) ? ' on' : ''}" onclick="cgGroupHide(${q(gk)})">${label}</button>`;
+  return `<div class="armexprow cgcrew" title="${ttA('cards.gen_crew_title')}"><span>${tt('cards.gen_crew')}</span>
+    ${driver ? chip(driver, tt('cards.gen_crew_driver')) : ''}
+    ${riders.map((gk, i) => chip(gk, tt('cards.gen_crew_rider', {n: i + 1}))).join('')}
+    <button class="mini" onclick="cgCrewAll(${riders.some(shown) ? 'false' : 'true'})">${tt(riders.some(shown) ? 'cards.gen_crew_none' : 'cards.gen_crew_all')}</button></div>`;
+}
+function cgCrewAll(on){
+  const c = cg(), off = new Set(c.off || []);
+  for(const o of cgAllObjects()) if(o.crew){ if(on) off.delete(o.id); else off.add(o.id); }
+  c.off = [...off]; cgFitChanged(); cgPaint();
 }
 /* A copy of a model, or of one object, set down beside its source. */
 function cgDuplicate(ids, name){
@@ -311,20 +351,29 @@ async function cgUnitLoad(type, model, how){
   CG_UNIT.skins = live.view.skins || [];
   const objects = live.view.objects.map((ob, i) => ({id: -1 - i, src: [{asset: key, group: ob.index}], name: ob.name, mesh: ob.mesh,
     flag: ob.flag, t: [0, 0, 0], r: [0, 0, 0], s: [1, 1, 1]}));
-  const extras = await cgExtras(u, mod, -5000);
+  const extras = await cgExtras(u, mod, -5000), crew = await cgCrewLoad(u, mod, entry);
   if(CG_UNIT.unit !== type) return;
   // the mount under the rider, the engine beside the crew
   cgBeside(objects, extras.filter(o => o.still !== 'mount'));
-  CG_UNIT.objects = objects.concat(extras);
+  CG_UNIT.objects = objects.concat(extras, crew ? crew.objects : []);
   // its own animations, in the held-aside state
   cgUnitAnimIn();
   ARM.anim = null; const an = armAnim(); CG_UNIT.anim = an; an.fromMod = mod;
-  try{ an.list = await cgGet(`/api/model/anims?mod=${enc(mod)}&entry=${enc(entry)}`); }catch(e){ an.list = {error: errText(e)}; }
+  // a model with foot skeletons only, played by the unit's riding one (cgRideEntry)
+  const from = await cgRideEntry(u, entry);
+  try{ an.list = await cgGet(`/api/model/anims?mod=${enc(mod)}&entry=${enc(from || entry)}`); }catch(e){ an.list = {error: errText(e)}; }
   if(ARM.anim !== an) return;
+  an.from = from;
+  if(crew){
+    an.crew = await cgCrewAnim(mod, crew.rider, entry, an.list);
+    if(ARM.anim !== an) return;
+    if(an.crew) an.crew.spots = crew.spots;
+    if(!resume || !(c.dups || []).some(d => typeof d.spot === 'number')) cgCrewSpots(crew);
+  }
   const set = (an.list.sets || [])[0];
   an.skel = set ? ((c.gear === 'secondary' && set.secondary) || set.primary || set.secondary || '') : Object.keys(an.list.skeletons || {})[0] || '';
   an.set = set || null;
-  an.mountFor = u.mount ? cgMountFor(mod, entry, u.mount.toLowerCase()) : null;
+  an.mountFor = u.mount ? cgMountFor(mod, from || entry, u.mount.toLowerCase()) : null;
   CG_WORK.fit = null;
   await cgPreparePose();
   if(resume && c.texFaction) await cgTexPick(c.texFaction);
@@ -423,7 +472,10 @@ async function cgUnitPeek(type, model){
   const old = CG_UNIT.peek || {};
   const pk = CG_UNIT.peek = {type, entry, info: u, objects: [], yaw: old.yaw != null ? old.yaw : 0.5, pitch: old.pitch != null ? old.pitch : 0.12, loading: true, err: '',
     zoom: old.type === type ? old.zoom : 1, pan: old.type === type ? old.pan : null};
+  // the docked viewer reads the model itself
+  if(cgPeekDocked(pk)) pk.loading = false;
   cgUnitRows(); cgPeekPaint();
+  if(cgPeekDocked(pk)) return;
   const live = await armLoadAsset(a);
   if(CG_UNIT.peek !== pk) return;
   pk.loading = false;
@@ -439,48 +491,115 @@ async function cgUnitPeek(type, model){
   cgPeekPaint();
 }
 function cgPeekHtml(){
-  return `<div class="cgpeek"><div class="armexprow" id="cgPeekHead"></div><canvas id="cgPeek"></canvas><div id="cgPeekV3" class="cgpeekv3" hidden></div>
-    <p class="count">${tt('cards.gen_peek_hint')}</p></div>`;
+  return `<div class="cgpeek"><div class="armexprow" id="cgPeekHead"></div><canvas id="cgPeek" hidden></canvas><div id="cgPeekV3" class="cgpeekv3" hidden></div>
+    <p class="count cgpeekhint">${tt('cards.gen_peek_hint')}</p></div>`;
 }
-/* 2026-11-24: a cavalry unit seen Mounted: the rider on his mount, playing
-   their actions, in the Models viewer (viewer3d.js) docked where the turning
-   view stands; its own "On his mount", with the mount the unit rides. */
-function cgPeekMounted(){ const pk = CG_UNIT.peek; return !!(CG_UNIT.mounted && pk && pk.info && pk.info.mount && !pk.err && !pk.noRide); }
+/* 2026-11-24: one viewer. The unit is shown in the Models viewer (viewer3d.js)
+   docked here, Mounted or not: Mounted only sets him on his mount in the
+   viewer already open, the mount read in the background beforehand, so it is
+   there at once. A siege unit keeps the plain turning view, which sets its
+   engine beside the crew. */
+const cgPeekDocked = pk => !!(pk && pk.info && !pk.info.engine && typeof v3Mount === 'function');
+const cgPeekLive = () => typeof v3 !== 'undefined' && v3 && v3.host === 'cgPeekV3' ? v3 : null;
+const cgSleep = ms => new Promise(ok => setTimeout(ok, ms));
+/* 2026-11-24: why Territorial Cavalry stood beside his horse: modeldb gives
+   its armour upgrade models (territorial_cavalry_upg0..3) one skeleton row,
+   MTW2_Spear with mount none, and only its soldier model (pinnath_cavalry) a
+   horse row. Such a model is played by the skeletons of the unit's model that
+   has a riding row (its soldier line's, else another upgrade level's); rider
+   meshes share the bone names, so his skin follows them. '' when the model
+   has its own, or none of the unit's models has one. */
+function cgRideEntry(u, entry){
+  entry = (entry || '').toLowerCase();
+  if(!u || !u.mount || u.engine) return Promise.resolve('');
+  const memo = CG_WORK.rideMemo = CG_WORK.rideMemo || new Map(), key = state.src + '|' + u.type + '|' + entry;
+  if(!memo.has(key)) memo.set(key, (async () => {
+    const rides = async e => { try{ const l = await cgGet(`/api/model/anims?mod=${enc(state.src)}&entry=${enc(e)}`);
+      return (l.sets || []).some(x => (x.mount || 'none').toLowerCase() !== 'none'); }catch(err){ return false; } };
+    if(await rides(entry)) return '';
+    const others = [u.soldier, ...(u.ug || [])].map(x => (x || '').toLowerCase()).filter((x, i, l) => x && x !== entry && l.indexOf(x) === i);
+    for(const e of others) if(await rides(e)) return e;
+    return '';
+  })());
+  return memo.get(key);
+}
 async function cgPeekV3(pk){
-  if(typeof v3Mount !== 'function') return;
-  await v3Mount('cgPeekV3', state.src, pk.entry);
-  const want = (pk.info.mount || '').toLowerCase();
-  // its mount list comes a moment after the model; the unit's own mount picked from it
-  for(let i = 0; i < 60 && CG_UNIT.peek === pk && cgPeekMounted(); i++){
-    const here = typeof v3 !== 'undefined' && v3 && v3.host === 'cgPeekV3' ? v3 : null, m = here && here.anim && here.anim.mount;
-    // its actions read and none a rider's: nothing to carry him, the turntable again
-    if(here && here.anim && here.anim.list && !m){ pk.noRide = true; cgPeekPaint(); return; }
-    if(m && m.list){
-      const rows = m.list.mounts || [], at = rows.findIndex(r => (r.type || '').toLowerCase() === want || (r.entry || '').toLowerCase() === want);
-      if(at >= 0 && at !== m.pick){ m.pick = at; m.x = null; m.data = null; }
-      // the viewer carries him only while a riding action plays: his mounted
-      // skeleton set and its standing idle
-      const a = v3.anim, si = (a.list.sets || []).findIndex(x => (x.mount || 'none').toLowerCase() !== 'none');
-      if(si >= 0 && si !== a.set) v3AnimSet(si);
-      const acts = ((v3AnimSk() || {}).actions || []).filter(x => x.playable);
-      const row = ['stand_a_idle', 'stand_idle', 'idle'].map(n => acts.find(x => x.action.toLowerCase() === n)).find(Boolean) || acts[0];
-      if(row && !a.data) await v3AnimPick(v3AnimKey(row));
-      if(!m.on) v3AnimMountOn(true);
-      return;
-    }
-    await new Promise(ok => setTimeout(ok, 250));
-  }
+  const from = await cgRideEntry(pk.info, pk.entry);
+  if(CG_UNIT.peek !== pk) return;
+  pk.from = from; cgPeekHead();
+  await v3Mount('cgPeekV3', state.src, pk.entry, from);
+  if(CG_UNIT.peek !== pk || !cgPeekLive()) return;
+  if(CG_UNIT.mounted) await cgPeekRide(pk); else cgPeekPreload(pk);
 }
-function cgPeekMount(on){ CG_UNIT.mounted = !!on; cgPeekPaint(); }
-function cgPeekPaint(){
-  const head = document.getElementById('cgPeekHead'), canvas = document.getElementById('cgPeek');
-  if(!head || !canvas) return;
+/* The viewer's actions list, or its mounts list, once it has come. */
+async function cgPeekWait(pk, ready){
+  for(let i = 0; i < 100; i++){
+    const v = cgPeekLive();
+    if(CG_UNIT.peek !== pk || !v) return null;
+    if(ready(v)) return v;
+    await cgSleep(150);
+  }
+  return null;
+}
+/* The unit's mount read while he stands, so Mounted has it at once; the view
+   kept where it was. */
+async function cgPeekPreload(pk){
+  const v = await cgPeekWait(pk, v => v.anim && v.anim.list && (!v.anim.mount || v.anim.mount.list || v.anim.mount.err));
+  const m = v && v.anim.mount;
+  if(!m || !m.list || m.x || m.on || CG_UNIT.mounted) return;
+  cgPeekMountPick(pk, m);
+  const keep = [v.centre.slice(), v.dist];
+  pk.preload = v3AnimMountLoad();
+  await pk.preload;
+  if(cgPeekLive() === v && !m.on){ v.centre = keep[0]; v.dist = keep[1]; m.framed = false; }
+}
+function cgPeekMountPick(pk, m){
+  const want = (pk.info.mount || '').toLowerCase(), rows = (m.list || {}).mounts || [];
+  const at = rows.findIndex(r => (r.type || '').toLowerCase() === want || (r.entry || '').toLowerCase() === want);
+  if(at >= 0 && at !== m.pick){ m.pick = at; m.x = null; m.data = null; }
+}
+/* Mounted on or off, in the viewer already open. */
+async function cgPeekRide(pk){
+  const v = await cgPeekWait(pk, v => v.anim && v.anim.list);
+  if(!v) return;
+  const a = v.anim;
+  if(!CG_UNIT.mounted){ if(a.mount && a.mount.on) v3AnimMountOn(false); return; }
+  // its actions read and none a rider's: nothing to carry him
+  if(!a.mount){ pk.noRide = true; cgPeekHead(); return; }
+  if(pk.preload) await pk.preload;
+  if(!await cgPeekWait(pk, () => a.mount.list || a.mount.err) || !a.mount.list) return;
+  const m = a.mount;
+  cgPeekMountPick(pk, m);
+  // the viewer carries him only while a riding action plays: his mounted
+  // skeleton set and its standing idle
+  const si = (a.list.sets || []).findIndex(x => (x.mount || 'none').toLowerCase() !== 'none');
+  if(si >= 0 && si !== a.set) v3AnimSet(si);
+  const acts = ((v3AnimSk() || {}).actions || []).filter(x => x.playable);
+  const row = ['stand_a_idle', 'stand_idle', 'idle'].map(n => acts.find(x => x.action.toLowerCase() === n)).find(Boolean) || acts[0];
+  if(row && !a.data) await v3AnimPick(v3AnimKey(row));
+  if(cgPeekLive() !== v || !CG_UNIT.mounted || m.on) return;
+  if(!m.x){ v3AnimMountOn(true); return; }
+  m.on = true; m.framed = false;
+  await v3AnimMountAction();
+  if(cgPeekLive() !== v) return;
+  v3AnimFrameMounted(); a.dirty = true; v3AnimPanel();
+}
+function cgPeekMount(on){
+  CG_UNIT.mounted = !!on; cgPeekHead();
+  const pk = CG_UNIT.peek;
+  if(cgPeekDocked(pk) && cgPeekLive()) cgPeekRide(pk); else cgPeekPaint();
+}
+function cgPeekHead(){
+  const head = document.getElementById('cgPeekHead');
+  if(!head) return;
   const pk = CG_UNIT.peek, u = pk && pk.info;
   const t = pk && esc(JSON.stringify(pk.type));
   head.innerHTML = pk ? `<b>${esc(pk.type)}</b><span class="count">${esc(u.category)} · ${esc(u['class'])} · ${esc(pk.entry)}</span>
       ${cgUgSelect(u, pk.entry, `cgUnitPeek(${t},this.value)`)}<span style="flex:1"></span>
       ${pk.err ? `<button class="mini" onclick="cgRetry(${t},${esc(JSON.stringify(pk.entry))},true)">${tt('cards.gen_retry')}</button>` : ''}
+      ${pk.from && CG_UNIT.mounted ? `<span class="count" title="${ttA('cards.gen_peek_borrow_title')}">${tt('cards.gen_peek_borrow', {entry: esc(pk.from)})}</span>` : ''}
       ${pk.noRide && CG_UNIT.mounted ? `<span class="count">${tt('cards.gen_peek_no_ride')}</span>` : ''}
+      ${cgPeekDocked(pk) ? `<button class="mini" title="${ttA('cards.gen_tex_reload_title')}" onclick="cgPeekTexReload()">${tt('cards.gen_tex_reload')}</button>` : ''}
       ${u.mount ? `<button class="mini${CG_UNIT.mounted ? ' on' : ''}" title="${ttA('cards.gen_peek_mounted_title')}" onclick="cgPeekMount(${!CG_UNIT.mounted})">${tt('cards.gen_peek_mounted')}</button>` : ''}
       ${CG_UNIT.unit ? `<button class="mini" onclick="CG_UNIT.picking=false;cgPaint()">${tt('cards.gen_peek_cancel')}</button>` : ''}
       ${cgSessGet(state.src, pk.type) ? `<span class="count">${tt('cards.gen_sess_found')}</span>
@@ -488,13 +607,20 @@ function cgPeekPaint(){
         <button title="${ttA('cards.gen_sess_new_title')}" onclick="cgUnitLoad(${t},${esc(JSON.stringify(pk.entry))},'new')">${tt('cards.gen_sess_new')}</button>`
       : `<button class="primary" onclick="cgUnitLoad(${t},${esc(JSON.stringify(pk.entry))},'new')">${tt('cards.gen_peek_use')}</button>`}`
     : `<span class="count">${tt('cards.gen_peek_none')}</span>`;
-  const dock = document.getElementById('cgPeekV3'), mounted = cgPeekMounted();
-  if(dock){
-    canvas.hidden = mounted; dock.hidden = !mounted;
-    if(mounted && dock.dataset.entry !== pk.entry){ dock.dataset.entry = pk.entry; cgPeekV3(pk); }
-    if(!mounted && dock.dataset.entry){ dock.dataset.entry = ''; if(typeof v3 !== 'undefined' && v3 && v3.host === 'cgPeekV3'){ v3Stop(); v3 = null; } dock.innerHTML = ''; }
-    if(mounted) return;
+}
+function cgPeekPaint(){
+  const canvas = document.getElementById('cgPeek'), dock = document.getElementById('cgPeekV3');
+  if(!canvas || !dock) return;
+  cgPeekHead();
+  const pk = CG_UNIT.peek, docked = cgPeekDocked(pk);
+  canvas.hidden = docked; dock.hidden = !docked;
+  if(docked){
+    // a repaint of the page leaves the viewer an empty host: mounted again
+    if(cgPeekLive() && !dock.firstChild){ v3Stop(); v3 = null; }
+    if(dock.dataset.entry !== pk.type + '|' + pk.entry || !cgPeekLive()){ dock.dataset.entry = pk.type + '|' + pk.entry; cgPeekV3(pk); }
+    return;
   }
+  if(dock.dataset.entry){ dock.dataset.entry = ''; if(cgPeekLive()){ v3Stop(); v3 = null; } dock.innerHTML = ''; }
   const box = canvas.getBoundingClientRect(), ratio = Math.min(2, devicePixelRatio || 1);
   const w = Math.max(64, Math.round(box.width * ratio)), h = Math.max(64, Math.round(box.height * ratio));
   if(canvas.width !== w || canvas.height !== h){ canvas.width = w; canvas.height = h; }
@@ -595,7 +721,28 @@ function cgSessForget(type){ cgSessDrop(state.src, type); cgPaint(); }
 function cgUgHtml(){
   const u = ((CG_UNIT.units || {}).list || []).find(x => x.type === CG_UNIT.unit);
   if(!u || CG_UNIT.picking) return '';
-  return cgUgSelect(u, CG_UNIT.entry, `cgUnitLoad(${esc(JSON.stringify(u.type))},this.value,'level')`) + cgTexHtml();
+  return cgUgSelect(u, CG_UNIT.entry, `cgUnitLoad(${esc(JSON.stringify(u.type))},this.value,'level')`) + cgTexHtml()
+    + `<div class="armexprow"><button class="mini" title="${ttA('cards.gen_tex_reload_title')}" onclick="cgTexReload()">${tt('cards.gen_tex_reload')}</button></div>`;
+}
+/* 2026-11-24: every model's sheets read again, by hand (each is asked for a
+   few times by itself first, armLoadSkin). */
+async function cgTexReload(){
+  const own = armAssetKey({kind: 'entry', mod: CG_UNIT.mod, entry: CG_UNIT.entry});
+  const keys = new Set(cgAllObjects().map(o => ((o.src || [])[0] || {}).asset).filter(Boolean));
+  toast(tt('cards.gen_tex_reloading'));
+  await Promise.all([...keys].map(k => {
+    const live = ARM.assets.get(k);
+    if(!live || !live.asset || live.asset.kind !== 'entry') return null;
+    return armLoadSkin(k === own ? {...live.asset, skin: cgSkinOf(cg().texFaction)} : live.asset, live);
+  }));
+  cgDraw();
+}
+function cgPeekTexReload(){
+  const v = cgPeekLive();
+  if(!v) return;
+  v3LoadSkin(v3Gen);
+  const m = v.anim && v.anim.mount, skin = m && m.x && (m.x.info.skins || []).find(x => x.exists);
+  if(skin) v3AnimExtraSkin(m.x, skin, v);
 }
 /* 2026-11-24: whose textures the model wears. A model lists a texture per
    group of factions (its modeldb skins); the faction picked here wears its
@@ -836,6 +983,8 @@ function cgPaint(){
   main.innerHTML = nav + `<div class="cggrid"><div class="cgctl">${cgSourceHtml()}${controls}<div class="armexperr" id="cgError">${esc(c.err || '')}</div></div>${right}</div>`;
   cgLayout(); keep();
   if(picking){ cgPeekPaint(); return; }
+  // the picker's docked viewer gone with it: stopped
+  if(cgPeekLive()){ v3Stop(); v3 = null; }
   cgWire(); cgDraw(); cgPoseThumbs();
   if(armObjGallery()) armThumbsPaint();
 }
@@ -890,7 +1039,6 @@ function cgObjListHtml(){
       <div class="armexprow"><button class="mini${CG_WORK.grpSel === gk ? ' on' : ''}" title="${ttA('cards.gen_grp_pick_title')}" onclick="cgGroupPick(${q})">${tt('cards.gen_grp_pick')}</button>
         <button class="mini" title="${ttA('armory.hide_show')}" onclick="cgGroupHide(${q})">${objs.every(o => off.has(o.id)) ? '◌' : '●'}</button>
         <button class="mini" title="${ttA('cards.gen_dup_model_title')}" onclick="cgDuplicate(${esc(JSON.stringify(objs.map(o => o.id)))},${esc(JSON.stringify(name))})">${tt('cards.gen_dup_model')}</button>
-        ${cgRiderSpotsHtml(gk, objs)}
         ${dup ? `<button class="mini" title="${ttA('cards.gen_dup_remove')}" onclick="cgDupRemove(${dup})">✕</button>` : ''}</div>
       <label class="cgrange"><span>${tt('cards.gen_grp_scale')}</span><input type="range" min="0.2" max="3" step="0.01" value="${Number(g.s) || 1}" oninput="cgGroupScale(${q},+this.value)"><span data-cggs="${esc(gk)}">${Math.round((Number(g.s) || 1)*100)/100}</span></label>
       ${[...parts].map(part).join('')}</details>`;
@@ -898,7 +1046,7 @@ function cgObjListHtml(){
   return cgSec('objects', `${tt('armory.objects')} <span class="count">${drawn.size} / ${all.length}</span>`, `<div class="armexprow"><span style="flex:1"></span>
       <button class="mini${gal ? '' : ' on'}" onclick="cgObjView('list')">${tt('armory.as_list')}</button>
       <button class="mini${gal ? ' on' : ''}" onclick="cgObjView('gallery')">${tt('armory.as_gallery')}</button></div>
-    ${cgObjXfHtml()}<div class="armobjlist cgobjlist">${body}</div>`);
+    ${cgCrewHtml()}${cgObjXfHtml()}<div class="armobjlist cgobjlist">${body}</div>`);
 }
 /* 2026-11-24: the object picked in the list moved, turned and scaled on the
    card alone (c.oxf, see cgXf). */
@@ -992,7 +1140,8 @@ async function cgPoseAnim(){
   if(cgSrc() === 'armory' && !a.list){ const entry = armAnimEntries()[0]; if(entry) await armAnimFrom(armAssetKey(entry)); }
   if(!a.list){ c.poseNote = tt('cards.gen_no_entry'); return; }
   const skels = a.list.skeletons || {};
-  const presets = {guard:[['stand_a_idle','stand_idle','idle'],0.3],brace:[['ready','ready_hf_idle_1'],0.3],draw:[['attack_missile_hold','attack_missile_ready'],0.5],riding:[['stand_a_idle','ready'],0.3],march:[['walk','march'],0.25]};
+  // an elephant's driver sits by his own crew idle where his skeleton has one
+  const presets = {guard:[['elephant_crew_idle','stand_a_idle','stand_idle','idle'],0.3],brace:[['ready','ready_hf_idle_1'],0.3],draw:[['attack_missile_hold','attack_missile_ready'],0.5],riding:[['elephant_crew_idle','stand_a_idle','ready'],0.3],march:[['walk','march'],0.25]};
   let selected = null, skeleton = a.skel;
   if(c.pose === 'anim' && a.data){ a.playing = false; return; }
   const names = Object.keys(skels).sort((x,y) => {
@@ -1025,10 +1174,11 @@ async function cgSeat(){
   const m = await a.mountFor(slot);
   if(m && armAnim() === a && a.data && !a.mount){ a.mount = m; CG_WORK.fit = null; }
 }
-/* A horse rides under its man; an elephant's crew stand in its howdah, beside. */
+/* A horse carries its man; 2026-11-24: an elephant its driver, at its first
+   rider_offset, and its riders at the others (cgCrewLoad). */
 function cgSeated(){
   const u = ((CG_UNIT.units || {}).list || []).find(x => x.type === CG_UNIT.unit);
-  return !!(u && u.mount && !u.engine && !/elephant|mumak|oliphaunt|howdah/i.test(u.mount));
+  return !!(u && u.mount && !u.engine);
 }
 function cgTwoHands(on){
   const basis = cg().rig.basis; basis.Switch = {...basis.Switch,l:[0,on ? 0.05 : 0,0]}; cgFitChanged(); cgDraw();
@@ -1218,6 +1368,7 @@ function cgViewBarHtml(hw,hh){
     ${b(CG_WORK.rest && rig,'cards.gen_mode_rest','cards.gen_mode_rest_title','cgRestToggle()',!rig)}
     <span class="count">${tt('cards.gen_hd',{w:hw,h:hh})}</span><span style="flex:1"></span>
     ${b(c.overlay,'cards.gen_overlay','cards.gen_overlay_title',"cgToggle('overlay')")}
+    ${cgIsInfo() ? '' : b(c.guide,'cards.gen_overlay_xp','cards.gen_guide_title',"cgToggle('guide')")}
     ${b(rig && c.rig.handles,'cards.gen_bones','cards.gen_bones_title',"cgToggle('handles')",!rig)}
     ${b(false,c.cam.persp ? 'cards.gen_lens_persp' : 'cards.gen_lens_ortho','cards.gen_lens_title',"cgToggle('persp')")}`;
 }
@@ -1235,6 +1386,7 @@ function cgRestToggle(){ CG_WORK.rest = !CG_WORK.rest; cgViewBarPaint(); cgDraw(
 function cgToggle(what){
   const c = cg();
   if(what === 'overlay') c.overlay = !c.overlay;
+  else if(what === 'guide'){ c.guide = !c.guide; cgCardDraw(); }
   else if(what === 'handles') c.rig.handles = !c.rig.handles;
   else if(what === 'persp'){ c.cam.persp = !c.cam.persp; CG_WORK.view = null; }
   cgViewBarPaint();
@@ -1274,12 +1426,28 @@ function cgPickObject(point){
   const i = px[0]+px[1]*256-1;
   return i >= 0 && objects[i] ? objects[i].id : 0;
 }
+/* Every object drawn under a point of the view, each tried alone. */
+function cgObjectsAt(point){
+  const cam = CG_WORK.camera, hd = document.getElementById('cgHd'), gl = armGl();
+  if(!cam || !hd || !gl) return [];
+  const w = hd.width, h = hd.height, x = Math.round(point[0]), y = Math.round(point[1]), px = new Uint8Array(4), out = [];
+  if(x < 0 || y < 0 || x >= w || y >= h) return [];
+  for(const o of cgObjects()){
+    armRender([o],w,h,cam,{plain:true,card:true,pre:cam.pre,mask:true,bg:[0,0,0],maskCol:[1,0,0]});
+    gl.readPixels(x,ARM.glCanvas.height-1-y,1,1,gl.RGBA,gl.UNSIGNED_BYTE,px);
+    if(px[0] > 127) out.push(o.id);
+  }
+  cgViewAsk();
+  return out;
+}
 function cgGroupPick(gk){
   CG_WORK.grpSel = CG_WORK.grpSel === gk ? '' : gk; CG_WORK.objSel = 0; CG_WORK.selAll = false;
   CG_WORK.mode = 'object'; cgViewBarPaint(); cgObjsRefresh(); cgViewAsk();
 }
 function cgObjClick(point){
-  const id = cgPickObject(point);
+  let id = cgPickObject(point);
+  // 2026-11-24: the picked object clicked again: the next one under the pointer
+  if(id && id === CG_WORK.objSel){ const under = cgObjectsAt(point); if(under.length > 1) id = under[(under.indexOf(id)+1) % under.length]; }
   CG_WORK.objSel = id; CG_WORK.selAll = false; CG_WORK.grpSel = '';
   cgObjsRefresh(); cgViewAsk();
 }
@@ -1482,32 +1650,72 @@ function cgGiveRow(type){
 async function cgGivePics(type, r){
   try{
     const d = await cgGet(`/api/edit/unit?mod=${enc(state.src)}&type=${enc(type)}`), kind = cg().saved && cg().saved.kind === 'info' ? 'info' : 'card';
+    CG_WORK.facNames = {...(CG_WORK.facNames || {}), ...(d.faction_names || {})};
+    if(d.all_factions) CG_WORK.facAll = d.all_factions;
     r.pics = {};
     for(const row of (d.icon_variants || {})[kind] || []) for(const f of row.factions || []) r.pics[f.toLowerCase()] = row.rel;
   }catch(e){ r.pics = {}; }
   cgGiveRepaint(true);
 }
+/* 2026-11-24: a faction by its name in the game with its code in brackets,
+   as the unit editor shows it (facTwoNames). */
+const cgFac = f => facTwoNames(f, (CG_WORK.facNames || {})[f] || (state.factionNames || {})[f]);
 function cgGiveTile(type, f, r, kind){
   const own = r.pics && r.pics[f], on = r.picked.has(f), q = v => esc(JSON.stringify(v)), isNew = r.added.includes(f), g = cg().give;
   const src = own ? `/icon?mod=${enc(state.src)}&kind=modfile&rel=${enc(own)}${iconBust()}` : kind === 'info' ? iconUrl(state.src, type, 'info') : iconUrl(state.src, type, 'card', f);
   return `<button class="cggivetile${on ? ' on' : ''}${f === cg().texFaction ? ' cgtexf' : ''}${g.mercs ? ' off' : ''}" ${g.mercs ? 'disabled' : ''}
-      title="${esc(isNew ? tt('cards.gen_give_new_owner') : own ? own : tt('cards.gen_give_fallback'))}" onclick="cgGiveTick(${q(type)},${q(f)})">
-    <img loading="lazy" onerror="iconRetry(this)" src="${src}" alt=""><span>${esc(f)}${isNew ? ' +' : ''}</span>
+      title="${esc(cgFac(f) + ' · ' + (isNew ? tt('cards.gen_give_new_owner') : own ? own : tt('cards.gen_give_fallback')))}" onclick="cgGiveTick(${q(type)},${q(f)})">
+    <img loading="lazy" onerror="iconRetry(this)" src="${src}" alt=""><span>${esc(cgFac(f))}${isNew ? ' +' : ''}</span>
     ${on ? `<i>${tt('cards.gen_give_replace')}</i>` : own ? '' : `<i class="count">${tt('cards.gen_give_none')}</i>`}</button>`;
+}
+/* 2026-11-24: the mercenary folder's card, shown beside the factions' own. */
+function cgGiveMercTile(type, r, kind){
+  const g = cg().give, f = cgGiveMerc(kind), own = r.pics && (r.pics[f] || r.pics.merc || r.pics.mercs);
+  const src = own ? `/icon?mod=${enc(state.src)}&kind=modfile&rel=${enc(own)}${iconBust()}` : iconUrl(state.src, type, kind, f);
+  return `<button class="cggivetile cggivemerc${g.mercs ? ' on' : ''}" title="${ttA('cards.gen_give_mercs_title')}" onclick="cgGiveSet('mercs',!cg().give.mercs)">
+    <img loading="lazy" onerror="iconRetry(this)" src="${src}" alt=""><span>${tt('cards.gen_give_merc_tile')}</span>
+    ${g.mercs ? `<i>${tt('cards.gen_give_replace')}</i>` : own ? '' : `<i class="count">${tt('cards.gen_give_none')}</i>`}</button>`;
+}
+/* + : the factions that do not own the unit, as the unit editor's checklist,
+   found by either name; the find box filters the rows in place. */
+function cgGiveOwnersHtml(type, r, rest, sk){
+  const q = v => esc(JSON.stringify(v));
+  const rows = rest.map(f => `<div class="cgfacrow" data-f="${esc((f + ' ' + cgFac(f)).toLowerCase())}">${facCheckRow(f, (CG_WORK.facNames || {})[f],
+    `cgGiveOwnerSet(${q(type)},${q(f)},this.checked)`, r.added.includes(f), sk.all.includes(f) ? tt('cards.gen_give_has_tex') : '')}</div>`).join('');
+  return `<div class="cggiveowners"><input placeholder="${ttA('armory.find')}" oninput="cgGiveOwnersFind(this)"><div class="faclist">${rows}</div></div>`;
+}
+function cgGiveOwnersFind(input){
+  const q = input.value.trim().toLowerCase();
+  input.parentNode.querySelectorAll('.cgfacrow').forEach(el => { el.hidden = !!q && !el.dataset.f.includes(q); });
+}
+function cgGiveOwnerSet(type, f, on){
+  const r = cg().give.rows[type];
+  if(on){ if(!r.added.includes(f)) r.added.push(f); r.picked.add(f); }
+  else{ r.added = r.added.filter(x => x !== f); r.picked.delete(f); }
+  // the checklist stays open and where it was scrolled: only the tiles above it change
+  const el = document.querySelector(`[data-cgtiles="${CSS.escape(type)}"]`);
+  if(el) el.innerHTML = cgGiveTilesHtml(type);
+  cg().give.plans = null;
+}
+function cgGiveTilesHtml(type){
+  const g = cg().give, r = g.rows[type], kind = cg().saved && cg().saved.kind === 'info' ? 'info' : 'card', q = v => esc(JSON.stringify(v));
+  return [...r.owned, ...r.added].map(f => cgGiveTile(type, f, r, kind)).join('') + cgGiveMercTile(type, r, kind)
+    + `<button class="cggivetile cggiveplus${r.plus ? ' on' : ''}" title="${ttA('cards.gen_give_adds_owner')}" onclick="cgGivePlus(${q(type)})"${g.mercs ? ' disabled' : ''}><b>+</b><span>${tt('cards.gen_give_add_owner')}</span></button>`;
 }
 function cgSavedHtml(){
   const c = cg(), s = c.saved; if(!s) return '';
   if(!c.give) cgGiveOpen();
   const g = c.give, q = v => esc(JSON.stringify(v)), kind = s.kind === 'info' ? 'info' : 'card', sk = cgSkinFactions();
   const rows = g.order.map(type => {
-    const r = g.rows[type], tiles = [...r.owned, ...r.added].map(f => cgGiveTile(type, f, r, kind)).join('');
+    const r = g.rows[type];
     // + : a faction that does not own it yet, the model's textured ones first
     const rest = [...new Set([...sk.all, ...cgGiveUnits().flatMap(u => u.factions || []).map(f => f.toLowerCase())])]
-      .filter(f => f !== 'merc' && f !== 'mercs' && !r.owned.includes(f) && !r.added.includes(f))
-      .sort((x,y) => Number(sk.all.includes(y)) - Number(sk.all.includes(x)) || x.localeCompare(y));
+      .concat(CG_WORK.facAll || []).filter((f, i, l) => l.indexOf(f) === i)
+      .filter(f => f !== 'merc' && f !== 'mercs' && !r.owned.includes(f))
+      .sort((x,y) => Number(sk.all.includes(y)) - Number(sk.all.includes(x)) || cgFac(x).localeCompare(cgFac(y)));
     return `<div class="cggive"><div class="armexprow"><b>${esc(type)}</b>${type !== CG_UNIT.unit ? `<button class="mini" title="${ttA('cards.gen_give_drop')}" onclick="cgGiveDrop(${q(type)})">✕</button>` : ''}</div>
-      <div class="cggivetiles">${tiles}<button class="cggivetile cggiveplus${r.plus ? ' on' : ''}" title="${ttA('cards.gen_give_adds_owner')}" onclick="cgGivePlus(${q(type)})"${g.mercs ? ' disabled' : ''}><b>+</b><span>${tt('cards.gen_give_add_owner')}</span></button></div>
-      ${r.plus ? `<div class="armchips">${rest.map(f => `<button class="mini${sk.all.includes(f) ? ' cgtexf' : ''}" onclick="cgGiveOwner(${q(type)},${q(f)})">${esc(f)}</button>`).join('')}</div>` : ''}</div>`;
+      <div class="cggivetiles" data-cgtiles="${esc(type)}">${cgGiveTilesHtml(type)}</div>
+      ${r.plus ? cgGiveOwnersHtml(type, r, rest, sk) : ''}</div>`;
   }).join('');
   const plans = g.plans ? g.plans.map(p => `<div class="cggiveplan"><b>${esc(p.unit)}</b>${p.error ? `<div class="armissue">${esc(p.error)}</div>`
       : (p.errors || []).map(e => `<div class="armissue">${esc(e)}</div>`).join('') + (p.changes || []).map(e => `<div>${esc(e)}</div>`).join('') + (p.warnings || []).map(e => `<div class="w-warn">${esc(e)}</div>`).join('')}</div>`).join('') : '';
@@ -1515,19 +1723,35 @@ function cgSavedHtml(){
   return `<p class="ok">${tt('cards.gen_saved',{path:esc(s.path)})} <button class="mini" onclick="cgReveal(${q(s.path)})">${tt('editor.open_file_location')}</button></p>
     <div class="cggivemenu"><b>${tt(kind === 'info' ? 'cards.gen_give_info_head' : 'cards.gen_give_head')}</b>
     <p class="count">${tt('cards.gen_give_note')}</p>${rows}
+    ${cgGiveSuggestHtml()}
     <div class="armexprow"><button class="mini${g.adding ? ' on' : ''}" onclick="cgGiveSet('adding',!cg().give.adding)">${tt('cards.gen_give_add')}</button>
       <button class="mini" title="${ttA('cards.gen_give_all_title')}" onclick="cgGiveAll()">${tt('cards.gen_give_all')}</button></div>
-    ${g.adding ? upkHtml('cgGive', cgGiveUnits(), {skip: g.order, model: cgUnitModel, onPick: cgGiveAdd}) : ''}
+    ${g.adding ? upkHtml('cgGive', cgGiveUnits(), {tiles: true, skip: g.order, model: cgUnitModel, onPick: cgGiveAdd}) : ''}
     <label class="armcheck" title="${ttA('cards.gen_give_mercs_title')}"><input type="checkbox"${g.mercs ? ' checked' : ''} onchange="cgGiveSet('mercs',this.checked)">${tt('cards.gen_give_mercs')}</label>
     ${g.mercs ? `<label class="armcheck cggivesub"><input type="checkbox"${g.only ? ' checked' : ''} onchange="cgGiveSet('only',this.checked)">${tt('cards.gen_give_mercs_only')}</label>` : ''}
-    <div class="armexprow"><button onclick="cgGive(false)">${tt('cards.gen_give')}</button>${ok ? `<button class="primary" onclick="cgGive(true)">${tt('cards.gen_give_apply')}</button>` : ''}</div>
-    ${plans}</div>`;
+    <div class="armexprow"><button onclick="cgGive(false)">${tt('cards.gen_give')}</button>
+      <button class="primary" title="${ttA('cards.gen_give_now_title')}" onclick="cgGive(true,${ok ? 'false' : 'true'})">${tt(ok ? 'cards.gen_give_apply' : 'cards.gen_give_now')}</button></div>
+    ${plans}${(g.done || []).length ? `<div class="cggivedone"><span class="ok">${tt('cards.gen_given_n', {n: g.done.length})}</span>${g.done.map(t =>
+      `<button class="mini" title="${ttA('cards.gen_give_open_title')}" onclick="cgOpenUnit(${q(t)})">${tt('cards.gen_give_open', {unit: esc(t)})}</button>`).join('')}</div>` : ''}</div>`;
 }
 /* quiet: a picture list come in, the plans shown kept */
 function cgGiveRepaint(quiet){ const c = cg(); if(c.give && !quiet) c.give.plans = null; const el = document.getElementById('cgSaveResult'); if(el && c.give) el.innerHTML = cgSavedHtml(); }
 function cgGiveTick(type, f){ const r = cg().give.rows[type]; if(r.picked.has(f)) r.picked.delete(f); else r.picked.add(f); cgGiveRepaint(); }
 function cgGivePlus(type){ const r = cg().give.rows[type]; r.plus = !r.plus; cgGiveRepaint(true); }
-function cgGiveOwner(type, f){ const r = cg().give.rows[type]; r.added.push(f); r.picked.add(f); r.plus = false; cgGiveRepaint(); }
+/* 2026-11-24: the other units with the same model (its soldier or armour
+   upgrade line), suggested: a click adds one, with its own owners' cards. */
+function cgGiveSuggest(){
+  const g = cg().give, entry = cgSrc() === 'unit' ? (CG_UNIT.entry || '').toLowerCase() : '';
+  if(!entry || !g) return [];
+  return cgGiveUnits().filter(u => !g.order.includes(u.type) && [u.soldier, ...(u.ug || [])].some(m => (m || '').toLowerCase() === entry));
+}
+function cgGiveSuggestHtml(){
+  const list = cgGiveSuggest();
+  if(!list.length) return '';
+  return `<div class="cggivesuggest"><span class="count">${tt('cards.gen_give_suggest')}</span><div class="cggivetiles">${list.slice(0, 24).map(u =>
+    `<button class="cggivetile" title="${ttA('cards.gen_give_suggest_title')}" onclick="cgGiveAdd(${esc(JSON.stringify(u.type))})">
+      <img loading="lazy" onerror="iconRetry(this)" src="${iconUrl(state.src, u.type, 'card')}" alt=""><span>${esc(u.type)}</span><i>+</i></button>`).join('')}</div></div>`;
+}
 function cgGiveAdd(type){ const g = cg().give; if(g.order.includes(type)) return; g.order.push(type); g.rows[type] = cgGiveRow(type); g.adding = false; cgGiveRepaint(); }
 function cgGiveDrop(type){ const g = cg().give; g.order = g.order.filter(t => t !== type); delete g.rows[type]; cgGiveRepaint(); }
 function cgGiveAll(){ for(const r of Object.values(cg().give.rows)) r.picked = new Set([...r.owned, ...r.added]); cgGiveRepaint(); }
@@ -1543,12 +1767,14 @@ function cgGiveBody(type){
   if(adds.length) body.field_overrides = {ownership: [...r.owned, ...adds].join(', ')};
   return body;
 }
-async function cgGive(apply){
+/* now: Apply now, with no Preview first (the server checks the edit as it applies it) */
+async function cgGive(apply, now){
   const c = cg(), g = c.give;
   if(!c.saved || !g) return;
   const types = g.order.filter(t => g.rows[t].on && (g.mercs || g.rows[t].picked.size));
   if(!types.length){ toast(tt('cards.gen_unit_first')); return; }
-  if(apply && !(g.plans && g.plans.length)) return;
+  if(apply && !now && !(g.plans && g.plans.length)) return;
+  g.done = [];
   const out = [];
   for(const type of types){
     try{
@@ -1558,12 +1784,17 @@ async function cgGive(apply){
   }
   if(cg() !== c || c.give !== g) return;
   if(apply){
-    const bad = out.filter(p => p.error);
-    toast(bad.length ? bad.map(p => p.unit + ': ' + p.error).join('; ') : tt('cards.gen_given_n', {n: out.length}));
-    g.plans = null;
+    const bad = out.filter(p => p.error || (p.errors || []).length);
+    toast(bad.length ? bad.map(p => p.unit + ': ' + (p.error || p.errors.join(', '))).join('; ') : tt('cards.gen_given_n', {n: out.length}));
+    g.plans = bad.length ? bad : null;
+    g.done = out.filter(p => !bad.includes(p)).map(p => p.unit);
+    // the pictures now in the mod: fetched afresh
+    if(g.done.length) state.iconV = Date.now();
   }else g.plans = out;
   const el = document.getElementById('cgSaveResult'); if(el) el.innerHTML = cgSavedHtml();
 }
+/* 2026-11-24: a unit the card was given to, opened in the unit editor in a new tab */
+function cgOpenUnit(type){ window.open(`/?mod=${enc(state.src)}&edit=${enc(type)}`, '_blank'); }
 /* 2026-11-24: Open file location for a card just saved, in its message too */
 function cgReveal(path){ api.post('/api/armory/cards/reveal',{path}).then(r => { if(!r.ok) toast(tt('cards.gen_reveal_failed')); }).catch(e => toast(errText(e))); }
 function cgToastReveal(path){
@@ -1615,8 +1846,9 @@ function cgOverlay(){
     ctx.fillStyle = 'rgba(8,10,14,0.5)'; ctx.beginPath(); ctx.rect(0,0,hd.width,hd.height); ctx.rect(cut.x,cut.y,cut.w,cut.h); ctx.fill('evenodd');
     ctx.lineWidth = lw*3; ctx.strokeStyle = 'rgba(0,0,0,0.85)'; ctx.strokeRect(cut.x-lw,cut.y-lw,cut.w+lw*2,cut.h+lw*2);
     ctx.lineWidth = lw; ctx.strokeStyle = (pref.colours || {}).accent || '#f4ce61'; ctx.strokeRect(cut.x-lw,cut.y-lw,cut.w+lw*2,cut.h+lw*2);
-    if(cg().guide && !cgIsInfo()) cgGuideDraw(ctx,cut);
   }
+  // 2026-11-24: the experience overlay has a button of its own (cgViewBarHtml)
+  if(cut && cg().guide && !cgIsInfo()) cgGuideDraw(ctx,cut);
   CG_WORK.handles = [];
   // 2026-11-24: drawn before the view's first draw (a picture landing, a hover)
   // there is no camera yet to put the handles through
@@ -1674,10 +1906,13 @@ function cgPointerPoint(event){
   const s = Math.min(box.width/hd.width,box.height/hd.height);
   return [(event.clientX-box.left-(box.width-hd.width*s)/2)/s,(event.clientY-box.top-(box.height-hd.height*s)/2)/s];
 }
-function cgHit(event){
+function cgHit(event){ return cgHits(event)[0]; }
+/* 2026-11-24: every handle under the pointer, nearest first: a click on the
+   picked one again picks the next (as Blender's does). */
+function cgHits(event){
   const p = cgPointerPoint(event), hd = document.getElementById('cgHd');
-  const radius = Math.max(10,hd.width/60);
-  return CG_WORK.handles.find(h => Math.hypot(h.point[0]-p[0],h.point[1]-p[1]) < radius);
+  const radius = Math.max(10,hd.width/60), d = h => Math.hypot(h.point[0]-p[0],h.point[1]-p[1]);
+  return CG_WORK.handles.filter(h => d(h) < radius).sort((a,b) => d(a)-d(b));
 }
 function cgSyncCamera(){
   const c = cg();
@@ -1724,8 +1959,8 @@ function cgWire(){
     if(e.button === 1 || e.altKey && e.button === 0){ e.preventDefault(); drag = {kind:'camera'}; }
     else if(simple && e.button === 2){ e.preventDefault(); drag = {kind:'camera',pan:true}; }
     else if(e.button === 0){
-      const hit = cgHit(e);
-      if(hit){ drag = {kind:'rig',handle:hit}; cgBoneSelect(hit.name); }
+      const hits = cgHits(e), hit = hits.find(h => h.name === CG_WORK.boneSel) || hits[0];
+      if(hit){ drag = {kind:'rig',handle:hit,click:[e.clientX,e.clientY],cycle:hits.length > 1 && hit.name === CG_WORK.boneSel ? hits : null}; cgBoneSelect(hit.name); }
       else drag = {kind:simple ? 'camera' : 'none',click:[e.clientX,e.clientY]};
     }
     if(drag) hd.setPointerCapture(e.pointerId);
@@ -1794,6 +2029,7 @@ function cgWire(){
   hd.addEventListener('pointerup',e => {
     const d = drag; drag = null;
     if(hd.hasPointerCapture(e.pointerId)) hd.releasePointerCapture(e.pointerId);
+    if(d && d.kind === 'rig'){ if(d.cycle && !d.moved){ const i = d.cycle.findIndex(h => h.name === CG_WORK.boneSel); cgBoneSelect(d.cycle[(i+1) % d.cycle.length].name); cgOverlay(); } return; }
     if(d && d.click && !d.moved){ if(cgMode() === 'object') cgObjClick(cgPointerPoint(e)); else cgBoneSelect(''); }
   });
   hd.addEventListener('keydown',e => cgViewKey(e,false));

@@ -281,14 +281,17 @@ async function v3Open(mod, entry){
    Still ONE viewer at a time. A second WebGL context on the same page is a
    second copy of a 30 MB mesh and a second animation loop, for a second view of
    a model nobody is looking at; mounting somewhere new drops what was there. */
-async function v3Mount(hostId, mod, entry){
-  if(v3 && v3.host === hostId && v3.entry === entry && v3.mod === mod && !v3.loose) return;
+/* animEntry (2026-11-24, the card maker's unit picker): another entry whose
+   skeletons play this one, for an armour upgrade model modeldb gives no riding
+   skeleton while the unit's own soldier model has one. */
+async function v3Mount(hostId, mod, entry, animEntry){
+  if(v3 && v3.host === hostId && v3.entry === entry && v3.mod === mod && !v3.loose && (v3.animEntry || '') === (animEntry || '')) return;
   v3Stop();
   v3Back = null; v3 = null;
   const host = document.getElementById(hostId);
   if(!host) return;
   host.innerHTML = `<div class="empty">${tt('viewer3d.reading',{entry:esc(entry)})}</div>`;
-  await v3Begin(mod, entry, hostId);
+  await v3Begin(mod, entry, hostId, '', '', animEntry);
 }
 
 /* A .mesh under unit_models that no entry names, docked the same way. It is
@@ -378,7 +381,7 @@ async function v3MountCas(hostId, mod, rel){
 // requests in flight, and the one that answers last must not be the one drawn
 let v3BeginSeq = 0;
 
-async function v3Begin(mod, entry, host, cas, loose){
+async function v3Begin(mod, entry, host, cas, loose, animEntry){
   // Whatever was showing goes first. Two WebGL contexts on one page is two
   // copies of a 30 MB mesh and two animation loops, one of them for a view
   // nobody can see any more.
@@ -397,7 +400,7 @@ async function v3Begin(mod, entry, host, cas, loose){
   // `skin` indexes info.skins, because a skin is a PAIR of files now - the
   // main sheet and the attachment sheet a faction uses together - and a pair
   // has no one path to name it by
-  v3 = {mod, entry, info, cas: cas || '', loose: loose || '', host: host || '', lod: 0, skin: 0,
+  v3 = {mod, entry, info, cas: cas || '', loose: loose || '', host: host || '', lod: 0, skin: 0, animEntry: animEntry || '',
         geo: null, tex: null, texAtt: null, hidden: {}, variant: {},
         wire: false, spin: false, uv: false,
         // the UV layout pane: whether it is open, how it is framed (null until
@@ -993,8 +996,14 @@ function v3AskWhy(rel, want){
 /* One image per sheet. They land independently and either may be missing - a
    mod that references vanilla art ships neither - so each one applies as it
    arrives rather than waiting for the pair. */
-function v3Fetch(rel, want, into){
+/* 2026-11-24: a sheet that did not come is asked for again, four times over
+   about nine seconds, before it counts as missing: the server converting a
+   big .dds for the first time, or busy with the model, dropped it now and
+   then and the model stood bare. */
+const V3_TEX_WAIT = [600, 1200, 2400, 4800];
+function v3Fetch(rel, want, into, tries){
   if(!rel){ v3[into] = null; v3Apply(); return; }
+  tries = tries || 0;
   const img = new Image();
   img.onload = () => {
     if(want!==v3Gen || !v3) return;
@@ -1004,9 +1013,10 @@ function v3Fetch(rel, want, into){
   };
   img.onerror = () => {
     if(want!==v3Gen || !v3) return;
+    if(tries < V3_TEX_WAIT.length){ setTimeout(() => { if(want === v3Gen && v3) v3Fetch(rel, want, into, tries + 1); }, V3_TEX_WAIT[tries]); return; }
     v3[into] = null; v3Apply(); v3AskWhy(rel, want);
   };
-  img.src = v3TexUrl(rel);
+  img.src = v3TexUrl(rel) + (tries ? (v3TexUrl(rel).includes('?') ? '&' : '?') + 'try=' + tries : '');
 }
 
 async function v3LoadSkin(want){

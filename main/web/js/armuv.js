@@ -36,13 +36,30 @@ function armUvBuffer(live, pc){
 function armUvOpen(){
   const o = armSelected()[0];
   if(!o || armSelected().length !== 1 || !(o.src || []).length){ toast(tt('armory.uv_pick_one')); return; }
-  ARM.uvEd = {id: o.id, mode: 'vertex', view: 'sheet', show: '', snap: true, sel: new Set(),
+  // 2026-11-24: the way it was last set up (mode, view, lines, snap) kept for the next object
+  const was = ARM.uvLast || {};
+  ARM.uvEd = {id: o.id, mode: was.mode || 'vertex', view: was.view || 'sheet', show: '', snap: was.snap !== false, wire: was.wire !== false, sel: new Set(),
               z: 1, ox: 0, oy: 0, drag: null, xf: null};
   armUvBuild();
   armUvPanel();
 }
+/* 2026-11-24: another object picked while the UV editor is open: its UVs. */
+function armUvFollow(){
+  const e = ARM.uvEd, sel = armSelected();
+  if(!e || e.xf || e.drag || sel.length !== 1 || sel[0].id === e.id || !(sel[0].src || []).length) return;
+  armUvOpen();
+}
+/* The 3D view's Edit Mode (the detail view) on the same object. */
+function armUvEditMode(){
+  const e = ARM.uvEd;
+  if(!e) return;
+  if(!ARM.sel.has(e.id) || ARM.sel.size !== 1){ ARM.sel = new Set([e.id]); ARM.active = e.id; armPaintObjects(); }
+  if(!ARM.detail) armDetailOpen();
+  armPaintBar();
+}
 function armUvClose(){
   if(ARM.uvEd && ARM.uvEd.xf) armUvXfEnd(true);
+  if(ARM.uvEd){ const e = ARM.uvEd; ARM.uvLast = {mode: e.mode, view: e.view, snap: e.snap, wire: e.wire}; }
   const el = document.getElementById('armUvPanel');
   if(el) el.remove();
   ARM.uvEd = null;
@@ -76,6 +93,12 @@ function armUvBuild(){
   const find = i => { while(up[i] !== i){ up[i] = up[up[i]]; i = up[i]; } return i; };
   for(const [a, b, c] of e.tris){ up[find(b)] = find(a); up[find(c)] = find(a); }
   e.island = e.pts.map((_, i) => find(i));
+  const ek = new Set();
+  e.edges = [];
+  for(const [a, b, c] of e.tris) for(const [x, y] of [[a, b], [b, c], [c, a]]){
+    const k = x < y ? x + ',' + y : y + ',' + x;
+    if(!ek.has(k)){ ek.add(k); e.edges.push([x, y]); }
+  }
 }
 
 /* --- the sheet behind, and where a UV lands on the canvas ----------------------------- */
@@ -134,11 +157,17 @@ function armUvPanel(){
       <b>${tt('armory.uv_edit')}</b> <span class="count">${esc(o.mesh)}</span><span style="flex:1"></span>
       <button class="mini" onclick="armUvClose()">✕</button></div>
     <div class="armuvbar">
-      <button class="mini${e.mode === 'vertex' ? ' on' : ''}" onclick="armUvSet('mode','vertex')">${tt('armory.uv_vertex')}</button>
-      <button class="mini${e.mode === 'island' ? ' on' : ''}" onclick="armUvSet('mode','island')">${tt('armory.uv_island')}</button>
-      ${entry ? `<button class="mini${e.view === 'sheet' ? ' on' : ''}" onclick="armUvSet('view','sheet')" title="${esc(tt('armory.uv_sheet_title'))}">${tt('armory.uv_sheet')}</button>
-        <button class="mini${e.view === 'm2' ? ' on' : ''}" onclick="armUvSet('view','m2')" title="${esc(tt('armory.uv_m2_title'))}">${tt('armory.uv_m2')}</button>` : ''}
+      <span class="armgrp" title="${esc(tt('armory.uv_modes_title'))}">${[['vertex', tt('armory.uv_vertex')], ['edge', tt('armory.uv_edge')], ['face', tt('armory.uv_face')], ['island', tt('armory.uv_island')]].map(([m, label]) =>
+        `<button class="mini${e.mode === m ? ' on' : ''}" onclick="armUvSet('mode','${m}')">${label}</button>`).join('')}</span>
+      ${entry ? `<span class="armgrp armuvpair" title="${esc(tt('armory.uv_pair_title'))}" onclick="armUvSet('view',ARM.uvEd.view === 'm2' ? 'sheet' : 'm2')">
+        <button class="mini${e.view === 'sheet' ? ' on' : ''}" title="${esc(tt('armory.uv_sheet_title'))}">${tt('armory.uv_sheet')}</button><span class="count">⇄</span>
+        <button class="mini${e.view === 'm2' ? ' on' : ''}" title="${esc(tt('armory.uv_m2_title'))}">${tt('armory.uv_m2')}</button></span>` : ''}
+    </div>
+    <div class="armuvbar">
+      <label class="armcheck" title="${esc(tt('armory.uv_wire_title'))}"><input type="checkbox"${e.wire ? ' checked' : ''} onchange="ARM.uvEd.wire=this.checked;armUvPaint()"> ${tt('armory.uv_wire')}</label>
       <label class="armcheck"><input type="checkbox"${e.snap ? ' checked' : ''} onchange="ARM.uvEd.snap=this.checked"> ${tt('armory.uv_snap')}</label>
+      <span style="flex:1"></span>
+      <button class="mini${ARM.detail ? ' on' : ''}" onclick="armUvEditMode()" title="${esc(tt('armory.uv_editmode_title'))}">${tt('armory.uv_editmode')}</button>
     </div>
     <div class="armuvbar">
       <select onchange="armUvShow(this.value)" title="${esc(tt('armory.uv_show_title'))}">
@@ -157,7 +186,12 @@ function armUvPanel(){
   c.addEventListener('mouseenter', () => c.focus({preventScroll: true}));
   armUvPaint();
 }
-function armUvSet(k, v){ ARM.uvEd[k] = v; armUvPanel(); }
+function armUvSet(k, v){
+  const e = ARM.uvEd; e[k] = v;
+  // a mode that picks less keeps what is picked; island grows it to whole islands
+  if(k === 'mode' && v === 'island' && e.sel.size){ const isl = new Set([...e.sel].map(i => e.island[i])); e.pts.forEach((_, i) => isl.has(e.island[i]) && e.sel.add(i)); }
+  armUvPanel();
+}
 async function armUvShow(url){
   const e = ARM.uvEd;
   e.show = url;
@@ -200,10 +234,18 @@ function armUvPaint(){
   if(g.sh.span === 2){ x.beginPath(); x.moveTo(g.x0 + g.W / 2, g.y0); x.lineTo(g.x0 + g.W / 2, g.y0 + g.H); x.stroke(); }
   const P = e.pts.map(g.to);
   x.lineWidth = 1;
-  x.strokeStyle = 'rgba(255, 200, 60, 0.8)';
-  x.beginPath();
-  for(const [a, b, cc] of e.tris){ x.moveTo(P[a][0], P[a][1]); x.lineTo(P[b][0], P[b][1]); x.lineTo(P[cc][0], P[cc][1]); x.closePath(); }
-  x.stroke();
+  // 2026-11-24: the yellow lines can be turned off (Show UVs), to see the sheet
+  if(e.wire){
+    x.strokeStyle = 'rgba(255, 200, 60, 0.8)';
+    x.beginPath();
+    for(const [a, b, cc] of e.tris){ x.moveTo(P[a][0], P[a][1]); x.lineTo(P[b][0], P[b][1]); x.lineTo(P[cc][0], P[cc][1]); x.closePath(); }
+    x.stroke();
+  }
+  if(e.sel.size && e.mode === 'edge'){
+    x.strokeStyle = '#ff8c1e'; x.lineWidth = 2; x.beginPath();
+    for(const [a, b] of e.edges) if(e.sel.has(a) && e.sel.has(b)){ x.moveTo(P[a][0], P[a][1]); x.lineTo(P[b][0], P[b][1]); }
+    x.stroke(); x.lineWidth = 1;
+  }
   if(e.sel.size){
     x.fillStyle = 'rgba(255, 140, 30, 0.25)';
     x.beginPath();
@@ -240,9 +282,33 @@ function armUvNearest(X, Y, within){
   e.pts.forEach((p, i) => { const [px, py] = g.to(p); const d = (px - X) ** 2 + (py - Y) ** 2; if(d < bd){ bd = d; best = i; } });
   return best;
 }
-function armUvPick(i, add){
+/* 2026-11-24: what a click is on in the mode picked: a vertex, an edge (its
+   two ends), a face (its three corners) or an island. A list of points, or
+   null when the click is on nothing. */
+function armUvHit(X, Y){
+  const e = ARM.uvEd, g = armUvGeom(document.getElementById('armUvCanvas')), P = e.pts.map(g.to);
+  if(e.mode === 'edge'){
+    let best = null, bd = 64;
+    for(const [a, b] of e.edges){
+      const [ax, ay] = P[a], [bx, by] = P[b], dx = bx - ax, dy = by - ay, L = dx * dx + dy * dy || 1;
+      const t = Math.max(0, Math.min(1, ((X - ax) * dx + (Y - ay) * dy) / L)), d = (ax + t * dx - X) ** 2 + (ay + t * dy - Y) ** 2;
+      if(d < bd){ bd = d; best = [a, b]; }
+    }
+    return best;
+  }
+  if(e.mode === 'face'){
+    const inside = (p, a, b, c) => { const s = (u, v, w) => (u[0] - w[0]) * (v[1] - w[1]) - (v[0] - w[0]) * (u[1] - w[1]);
+      const d1 = s(p, a, b), d2 = s(p, b, c), d3 = s(p, c, a); return !((d1 < 0 || d2 < 0 || d3 < 0) && (d1 > 0 || d2 > 0 || d3 > 0)); };
+    for(let t = e.tris.length - 1; t >= 0; t--){ const [a, b, c] = e.tris[t]; if(inside([X, Y], P[a], P[b], P[c])) return [a, b, c]; }
+    return null;
+  }
+  const i = armUvNearest(X, Y, 8);
+  return i < 0 ? null : [i];
+}
+function armUvPick(hit, add){
   const e = ARM.uvEd;
-  const set = e.mode === 'island' ? e.pts.map((_, k) => k).filter(k => e.island[k] === e.island[i]) : [i];
+  if(!Array.isArray(hit)) hit = [hit];
+  const set = e.mode === 'island' ? e.pts.map((_, k) => k).filter(k => e.island[k] === e.island[hit[0]]) : hit;
   const on = !(add && set.every(k => e.sel.has(k)));
   if(!add) e.sel.clear();
   set.forEach(k => on ? e.sel.add(k) : e.sel.delete(k));
@@ -256,13 +322,14 @@ function armUvDown(ev){
   ev.preventDefault();
   const [X, Y] = armUvAt(ev);
   if(e.xf){ armUvXfEnd(ev.button !== 0); return; }
-  if(ev.button === 1 || (ev.button === 0 && ev.altKey)){
+  // 2026-11-24: the right button pans too, as in Armory's Simple navigation
+  if(ev.button === 1 || ev.button === 2 || (ev.button === 0 && ev.altKey)){
     e.drag = {pan: true, X, Y, ox: e.ox, oy: e.oy};
   }else if(ev.button === 0){
-    const hit = armUvNearest(X, Y, 8);
-    if(hit >= 0 && e.sel.has(hit) && !ev.shiftKey){
+    const hit = armUvHit(X, Y);
+    if(hit && hit.every(i => e.sel.has(i)) && !ev.shiftKey){
       e.drag = {move: true, X, Y, start: armUvSnapshot()};
-    }else if(hit >= 0){
+    }else if(hit){
       armUvPick(hit, ev.shiftKey);
       e.drag = {move: true, X, Y, start: armUvSnapshot()};
     }else{
@@ -299,7 +366,12 @@ function armUvUp(){
   if(d.box){
     const g = armUvGeom(document.getElementById('armUvCanvas'));
     const lx = Math.min(d.x0, d.x1), hx = Math.max(d.x0, d.x1), ly = Math.min(d.y0, d.y1), hy = Math.max(d.y0, d.y1);
-    e.pts.forEach((p, i) => { const [px, py] = g.to(p); if(px >= lx && px <= hx && py >= ly && py <= hy) e.sel.add(i); });
+    const inBox = new Set();
+    e.pts.forEach((p, i) => { const [px, py] = g.to(p); if(px >= lx && px <= hx && py >= ly && py <= hy) inBox.add(i); });
+    // an edge or a face is taken when all of it is in the box
+    if(e.mode === 'face'){ for(const t of e.tris) if(t.every(i => inBox.has(i))) t.forEach(i => e.sel.add(i)); }
+    else if(e.mode === 'edge'){ for(const d of e.edges) if(d.every(i => inBox.has(i))) d.forEach(i => e.sel.add(i)); }
+    else inBox.forEach(i => e.sel.add(i));
     if(e.mode === 'island'){ const isl = new Set([...e.sel].map(i => e.island[i])); e.pts.forEach((_, i) => isl.has(e.island[i]) && e.sel.add(i)); }
   }
   if(d.move && d.start.moved) armUvCommit();

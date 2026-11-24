@@ -38,7 +38,45 @@ function armLitSet(k, v, quiet){
   if(!quiet) api.post('/api/settings', {armory_lit: o}).catch(() => {});
   const out = typeof document !== 'undefined' && document.getElementById('armLitVal_' + k);
   if(out) out.textContent = v;
+  armLitPreviewSoon();
   armFrame();
+}
+/* --- 2026-11-24: what the bake will give, in the viewport -----------------------
+   The viewport's own light lit the colour alone, and a PBR object's spec and
+   normal maps and its shadows showed only after the bake. While the panel is
+   open the chosen objects are now drawn with the bake itself, made small
+   (armlit.bake_objects preview, 512 pixels across), again a moment after a
+   slider stops; the viewport's light stands in only until it comes. */
+const ARM_LIT_PREVIEW = 512;
+function armLitPreviewSoon(){
+  const l = armLit();
+  if(l.prevTimer) clearTimeout(l.prevTimer);
+  if(!l.open) return;
+  l.prevTimer = setTimeout(armLitPreview, 300);
+}
+async function armLitPreview(){
+  const l = armLit(), objs = armLitTargets(), st = armLitOpts();
+  if(!l.open || !objs.length) return;
+  const ask = JSON.stringify([objs.map(o => [o.id, o.lit ? o.lit.src : o.sheet, o.src]), st]);
+  l.prevAsk = ask;
+  let r;
+  try{ r = await api.post('/api/armory/lit', {project: armProj(), ids: objs.map(o => o.id), settings: st, preview: ARM_LIT_PREVIEW}); }
+  catch(e){ return; }
+  if(l.prevAsk !== ask || !l.open || r.error) return;
+  const paths = {};
+  for(const b of r.baked || []){
+    ARM.sheetAllowed.add(b.path); ARM.sheetCache.delete(b.path); ARM.sheetStamp[b.path] = Date.now();
+    for(const id of b.objects || []) paths[id] = b.path;
+  }
+  l.prev = {sig: ask, paths};
+  armFrame();
+}
+// the panel repainted (a new selection): a preview for what it now covers
+function armLitPreviewCheck(){
+  const l = armLit(), objs = armLitTargets();
+  if(!l.open) return;
+  const want = objs.map(o => o.id).join(',');
+  if(l.prevFor !== want){ l.prevFor = want; armLitPreviewSoon(); }
 }
 // the selected objects, or every visible one when none is
 function armLitTargets(){
@@ -49,6 +87,7 @@ function armLitToggle(){
   const l = armLit();
   l.open = !l.open;
   l.live = true;
+  l.prev = null; l.prevFor = '';
   armPaintObjects();
   armFrame();
 }
@@ -59,10 +98,13 @@ function armLitToggle(){
 function armLitMode(ob){
   const l = armLit();
   if(!l.open || !armLitTargets().includes(ob)) return 0;
+  if(l.live && l.prev && l.prev.paths[ob.id]) return 2;       // the bake's preview, as it is
   return ob.lit && !l.live ? 2 : 1;
 }
 // the sheet an object is drawn with: under the live light, what it wore before the bake
 function armLitSheetOf(ob){
+  const l = armLit();
+  if(l.open && l.live && l.prev && l.prev.paths[ob.id] && armLitTargets().includes(ob)) return l.prev.paths[ob.id];
   return ob.lit && armLitMode(ob) === 1 ? (ob.lit.src || null) : (ob.sheet || null);
 }
 // towards the key light, in the page's space (the viewport mirrors x: ARM_MIRROR)
@@ -83,6 +125,7 @@ function armLitUniforms(gl, L){
 
 function armLitHtml(){
   const l = armLit(), o = armLitOpts(), objs = armLitTargets();
+  setTimeout(armLitPreviewCheck, 0);
   const lit = objs.filter(x => x.lit);
   const range = (k, label, title) => { const r = ARM_LIT_RANGES[k]; return `<label class="armrange" title="${esc(title || '')}">
       <span>${label} <span class="count" id="armLitVal_${k}">${o[k]}</span></span>
@@ -110,8 +153,7 @@ function armLitHtml(){
       ${l.cycles && l.cycles.job ? `<button class="mini" onclick="armLitCyclesStop()">${tt('armory.kf_stop')}</button>` : ''}
       <button class="mini" onclick="armLitCycles()" title="${esc(tt('armory.lit_cycles_title'))}"${objs.length && !l.busy ? '' : ' disabled'}>${tt('armory.lit_cycles')}</button></div>
     <div class="armpropsrow"><span style="flex:1"></span>
-      <button class="mini" onclick="pbrOpen()" title="${esc(tt('armory.pbr_open_title'))}">${tt('armory.pbr_open')}</button>
-      <button class="mini" onclick="kfOpen()" title="${esc(tt('armory.kf_open_title'))}">${tt('armory.kf_open')}</button></div>
+      <button class="mini" onclick="pbrOpen()" title="${esc(tt('armory.pbr_open_title'))}">${tt('armory.pbr_open')}</button></div>
   </div>`;
 }
 

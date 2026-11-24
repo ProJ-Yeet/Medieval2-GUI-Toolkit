@@ -15,7 +15,9 @@ const c={ARM:{sel:new Set([1,2]),sheetCache:new Map(),sheetAllowed:new Set(),she
   armSelected:()=>project.objects.filter(o=>c.ARM.sel.has(o.id)),armVisibleObjects:()=>project.objects,
   armFrame(){c.frames++;},armRepaint(){c.repaints++;},armPaintObjects(){c.paints++;},frames:0,repaints:0,paints:0,
   tt:(k,p)=>k+(p?JSON.stringify(p):''),ttN:(k,n)=>k+n,esc:String,errText:String,toast:t=>toasts.push(t),
-  api:{post:async(url,body)=>{calls.push({url,body:JSON.parse(JSON.stringify(body))});return answer;}}};
+  api:{post:async(url,body)=>{calls.push({url,body:JSON.parse(JSON.stringify(body))});return answer;}},
+  // the preview is asked for on a timer: run by hand below (armLitPreview)
+  setTimeout:()=>1,clearTimeout(){}};
 vm.createContext(c);
 vm.runInContext(fs.readFileSync(path.join(__dirname,'../web/js/armlit.js'),'utf8'),c);
 const near=(a,b)=>a.every((x,i)=>Math.abs(x-b[i])<1e-6);
@@ -77,6 +79,18 @@ const near=(a,b)=>a.every((x,i)=>Math.abs(x-b[i])<1e-6);
   assert.equal(c.armLitMode(project.objects[1]),1);
   assert.equal(c.armLitSheetOf(project.objects[1]),'C:/own.png');
   assert.equal(c.armLitSheetOf(project.objects[0]),null);
+
+  // 2026-11-24: the preview, the bake itself made small, drawn as it is in place of the live light
+  answer={baked:[{source:'C:/own.png',path:'C:/lit/preview/own_lit_2.png',objects:[2]}],skipped:[]};
+  await c.armLitPreview();
+  assert.equal(calls.at(-1).url,'/api/armory/lit');
+  assert.equal(calls.at(-1).body.preview,512);
+  assert.equal(c.armLitMode(project.objects[1]),2);
+  assert.equal(c.armLitSheetOf(project.objects[1]),'C:/lit/preview/own_lit_2.png');
+  assert.ok(c.ARM.sheetAllowed.has('C:/lit/preview/own_lit_2.png'));
+  // one it did not cover keeps the live light
+  assert.equal(c.armLitMode(project.objects[0]),1);
+  answer={baked:[{source:'C:/own.png',path:'C:/lit/own_lit_2.png',objects:[2]}],skipped:[]};
 
   // a second bake keeps the first source, not the lit texture it now wears
   await c.armLitRun();

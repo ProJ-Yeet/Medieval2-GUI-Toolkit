@@ -18,7 +18,7 @@ const els = { cgHdUi: canvas(), cgHd: canvas(), cgHdView: canvas() };
 const ctx = {
   state: { mode: 'cards', cgSrc: 'unit' }, console,
   tt: (k, o) => k + (o ? JSON.stringify(o) : ''), ttA: k => k, ttN: k => k, esc: s => String(s),
-  document: { getElementById: id => els[id] || null, querySelector: () => null },
+  document: { getElementById: id => els[id] || null, querySelector: () => null }, CSS: { escape: s => String(s) },
 };
 vm.createContext(ctx);
 vm.runInContext(src, ctx);
@@ -74,7 +74,7 @@ assert.strictEqual(JSON.stringify(g.order), JSON.stringify(['Mumakil']), 'only t
 assert.strictEqual(JSON.stringify([...g.rows.Mumakil.picked]), JSON.stringify(['spain']), 'its owners, slave left out beside a real one');
 vm.runInContext(`cgGiveAdd('Other')`, ctx);
 assert.strictEqual(JSON.stringify(vm.runInContext('cg().give.order', ctx)), JSON.stringify(['Mumakil', 'Other']), 'another unit, from the picker');
-let body = vm.runInContext(`cgGiveOwner('Mumakil', 'khand'); cgGiveBody('Mumakil')`, ctx);
+let body = vm.runInContext(`cgGiveOwnerSet('Mumakil', 'khand', true); cgGiveBody('Mumakil')`, ctx);
 assert.strictEqual(JSON.stringify(body.card_folders), JSON.stringify(['spain', 'khand']));
 assert.strictEqual(body.field_overrides.ownership, 'spain, slave, khand', '+ gives khand ownership');
 body = vm.runInContext(`cgGiveTick('Mumakil', 'khand'); cgGiveBody('Mumakil')`, ctx);

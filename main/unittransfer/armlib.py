@@ -47,8 +47,11 @@ def save(lib: dict) -> None:
 
 
 def item_key(item: dict) -> str:
-    """The same key the page gives an asset (``armAssetKey``)."""
-    return armory.asset_key(item)
+    """The same key the page gives an asset (``armAssetKey``); an item that
+    is one object of a model (2026-11-24, ``part``) adds that object's group."""
+    part = item.get("part")
+    key = armory.asset_key(item)
+    return key + "#" + str(part.get("group")) if isinstance(part, dict) else key
 
 
 def add(lib: dict, item: dict) -> dict:
@@ -60,10 +63,14 @@ def add(lib: dict, item: dict) -> dict:
     for old in lib["items"]:
         if item_key(old) == key:
             return {"same": old, "why": "same"}
-        if item.get("file_hash") and old.get("file_hash") == item.get("file_hash"):
+        # one object is never the same art as a whole model, or as another object
+        if item.get("file_hash") and old.get("file_hash") == item.get("file_hash") and not item.get("part") and not old.get("part"):
             return {"same": old, "why": "art"}
     top = max([0] + [int(x.get("id") or 0) for x in lib["items"]])
     new = {k: item.get(k) for k in ("kind", "mod", "entry", "path", "unit", "file_hash") if item.get(k)}
+    part = item.get("part")
+    if isinstance(part, dict):
+        new["part"] = {"group": int(part.get("group") or 0), "name": str(part.get("name") or ""), "mesh": str(part.get("mesh") or "")}
     new.update(id=top + 1, name=item.get("name") or item.get("entry") or (item.get("path") or "").replace("\\", "/").split("/")[-1],
                notes=item.get("notes") or "", collections=list(item.get("collections") or []),
                categories=list(item.get("categories") or []))

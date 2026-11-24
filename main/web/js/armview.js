@@ -186,7 +186,7 @@ function armFrameObjects(objs){
 }
 function armToggle(what){
   ARM[what] = !ARM[what];
-  armPaintSliders(); armFrame();
+  armPaintSliders(); armPaintBar(); armFrame();
 }
 
 /* --- rotation as a 3x3, row-major, Z * Y * X: the order armRot and
@@ -381,8 +381,7 @@ function armPaintSliders(){
   const o = sel[0];
   if(armFootShut()){
     el.innerHTML = `<div class="armfoothead"><button class="armfold" onclick="armFootToggle()" title="${esc(tt('armory.foot_fold_title'))}">▸ ${tt('armory.foot_tools')}</button>
-      <span class="count">${o ? ttN('armory.n_selected', sel.length) : tt('armory.nothing_selected')}</span>
-      <span id="armSelTools">${typeof armSelToolsHtml === 'function' ? armSelToolsHtml() : ''}</span></div>`;
+      <span class="count">${o ? ttN('armory.n_selected', sel.length) : tt('armory.nothing_selected')}</span></div>`;
     if(typeof armAnimPaint === 'function') armAnimPaint();
     armFrame();
     return;
@@ -399,15 +398,9 @@ function armPaintSliders(){
         onchange="ARM.uniform=this.checked"> ${tt('armory.uniform_scale')}</label>
         <span class="count">${o ? ttN('armory.n_selected', sel.length) : tt('armory.nothing_selected')}</span></div>
     </div>
-    <div class="armslside">
-      <label class="armcheck"><input type="checkbox"${ARM.stats ? ' checked' : ''} onchange="armToggle('stats')"> ${tt('armory.statistics')}</label>
-      <span id="armSelTools">${typeof armSelToolsHtml === 'function' ? armSelToolsHtml() : ''}</span>
-    </div></div>
+    </div>
     <div class="armtoggles">
-      <label class="armcheck"><input type="checkbox"${ARM.faceOrient ? ' checked' : ''} onchange="armToggle('faceOrient')"> ${tt('armory.face_orientation')}</label>
-      <label class="armcheck" title="${esc(tt('armory.head_as_one_title'))}"><input type="checkbox"${ARM.headLink ? ' checked' : ''} onchange="armToggle('headLink')"> ${tt('armory.head_as_one')}</label>
       <button class="mini${ARM.cam.ortho ? ' on' : ''}" onclick="armToggleOrtho()">${tt('armory.ortho')}</button>
-      <button class="mini${ARM.bones ? ' on' : ''}" onclick="ARM.bones=!ARM.bones;armPaintSliders();armFrame()" title="${esc(tt('armory.bones_title'))}">${tt('armory.bones')}</button>
       <button class="mini" onclick="armShortcutsOpen()">${tt('armory.shortcuts')}</button>
       <span class="armnav" title="${esc(tt('armory.nav_title'))}">${tt('armory.nav')}
         <button class="mini${armNav() === 'simple' ? ' on' : ''}" onclick="armNavSet('simple')">${tt('armory.nav_simple')}</button>

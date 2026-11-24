@@ -507,7 +507,8 @@ function layoutTopFit(){
   const top=lay.offsetTop+1;
   if(top>0&&document.documentElement.style.getPropertyValue('--laytop')!==top+'px')document.documentElement.style.setProperty('--laytop',top+'px');
 }
-addEventListener('resize',layoutTopFit);
+// the node harness (tests) runs this file with no window
+if(typeof addEventListener==='function')addEventListener('resize',layoutTopFit);
 if(typeof ResizeObserver==='function')addEventListener('DOMContentLoaded',()=>{const ro=new ResizeObserver(layoutTopFit);for(const el of document.querySelectorAll('header,.crumbs'))ro.observe(el);layoutTopFit();});
 function topFold(shut){
   state.settings.top_shut=shut;api.post('/api/settings',{top_shut:shut}).catch(()=>{});
@@ -2179,6 +2180,7 @@ async function openCredits(){
         <div>${tt('core.twmapreader_by_withwnar')}</div>
         <div>${tt('core.armory_studio_3d_by_mreedmm')}</div>
         <div>${tt('core.ssr_unit_builder_by_lupinemaverick')}</div>
+        <div>${tt('core.rmce_by_pfadfinder_adam')} · ${tt('core.gplv3')}</div>
       </div>
       <div style="margin-bottom:14px">
         <div class="lbl" style="margin-bottom:4px">${tt('core.sponsored_by')}</div>
