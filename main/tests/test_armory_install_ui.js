@@ -3,7 +3,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
 const root = path.resolve(__dirname, '..');
-const c = {state:{src:'fixture'}, ARM:{mods:['fixture']}, armSave(){}, armProj:()=>({collections:[]}),
+const c = {state:{src:'fixture'}, ARM:{mods:['fixture']}, ARM_BODY_SCALES:{}, armSave(){}, armProj:()=>({collections:[]}),
   document:{getElementById:()=>null}, window:{addEventListener(){},removeEventListener(){}},
   esc:String, enc:encodeURIComponent, tt:(id,args)=>id+JSON.stringify(args||{}), ttA:String};
 vm.createContext(c);
@@ -14,7 +14,11 @@ m.choice='add'; m.unit='Guard';
 m.unitData={fields:[['soldier','old, 40, 0, 1'],['officer','captain'],['officer#2','standard'],['armour_ug_models','old, old_t1']]};
 assert.deepEqual(Array.from(c.armExpAssignSlots(),x=>x.v),
   ['soldier','officer#1','officer#2','officer#3','armour_ug_models#1','armour_ug_models#2','armour_ug_models#3']);
+// the default is a new tier after the unit's armour_ug_models, else soldier (86f0a66a)
+assert.equal(c.armExpModBody().assign_to,'armour_ug_models#3');
+const fields=m.unitData.fields; m.unitData={fields:fields.slice(0,3)};
 assert.equal(c.armExpModBody().assign_to,'soldier');
+m.unitData={fields};
 m.assign_to='armour_ug_models#3';
 assert.equal(c.armExpModBody().assign_to,'armour_ug_models#3');
 m.choice='new'; assert.equal(c.armExpModBody().assign_to,'armour_ug_models#3');

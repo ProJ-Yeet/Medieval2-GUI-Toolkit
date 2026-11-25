@@ -8,7 +8,7 @@ const c={ARM:{},state:{},armProj:()=>project,armFrame(){},armSave(){},
   document:{getElementById:()=>null},performance:{now:()=>0},
   v3aBind:d=>d,v3aTravel:()=>[0,0],v3aCarried:()=>false,
   tt:x=>x,esc:String,errText:String,confirm:()=>true,
-  api:{post:async(url,body)=>{calls.push({url,body});return url.endsWith('save_plan') ? {plan:{ok:true,target:'animations/scaled.cas',notes:[]}} : {times:[0,1],bones:[]};}}};
+  api:{post:async(url,body)=>{calls.push({url,body});return url.endsWith('save_plan') ? {plan:{ok:true,target:'animations/scaled.cas',notes:[]}} : url.endsWith('kit_plan') ? {plan:{ok:true,rows:[]}} : {times:[0,1],bones:[]};}}};
 vm.createContext(c);
 vm.runInContext(fs.readFileSync(path.join(__dirname,'../web/js/armanim.js'),'utf8'),c);
 c.armAnimPaint=()=>{};
@@ -30,8 +30,11 @@ assert.equal(JSON.stringify(c.armAnimScaleEdits()),'{}');
   assert.equal(calls.at(-1).body.save_as,'animations/scaled.cas');
   a.saveTarget='pack';a.packName='walk_scaled';
   await c.armAnimScaleSave();
-  assert.equal(calls.at(-1).body.target,'pack');
+  // ab7c9b06: Into a pack saves the whole skeleton scaled, as a kit
+  assert.deepEqual(calls.slice(-2).map(c=>c.url),['/api/model/skeleton/kit_plan','/api/model/skeleton/kit_apply']);
   assert.equal(calls.at(-1).body.name,'walk_scaled');
+  assert.equal(calls.at(-1).body.base,'human');
+  assert.deepEqual(JSON.parse(JSON.stringify(calls.at(-1).body.scale)),[2,3,2]);
   await c.armAnimScaleSet(-1,1);
   const count=calls.length;
   await c.armAnimScaleSave();assert.equal(calls.length,count,'scale 1 writes nothing');
