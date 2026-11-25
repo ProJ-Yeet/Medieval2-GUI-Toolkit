@@ -1896,10 +1896,18 @@ def _plan_payload(plan) -> dict:
 
 class Handler(BaseHTTPRequestHandler):
     registry: Registry = None
-    # HTTP/1.0 (connection-per-request): ThreadingHTTPServer keep-alive plays
-    # badly with the browser's pooled connections (sporadic "Failed to fetch").
-    # The lock + atomic-cache + always-return-a-PNG fixes are what actually cure
-    # the broken card icons, not connection reuse.
+    # 2026-11-25: HTTP/1.1, the connection kept for the next request. One
+    # connection per request (HTTP/1.0, until now) left a port pair in
+    # TIME_WAIT for each, about two minutes; icons, scripts and models switched
+    # fast made thousands, Windows ran short of ports and refused the
+    # browser's connect (WSAEACCES, "net::ERR_NETWORK_ACCESS_DENIED", "Failed
+    # to fetch"): 731 of 3,000 quick connections, measured. Safe because every
+    # reply goes through _send with a Content-Length and every POST body is
+    # read before the handler runs. tests/test_server_keepalive.py
+    protocol_version = "HTTP/1.1"
+    # An idle kept connection is let go after this long; the browser drops
+    # its own sooner (5 min), so it is normally the one that closes.
+    timeout = 600
 
     def log_message(self, fmt, *args):
         # http.server's per-request line. Icons are dozens per page view, so keep
@@ -1916,15 +1924,9 @@ class Handler(BaseHTTPRequestHandler):
         self.send_header("Content-Length", str(len(body)))
         if not any(k.lower() == "cache-control" for k in (headers or {})):
             self.send_header("Cache-Control", "no-cache")
-        # Say the connection is closing, because it is (HTTP/1.0, above). Left
-        # unsaid, the browser is free to decide otherwise and write its NEXT
-        # request into a socket this handler is about to close - and a socket
-        # closed with unread bytes in it is reset rather than finished, which
-        # throws away the reply we just wrote. That is not theoretical: a page
-        # load here would log a clean 200 for two dozen scripts and the browser
-        # would receive twenty-one of them, leaving whichever modules lost the
-        # race undefined. See uiFailedFiles in web/js/core.js for the other half.
-        self.send_header("Connection", "close")
+        # No "Connection: close" since 2026-11-25: the connection is kept for
+        # the next request (HTTP/1.1, see the class). The Content-Length above
+        # is what lets the browser tell where this reply ends.
         for k, v in (headers or {}).items():
             self.send_header(k, v)
         self.end_headers()
