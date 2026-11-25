@@ -355,6 +355,23 @@ def gather(project: dict, obj_ids, mod_of, image_of=armbake.default_image_of):
     return jobs, skipped, sheets
 
 
+def maps(project: dict, obj_ids, mod_of, image_of=armbake.default_image_of) -> dict:
+    """``{id: {"colour", "spec", "normal"}}``: the maps the bake would light
+    each object with, found as :func:`gather` finds them, so the viewport
+    can draw the same light live (2026-11-25). An object the bake skips is
+    left out; a map not found is ``""``. Each path is allowed to be served."""
+    jobs, _skipped, _sheets = gather(project, obj_ids, mod_of, image_of)
+    out = {}
+    for job in jobs.values():
+        one = {"colour": job["path"], "spec": sibling(job["path"], "s"), "normal": job["normal"] or ""}
+        for path in one.values():
+            if path:
+                armory.allow_texture(path)
+        for i in job["objects"]:
+            out[str(i)] = one
+    return out
+
+
 def _shrink(img: Optional[np.ndarray], most: int) -> Optional[np.ndarray]:
     """``img`` no more than ``most`` pixels across, for a preview."""
     if img is None or max(img.shape[:2]) <= most:

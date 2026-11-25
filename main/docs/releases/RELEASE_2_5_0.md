@@ -50,7 +50,11 @@ A portable install of v2.4.14 fetches this one by itself at the next start.
   * Blender-style Edit Mode (vertex, edge, face), Solid, Wireframe and
     X-ray, outlined selection, the Objects panel reworked, UV edge and face
     modes, and the bar in two rows with Sessions, Library and Export;
-  * Into a mod picks the unit from card tiles.
+  * Into a mod picks the unit from card tiles;
+  * Pre-render lighting is drawn live in the viewport with the bake's own
+    arithmetic: the spec map, the normal map and the key light's soft
+    shadow, as the bake will write them. An object with a spec or normal
+    map shows it that way even with the panel closed, until it is baked.
 
 ## Fixed
 

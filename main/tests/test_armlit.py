@@ -214,6 +214,14 @@ f 5/1/2 6/2/2 7/3/2 8/4/2
           pp.parent.name == "preview" and max(pimg.shape[:2]) <= 24 and armory.texture_allowed(str(pp))
           and abs(int(pimg[12, 5, 0]) - int(img[32, 10, 0])) <= 3)
     check("a preview leaves no normal map copy beside it", not pp.with_name(pp.stem + "_norm.png").exists())
+    # 2026-11-25: the maps the viewport draws the live light with, the bake's own
+    mp = armlit.maps(proj, [1, 3], None)
+    m1 = mp.get("1") or {}
+    check("each object's colour, spec and normal map, as the bake finds them",
+          Path(m1.get("colour", "")).name == "plate_d.png" and Path(m1.get("spec", "")).name == "plate_s.png"
+          and Path(m1.get("normal", "")).name == "plate_n.png")
+    check("  an object the bake skips is left out", "3" not in mp)
+    check("  and each map may be served to the page", armory.texture_allowed(m1.get("spec", "")))
 
 print(f"\n{sum(ok)}/{len(ok)} checks passed")
 print("ALL PASSED" if all(ok) else "FAILURES")

@@ -43,17 +43,40 @@ void main(){
 // built when the viewport first draws, not at load: V3_ENV is viewer3d.js's,
 // and a dropped viewer3d.js that core.js fetches again arrives after this file ran
 const armFrag = () => `#extension GL_OES_standard_derivatives : enable
+#ifdef GL_FRAGMENT_PRECISION_HIGH
+precision highp float;
+#else
 precision mediump float;
+#endif
 varying vec3 vNormal; varying vec2 vUv; varying vec3 vPos;
-uniform sampler2D uTex, uNTex;
+uniform sampler2D uTex, uNTex, uSTex, uShTex;
 uniform float uHasTex, uUScale, uHi, uSel, uFlip, uXray, uHasN;
 uniform float uCard, uMask, uAmb, uLevel, uLN;
 uniform float uLAmt[4], uPoint[4];
-uniform float uLit, uLitAmb, uLitStr, uLitSoft;
+uniform float uLit, uLitAmb, uLitStr, uLitSoft, uLitSh, uLitN, uHasS, uFlipG, uHasSh;
+uniform float uShScale, uShSpan, uShZmax, uShZspan;
+uniform vec3 uShX, uShY;
+uniform vec2 uShLo;
 uniform vec3 uLDir[4], uLPos[4];
 uniform vec3 uLitDir, uMaskCol;
 uniform vec4 uCrop;
 ${V3_ENV}
+// armlit._visible: how much of the key light reaches this point past the
+// object's own triangles, from its shadow map (armlit.js armLitShadows)
+float armShadow(float raw){
+  vec2 r = (vec2(dot(vPos, uShX), dot(vPos, uShY)) - uShLo) * uShScale + 1.0;
+  float me = (uShZmax - dot(vPos, uLitDir)) / uShZspan;
+  float bias = uShSpan * (0.004 + 0.03 * (1.0 - clamp(raw, 0.0, 1.0))) / uShZspan;
+  float reach = uLitSoft * 5.0;
+  float seen = 0.0;
+  for(int j = 0; j < 5; j++) for(int i = 0; i < 5; i++){
+    vec2 d = reach >= 0.5 ? (vec2(float(i), float(j)) / 2.0 - 1.0) * reach : vec2(0.0);
+    vec2 c = clamp(floor(r + d), 0.0, 511.0);
+    float z = dot(texture2D(uShTex, (c + 0.5) / 512.0), vec4(1.0, 1.0 / 255.0, 1.0 / 65025.0, 1.0 / 16581375.0));
+    seen += z >= me - bias ? 1.0 : 0.0;
+  }
+  return seen / 25.0;
+}
 void main(){
   // uCrop: a dyed object's own crop of the sheet, (x, y, width, height)
   // in the glued image's 0..1; the whole sheet otherwise
@@ -66,7 +89,20 @@ void main(){
   // same reason (modelexport.py), and Blender agrees with that.
   bool front = !gl_FrontFacing;
   vec3 n = normalize(vNormal) * (front ? 1.0 : uFlip);
-  if(uHasN > 0.5){
+  if(uLit > 0.5 && uLit < 1.5 && uLitN > 0.5){
+    // the bake's own tangents (armlit.bake_image): along the image's x and down
+    // its y, worked out from how the UVs run, here per pixel; green points down
+    // the image unless Flip green is ticked
+    vec3 dp1 = dFdx(vPos), dp2 = dFdy(vPos);
+    vec2 d1 = dFdx(st), d2 = dFdy(st);
+    float det = d1.x * d2.y - d2.x * d1.y;
+    det = abs(det) < 1e-12 ? 1e-12 : det;
+    vec3 T = (dp1 * d2.y - dp2 * d1.y) / det, B = (dp2 * d1.x - dp1 * d2.x) / det;
+    T = normalize(T - n * dot(T, n)); B = normalize(B - n * dot(B, n));
+    vec2 m = texture2D(uNTex, st).xy * 2.0 - 1.0;
+    m.y *= uFlipG;
+    n = normalize(T * m.x + B * m.y + n * sqrt(max(1.0 - dot(m, m), 0.01)));
+  }else if(uHasN > 0.5){
     // 95j: the normal map's preview, its tangents worked out per pixel
     // from how the UVs run across the surface (a cotangent frame)
     vec3 dp1 = dFdx(vPos), dp2 = dFdy(vPos);
@@ -82,11 +118,23 @@ void main(){
   vec3 col = pow(clamp(base.rgb * light, 0.0, 1.0), vec3(0.78));
   if(uLit > 1.5) col = base.rgb;       // armlit.js: a baked texture, shown as it is
   else if(uLit > 0.5){
-    // the pre-rendered bake's ambient and key light, live: armlit.bake_image's
-    // own numbers, without its shadows and maps
-    float wrap = uLitSoft * 0.5;
-    float lit = uLitAmb * (0.85 + 0.15 * n.y) + uLitStr * clamp((dot(n, uLitDir) + wrap) / (1.0 + wrap), 0.0, 1.0);
-    col = pow(clamp(pow(base.rgb, vec3(2.2)) * lit, 0.0, 1.0), vec3(1.0 / 2.2));
+    // the pre-rendered bake, live: armlit.bake_image's own arithmetic, its
+    // spec map (red metal, green gloss, blue AO), normal map and shadow
+    vec3 b = pow(base.rgb, vec3(2.2));
+    float metal = 0.0, gloss = 0.0, ao = 1.0;
+    if(uHasS > 0.5){ vec3 s = texture2D(uSTex, st).rgb; metal = s.r; gloss = s.g; ao = 0.25 + 0.75 * s.b; }
+    float lit = uLitAmb * (0.85 + 0.15 * n.y) * ao, shine = 0.0;
+    if(uLitStr > 0.0){
+      float raw = dot(n, uLitDir), wrap = uLitSoft * 0.5;
+      float ndl = clamp((raw + wrap) / (1.0 + wrap), 0.0, 1.0);
+      float reach = uHasSh > 0.5 && uLitSh > 0.0 ? armShadow(raw) : 1.0;
+      float key = uLitStr * ndl * (1.0 - uLitSh * (1.0 - reach));
+      lit += key;
+      float ndh = clamp(dot(normalize(n + uLitDir), n), 0.0, 1.0);
+      shine = key * gloss * pow(ndh, 4.0 + 60.0 * gloss);
+    }
+    vec3 tint = 0.08 + metal * (b - 0.08);
+    col = pow(clamp(b * lit + tint * shine, 0.0, 1.0), vec3(1.0 / 2.2));
   }
   if(uCard > 0.5){
     // 95m: the card maker's lamps (2026-11-24: up to four, each a sun or a
@@ -897,7 +945,9 @@ function armGl(){
   for(const n of ['aPos', 'aNormal', 'aUv']) ARM.loc[n] = gl.getAttribLocation(p, n);
   for(const n of ['uProj', 'uView', 'uModel', 'uTex', 'uHasTex', 'uUScale', 'uHi', 'uSel', 'uFlip', 'uXray', 'uCrop', 'uNTex', 'uHasN',
                   'uCard', 'uMask', 'uLAmt', 'uAmb', 'uLevel', 'uPoint', 'uLDir', 'uLPos', 'uLN',
-                  'uLit', 'uLitAmb', 'uLitStr', 'uLitSoft', 'uLitDir', 'uMaskCol'])
+                  'uLit', 'uLitAmb', 'uLitStr', 'uLitSoft', 'uLitDir', 'uMaskCol',
+                  'uSTex', 'uShTex', 'uLitSh', 'uLitN', 'uHasS', 'uFlipG', 'uHasSh', 'uShScale', 'uShSpan',
+                  'uShZmax', 'uShZspan', 'uShX', 'uShY', 'uShLo'])
     ARM.loc[n] = gl.getUniformLocation(p, n);
   gl.enable(gl.DEPTH_TEST);
   return gl;
@@ -1069,6 +1119,8 @@ function armRender(objs, w, h, cam, opts){
     ARM.glCanvas.width = Math.max(ARM.glCanvas.width, w);
     ARM.glCanvas.height = Math.max(ARM.glCanvas.height, h);
   }
+  // the bake's live light (armlit.js): each object's shadow map first, off screen
+  if(!o.plain && !o.mask && typeof armLitShadows === 'function') armLitShadows(gl, armLitShadowItems(objs, o));
   gl.viewport(0, ARM.glCanvas.height - h, w, h);
   gl.enable(gl.SCISSOR_TEST);
   gl.scissor(0, ARM.glCanvas.height - h, w, h);
@@ -1122,6 +1174,9 @@ function armRender(objs, w, h, cam, opts){
     const nTex = dyed && dyed.nTex && (!o.plain || o.card) ? dyed.nTex : null;
     gl.uniform1f(L.uHasN, nTex ? 1 : 0);
     if(nTex){ gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, nTex); gl.uniform1i(L.uNTex, 1); gl.activeTexture(gl.TEXTURE0); }
+    // under the bake's live light: its spec, normal and shadow maps (armlit.js)
+    if(typeof armLitBindMaps === 'function') armLitBindMaps(gl, L, ob, litOf(ob));
+    else gl.uniform1f(L.uLitN, 0);
   };
   // the card maker's own move and turn of the whole model (99m), in the
   // game's space, under the page's mirror
@@ -1186,6 +1241,38 @@ function armRender(objs, w, h, cam, opts){
   return true;
 }
 
+/* What each object under the bake's live light is drawn with, for its shadow
+   map: the same buffers and matrices as armRender's own pass below, and the
+   positions its extent is measured on (bStart/bCount into I, or all of P). */
+function armLitShadowItems(objs, o){
+  const top = o.pre ? armMul(ARM_MIRROR, o.pre) : ARM_MIRROR, items = [];
+  for(const ob of objs){
+    if(armLitMode(ob) !== 1) continue;
+    const draws = [];
+    const posed = typeof armAnimGeoFor === 'function' ? armAnimGeoFor(ob, o.card) : null;
+    if(posed){
+      const model = ob.post ? armMul(top, ob.post) : top;
+      const P = posed.outPos || posed.positions;
+      posed.ranges.forEach((r, k) => draws.push({model, pos: posed.glPos, idx: posed.glIdx, idxStart: r.start, count: r.count,
+                                                 P: k ? new Float32Array(0) : P, I: null}));
+    }else{
+      const om = armMul(ob.post ? armMul(top, ob.post) : top, armObjMatrix(ob, armPivot(ob)));
+      for(const pc of ob.src || []){
+        const live = ARM.assets.get(pc.asset);
+        if(!live || !live.buf || !live.geo) continue;
+        const g = live.geo.groups[pc.group];
+        if(!g) continue;
+        const model = pc.xf ? armMul(om, pc.xf) : om;
+        const sub = pc.tris || pc.weld || pc.flip ? armPieceBuffer(live, pc) : null;
+        draws.push({model, pos: live.buf.pos, idx: sub ? sub.buf : live.buf.idx, idxStart: sub ? 0 : g.start,
+                    count: sub ? sub.count : g.count, P: live.geo.positions, I: live.geo.indices, bStart: g.start, bCount: g.count});
+      }
+    }
+    if(draws.length) items.push({ob, draws});
+  }
+  return items;
+}
+
 function armDraw(){
   const view = ARM.view;
   // 2026-11-23: a texture landing while the card maker is shown redraws it
@@ -1198,6 +1285,8 @@ function armDraw(){
   const cam = armCamera(w / h);
   if(typeof armAnimPose === 'function') armAnimPose();
   const objs = armVisibleObjects();
+  // which objects have PBR maps for the bake's live light (armlit.js)
+  if(typeof armLitMapsCheck === 'function') armLitMapsCheck();
   if(!armRender(objs, w, h, cam, {faceOrient: ARM.faceOrient})) return;
   if(typeof armEditDraw === 'function') armEditDraw();
   if(typeof armOutlineDraw === 'function') armOutlineDraw(objs, cam, w, h);

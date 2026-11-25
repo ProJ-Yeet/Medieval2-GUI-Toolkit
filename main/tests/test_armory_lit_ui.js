@@ -80,16 +80,8 @@ const near=(a,b)=>a.every((x,i)=>Math.abs(x-b[i])<1e-6);
   assert.equal(c.armLitSheetOf(project.objects[1]),'C:/own.png');
   assert.equal(c.armLitSheetOf(project.objects[0]),null);
 
-  // 2026-11-24: the preview, the bake itself made small, drawn as it is in place of the live light
-  answer={baked:[{source:'C:/own.png',path:'C:/lit/preview/own_lit_2.png',objects:[2]}],skipped:[]};
-  await c.armLitPreview();
-  assert.equal(calls.at(-1).url,'/api/armory/lit');
-  assert.equal(calls.at(-1).body.preview,512);
-  assert.equal(c.armLitMode(project.objects[1]),2);
-  assert.equal(c.armLitSheetOf(project.objects[1]),'C:/lit/preview/own_lit_2.png');
-  assert.ok(c.ARM.sheetAllowed.has('C:/lit/preview/own_lit_2.png'));
-  // one it did not cover keeps the live light
-  assert.equal(c.armLitMode(project.objects[0]),1);
+  // 2026-11-25: no small bake from the server any more; the live light is the bake's own arithmetic
+  assert.equal(c.armLitPreview,undefined);
   answer={baked:[{source:'C:/own.png',path:'C:/lit/own_lit_2.png',objects:[2]}],skipped:[]};
 
   // a second bake keeps the first source, not the lit texture it now wears
@@ -107,6 +99,23 @@ const near=(a,b)=>a.every((x,i)=>Math.abs(x-b[i])<1e-6);
   c.armLitToggle();
   assert.equal(c.armLitMode(project.objects[1]),0);
   assert.equal(c.armLitSheetOf(project.objects[1]),'C:/lit/own_lit_2.png');
+
+  // 2026-11-25: the maps the bake would use, asked once for what the objects wear
+  answer={3:{colour:'C:/belt_d.png',spec:'C:/belt_s.png',normal:'C:/belt_n.png'}};
+  c.armLitMapsCheck();
+  await new Promise(r=>setImmediate(r));
+  assert.equal(calls.at(-1).url,'/api/armory/lit_maps');
+  assert.deepEqual(calls.at(-1).body.ids,[1,2,3]);
+  const asked=calls.length;
+  c.armLitMapsCheck();
+  await new Promise(r=>setImmediate(r));
+  assert.equal(calls.length,asked);
+  assert.ok(c.ARM.sheetAllowed.has('C:/belt_s.png'));
+  // closed: an object with PBR maps, never baked, shows the bake's live light on its colour map
+  assert.equal(c.armLitMode(project.objects[2]),1);
+  assert.equal(c.armLitSheetOf(project.objects[2]),'C:/belt_d.png');
+  // one already baked keeps its lit texture
+  assert.equal(c.armLitMode(project.objects[1]),0);
 
   // taking it off: each object wears what it wore before
   c.armLitRemove([1,2]);

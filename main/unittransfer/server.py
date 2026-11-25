@@ -3449,6 +3449,14 @@ class Handler(BaseHTTPRequestHandler):
                         body.get("opts") or {}, self.registry.get))
                 except (armory.ArmoryError, mesh.MeshError, KeyError, ValueError) as e:
                     return self._err(400, str(e))
+            if u.path == "/api/armory/lit_maps":
+                # each object's colour, spec and normal map, for the viewport's live bake light
+                from . import armlit
+                try:
+                    return self._json(armlit.maps(body.get("project") or {}, body.get("ids") or [],
+                                                  self.registry.get))
+                except (armory.ArmoryError, mesh.MeshError, KeyError, ValueError, OSError) as e:
+                    return self._err(400, str(e))
             if u.path == "/api/armory/lit":
                 # the pre-rendered bake: a lit colour texture per source texture
                 from . import armlit

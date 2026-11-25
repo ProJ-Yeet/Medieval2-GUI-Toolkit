@@ -6,12 +6,15 @@
    object's own UVs. Not the export's bake, which packs the sheets: this one
    changes what an object wears, and the export then packs that.
 
-   The work is armlit.py on the server. While the panel is open the viewport
-   draws the chosen objects under the same ambient and key light, with the
-   bake's own numbers, so a slider shows what it does as it moves. Shadows,
-   the spec map and the normal map are only in the baked texture: after a
-   bake the objects are drawn with that texture and no light over it, until a
-   slider moves again.
+   The work is armlit.py on the server. The viewport draws the bake's light
+   live, its own arithmetic in the shader (armory.js armFrag): the colour,
+   spec and normal maps the bake would use (armlit.maps), the ambient and key
+   light, the highlight, and the key light's soft shadow from a shadow map
+   made as the bake makes it (armLitShadows). So a slider shows what it does
+   as it moves, and 2026-11-25 an object with a spec or normal map is drawn
+   that way with the panel closed too, until it is baked. After a bake the
+   objects are drawn with that texture and no light over it, until a slider
+   moves again.
 
    On an object: o.sheet is the lit texture, o.lit = {src, settings} what it
    wore before (null: its source's own) and how it was lit, so a second bake
@@ -38,45 +41,31 @@ function armLitSet(k, v, quiet){
   if(!quiet) api.post('/api/settings', {armory_lit: o}).catch(() => {});
   const out = typeof document !== 'undefined' && document.getElementById('armLitVal_' + k);
   if(out) out.textContent = v;
-  armLitPreviewSoon();
   armFrame();
 }
-/* --- 2026-11-24: what the bake will give, in the viewport -----------------------
-   The viewport's own light lit the colour alone, and a PBR object's spec and
-   normal maps and its shadows showed only after the bake. While the panel is
-   open the chosen objects are now drawn with the bake itself, made small
-   (armlit.bake_objects preview, 512 pixels across), again a moment after a
-   slider stops; the viewport's light stands in only until it comes. */
-const ARM_LIT_PREVIEW = 512;
-function armLitPreviewSoon(){
-  const l = armLit();
-  if(l.prevTimer) clearTimeout(l.prevTimer);
-  if(!l.open) return;
-  l.prevTimer = setTimeout(armLitPreview, 300);
+/* --- 2026-11-25: the maps the bake would use, for the viewport's live light ------
+   armlit.maps on the server, asked again whenever what the objects wear
+   changes. Until 2026-11-25 the viewport drew a small bake from the server
+   instead (armlit.bake_objects preview), which came late and blurred. */
+function armLitMapsOf(ob){
+  const m = ARM.litMaps && ARM.litMaps.byId[ob.id];
+  return m && (m.spec || m.normal) ? m : null;
 }
-async function armLitPreview(){
-  const l = armLit(), objs = armLitTargets(), st = armLitOpts();
-  if(!l.open || !objs.length) return;
-  const ask = JSON.stringify([objs.map(o => [o.id, o.lit ? o.lit.src : o.sheet, o.src]), st]);
-  l.prevAsk = ask;
-  let r;
-  try{ r = await api.post('/api/armory/lit', {project: armProj(), ids: objs.map(o => o.id), settings: st, preview: ARM_LIT_PREVIEW}); }
-  catch(e){ return; }
-  if(l.prevAsk !== ask || !l.open || r.error) return;
-  const paths = {};
-  for(const b of r.baked || []){
-    ARM.sheetAllowed.add(b.path); ARM.sheetCache.delete(b.path); ARM.sheetStamp[b.path] = Date.now();
-    for(const id of b.objects || []) paths[id] = b.path;
-  }
-  l.prev = {sig: ask, paths};
-  armFrame();
-}
-// the panel repainted (a new selection): a preview for what it now covers
-function armLitPreviewCheck(){
-  const l = armLit(), objs = armLitTargets();
-  if(!l.open) return;
-  const want = objs.map(o => o.id).join(',');
-  if(l.prevFor !== want){ l.prevFor = want; armLitPreviewSoon(); }
+function armLitMapsCheck(){
+  const p = armProj();
+  const sig = JSON.stringify([(p.objects || []).map(o => [o.id, o.sheet || '', o.lit ? o.lit.src || '' : '',
+    (o.src || []).map(pc => pc.asset + ':' + pc.group)]), (p.assets || []).length]);
+  const k = ARM.litMaps = ARM.litMaps || {sig: '', byId: {}, busy: false};
+  if(k.sig === sig || k.busy) return;
+  k.busy = true;
+  api.post('/api/armory/lit_maps', {project: p, ids: (p.objects || []).map(o => o.id)})
+    .then(r => {
+      k.sig = sig;
+      k.byId = r && !r.error ? r : {};
+      for(const m of Object.values(k.byId)) for(const path of [m.colour, m.spec, m.normal]) if(path) ARM.sheetAllowed.add(path);
+    })
+    .catch(() => { k.sig = sig; })
+    .finally(() => { k.busy = false; armFrame(); });
 }
 // the selected objects, or every visible one when none is
 function armLitTargets(){
@@ -87,7 +76,6 @@ function armLitToggle(){
   const l = armLit();
   l.open = !l.open;
   l.live = true;
-  l.prev = null; l.prevFor = '';
   armPaintObjects();
   armFrame();
 }
@@ -97,15 +85,17 @@ function armLitToggle(){
 // 0: the viewport's own light; 1: the bake's light, live; 2: the baked texture as it is
 function armLitMode(ob){
   const l = armLit();
-  if(!l.open || !armLitTargets().includes(ob)) return 0;
-  if(l.live && l.prev && l.prev.paths[ob.id]) return 2;       // the bake's preview, as it is
-  return ob.lit && !l.live ? 2 : 1;
+  if(l.open && armLitTargets().includes(ob)) return ob.lit && !l.live ? 2 : 1;
+  // closed: an object with PBR maps, not baked yet, shows what the bake will give
+  return !ob.lit && armLitMapsOf(ob) ? 1 : 0;
 }
-// the sheet an object is drawn with: under the live light, what it wore before the bake
+// the sheet an object is drawn with: under the live light, the colour the
+// bake starts from (what it wore before a bake)
 function armLitSheetOf(ob){
-  const l = armLit();
-  if(l.open && l.live && l.prev && l.prev.paths[ob.id] && armLitTargets().includes(ob)) return l.prev.paths[ob.id];
-  return ob.lit && armLitMode(ob) === 1 ? (ob.lit.src || null) : (ob.sheet || null);
+  if(armLitMode(ob) !== 1) return ob.sheet || null;
+  const m = ARM.litMaps && ARM.litMaps.byId[ob.id];
+  if(m && m.colour) return m.colour;
+  return ob.lit ? (ob.lit.src || null) : (ob.sheet || null);
 }
 // towards the key light, in the page's space (the viewport mirrors x: ARM_MIRROR)
 function armLitDir(){
@@ -119,13 +109,161 @@ function armLitUniforms(gl, L){
   gl.uniform1f(L.uLitStr, o.key ? o.strength : 0);
   gl.uniform1f(L.uLitSoft, o.softness);
   gl.uniform3fv(L.uLitDir, armLitDir());
+  gl.uniform1f(L.uLitSh, o.key ? o.shadows : 0);
+}
+
+/* An object under the live light: its spec and normal maps, and its shadow
+   map, bound for the shader (armory.js bindTex). The colour is armLitSheetOf. */
+function armLitBindMaps(gl, L, ob, lit){
+  const m = lit === 1 && ARM.litMaps ? ARM.litMaps.byId[ob.id] : null;
+  const spec = m && m.spec ? armSheetTex(m.spec) : null;
+  const nrm = m && m.normal ? armSheetTex(m.normal) : null;
+  gl.uniform1f(L.uHasS, spec ? 1 : 0);
+  gl.uniform1f(L.uLitN, nrm ? 1 : 0);
+  gl.uniform1f(L.uFlipG, lit === 1 && armLitOpts().flip_green ? -1 : 1);
+  if(spec){ gl.activeTexture(gl.TEXTURE2); gl.bindTexture(gl.TEXTURE_2D, spec); gl.uniform1i(L.uSTex, 2); }
+  if(nrm){ gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, nrm); gl.uniform1i(L.uNTex, 1); }
+  const sh = lit === 1 && ARM.litShadow ? ARM.litShadow.get(ob.id) : null;
+  gl.uniform1f(L.uHasSh, sh && sh.ready ? 1 : 0);
+  if(sh && sh.ready){
+    gl.activeTexture(gl.TEXTURE3); gl.bindTexture(gl.TEXTURE_2D, sh.tex); gl.uniform1i(L.uShTex, 3);
+    gl.uniform3fv(L.uShX, sh.x); gl.uniform3fv(L.uShY, sh.y);
+    gl.uniform2fv(L.uShLo, sh.lo);
+    gl.uniform1f(L.uShScale, sh.scale); gl.uniform1f(L.uShSpan, sh.span);
+    gl.uniform1f(L.uShZmax, sh.zmax); gl.uniform1f(L.uShZspan, sh.zspan);
+  }
+  gl.activeTexture(gl.TEXTURE0);
+}
+
+/* --- the key light's shadow, as armlit._visible makes it ---------------------------
+   Per object, shadowed by itself only: its triangles drawn as seen from the
+   light into a 512 x 512 map (ARM_LIT_SHADOW), each cell holding the
+   nearest to the light, its depth packed into the four bytes of a texel.
+   The map spans the object across the light, with a cell of margin, as the
+   bake's does. Made again every frame for the objects under the live light:
+   cheap next to the frame itself, and a pose or a slider is never stale. */
+const ARM_LIT_SHADOW = 512;
+const ARM_LIT_SH_VERT = `
+attribute vec3 aPos;
+uniform mat4 uModel;
+uniform vec3 uShX, uShY, uLitDir;
+uniform vec2 uShLo;
+uniform float uShScale, uShZmax, uShZspan;
+varying float vD;
+void main(){
+  vec3 w = (uModel * vec4(aPos, 1.0)).xyz;
+  vec2 f = (vec2(dot(w, uShX), dot(w, uShY)) - uShLo) * uShScale + 1.0;
+  vD = (uShZmax - dot(w, uLitDir)) / uShZspan;
+  gl_Position = vec4(f / ${ARM_LIT_SHADOW / 2}.0 - 1.0, vD * 2.0 - 1.0, 1.0);
+}`;
+const ARM_LIT_SH_FRAG = `
+#ifdef GL_FRAGMENT_PRECISION_HIGH
+precision highp float;
+#else
+precision mediump float;
+#endif
+varying float vD;
+void main(){
+  vec4 e = fract(vec4(1.0, 255.0, 65025.0, 16581375.0) * vD);
+  gl_FragColor = e - e.yzww * vec4(1.0 / 255.0, 1.0 / 255.0, 1.0 / 255.0, 0.0);
+}`;
+function armLitShProg(gl){
+  if(ARM.litShProg && ARM.litShGl === gl) return ARM.litShProg;
+  const sh = (type, src) => {
+    const s = gl.createShader(type); gl.shaderSource(s, src); gl.compileShader(s);
+    if(!gl.getShaderParameter(s, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(s));
+    return s;
+  };
+  const p = gl.createProgram();
+  gl.attachShader(p, sh(gl.VERTEX_SHADER, ARM_LIT_SH_VERT));
+  gl.attachShader(p, sh(gl.FRAGMENT_SHADER, ARM_LIT_SH_FRAG));
+  gl.linkProgram(p);
+  const loc = {aPos: gl.getAttribLocation(p, 'aPos')};
+  for(const n of ['uModel', 'uShX', 'uShY', 'uLitDir', 'uShLo', 'uShScale', 'uShZmax', 'uShZspan'])
+    loc[n] = gl.getUniformLocation(p, n);
+  ARM.litShProg = {p, loc}; ARM.litShGl = gl;
+  ARM.litShadow = new Map();
+  return ARM.litShProg;
+}
+const armLitXf = (m, x, y, z) => [m[0] * x + m[4] * y + m[8] * z + m[12],
+                                  m[1] * x + m[5] * y + m[9] * z + m[13],
+                                  m[2] * x + m[6] * y + m[10] * z + m[14]];
+// items: [{ob, draws: [{model, pos, idx (buffers), idxStart, count, P (positions), I (indices) or null, bStart, bCount}]}]
+function armLitShadows(gl, items){
+  const o = armLitOpts();
+  if(!o.key || !(o.strength > 0) || !(o.shadows > 0) || !items.length) return;
+  let prog;
+  try{ prog = armLitShProg(gl); }catch(e){ return; }
+  const L = armLitDir();
+  const up = Math.abs(L[1]) < 0.99 ? [0, 1, 0] : [1, 0, 0];
+  const cr = (a, b) => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
+  const un = v => { const l = Math.hypot(v[0], v[1], v[2]) || 1; return v.map(c => c / l); };
+  const X = un(cr(up, L)), Y = cr(L, X);
+  const N = ARM_LIT_SHADOW;
+  gl.disable(gl.SCISSOR_TEST); gl.disable(gl.CULL_FACE); gl.disable(gl.BLEND);
+  gl.useProgram(prog.p);
+  const P = prog.loc;
+  // only aPos is read here: an array left on by the viewport's pass is not checked against these draws
+  for(let i = 0; i < 8; i++) if(i !== P.aPos) gl.disableVertexAttribArray(i);
+  for(const {ob, draws} of items){
+    // the object's extent across the light and along it
+    let lx = Infinity, ly = Infinity, hx = -Infinity, hy = -Infinity, lz = Infinity, hz = -Infinity;
+    for(const d of draws){
+      const each = v => {
+        const w = armLitXf(d.model, d.P[v * 3], d.P[v * 3 + 1], d.P[v * 3 + 2]);
+        const a = w[0] * X[0] + w[1] * X[1] + w[2] * X[2], b = w[0] * Y[0] + w[1] * Y[1] + w[2] * Y[2];
+        const z = w[0] * L[0] + w[1] * L[1] + w[2] * L[2];
+        if(a < lx) lx = a; if(a > hx) hx = a; if(b < ly) ly = b; if(b > hy) hy = b; if(z < lz) lz = z; if(z > hz) hz = z;
+      };
+      if(d.I) for(let i = d.bStart; i < d.bStart + d.bCount; i++) each(d.I[i]);
+      else for(let v = 0; v < d.P.length / 3; v++) each(v);
+    }
+    if(!isFinite(lx)) continue;
+    const span = Math.max(hx - lx, hy - ly, 1e-9);
+    let sh = ARM.litShadow.get(ob.id);
+    if(!sh){
+      const tex = gl.createTexture();
+      gl.bindTexture(gl.TEXTURE_2D, tex);
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, N, N, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+      for(const [k, v] of [[gl.TEXTURE_MIN_FILTER, gl.NEAREST], [gl.TEXTURE_MAG_FILTER, gl.NEAREST],
+                           [gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE], [gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE]])
+        gl.texParameteri(gl.TEXTURE_2D, k, v);
+      const rb = gl.createRenderbuffer();
+      gl.bindRenderbuffer(gl.RENDERBUFFER, rb);
+      gl.renderbufferStorage(gl.RENDERBUFFER, gl.DEPTH_COMPONENT16, N, N);
+      const fb = gl.createFramebuffer();
+      gl.bindFramebuffer(gl.FRAMEBUFFER, fb);
+      gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, tex, 0);
+      gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.RENDERBUFFER, rb);
+      sh = {tex, fb, rb, ready: false};
+      ARM.litShadow.set(ob.id, sh);
+    }
+    // depth 0 the nearest the light, a hair under 1 the farthest: a packed 1.0 reads 0
+    Object.assign(sh, {x: X, y: Y, lo: [lx, ly], span, scale: (N - 3) / span,
+                       zmax: hz, zspan: (hz - lz) * 1.002 + 1e-6});
+    gl.bindFramebuffer(gl.FRAMEBUFFER, sh.fb);
+    gl.viewport(0, 0, N, N);
+    gl.clearColor(1, 1, 1, 1);
+    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+    gl.uniform3fv(P.uShX, X); gl.uniform3fv(P.uShY, Y); gl.uniform3fv(P.uLitDir, L);
+    gl.uniform2fv(P.uShLo, sh.lo); gl.uniform1f(P.uShScale, sh.scale);
+    gl.uniform1f(P.uShZmax, sh.zmax); gl.uniform1f(P.uShZspan, sh.zspan);
+    for(const d of draws){
+      gl.uniformMatrix4fv(P.uModel, false, new Float32Array(d.model));
+      gl.bindBuffer(gl.ARRAY_BUFFER, d.pos);
+      gl.enableVertexAttribArray(P.aPos); gl.vertexAttribPointer(P.aPos, 3, gl.FLOAT, false, 0, 0);
+      gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, d.idx);
+      gl.drawElements(gl.TRIANGLES, d.count, gl.UNSIGNED_SHORT, d.idxStart * 2);
+    }
+    sh.ready = true;
+  }
+  gl.bindFramebuffer(gl.FRAMEBUFFER, null);
 }
 
 /* --- the panel ---------------------------------------------------------------- */
 
 function armLitHtml(){
   const l = armLit(), o = armLitOpts(), objs = armLitTargets();
-  setTimeout(armLitPreviewCheck, 0);
   const lit = objs.filter(x => x.lit);
   const range = (k, label, title) => { const r = ARM_LIT_RANGES[k]; return `<label class="armrange" title="${esc(title || '')}">
       <span>${label} <span class="count" id="armLitVal_${k}">${o[k]}</span></span>
