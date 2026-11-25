@@ -10750,7 +10750,7 @@
  "armory.rig_second": "Kein zweiter Knochen",
  "armory.rig_second_title": "Optional. Ein zweiter Knochen teilt das Gewicht jedes Vertex mit dem ersten. Für Teile, die ein Gelenk überbrücken, etwa eine Schulterplatte zwischen Schlüsselbein und Oberarm. Der Regler bestimmt, wie viel Gewicht der erste Knochen behält.",
  "armory.rig_share": "Erster Knochen",
- "armory.rig_share_title": "Wie viel vom Gewicht jedes Vertex der erste Knochen nimmt, 50 % bis 100 %",
+ "armory.rig_share_title": "Anteil des Gewichts jedes Vertex, den der erste Knochen erhält (0 % bis 100 %); der zweite erhält den Rest",
  "armory.rig_done": {
   "one": "{count} Objekt an {bones} gebunden",
   "other": "{count} Objekte an {bones} gebunden"

@@ -316,6 +316,11 @@ if horse is not None:
           and abs(back.weights[0] - 0.7) < 1e-6 and abs(back.weights[1] - 0.3) < 1e-6)
     check("rigged weights are normalized: every vertex sums to 1",
           all(abs(back.weights[v * 2] + back.weights[v * 2 + 1] - 1) < 1e-6 for v in range(back.vertices)))
+    rig = armory.rig_to_bones(project, [head_i + 1], ["bone_head", "bone_torso"], 0.0, None)[str(head_i + 1)]
+    project["objects"][head_i]["weights"] = rig
+    back = armory.object_mesh(project["objects"][head_i], assets, None)
+    check("a share of 0%: the second bone takes every vertex whole",
+          abs(back.weights[0]) < 1e-6 and abs(back.weights[1] - 1) < 1e-6)
     try:
         armory.rig_to_bones(project, [head_i + 1], [], 1.0, None)
         check("no bone is refused", False)

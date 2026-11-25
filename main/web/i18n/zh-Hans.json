@@ -1452,7 +1452,7 @@
  "armory.rig_second": "无第二骨骼",
  "armory.rig_second_title": "可选。添加第二根骨骼，与第一根共同分配每个顶点的权重，适用于跨关节部件，例如连接锁骨和上臂的肩甲。滑块控制第一根骨骼保留的权重。",
  "armory.rig_share": "第一骨骼",
- "armory.rig_share_title": "每个顶点分配给第一骨骼的权重比例，50% 至 100%",
+ "armory.rig_share_title": "每个顶点分配给第一根骨骼的权重（0%至100%）；其余由第二根骨骼承担",
  "armory.role_archer": "弓手",
  "armory.role_cavalry": "骑兵",
  "armory.role_crossbow": "弩兵",

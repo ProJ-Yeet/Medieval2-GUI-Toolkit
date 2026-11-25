@@ -11193,7 +11193,7 @@
  "armory.rig_second": "Sin segundo hueso",
  "armory.rig_second_title": "Opcional. Un segundo hueso comparte con el primero el peso de cada vértice, para una pieza que cruza una articulación, como una hombrera entre la clavícula y el brazo. El control deslizante determina cuánto peso conserva el primer hueso.",
  "armory.rig_share": "Primer hueso",
- "armory.rig_share_title": "Cuánto del peso de cada vértice toma el primer hueso, del 50 % al 100 %",
+ "armory.rig_share_title": "Parte del peso de cada vértice que recibe el primer hueso (del 0 % al 100 %); el segundo recibe el resto",
  "armory.rig_done": {
   "one": "{count} objeto enlazado a {bones}",
   "many": "{count} de objetos enlazados a {bones}",

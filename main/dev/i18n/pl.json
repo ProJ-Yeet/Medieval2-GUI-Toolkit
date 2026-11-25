@@ -1647,7 +1647,7 @@
  "armory.rig_second": "Bez drugiej kości",
  "armory.rig_second_title": "Opcjonalnie. Druga kość współdzieli z pierwszą wagę każdego wierzchołka. Przydaje się przy elemencie zachodzącym na staw, np. naramienniku między obojczykiem a ramieniem. Suwak ustawia udział wagi zachowywany przez pierwszą kość.",
  "armory.rig_share": "Pierwsza kość",
- "armory.rig_share_title": "Udział wagi każdego wierzchołka przypisany do pierwszej kości: od 50% do 100%",
+ "armory.rig_share_title": "Udział wagi każdego wierzchołka przypisany pierwszej kości (od 0% do 100%); resztę otrzymuje druga kość",
  "armory.role_archer": "Łucznik",
  "armory.role_cavalry": "Kawaleria",
  "armory.role_crossbow": "Kusza",

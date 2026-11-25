@@ -1991,7 +1991,7 @@ def rig_to_bones(project: dict, obj_ids: Sequence[int], bones: Sequence[str],
     names = [b for b in bones if b][:2]
     if not names:
         raise ArmoryError(_i18n.msg("eng.armory.pick_a_bone", "pick a bone to rig to"))
-    share = 1.0 if len(names) == 1 else min(1.0, max(0.5, float(share)))
+    share = 1.0 if len(names) == 1 else min(1.0, max(0.0, float(share)))
     pair = names if len(names) == 2 else names * 2
     assets = project_assets(project)
     out: Dict[str, dict] = {}

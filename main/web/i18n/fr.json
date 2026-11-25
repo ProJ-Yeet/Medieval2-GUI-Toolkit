@@ -1442,7 +1442,7 @@
  "armory.rig_second": "Aucun second os",
  "armory.rig_second_title": "Facultatif. Un second os partage le poids de chaque sommet avec le premier pour une pièce qui chevauche une articulation, comme une épaulette entre la clavicule et le haut du bras. Le curseur règle le poids conservé par le premier os.",
  "armory.rig_share": "Premier os",
- "armory.rig_share_title": "Part du poids de chaque sommet attribuée au premier os, de 50 % à 100 %",
+ "armory.rig_share_title": "Part du poids de chaque sommet attribuée au premier os (de 0 % à 100 %) ; le second reçoit le reste",
  "armory.role_archer": "Archer",
  "armory.role_cavalry": "Cavalerie",
  "armory.role_crossbow": "Arbalète",

@@ -1182,7 +1182,7 @@
  "armory.rig_second": "İkinci kemik yok",
  "armory.rig_second_title": "İsteğe bağlı. Eklemi aşan parçalar, örneğin köprücük kemiği ile üst kol arasındaki omuzluk için, her köşe noktasının ağırlığını ilk kemikle paylaşan ikinci kemik. Kaydırıcı ilk kemiğin payını belirler.",
  "armory.rig_share": "İlk kemik",
- "armory.rig_share_title": "İlk kemik her bir köşe noktası'nin ağırlığının ne kadarını alır, %50 ila %100",
+ "armory.rig_share_title": "Her köşe noktasının ağırlığından ilk kemiğe düşen pay (%0 ile %100 arasında); kalanını ikinci kemik alır",
  "armory.role_archer": "Okçu",
  "armory.role_cavalry": "Süvari",
  "armory.role_crossbow": "Arbalet",

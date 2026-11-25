@@ -640,17 +640,17 @@ const ARM_BONES = ['bone_head', 'bone_torso', 'bone_abs', 'bone_pelvis',
 const armRigRowsHtml = id => `<div class="armpropsrow"><select id="armRigA" title="${esc(tt('armory.rig_first'))}">${ARM_BONES.map(b => `<option>${b}</option>`).join('')}</select>
       <select id="armRigB" title="${esc(tt('armory.rig_second_title'))}"><option value="">${tt('armory.rig_second')}</option>${ARM_BONES.map(b => `<option>${b}</option>`).join('')}</select>
       <span class="armtip" title="${esc(tt('armory.rig_second_title'))}">?</span></div>
-    <div class="armpropsrow"><label class="armrange" title="${esc(tt('armory.rig_share_title'))}">${tt('armory.rig_share')}<input type="range" id="armRigShare" min="50" max="100" value="100"
+    <div class="armpropsrow"><label class="armrange" title="${esc(tt('armory.rig_share_title'))}">${tt('armory.rig_share')}<input type="range" id="armRigShare" min="0" max="100" value="100"
         oninput="document.getElementById('armRigPct').value=this.value"></label>
-      <input type="number" class="armpct" id="armRigPct" min="50" max="100" step="1" value="100"
-        oninput="const v=Math.max(50,Math.min(100,+this.value||100));document.getElementById('armRigShare').value=v">%
+      <input type="number" class="armpct" id="armRigPct" min="0" max="100" step="1" value="100"
+        oninput="const v=Math.max(0,Math.min(100,+this.value));document.getElementById('armRigShare').value=v">%
       <button class="mini" onclick="document.getElementById('armRigShare').value=100;document.getElementById('armRigPct').value=100" title="${esc(tt('armory.rig_all_title'))}">${tt('armory.rig_all')}</button>
       <button class="mini" onclick="armRigBones(${id})" title="${esc(tt('armory.rig_bones_title'))}">${tt('armory.rig_bones')}</button></div>`;
 async function armRigBones(id){
   const ids = ARM.sel.size ? [...ARM.sel] : [id];
   const val = k => (document.getElementById(k) || {}).value || '';
   const bones = [val('armRigA'), val('armRigB')].filter(Boolean);
-  const share = (+val('armRigShare') || 100) / 100;
+  const share = val('armRigShare') === '' ? 1 : +val('armRigShare') / 100;
   try{
     const r = await api.post('/api/armory/rig_bones', {project: armProj(), ids, bones, share});
     if(r.error) throw new Error(r.error);
