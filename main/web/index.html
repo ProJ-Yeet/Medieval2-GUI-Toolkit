@@ -3781,7 +3781,13 @@ body.look-editing :is(button,label,legend,h1,h2,h3,.trsechead,.mftab):hover{outl
   .armexprowbtn:hover{background:var(--panel)}
   .armexprowbtn.on{background:rgba(224,123,31,.18)}
   .armexpunit{font-weight:600}
-  .armexpv3{height:300px;position:relative}
+  .armexpunitcard{height:64px;width:auto;border-radius:4px;flex:none}
+  /* the source viewer's controls under its picture, never wrapped into a
+     second column out past the dialog's edge */
+  .armexpv3{position:relative}
+  .armexpv3 .v3wrap.dock{flex-wrap:nowrap;height:auto}
+  .armexpv3 .v3wrap.dock .v3stage{flex:none;height:300px;min-height:200px}
+  .armexpv3 .v3wrap.dock .v3side{max-height:calc(24vh / var(--uiz))}
   .armexpmine{width:100%;height:auto;border-radius:6px;background:#22272e}
   @container page (max-width:1000px){.armexpmod{grid-template-columns:1fr}}
   .armtexmeta{display:flex;flex-direction:column;gap:2px;flex:1;min-width:0}

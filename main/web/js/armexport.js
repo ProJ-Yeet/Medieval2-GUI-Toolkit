@@ -1021,6 +1021,7 @@ function armExpModHtml(){
       ${d.entries.includes(m.name.trim().toLowerCase()) && !m.replace ? `<span class="armexpwarn">${tt('armory.exp_entry_taken', {name: esc(m.name.trim().toLowerCase())})}</span>` : ''}</div>`);
   if(m.choice !== 'skip'){
     let unit = `<div class="armexprow"><b>${m.choice === 'new' ? tt('armory.exp_unit_from') : tt('armory.exp_unit')}</b>
+        ${m.unit ? `<img class="armexpunitcard" onerror="iconRetry(this)" src="${iconUrl(m.target, m.unit, 'card')}" alt="">` : ''}
         <span class="armexpunit">${m.unit ? esc(m.unit) : `<span class="count">${tt('armory.exp_unit_none')}</span>`}</span>
         <button class="mini${m.picking ? ' on' : ''}" onclick="armExpModSet('picking', !armExpMod().picking)">${tt(m.unit ? 'armory.exp_unit_change' : 'armory.exp_unit_choose')}</button>
       <label>${tt('armory.assign_slot')}<select onchange="armExpModSet('assign_to',this.value)"${m.unitData ? '' : ' disabled'}>${armExpAssignSlots().map(s=>
@@ -1079,10 +1080,11 @@ function armExpSrcSet(v){
   armExpModSet('src', v);
 }
 
-/* The unit, picked with the shared unit picker (unitpick.js). */
+/* The unit, picked with the shared unit picker (unitpick.js), as the card
+   maker's cards: the target mod's units with their own pictures. */
 function armExpPickerHtml(){
   const m = armExpMod();
-  return `<div class="armexppick">${upkHtml('armExp', (m.data || {}).units || [], {current: m.unit, onPick: armExpPickUnit})}</div>`;
+  return `<div class="armexppick">${upkHtml('armExp', (m.data || {}).units || [], {tiles: true, mod: m.target, current: m.unit, onPick: armExpPickUnit})}</div>`;
 }
 function armExpPickUnit(type){ const m = armExpMod(); m.picking = false; armExpModSet('unit', type); }
 function armExpRoleRowsHtml(){

@@ -3,7 +3,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
 const root = path.resolve(__dirname, '..');
-const c = {state:{src:'fixture'}, ARM:{mods:['fixture']}, ARM_BODY_SCALES:{}, armSave(){}, armProj:()=>({collections:[]}),
+const c = {state:{src:'fixture'}, ARM:{mods:['fixture']}, ARM_BODY_SCALES:{}, iconUrl:()=>'', armSave(){}, armProj:()=>({collections:[]}),
   document:{getElementById:()=>null}, window:{addEventListener(){},removeEventListener(){}},
   esc:String, enc:encodeURIComponent, tt:(id,args)=>id+JSON.stringify(args||{}), ttA:String};
 vm.createContext(c);

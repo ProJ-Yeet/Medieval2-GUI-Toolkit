@@ -216,12 +216,31 @@ const armRound = (v, k) => Math.round(v * k) / k;
 /* --- several objects as one -------------------------------------------------- */
 
 const ARM_HEAD = /^(head|helm|helmet|coif|face|hair|beard|moustache|mustache)/i;
+/* 2026-11-25: a head part is one named as one, or one rigged solely or mostly
+   to the head: half its weight or more on bone_head, a hood or a mask
+   whatever it is called. A vertex weighted 0 on both bones is held wholly by
+   its first, as v3aSkin holds it. */
+function armHeadShare(o){
+  const g = typeof armAnimGeo === 'function' ? armAnimGeo(o) : null;
+  if(!g || !g.vertices) return 0;
+  if(g.headShare == null){
+    const head = g.bones.map(b => /head/i.test(b || '')), W = g.weights, J = g.joints;
+    let on = 0;
+    for(let v = 0; v < g.vertices; v++){
+      if(W[v*2] <= 0 && W[v*2+1] <= 0){ if(head[J[v*2]]) on += 1; }
+      else on += (head[J[v*2]] ? W[v*2] : 0) + (head[J[v*2+1]] ? W[v*2+1] : 0);
+    }
+    g.headShare = on / g.vertices;
+  }
+  return g.headShare;
+}
+const armIsHead = o => ARM_HEAD.test(o.name) || armHeadShare(o) >= 0.5;
 /* What a transform moves: the selection, and with Head as one every head
    part when any is picked. */
 function armXformSet(){
   const sel = armSelected();
-  if(ARM.headLink && sel.some(o => ARM_HEAD.test(o.name)))
-    for(const o of armVisibleObjects()) if(ARM_HEAD.test(o.name) && !sel.includes(o)) sel.push(o);
+  if(ARM.headLink && sel.some(armIsHead))
+    for(const o of armVisibleObjects()) if(!sel.includes(o) && armIsHead(o)) sel.push(o);
   return sel;
 }
 /* An object's origin in the game's space: its pivot, moved. */

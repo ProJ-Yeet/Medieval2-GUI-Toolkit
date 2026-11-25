@@ -25,6 +25,9 @@ function armExtrasInto(p){
 function armExtrasFrom(p){
   const x = (p && p.extra) || {};
   if(x.cam && Array.isArray(x.cam.target)) ARM.cam = Object.assign({}, ARM.cam, x.cam);
+  // the card maker's settings are the session's own: one without them (a new
+  // session) starts on the defaults, never on the last model's camera
+  state.cg = null;
   if(x.card) state.cg = Object.assign(cg('armory'), x.card);
   state.armExp = null;
   if(x.exp) armExp().settings = Object.assign(armExp().settings, x.exp);

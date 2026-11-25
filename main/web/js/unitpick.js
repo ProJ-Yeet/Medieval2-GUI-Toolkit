@@ -11,6 +11,7 @@
      tiles          cards with their picture (the unit editor's), else rows
      model(u)       the model line shown under a unit (its soldier by default)
      skip           types left out of the list
+     mod            the mod the tiles' cards come from (the FROM mod by default)
    Its filters are kept per id while the page lives. */
 const UPK = new Map();
 const upkQ = id => UPK.get(id) || {f: {q: '', faction: '', category: '', cls: ''}};
@@ -40,7 +41,7 @@ function upkRows(id){
   const k = esc(JSON.stringify(id)), t = u => esc(JSON.stringify(u.type)), take = o.onPeek ? 'false' : 'true';
   el.innerHTML = rows.slice(0, 400).map(u => o.tiles
     ? `<div class="card${u.type === o.current ? ' sel' : ''}" onclick="upkClick(${k},${t(u)},${take})" ondblclick="upkClick(${k},${t(u)},true)" title="${esc(u.type)}">
-        <img loading="lazy" onerror="iconRetry(this)" src="${iconUrl(state.src, u.type, 'card')}" alt="">
+        <img loading="lazy" onerror="iconRetry(this)" src="${iconUrl(o.mod || state.src, u.type, 'card')}" alt="">
         <div class="meta"><div class="nm">${esc(u.type)}</div><div class="sub">${esc(u.category)} · ${esc(u['class'])}</div><div class="sub">${esc(model(u))}</div></div></div>`
     : `<button class="armexprowbtn${u.type === o.current ? ' on' : ''}" onclick="upkClick(${k},${t(u)},${take})" ondblclick="upkClick(${k},${t(u)},true)">
         <b>${esc(u.type)}</b> <span class="count">${esc(u.category)} · ${esc(u['class'])} · ${esc(model(u))}</span></button>`).join('')

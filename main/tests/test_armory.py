@@ -1211,10 +1211,11 @@ console.log(JSON.stringify({first, picked, offFalls, all, changed, cutA, cutB, p
     check(f"Randomize variation draws another head every time ({got.get('changed')} of 20)", got.get("changed") == 20)
     A, B = got.get("cutA") or {}, got.get("cutB") or {}
     near = lambda x, y: abs((x or 0) - y) < 1e-6
+    # the view shows the model 1.25 times its size: 4 tall is 5 high, 2.5 wide at 200x400
     check(f"the card's frame sits where its camera looks, at its size, in the HD view ({A})",
-          near(A.get("x"), 100 - 1 / 2.2 * 200 / 2) and near(A.get("y"), 200 - 400 / 4.4 - 1.5 * 400 / 4.4 / 2) and near(A.get("h"), 1.5 * 400 / 4.4))
+          near(A.get("x"), 100 - 1 / 2.5 * 200 / 2) and near(A.get("y"), 200 - 400 / 5.0 - 1.5 * 400 / 5.0 / 2) and near(A.get("h"), 1.5 * 400 / 5.0))
     check(f"the wheel zooms the view itself: the model and the frame grow about the fixed point ({B}, pivot {got.get('pivot')})",
-          near(B.get("h"), 2 * A.get("h", 0)) and near(B.get("y") + B.get("h", 0) / 2, 200 - 2 * 400 / 4.4) and got.get("pivot") == [0, 0, 0])
+          near(B.get("h"), 2 * A.get("h", 0)) and near(B.get("y") + B.get("h", 0) / 2, 200 - 2 * 400 / 5.0) and got.get("pivot") == [0, 0, 0])
 
 # ---------------------------------------------------------------------------
 print("\nThe card maker's IK rig and pose library (99n)")

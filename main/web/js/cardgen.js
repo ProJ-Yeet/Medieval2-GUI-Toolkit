@@ -177,7 +177,9 @@ function cgCrewSpots(crew){
 }
 /* The Crew row's words: an elephant's driver and riders, a siege engine's crew. */
 const cgCrewKey = k => CG_UNIT.crewKind === 'siege' ? {rider: 'cards.gen_crew_man', riders: 'cards.gen_crew_men', title: 'cards.gen_crew_siege_title',
-  all: 'cards.gen_crew_all_men', none: 'cards.gen_crew_none_men', driver: 'cards.gen_crew_own'}[k] : 'cards.gen_crew_' + k;
+  all: 'cards.gen_crew_all_men', none: 'cards.gen_crew_none_men', driver: 'cards.gen_crew_own'}[k]
+  : {rider: 'cards.gen_crew_rider', riders: 'cards.gen_crew_riders', title: 'cards.gen_crew_title',
+     all: 'cards.gen_crew_all', none: 'cards.gen_crew_none', driver: 'cards.gen_crew_driver'}[k];
 function cgCrewHtml(){
   const groups = cgGroups();
   if(!groups.has('crew')) return '';
@@ -1072,7 +1074,7 @@ function cgCameraHtml(){
     ${cgField(tt('cards.gen_framing'), cgSelectHtml('fit','part',['whole','knees','thighs','waist'].map(x => [x,tt(CG_FRAME_KEYS[x])])), tt('cards.gen_framing_hint'))}
     ${cgCheckHtml('fit','auto','cards.gen_fit_auto')}
     ${cgIsInfo() ? '' : `<div title="${ttA('cards.gen_guide_title')}">${cgCheckHtml('','guide','cards.gen_guide')}</div>`}
-    <button class="mini" id="cgReset" ${cgPlacementReset() ? 'disabled' : ''} onclick="cg().xf={t:[0,0,0],r:[0,0,0],s:1};cg().cam.pan=0;cgPaint()">${tt('cards.gen_place_reset')}</button>
+    <button class="mini" id="cgReset" ${cgPlacementReset() ? 'disabled' : ''} onclick="cgCamDefault();cgPaint()">${tt('cards.gen_place_reset')}</button>
     <span class="armnav" title="${esc(tt('armory.nav_title'))}">${tt('armory.nav')}
       <button class="mini${armNav() === 'simple' ? ' on' : ''}" onclick="armNavSet('simple');cgPaint()">${tt('armory.nav_simple')}</button>
       <button class="mini${armNav() === 'blender' ? ' on' : ''}" onclick="armNavSet('blender');cgPaint()">${tt('armory.nav_blender')}</button></span>
@@ -1266,7 +1268,11 @@ function cgRandom(){
   }
   c.pick = pick; c.oneEach = true; cgFitChanged(); cgPaint();
 }
-function cgPlacementReset(){ const c = cg(); return !c.cam.pan && (c.xf.s || 1) === 1 && [...c.xf.t,...c.xf.r].every(v => !v); }
+// 2026-11-25: Reset pose and frame puts the whole camera back (cgCamDefault), its zoom and turn too
+function cgPlacementReset(){
+  const c = cg(), m = c.cam;
+  return !m.pan && !m.height && m.yaw === 20 && m.pitch === 4 && m.scale === 1.2 && (c.xf.s || 1) === 1 && [...c.xf.t,...c.xf.r].every(v => !v);
+}
 function cgSet(group,key,value,redraw){
   const c = cg(); (group ? c[group] : c)[key] = value;
   const out = document.getElementById('cgv_' + group + '_' + key); if(out) out.textContent = typeof value === 'number' ? Math.round(value*100)/100 : value;
@@ -1427,11 +1433,13 @@ function cgCamera(objects,w,h){
   const r = c.xf.r, t = c.xf.t;
   const k = Number(c.xf.s) || 1;
   const pre = armMul(armTrans(center[0]+t[0],center[1]+t[1],center[2]+t[2]),armMul(armRot(...r),armMul(armScale(k,k,k),armTrans(-center[0],-center[1],-center[2]))));
+  // full: the view (cgViewCamera) turns about the body's middle and shows
+  // everything drawn round it, a sword held up included
   if(!CG_WORK.fit){
     const fraction = {whole:1,knees:0.78,thighs:0.64,waist:0.5}[c.fit.part] || 1;
     const height = Math.max(0.1,hi[1]-lo[1]);
     CG_WORK.fit = {height:Math.max(height*fraction*1.12,(hi[0]-lo[0])*h/w*1.12),target:[-center[0],hi[1]-height*fraction/2,center[2]],
-      center:[-center[0],center[1],center[2]],full:Math.max(height,hi[0]-lo[0],hi[2]-lo[2])};
+      center:[-center[0],center[1],center[2]],full:(([l,u]) => Math.max(2*Math.max(u[1]-center[1],center[1]-l[1]),u[0]-l[0],u[2]-l[2]))(cgBounds(objects))};
   }
   const fit = CG_WORK.fit, height = fit.height * c.cam.scale, width = height*w/h;
   const target = [...fit.target]; target[0] += c.cam.pan; target[1] += c.cam.height;
@@ -1465,7 +1473,7 @@ function cgViewCamera(card,w,h){
   // first shown: the whole model and the card's frame in view
   if(!v.pivot){ v.pivot = fit.center.slice(); v.full = Math.max(fit.full,2*(Math.abs(card.target[1]-fit.center[1])+card.height/2),card.width*h/w); }
   const yaw = c.cam.yaw*Math.PI/180, pitch = c.cam.pitch*Math.PI/180;
-  const height = v.full*1.1/v.zoom, width = height*w/h;
+  const height = v.full*1.25/v.zoom, width = height*w/h;
   const target = v.pivot.slice(), {eye,proj,view} = cgLens(target,yaw,pitch,height,width);
   // the card's frame: its camera looks the same way, so its corners, upright
   // across the line of sight at its middle, are enough
