@@ -1418,6 +1418,21 @@ if mods:
 else:
     print("  no mod installed; skipped")
 
+# 2026-11-25: Rig to bones names bones in lower case (bone_lhand); a melee
+# model's table spells it bone_Lhand. The export finds it, case aside, and
+# writes the table's spelling and slot, not the pelvis.
+print("\nA rigged bone is found in the model's table whatever its case")
+from array import array as _arr  # noqa: E402
+_om = mesh.MeshFile(source="t", format="mesh")
+_om.positions.extend((0, 0, 0, 1, 0, 0, 0, 1, 0)); _om.normals.extend((0, 1, 0) * 3); _om.uvs.extend((0, 0) * 3)
+_om.bones = ["bone_lhand"]
+_om.weights = _arr("f", (1.0, 0.0) * 3); _om.bone_ids = bytes((0, 0, 0, 0)) * 3
+_om.groups.append(mesh.MeshGroup("sword", "sword", _arr("H", (0, 1, 2)), 0))
+_tbl = [(n.replace("bone_l", "bone_L"), s) for n, s in armbake.STANDARD_BONES]
+_out = armbake.assemble([{"id": 1, "name": "sword", "mesh": "sword"}], {1: _om}, {}, _tbl)
+check(f"bone_lhand written as {_out.bones[_out.bone_ids[2]]}, slot {_out.bone_links[_out.bone_ids[2]]}, nothing missing",
+      _out.bones[_out.bone_ids[2]] == "bone_Lhand" and _out.bone_links[_out.bone_ids[2]] == 16 and not _out.notes)
+
 shutil.rmtree(tmp, ignore_errors=True)
 print(f"\n{sum(ok)}/{len(ok)} checks passed")
 sys.exit(0 if all(ok) else 1)
