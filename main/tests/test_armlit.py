@@ -224,10 +224,21 @@ f 5/1/2 6/2/2 7/3/2 8/4/2
     img2 = np.asarray(Image.open(again["baked"][0]["path"]).convert("RGBA"))
     check("a second bake starts from the source, not from the lit texture",
           again["baked"][0]["source"] == str(t / "plate_d.png") and abs(int(img2[32, 10, 0]) - int(img[32, 10, 0])) <= 1)
+    # 2026-11-25: two objects stacked on the same texels each get a lit texture of
+    # their own, so each wears its own light: the top one lit, the one under it not
     two = armlit.bake_objects(proj, [1, 2], None, dict(ambient=0.3, **TOP))
-    check("two objects on one texture, stacked: one file, the texels one tone",
-          len(two["baked"]) == 1 and sorted(two["baked"][0]["objects"]) == [1, 2]
-          and np.ptp(np.asarray(Image.open(two["baked"][0]["path"]))[4:60, 2:30, 0].astype(int)) <= 1)
+    by = {b["objects"][0]: b for b in two["baked"]}
+    check("two objects on one texture, stacked: a file each",
+          len(two["baked"]) == 2 and sorted(by) == [1, 2] and by[1]["path"] != by[2]["path"]
+          and all(b["source"] == str(t / "plate_d.png") for b in two["baked"]))
+    up_img = np.asarray(Image.open(by[1]["path"]).convert("RGBA")) if 1 in by else GREY
+    down_img = np.asarray(Image.open(by[2]["path"]).convert("RGBA")) if 2 in by else GREY
+    check(f"  each lit as its own surface faces (top {up_img[32, 10, 0]}, under {down_img[32, 10, 0]})",
+          int(up_img[32, 10, 0]) > int(down_img[32, 10, 0]) + 30)
+    check("  each file's texels one tone", np.ptp(up_img[4:60, 2:30, 0].astype(int)) <= 1
+          and np.ptp(down_img[4:60, 2:30, 0].astype(int)) <= 1)
+    check("  the lit textures beside each other's are kept apart by name",
+          Path(by[1]["path"]).parent == Path(by[2]["path"]).parent)
     # 2026-11-24: the viewport's preview, the same bake at a small size, kept apart
     prev = armlit.bake_objects(proj, [1], None, dict(ambient=0.3, **TOP), preview=24)
     pp = Path(prev["baked"][0]["path"]) if prev["baked"] else Path("x")

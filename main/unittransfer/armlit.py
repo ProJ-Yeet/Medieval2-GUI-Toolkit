@@ -435,7 +435,13 @@ def _shrink(img: Optional[np.ndarray], most: int) -> Optional[np.ndarray]:
 def bake_objects(project: dict, obj_ids, mod_of, settings: Optional[dict] = None,
                  image_of=armbake.default_image_of, out_dir: Optional[Path] = None,
                  preview: int = 0) -> dict:
-    """Bake the named objects; one lit PNG per colour texture they wear.
+    """Bake the named objects; one lit PNG per object and colour texture.
+
+    2026-11-25: objects that share texels (a model's head variants, a collar
+    UV'd over the legs) go to different files, so each keeps its own light
+    where one file could hold only the biggest one's; objects that do not
+    share stay together, so a model is still a few files (:func:`_apart`). A
+    part mirrored onto its own other half still shares its texels.
 
     ``{"baked": [{"source", "path", "objects", "spec", "normal"}],
     "skipped": [{"id", "why"}]}``. An object drawing on two sheets at once is
@@ -457,17 +463,52 @@ def bake_objects(project: dict, obj_ids, mod_of, settings: Optional[dict] = None
         normal = sheets.image(job["normal"]) if job["normal"] else None
         if preview:
             colour, spec, normal = (_shrink(x, int(preview)) for x in (colour, spec, normal))
-        lit = bake_image(colour, spec, normal, pos=np.concatenate(job["pos"]), nrm=np.concatenate(job["nrm"]),
-                         uv=np.concatenate(job["uv"]), tris=np.array(job["tris"], int),
-                         island=np.array(job["island"], int), obj=np.array(job["obj"], int), settings=st)
-        tag = hashlib.blake2b((str(src).lower() + "|" + ",".join(str(i) for i in sorted(job["objects"]))).encode("utf-8"),
-                              digest_size=4).hexdigest()
-        out_dir.mkdir(parents=True, exist_ok=True)
-        out = out_dir / f"{src.stem}_lit_{tag}.png"
-        Image.fromarray(lit, "RGBA").save(out)
-        if normal is not None and not preview:
-            # the export looks for a sheet's normal map beside it
-            Image.fromarray(normal, "RGBA").save(out.with_name(out.stem + "_norm.png"))
-        baked.append({"source": job["path"], "path": str(out), "objects": job["objects"],
-                      "spec": spec is not None, "normal": normal is not None})
+        pos, nrm, uv = np.concatenate(job["pos"]), np.concatenate(job["nrm"]), np.concatenate(job["uv"])
+        tris, island, obj = np.array(job["tris"], int), np.array(job["island"], int), np.array(job["obj"], int)
+        for group in _apart(uv, tris, obj, colour.shape[1], colour.shape[0]):
+            pick = np.isin(obj, group)
+            ids = [job["objects"][k - 1] for k in group]
+            lit = bake_image(colour, spec, normal, pos=pos, nrm=nrm, uv=uv, tris=tris[pick],
+                             island=island[pick], obj=obj[pick], settings=st)
+            tag = hashlib.blake2b((str(src).lower() + "|" + ",".join(str(i) for i in sorted(ids))).encode("utf-8"),
+                                  digest_size=4).hexdigest()
+            out_dir.mkdir(parents=True, exist_ok=True)
+            out = out_dir / f"{src.stem}_lit_{tag}.png"
+            Image.fromarray(lit, "RGBA").save(out)
+            if normal is not None and not preview:
+                # the export looks for a sheet's normal map beside it
+                Image.fromarray(normal, "RGBA").save(out.with_name(out.stem + "_norm.png"))
+            baked.append({"source": job["path"], "path": str(out), "objects": ids,
+                          "spec": spec is not None, "normal": normal is not None})
     return {"baked": baked, "skipped": skipped, "settings": st}
+
+
+#: at what fraction of the smaller object's texels two objects count as sharing
+SHARED = 0.02
+
+
+def _apart(uv: np.ndarray, tris: np.ndarray, obj: np.ndarray, w: int, h: int) -> List[List[int]]:
+    """The job's objects (``obj``'s numbers) in groups whose texels do not
+    overlap, the fewest a greedy pass finds: each to the first group it shares
+    no texels with. Covered at half size, which is plenty to tell apart."""
+    hw, hh = max(1, w // 2), max(1, h // 2)
+    half = uv * 0.5
+    masks = {}
+    for k in np.unique(obj):
+        t = tris[obj == k]
+        cov, _, _ = _cover(half, t, range(len(t)), hw, hh)
+        masks[int(k)] = cov >= 0
+    groups: List[List[int]] = []
+    taken: List[np.ndarray] = []
+    # the biggest first, so a small one fits round them
+    for k in sorted(masks, key=lambda k: -int(masks[k].sum())):
+        m, n = masks[k], max(int(masks[k].sum()), 1)
+        for g, used in zip(groups, taken):
+            if int((used & m).sum()) <= SHARED * n:
+                g.append(k)
+                used |= m
+                break
+        else:
+            groups.append([k])
+            taken.append(m.copy())
+    return [sorted(g) for g in groups]
