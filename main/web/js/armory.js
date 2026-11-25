@@ -42,9 +42,13 @@ void main(){
   gl_Position = uProj * uView * w;
 }`;
 // built when the viewport first draws, not at load: V3_ENV is viewer3d.js's,
-// and a dropped viewer3d.js that core.js fetches again arrives after this file ran
-const armFrag = () => `#extension GL_OES_standard_derivatives : enable
-#ifdef GL_FRAGMENT_PRECISION_HIGH
+// and a dropped viewer3d.js that core.js fetches again arrives after this file ran.
+// 2026-11-25: two programs. Only `full` has the bake lights (armlit, armcycles):
+// Direct3D under ANGLE runs both sides of a branch that reads textures, so the
+// Cycles look's 200-odd lookups cost every pixel even with no object using it.
+const armFrag = full => `#extension GL_OES_standard_derivatives : enable
+${full ? '#define ARM_FULL' : ''}
+#if defined(ARM_FULL) && defined(GL_FRAGMENT_PRECISION_HIGH)
 precision highp float;
 #else
 precision mediump float;
@@ -62,6 +66,7 @@ uniform vec3 uLDir[4], uLPos[4];
 uniform vec3 uLitDir, uMaskCol;
 uniform vec4 uCrop;
 ${V3_ENV}
+#ifdef ARM_FULL
 // armlit._visible: how much of the key light reaches this point past the
 // object's own triangles, from its shadow map (armlit.js armLitShadows)
 float armShadow(float raw){
@@ -79,6 +84,9 @@ float armShadow(float raw){
   return seen / 25.0;
 }
 ${typeof ARM_CY_GLSL === 'string' ? ARM_CY_GLSL : 'varying float vPart; uniform vec4 uCyObj; vec3 cyShade(vec4 b, vec2 st, vec3 n){ return b.rgb; }'}
+#else
+varying float vPart;
+#endif
 void main(){
   // uCrop: a dyed object's own crop of the sheet, (x, y, width, height)
   // in the glued image's 0..1; the whole sheet otherwise
@@ -91,6 +99,7 @@ void main(){
   // same reason (modelexport.py), and Blender agrees with that.
   bool front = !gl_FrontFacing;
   vec3 n = normalize(vNormal) * (front ? 1.0 : uFlip);
+#ifdef ARM_FULL
   if((uLit > 0.5 && uLit < 1.5 || uLit > 2.5) && uLitN > 0.5){
     // the bake's own tangents (armlit.bake_image): along the image's x and down
     // its y, worked out from how the UVs run, here per pixel; green points down
@@ -105,7 +114,9 @@ void main(){
     m.y *= uFlipG;
     if(uLit > 2.5) m *= uCyObj.w;     // TpacTool's _m2_norm: red and green both the other way
     n = normalize(T * m.x + B * m.y + n * sqrt(max(1.0 - dot(m, m), 0.01)));
-  }else if(uHasN > 0.5){
+  }else
+#endif
+  if(uHasN > 0.5){
     // 95j: the normal map's preview, its tangents worked out per pixel
     // from how the UVs run across the surface (a cotangent frame)
     vec3 dp1 = dFdx(vPos), dp2 = dFdy(vPos);
@@ -119,6 +130,7 @@ void main(){
   vec3 light = v3Env(n) * 0.62 + vec3(1.0, 0.96, 0.9) * 0.5 * max(dot(n, normalize(vec3(0.4, 0.8, 0.5))), 0.0)
              + vec3(0.62, 0.7, 0.85) * 0.2 * max(dot(n, normalize(vec3(-0.6, 0.2, -0.7))), 0.0);
   vec3 col = pow(clamp(base.rgb * light, 0.0, 1.0), vec3(0.78));
+#ifdef ARM_FULL
   if(uLit > 2.5) col = cyShade(base, st, n);   // armcycles.js: the Cycles bake, live
   else if(uLit > 1.5) col = base.rgb;  // armlit.js: a baked texture, shown as it is
   else if(uLit > 0.5){
@@ -140,6 +152,7 @@ void main(){
     vec3 tint = 0.08 + metal * (b - 0.08);
     col = pow(clamp(b * lit + tint * shine, 0.0, 1.0), vec3(1.0 / 2.2));
   }
+#endif
   if(uCard > 0.5){
     // 95m: the card maker's lamps (2026-11-24: up to four, each a sun or a
     // point) and an ambient; none and a full ambient is its flat shading
@@ -941,24 +954,38 @@ function armGl(){
     if(!gl.getShaderParameter(s, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(s));
     return s;
   };
-  const p = gl.createProgram();
-  gl.attachShader(p, sh(gl.VERTEX_SHADER, ARM_VERT));
-  gl.attachShader(p, sh(gl.FRAGMENT_SHADER, armFrag()));
-  gl.linkProgram(p);
-  ARM.prog = p;
-  ARM.loc = {};
-  for(const n of ['aPos', 'aNormal', 'aUv', 'aPart']) ARM.loc[n] = gl.getAttribLocation(p, n);
-  for(const n of ['uProj', 'uView', 'uModel', 'uTex', 'uHasTex', 'uUScale', 'uHi', 'uSel', 'uFlip', 'uXray', 'uCrop', 'uNTex', 'uHasN',
+  // the plain program now, the full one the first time an object needs it
+  // (armUseProg); the same attribute slots in both
+  ARM.progs = {};
+  ARM.mkProg = full => {
+    const p = gl.createProgram();
+    gl.attachShader(p, sh(gl.VERTEX_SHADER, ARM_VERT));
+    gl.attachShader(p, sh(gl.FRAGMENT_SHADER, armFrag(full)));
+    ['aPos', 'aNormal', 'aUv', 'aPart'].forEach((n, i) => gl.bindAttribLocation(p, i, n));
+    gl.linkProgram(p);
+    const loc = {};
+    for(const n of ['aPos', 'aNormal', 'aUv', 'aPart']) loc[n] = gl.getAttribLocation(p, n);
+    for(const n of ARM_UNIFORMS) loc[n] = gl.getUniformLocation(p, n);
+    return ARM.progs[full ? 'full' : 'plain'] = {p, loc};
+  };
+  armUseProg(false);
+  gl.enable(gl.DEPTH_TEST);
+  return gl;
+}
+// the program armRender draws with: the full one only while an object on show
+// is under a bake light (armLitMode not 0)
+function armUseProg(full){
+  const k = full ? 'full' : 'plain';
+  const pr = ARM.progs[k] || ARM.mkProg(full);
+  ARM.prog = pr.p; ARM.loc = pr.loc;
+}
+const ARM_UNIFORMS = ['uProj', 'uView', 'uModel', 'uTex', 'uHasTex', 'uUScale', 'uHi', 'uSel', 'uFlip', 'uXray', 'uCrop', 'uNTex', 'uHasN',
                   'uCard', 'uMask', 'uLAmt', 'uAmb', 'uLevel', 'uPoint', 'uLDir', 'uLPos', 'uLN',
                   'uLit', 'uLitAmb', 'uLitStr', 'uLitSoft', 'uLitDir', 'uMaskCol',
                   'uSTex', 'uShTex', 'uLitSh', 'uLitN', 'uHasS', 'uFlipG', 'uHasSh', 'uShScale', 'uShSpan',
                   'uShZmax', 'uShZspan', 'uShX', 'uShY', 'uShLo',
                   'uCyEnv', 'uCyLut', 'uCyAt', 'uCyRows', 'uCyView', 'uCySunN', 'uCyHasAt', 'uCyLutR', 'uCyMix',
-                  'uCyMix2', 'uCyObj', 'uCyAlb', 'uCySun', 'uCySunA', 'uCyAo', 'uCyM1', 'uCyM2'])
-    ARM.loc[n] = gl.getUniformLocation(p, n);
-  gl.enable(gl.DEPTH_TEST);
-  return gl;
-}
+                  'uCyMix2', 'uCyObj', 'uCyAlb', 'uCySun', 'uCySunA', 'uCyAo', 'uCyM1', 'uCyM2'];
 
 function armUpload(live){
   const gl = armGl();
@@ -1138,6 +1165,8 @@ function armRender(objs, w, h, cam, opts){
     gl.clearColor(bg[0], bg[1], bg[2], 1);
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
   }
+  // the bake lights' program only while one of these objects is under one
+  armUseProg(!o.plain && typeof armLitMode === 'function' && objs.some(ob => armLitMode(ob) !== 0));
   gl.useProgram(ARM.prog);
   const L = ARM.loc;
   gl.uniformMatrix4fv(L.uProj, false, new Float32Array(cam.proj));
@@ -1161,8 +1190,10 @@ function armRender(objs, w, h, cam, opts){
   }
   // the pre-render panel's light on the objects it is about to bake (armlit.js)
   const litOf = !o.plain && typeof armLitMode === 'function' ? armLitMode : () => 0;
-  if(typeof armLitUniforms === 'function') armLitUniforms(gl, L);
-  if(typeof armCyUniforms === 'function') armCyUniforms(gl, L);
+  if(ARM.prog === (ARM.progs.full || {}).p){
+    if(typeof armLitUniforms === 'function') armLitUniforms(gl, L);
+    if(typeof armCyUniforms === 'function') armCyUniforms(gl, L);
+  }
   if(xray && !wire){ gl.enable(gl.BLEND); gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA); gl.depthMask(false); }
   // Wireframe: the faces only as depth, so the wires behind them hide (with
   // X-ray, not even that)
