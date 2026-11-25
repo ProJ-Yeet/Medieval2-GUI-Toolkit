@@ -12,6 +12,11 @@ object's own UVs:
   key light's shadow mixed in by that much. Shadows only ever take the key
   light away, so nothing falls below its ambient light: no black. An object
   is shadowed by itself only;
+* 2026-11-25: up to three more lights (``lights``), each a sun or a point
+  as the unit card maker's are, with a direction, a height and a strength,
+  and a point its distance from :data:`LAMP_CENTRE`. Each is lit and
+  shadowed as the key light is; a point's light falls off as the card
+  maker's does, and its shadow is cast along the line from the centre;
 * stacked UV islands: each texel is baked from **one** island, the biggest
   that covers it. A smaller island lying on those texels reuses them, and one
   that overlaps in part bakes only the texels that are its own. So a stack is
@@ -43,6 +48,16 @@ RANGES = {
     "strength": (0.5, 0.0, 3.0),
     "shadows": (0.5, 0.0, 1.0),
 }
+#: an extra light's settings: default and range (``type`` is "sun" or "point")
+LAMP_RANGES = {
+    "direction": (-120.0, -180.0, 180.0),
+    "height": (25.0, -90.0, 90.0),
+    "strength": (0.5, 0.0, 3.0),
+    "distance": (2.0, 0.2, 10.0),
+}
+LAMPS_MAX = 3
+#: what a point light's distance is measured from: a metre above the origin
+LAMP_CENTRE = np.array([0.0, 1.0, 0.0])
 GAMMA = 2.2
 #: how far the baked colour runs past an island's edge, in texels
 BLEED = 2
@@ -62,6 +77,17 @@ def settings_of(raw: Optional[dict]) -> dict:
             out[key] = default
     out["key"] = bool(raw.get("key", True))
     out["flip_green"] = bool(raw.get("flip_green", False))
+    lamps = []
+    for one in (raw.get("lights") if isinstance(raw.get("lights"), list) else [])[:LAMPS_MAX]:
+        one = one if isinstance(one, dict) else {}
+        lamp = {"type": "point" if one.get("type") == "point" else "sun"}
+        for key, (default, lo, hi) in LAMP_RANGES.items():
+            try:
+                lamp[key] = min(hi, max(lo, float(one.get(key, default))))
+            except (TypeError, ValueError):
+                lamp[key] = default
+        lamps.append(lamp)
+    out["lights"] = lamps
     return out
 
 
@@ -69,6 +95,24 @@ def light_dir(st: dict) -> np.ndarray:
     """The unit vector from the model towards the key light (y is up)."""
     a, h = math.radians(st["direction"]), math.radians(st["height"])
     return np.array([math.cos(h) * math.sin(a), math.sin(h), math.cos(h) * math.cos(a)])
+
+
+def lamps(st: dict) -> List[dict]:
+    """Every light that shines: the key light, then the extra ones. Each is
+    ``{"dir", "strength", "point"}`` and a point's ``"pos"``; ``dir`` points
+    from the model towards it (for a point, from :data:`LAMP_CENTRE`)."""
+    out = []
+    if st["key"] and st["strength"] > 0:
+        out.append({"dir": light_dir(st), "strength": st["strength"], "point": False})
+    for one in st.get("lights") or []:
+        if one["strength"] <= 0:
+            continue
+        d = light_dir(one)
+        lamp = {"dir": d, "strength": one["strength"], "point": one["type"] == "point"}
+        if lamp["point"]:
+            lamp["pos"] = LAMP_CENTRE + d * one["distance"]
+        out.append(lamp)
+    return out
 
 
 def sibling(path: str, kind: str) -> str:
@@ -241,21 +285,28 @@ def bake_image(colour: np.ndarray, spec: Optional[np.ndarray], normal: Optional[
 
     light = st["ambient"] * (0.85 + 0.15 * n[:, 1]) * ao
     shine = np.zeros(len(ys))
-    if st["key"] and st["strength"] > 0:
-        to = light_dir(st)
-        raw = n @ to
-        wrap = st["softness"] * 0.5
+    wrap = st["softness"] * 0.5
+    for lamp in lamps(st):
+        if lamp["point"]:
+            d = lamp["pos"] - point
+            dist = np.maximum(np.linalg.norm(d, axis=1, keepdims=True), 1e-9)
+            to = d / dist
+            fall = 1.0 / (1.0 + 0.08 * dist[:, 0] ** 2)       # the card maker's point light
+        else:
+            to = np.broadcast_to(lamp["dir"], n.shape)
+            fall = 1.0
+        raw = (n * to).sum(1)
         ndl = np.clip((raw + wrap) / (1 + wrap), 0.0, 1.0)
         reach = np.ones(len(ys))
         if st["shadows"] > 0:
             o = obj[t]
             for one in np.unique(o):
                 pick = o == one
-                reach[pick] = _visible(point[pick], raw[pick], pos, tris[obj == one], to, st["softness"])
-        key = st["strength"] * ndl * (1 - st["shadows"] * (1 - reach))
+                reach[pick] = _visible(point[pick], raw[pick], pos, tris[obj == one], lamp["dir"], st["softness"])
+        key = lamp["strength"] * fall * ndl * (1 - st["shadows"] * (1 - reach))
         light = light + key
         ndh = np.clip((_unit(n + to) * n).sum(1), 0.0, 1.0)
-        shine = key * gloss * ndh ** (4 + 60 * gloss)
+        shine = shine + key * gloss * ndh ** (4 + 60 * gloss)
     tint = 0.08 + metal[:, None] * (base - 0.08)
     lit = base * light[:, None] + tint * shine[:, None]
     out[ys, xs, :3] = np.floor(np.clip(lit, 0.0, 1.0) ** (1 / GAMMA) * 255 + 0.5).astype(np.uint8)

@@ -1,8 +1,9 @@
 // Armory Studio's Pre-render lighting panel (web/js/armlit.js).
 //   node tests/test_armory_lit_ui.js
-// The light's direction as the viewport draws it, which objects show the live
-// light and which their baked texture, the bake's request and what it leaves
-// on each object, and taking it off again.
+// The lights as the viewport draws them (the key light and the extra ones,
+// sun or point), which objects show the live light and which their baked
+// texture, Render mode, the bake's request and what it leaves on each object,
+// and taking it off again.
 const assert=require('node:assert/strict');
 const fs=require('node:fs');
 const path=require('node:path');
@@ -27,18 +28,43 @@ const near=(a,b)=>a.every((x,i)=>Math.abs(x-b[i])<1e-6);
   assert.equal(c.armLitOpts().shadows,0.5);
   assert.equal(c.armLitOpts().key,true);
 
-  // the light towards the page: y up, and x mirrored as the viewport mirrors the model
+  // the key light towards the page: y up, and x mirrored as the viewport mirrors the model
+  const key=()=>c.armLitLamps()[0].dir;
   c.armLitSet('direction',0,true);c.armLitSet('height',90,true);
-  assert.ok(near(c.armLitDir(),[0,1,0]));
+  assert.ok(near(key(),[0,1,0]));
   c.armLitSet('direction',90,true);c.armLitSet('height',0,true);
-  assert.ok(near(c.armLitDir(),[-1,0,0]));
+  assert.ok(near(key(),[-1,0,0]));
   c.armLitSet('direction',0,true);
-  assert.ok(near(c.armLitDir(),[0,0,1]));
+  assert.ok(near(key(),[0,0,1]));
+  assert.equal(c.armLitLamps().length,1);
+
+  // 2026-11-25: up to three more lights, as the card maker's: a sun, and a point
+  // standing its distance from a man's middle (x mirrored too), saved with the rest
+  c.armLitLampAdd();
+  assert.equal(JSON.stringify(c.armLitOpts().lights),JSON.stringify([{type:'sun',direction:-120,height:25,strength:0.5,distance:2}]));
+  assert.equal(calls.at(-1).body.armory_lit.lights.length,1);
+  c.armLitLamp(0,'type','point');c.armLitLamp(0,'direction',90);c.armLitLamp(0,'height',0);c.armLitLamp(0,'distance',3);
+  const pt=c.armLitLamps()[1];
+  assert.equal(pt.point,true);
+  assert.ok(near(pt.pos,[-3,1,0]));
+  assert.ok(near(pt.dir,[-1,0,0]));
+  c.armLitLampAdd();c.armLitLampAdd();c.armLitLampAdd();
+  assert.equal(c.armLitOpts().lights.length,3);
+  assert.equal(c.armLitLamps().length,4);
+  // a light at strength 0 does not shine; the key light off leaves the others
+  c.armLitLamp(2,'strength',0);
+  c.armLitSet('key',false,true);
+  assert.equal(c.armLitLamps().length,2);
+  c.armLitSet('key',true,true);
+  c.armLitLampRemove(2);c.armLitLampRemove(1);
+  assert.equal(c.armLitOpts().lights.length,1);
+  assert.equal(c.armLitOpts().lights[0].type,'point');
 
   // closed: the viewport's own light on everything
   assert.equal(c.armLitMode(project.objects[0]),0);
+  const painted=c.paints;
   c.armLitToggle();
-  assert.equal(c.paints,1);
+  assert.equal(c.paints,painted+1);
   // open: the selected objects show the live light, the others stay as they were
   assert.equal(c.armLitMode(project.objects[0]),1);
   assert.equal(c.armLitMode(project.objects[2]),0);
@@ -46,6 +72,11 @@ const near=(a,b)=>a.every((x,i)=>Math.abs(x-b[i])<1e-6);
   for(const k of ['ambient','direction','height','softness','strength','shadows','key','flip_green'])
     assert.match(html,new RegExp("armLitSet\\('"+k+"'"),k);
   assert.match(html,/armLitRun\(\)/);
+  // the extra light's own sliders, a point's distance among them, its remove and an add
+  for(const k of ['type','direction','height','strength','distance'])
+    assert.ok(html.includes(`armLitLamp(0, '${k}'`),k);
+  assert.match(html,/armLitLampRemove\(0\)/);
+  assert.match(html,/armLitLampAdd\(\)/);
 
   // a slider being dragged redraws the viewport and saves nothing yet
   const posts=calls.length,frames=c.frames;
@@ -111,11 +142,23 @@ const near=(a,b)=>a.every((x,i)=>Math.abs(x-b[i])<1e-6);
   await new Promise(r=>setImmediate(r));
   assert.equal(calls.length,asked);
   assert.ok(c.ARM.sheetAllowed.has('C:/belt_s.png'));
-  // closed: an object with PBR maps, never baked, shows the bake's live light on its colour map
+  // closed, Render mode off: the viewport's own light
+  assert.equal(c.armLitMode(project.objects[2]),0);
+  assert.doesNotMatch(c.armLitBarHtml(),/ checked/);
+  // Render mode on (and remembered): an object the bake can light shows its live
+  // light on its colour map, one already baked its lit texture as it is
+  c.armRenderToggle(true);
+  assert.equal(JSON.stringify(calls.at(-1)),JSON.stringify({url:'/api/settings',body:{armory_render_mode:true}}));
+  assert.match(c.armLitBarHtml(),/ checked/);
   assert.equal(c.armLitMode(project.objects[2]),1);
   assert.equal(c.armLitSheetOf(project.objects[2]),'C:/belt_d.png');
-  // one already baked keeps its lit texture
-  assert.equal(c.armLitMode(project.objects[1]),0);
+  assert.equal(c.armLitMode(project.objects[1]),2);
+  assert.equal(c.armLitMode(project.objects[0]),2);
+  // one the bake cannot light (no colour texture found) keeps the viewport's light
+  const plain={id:9,name:'rope',src:[]};
+  assert.equal(c.armLitMode(plain),0);
+  c.armRenderToggle(false);
+  assert.equal(c.armLitMode(project.objects[2]),0);
 
   // taking it off: each object wears what it wore before
   c.armLitRemove([1,2]);

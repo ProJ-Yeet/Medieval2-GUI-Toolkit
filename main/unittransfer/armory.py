@@ -965,20 +965,10 @@ def _pbr_of(objects: list) -> Optional[dict]:
     spec, normal = armlit.sibling(colour, "s"), armlit.sibling(colour, "n")
     if not spec and not normal:
         return None
-    metal = top = 0.0
-    if spec:
-        try:
-            from PIL import Image
-            import numpy as np
-            red = np.asarray(Image.open(spec).convert("RGB"))[..., 0] / 255.0
-            metal, top = float(red.mean()), float(red.max())
-        except (OSError, ValueError):
-            pass
     for f in (spec, normal):
         if f:
             allow_texture(f)
-    return {"colour": colour, "spec": spec, "normal": normal, "metal": metal, "max_metal": top,
-            "normal_kind": "n" if normal and Path(normal).stem.lower().endswith("_n") else "m2"}
+    return {"colour": colour, "spec": spec, "normal": normal}
 
 
 # ---------------------------------------------------------------------------

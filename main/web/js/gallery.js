@@ -231,9 +231,9 @@ async function galLoadExt(m, seq){
   // the game's layout when any object sits on the attachment, or the file is a
   // battle .mesh; a plain .obj or .glb on one sheet keeps u as it is
   const paired = objs.some(o => o.sheets === 'attach' || o.sheets === 'both') || /\.mesh$/i.test(m.name);
-  // 2026-11-25: a file on one PBR colour texture is drawn as the Cycles bake
-  // will bake it (armcycles.js), its spec and normal maps with it, no shadows
-  const pbr = view.pbr && await galCyLookWait() ? view.pbr : null;
+  // 2026-11-25: a file on one PBR colour texture is drawn under the Pre-render
+  // light (armlit.js), its spec and normal maps with it, no shadows
+  const pbr = view.pbr && typeof armLitLamps === 'function' ? view.pbr : null;
   const spec = pbr && pbr.spec ? await img(pbr.spec) : null;
   const nrm = pbr && pbr.normal ? await img(pbr.normal) : null;
   if(!gal || seq !== gal.seq) return;
@@ -432,62 +432,39 @@ function galFrame(now){
   if(spin || galVaryOn() || pending) galLoop();
 }
 
-/* --- 2026-11-25: the Cycles bake's look on a PBR tile (armcycles.js) -------------- */
-const galCyLook = () => {
-  if(typeof armCyCheck !== 'function') return null;
-  if(!(ARM.cy && ARM.cy.look)) armCyCheck();
-  return ARM.cy && ARM.cy.look ? ARM.cy.look : null;
-};
-// a tile waits for the light (the first time, Blender measures it), but not
-// past an error; the viewport's toggle no longer asks for it ahead of time
-async function galCyLookWait(){
-  for(let i = 0; i < 240; i++){
-    const lk = galCyLook();
-    if(lk) return lk;
-    if(!ARM.cy || ARM.cy.err) return null;
-    await new Promise(r => setTimeout(r, 500));
-  }
-  return null;
-}
-function galTex(gl, img, data){
+/* --- 2026-11-25: the Pre-render light on a PBR tile (armlit.js) ------------------
+   The viewport's Render mode without the shadows: the ambient light, the key
+   light and the extra ones, the spec map's metal, gloss and AO, the normal map. */
+function galTex(gl, img){
   const t = gl.createTexture();
   gl.bindTexture(gl.TEXTURE_2D, t);
   gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
-  if(data) gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, data.w, data.h, 0, gl.RGBA, gl.FLOAT, data.px);
-  else gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, img);
+  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, img);
   const pot = n => n > 0 && (n & (n - 1)) === 0;
-  const w = data ? data.w : img.width, h = data ? data.h : img.height;
-  const mip = !data && pot(w) && pot(h);
+  const mip = pot(img.width) && pot(img.height);
   if(mip) gl.generateMipmap(gl.TEXTURE_2D);
-  const lin = data && !gl.getExtension('OES_texture_float_linear') ? gl.NEAREST : gl.LINEAR;
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, mip ? gl.LINEAR_MIPMAP_LINEAR : lin);
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, lin);
-  const wrap = pot(w) && pot(h) ? gl.REPEAT : gl.CLAMP_TO_EDGE;
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, mip ? gl.LINEAR_MIPMAP_LINEAR : gl.LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+  const wrap = mip ? gl.REPEAT : gl.CLAMP_TO_EDGE;
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, wrap);
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, data ? gl.CLAMP_TO_EDGE : wrap);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, wrap);
   return t;
 }
-// the program and the light in the gallery's own context, made once per light
-function galCy(gl){
-  const lk = galCyLook();
-  if(!lk || !gl.getExtension('OES_texture_float') || !gl.getExtension('OES_standard_derivatives')) return null;
-  if(gal.cy && gal.cy.look === lk) return gal.cy;
-  if(gal.cy && gal.cy.look !== lk){ gl.deleteTexture(gal.cy.env); if(gal.cy.lut) gl.deleteTexture(gal.cy.lut); }
+// the program in the gallery's own context, made once
+function galLit(gl){
+  if(gal.lit) return gal.lit;
+  if(!gl.getExtension('OES_standard_derivatives')) return null;
   const vs = `attribute vec3 aPos; attribute vec3 aNormal; attribute vec2 aUv;
 uniform mat4 uProj, uView, uModel;
-varying vec3 vNormal; varying vec2 vUv; varying vec3 vPos; varying float vPart;
-void main(){ vNormal = mat3(uModel) * aNormal; vUv = aUv; vPart = 0.0;
+varying vec3 vNormal; varying vec2 vUv; varying vec3 vPos;
+void main(){ vNormal = mat3(uModel) * aNormal; vUv = aUv;
   vec4 w = uModel * vec4(aPos, 1.0); vPos = w.xyz; gl_Position = uProj * uView * w; }`;
   const fs = `#extension GL_OES_standard_derivatives : enable
-#ifdef GL_FRAGMENT_PRECISION_HIGH
-precision highp float;
-#else
 precision mediump float;
-#endif
 varying vec3 vNormal; varying vec2 vUv; varying vec3 vPos;
 uniform sampler2D uTex, uNTex, uSTex;
-uniform float uHasS, uHasN;
-${ARM_CY_GLSL}
+uniform float uHasS, uHasN, uFlipG, uAmb, uSoft, uKN, uKPt[4], uKStr[4];
+uniform vec3 uKDir[4], uKPos[4];
 void main(){
   vec4 base = texture2D(uTex, vUv);
   if(base.a < 0.35) discard;
@@ -499,60 +476,54 @@ void main(){
     det = abs(det) < 1e-12 ? 1e-12 : det;
     vec3 T = (dp1 * d2.y - dp2 * d1.y) / det, B = (dp2 * d1.x - dp1 * d2.x) / det;
     T = normalize(T - n * dot(T, n)); B = normalize(B - n * dot(B, n));
-    vec2 m = (texture2D(uNTex, vUv).xy * 2.0 - 1.0) * uCyObj.w;
+    vec2 m = texture2D(uNTex, vUv).xy * 2.0 - 1.0;
+    m.y *= uFlipG;
     n = normalize(T * m.x + B * m.y + n * sqrt(max(1.0 - dot(m, m), 0.01)));
   }
-  gl_FragColor = vec4(cyShade(base, vUv, n), 1.0);
+  vec3 b = pow(base.rgb, vec3(2.2));
+  float metal = 0.0, gloss = 0.0, ao = 1.0;
+  if(uHasS > 0.5){ vec3 s = texture2D(uSTex, vUv).rgb; metal = s.r; gloss = s.g; ao = 0.25 + 0.75 * s.b; }
+  float lit = uAmb * (0.85 + 0.15 * n.y) * ao, shine = 0.0, wrap = uSoft * 0.5;
+  for(int i = 0; i < 4; i++){
+    if(float(i) >= uKN) break;
+    vec3 to = uKDir[i];
+    float fall = 1.0;
+    if(uKPt[i] > 0.5){ vec3 d = uKPos[i] - vPos; float dist = max(length(d), 1e-6); to = d / dist; fall = 1.0 / (1.0 + 0.08 * dist * dist); }
+    float key = uKStr[i] * fall * clamp((dot(n, to) + wrap) / (1.0 + wrap), 0.0, 1.0);
+    lit += key;
+    shine += key * gloss * pow(clamp(dot(normalize(n + to), n), 0.0, 1.0), 4.0 + 60.0 * gloss);
+  }
+  vec3 tint = 0.08 + metal * (b - 0.08);
+  gl_FragColor = vec4(pow(clamp(b * lit + tint * shine, 0.0, 1.0), vec3(1.0 / 2.2)), 1.0);
 }`;
   const p = v3Program(gl, vs, fs);
   if(!p) return null;
   const loc = {};
   ['aPos', 'aNormal', 'aUv'].forEach(k => { loc[k] = gl.getAttribLocation(p, k); });
-  ['uProj', 'uView', 'uModel', 'uTex', 'uNTex', 'uSTex', 'uHasS', 'uHasN', 'uCyEnv', 'uCyLut', 'uCyRows', 'uCyView',
-   'uCySunN', 'uCyHasAt', 'uCyLutR', 'uCyMix', 'uCyMix2', 'uCyObj', 'uCyAlb', 'uCySun', 'uCySunA', 'uCyAo']
+  ['uProj', 'uView', 'uModel', 'uTex', 'uNTex', 'uSTex', 'uHasS', 'uHasN', 'uFlipG', 'uAmb', 'uSoft', 'uKN', 'uKPt', 'uKStr', 'uKDir', 'uKPos']
     .forEach(k => { loc[k] = gl.getUniformLocation(p, k); });
-  // the world's light, levels stacked and padded to 1024 rows, as armCyUpload has it
-  const e = lk.env, raw = Uint8Array.from(atob(e.data), ch => ch.charCodeAt(0)), f = new Float32Array(raw.buffer);
-  const px = new Float32Array(e.w * 1024 * 4);
-  for(let i = 0; i < e.levels * e.h * e.w; i++){ px[i*4] = f[i*3]; px[i*4+1] = f[i*3+1]; px[i*4+2] = f[i*3+2]; px[i*4+3] = 1; }
-  const cy = gal.cy = {look: lk, p, loc, env: galTex(gl, null, {w: e.w, h: 1024, px}), lut: null};
-  gl.bindTexture(gl.TEXTURE_2D, cy.env);
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT);
-  const im = new Image();
-  im.onload = () => { if(gal && gal.cy === cy){ cy.lut = galTex(gl, im); gl.bindTexture(gl.TEXTURE_2D, cy.lut);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR); gal.dirty = true; galLoop(); } };
-  im.src = lk.lut;
-  return cy;
+  return gal.lit = {p, loc};
 }
-function galCyUse(gl, m){
-  const cy = galCy(gl);
-  if(!cy || !cy.lut) return null;
-  const L = cy.loc, lk = cy.look, st = lk.settings, info = m.pbr.info;
-  gl.useProgram(cy.p);
+function galLitUse(gl, m){
+  const lp = galLit(gl);
+  if(!lp) return null;
+  const L = lp.loc, o = armLitOpts(), lamps = armLitLamps().slice(0, 4);
+  gl.useProgram(lp.p);
   if(!m.gpu.spec && m.pbr.spec) m.gpu.spec = galTex(gl, m.pbr.spec);
   if(!m.gpu.nmap && m.pbr.nrm) m.gpu.nmap = galTex(gl, m.pbr.nrm);
   const unit = (k, t, u) => { gl.activeTexture(gl.TEXTURE0 + u); gl.bindTexture(gl.TEXTURE_2D, t); gl.uniform1i(L[k], u); };
-  unit('uCyEnv', cy.env, 4); unit('uCyLut', cy.lut, 5);
   if(m.gpu.spec) unit('uSTex', m.gpu.spec, 2);
   if(m.gpu.nmap) unit('uNTex', m.gpu.nmap, 1);
   if(m.gpu.tex) unit('uTex', m.gpu.tex, 0);
   gl.activeTexture(gl.TEXTURE0);
   gl.uniform1f(L.uHasS, m.gpu.spec ? 1 : 0); gl.uniform1f(L.uHasN, m.gpu.nmap ? 1 : 0);
-  gl.uniform1f(L.uCyRows, 1024);
-  gl.uniform3f(L.uCyLutR, lk.lut_range[0], lk.lut_range[1], lk.lut_range[2]);
-  gl.uniform1f(L.uCyView, lk.view === 'AgX' && st.bake_view !== false ? 1 : 0);
-  gl.uniform4f(L.uCyMix, st.bake_ambient, st.bake_world, st.bake_shadows, st.bake_floor);
-  gl.uniform4f(L.uCyMix2, st.bake_surround_diffuse, lk.consts.metal_other, lk.consts.glossy[0], lk.consts.glossy[1]);
-  const alb = new Float32Array(18); lk.albedo.forEach((a, i) => { alb[i*2] = a[0]; alb[i*2+1] = a[1]; });
-  gl.uniform2fv(L.uCyAlb, alb);
-  const suns = lk.suns.slice(0, 9), sv = new Float32Array(36), sa = new Float32Array(9);
-  suns.forEach((x, i) => { sv.set([x.dir[0], x.dir[1], x.dir[2], x.energy], i * 4); sa[i] = x.angle * Math.PI / 180; });
-  gl.uniform4fv(L.uCySun, sv); gl.uniform1fv(L.uCySunA, sa); gl.uniform1f(L.uCySunN, suns.length);
-  gl.uniform1f(L.uCyHasAt, 0);
-  const metalObj = info.metal >= lk.consts.metal_object;
-  gl.uniform4f(L.uCyObj, metalObj ? 1 : 0, metalObj ? 1 : 0,
-               st.bake_surround_diffuse > 0.02 || info.max_metal > 0.02 ? 1 : 0, info.normal_kind === 'm2' ? -1 : 1);
+  gl.uniform1f(L.uFlipG, o.flip_green ? -1 : 1);
+  gl.uniform1f(L.uAmb, o.ambient); gl.uniform1f(L.uSoft, o.softness);
+  const dir = new Float32Array(12), pos = new Float32Array(12), pt = new Float32Array(4), str = new Float32Array(4);
+  lamps.forEach((x, i) => { dir.set(x.dir, i * 3); pos.set(x.pos, i * 3); pt[i] = x.point ? 1 : 0; str[i] = x.strength; });
+  gl.uniform1f(L.uKN, lamps.length);
+  gl.uniform3fv(L.uKDir, dir); gl.uniform3fv(L.uKPos, pos);
+  gl.uniform1fv(L.uKPt, pt); gl.uniform1fv(L.uKStr, str);
   return L;
 }
 
@@ -569,10 +540,10 @@ function galDraw(m, out){
   gl.clearColor(0, 0, 0, 0);
   gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
   gl.useProgram(gal.prog);
-  // a PBR tile under the Cycles look draws with its own program; the same
-  // matrices, and the gallery's own uniforms then go nowhere
-  const cyLoc = m.pbr ? galCyUse(gl, m) : null;
-  if(cyLoc) loc = cyLoc;
+  // a PBR tile under the Pre-render light draws with its own program; the
+  // same matrices, and the gallery's own uniforms then go nowhere
+  const litLoc = m.pbr ? galLitUse(gl, m) : null;
+  if(litLoc) loc = litLoc;
   const pitch = 0.25, yaw = gal.yaw;
   const eye = [m.centre[0] + m.dist * Math.cos(pitch) * Math.sin(yaw),
                m.centre[1] + m.dist * Math.sin(pitch),

@@ -51,16 +51,15 @@ A portable install of v2.4.14 fetches this one by itself at the next start.
     X-ray, outlined selection, the Objects panel reworked, UV edge and face
     modes, and the bar in two rows with Sessions, Library and Export;
   * Into a mod picks the unit from card tiles;
-  * import previews of a PBR file are drawn live as the Cycles bake (Bake
-    in Blender) will bake them: the bake's world, its surround suns, the
-    metal mix, the light floor and AgX. The world and the AgX curve are
-    measured in your own Blender once (a few seconds, then about half a
-    minute per world the first time it is used). **Bake light**, in the
-    viewport bar, draws objects in the viewport that way too, with each
-    part's shadows on itself. It is off until ticked, as it slows the
-    viewport;
-  * the Pre-render panel draws its own bake live too: the spec map, the
-    normal map and the key light's soft shadow, as it will write them.
+  * the Pre-render panel draws its bake live as it will write it: the spec
+    map, the normal map and each light's soft shadow. Beside the key light
+    it takes up to three more, each a sun or a point as in the card maker,
+    and the bake uses them all;
+  * **Render mode**, in the viewport bar, draws every object the bake can
+    light under the Pre-render panel's light with the panel closed, and a
+    baked object with its baked texture. Off by default; with it off the
+    viewport draws as quickly as before. Import previews of a PBR file use
+    the same light, without shadows.
 
 ## Fixed
 

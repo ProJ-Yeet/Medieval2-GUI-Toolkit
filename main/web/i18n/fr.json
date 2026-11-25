@@ -14631,9 +14631,8 @@
  "settings.base_edit_hint": "Le jeu de base est en lecture seule par défaut. Une fois la case cochée, son dossier de données accepte les modifications comme pour n’importe quel mod : chaque changement y est enregistré sous forme de fichier séparé, que le jeu charge par-dessus ses archives. Les changements sont sauvegardés et peuvent être annulés comme d’habitude. Les campagnes de Kingdoms dans son dossier de mods sont toujours modifiables. Créer un mod à partir du jeu reste la solution la plus sûre.",
  "settings.base_edit_on": "Le jeu de base peut maintenant être modifié",
  "settings.base_edit_off": "Le jeu de base est de nouveau en lecture seule",
- "armory.cy_look": "Cuire l’éclairage",
- "armory.cy_look_title": "Affiche chaque objet avec une carte spéculaire ou une carte normale avant le précalcul de l'éclairage; Cycles précalculera l'éclairage du monde, les lumières solaires environnantes, les ombres de chaque élément sur lui-même, le mélange métallique, l'éclairage du sol et AgX. Le précalcul est effectué une seule fois dans votre installation de Blender. L'option reste désactivée tant que vous ne cochez pas la case, car elle peut ralentir la vue 3D; les aperçus lors de l'importation d'un fichier PBR l'affichent toujours.",
- "armory.cy_look_err": "Impossible de préparer l’éclairage pour la cuisson Cycles : {why}",
- "armory.cy_no_blender": "Blender est introuvable. Définissez d’abord son chemin pour la cuisson Cycles.",
- "armory.cy_no_float": "Cette carte graphique ne peut pas stocker l’éclairage précalculé dans des textures à virgule flottante."
+ "armory.render_mode": "Mode de rendu",
+ "armory.render_mode_title": "Affiche en direct chaque objet avec l'éclairage du panneau Pre-render, tel qu'il sera appliqué lors du bake Pre-render : lumière ambiante, lumière principale, toutes les lumières ajoutées dans ce panneau, cartes spéculaire et normale et ombre de chaque lumière. Un objet baké affiche sa texture bakée telle quelle. Désactivé : l'éclairage propre à la fenêtre 3D, plus rapide.",
+ "armory.lit_distance": "Distance",
+ "armory.lit_distance_title": "Distance d'une lumière ponctuelle par rapport au modèle, mesurée depuis un point situé un mètre au-dessus de l'origine du modèle. La lumière s'atténue avec la distance, comme dans le créateur de cartes."
 }

@@ -104,6 +104,28 @@ check(f"0.5 lies between the two ({shade[0.5][0]})", shade[1.0][0] < shade[0.5][
 o = bake(scene((floor, 0, 0), (roof, 1, 1)), ambient=0.3, shadows=1.0, **TOP)
 check("another object's roof casts nothing on this one", abs(int(o[under][0]) - int(o[clear][0])) <= 1)
 
+print("3b) more lights (2026-11-25): sun or point, as the card maker's")
+c = armlit.settings_of({"lights": [{"type": "point", "strength": 9, "distance": -1, "height": "x"}, {}, {}, {}, 5]})
+check("at most three, each held inside its range",
+      len(c["lights"]) == 3 and c["lights"][0] == {"type": "point", "direction": -120.0, "height": 25.0,
+                                                   "strength": 3.0, "distance": 0.2}
+      and c["lights"][1]["type"] == "sun")
+sun_up = dict(type="sun", direction=0, height=90, strength=1.0)
+a = bake(up, ambient=0.3, **TOP)
+b = bake(up, ambient=0.3, key=False, direction=0, height=90, softness=0, lights=[sun_up])
+check("a sun overhead with the key light off lights as the key light does", np.array_equal(a, b))
+two = bake(up, ambient=0.3, **TOP, lights=[sun_up])
+check(f"a second light adds to the first ({int(two[32, 16, 0])} > {int(a[32, 16, 0])})", two[32, 16, 0] > a[32, 16, 0])
+dim = bake(up, ambient=0.3, key=False, softness=0, lights=[dict(sun_up, strength=0)])
+check("a light at strength 0 adds nothing", np.array_equal(dim, bake(up, ambient=0.3, key=False)))
+near_pt = bake(up, ambient=0.1, key=False, softness=0, lights=[dict(type="point", direction=0, height=90, strength=1, distance=1)])
+far_pt = bake(up, ambient=0.1, key=False, softness=0, lights=[dict(type="point", direction=0, height=90, strength=1, distance=6)])
+check(f"a point light fades with distance ({int(near_pt[32, 16, 0])} > {int(far_pt[32, 16, 0])})",
+      near_pt[32, 16, 0] > far_pt[32, 16, 0] + 10)
+o = bake(scene((floor, 0, 0), (roof, 1, 0)), ambient=0.3, shadows=1.0, key=False, softness=0,
+         lights=[dict(sun_up)])
+check("an extra light casts its own shadow", int(o[under][0]) < int(o[clear][0]) - 20)
+
 print("4) stacked UV islands")
 big_up = quad(0, 0, 1, 1, 0, True, (0, 0, 40, 40))
 small_down = quad(5, 0, 6, 1, 0, False, (8, 8, 24, 24))            # wholly on the big one's texels

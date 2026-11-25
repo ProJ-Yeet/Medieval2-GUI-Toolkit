@@ -13828,9 +13828,8 @@
  "settings.base_edit_hint": "原版游戏默认只读。勾选后，其数据文件夹便可像任何模组一样接受修改：每项改动都会作为松散文件保存在该文件夹中，游戏会优先读取这些文件而非数据包；备份和撤销也照常可用。其模组文件夹中的 Kingdoms 战役始终可以编辑。基于游戏创建模组仍然更安全。",
  "settings.base_edit_on": "现在可以编辑原版游戏了",
  "settings.base_edit_off": "原版游戏已恢复为只读",
- "armory.cy_look": "烘焙光照",
- "armory.cy_look_title": "显示每个对象的高光贴图或法线贴图效果，此时尚未烘焙；Cycles 烘焙会将世界环境光、周围的太阳光、各部分自身的阴影、金属混合效果、地面照明和 AgX 一并烘焙。在你的 Blender 中只需烘焙一次。此选项默认关闭，勾选后可能会拖慢视口；导入 PBR 文件时的预览始终会显示该效果。",
- "armory.cy_look_err": "无法为 Cycles 烘焙准备光照：{why}",
- "armory.cy_no_blender": "未找到 Blender。请先设置其路径，再进行 Cycles 烘焙。",
- "armory.cy_no_float": "这张显卡无法将烘焙光照存储在浮点贴图中。"
+ "armory.render_mode": "视口显示模式",
+ "armory.render_mode_title": "实时显示每个对象在 Pre-render 面板灯光下的效果，与 Pre-render 烘焙结果一致：环境光、主光、该面板中添加的所有灯光、镜面反射贴图和法线贴图，以及每盏灯的阴影。已烘焙的对象会原样显示其烘焙贴图。关闭：使用视口自身的灯光，速度更快。",
+ "armory.lit_distance": "距离",
+ "armory.lit_distance_title": "点光源与模型的距离，以模型原点上方一米处为测量基准。灯光会随距离衰减，和卡片制作器中的灯光一样。"
 }

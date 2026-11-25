@@ -14521,9 +14521,8 @@
  "settings.base_edit_hint": "Das Grundspiel ist standardmäßig schreibgeschützt. Wenn das Kästchen aktiviert ist, lassen sich im Datenordner Änderungen wie bei jedem Mod vornehmen: Jede Änderung wird dort als lose Datei gespeichert, die das Spiel über den Datenpaketen lädt. Änderungen werden wie gewohnt gesichert und können rückgängig gemacht werden. Die Kingdoms-Kampagnen im Mod-Ordner sind immer bearbeitbar. Einen Mod aus dem Spiel zu erstellen, ist weiterhin der sicherere Weg.",
  "settings.base_edit_on": "Das Grundspiel kann jetzt bearbeitet werden",
  "settings.base_edit_off": "Das Grundspiel ist wieder schreibgeschützt",
- "armory.cy_look": "Licht backen",
- "armory.cy_look_title": "Stelle jedes Objekt mit Specular- oder Normal-Map vor dem Backen dar; Cycles backt dabei die Weltbeleuchtung, die umgebenden Sonnenlichter, die Schatten jedes Teils auf sich selbst, den Metallmix, die Bodenbeleuchtung und AgX. Das wird in deiner Blender-Installation nur einmal gebacken. Die Option bleibt deaktiviert, bis du sie aktivierst, da sie das Ansichtsfenster verlangsamen kann; Importvorschauen einer PBR-Datei zeigen sie immer.",
- "armory.cy_look_err": "Die Beleuchtung für das Cycles-Backen konnte nicht vorbereitet werden: {why}",
- "armory.cy_no_blender": "Blender wurde nicht gefunden. Lege zuerst den Pfad für das Cycles-Backen fest.",
- "armory.cy_no_float": "Diese Grafikkarte kann die vorgebackene Beleuchtung nicht in Gleitkomma-Texturen speichern."
+ "armory.render_mode": "Render-Modus",
+ "armory.render_mode_title": "Zeigt jedes Objekt live mit der Beleuchtung des Pre-render-Panels, die der Pre-render-Bake verwenden kann, so wie es nach dem Backen aussehen wird: Umgebungslicht, Hauptlicht, alle dort hinzugefügten Lichter, Specular- und Normal-Maps sowie den Schatten jedes Lichts. Ein gebackenes Objekt zeigt seine gebackene Textur unverändert. Aus: das eigene Licht des Viewports; das ist schneller.",
+ "armory.lit_distance": "Abstand",
+ "armory.lit_distance_title": "Abstand einer Punktlichtquelle zum Modell, gemessen von einem Punkt einen Meter über dem Ursprung des Modells. Das Licht nimmt mit der Entfernung ab, wie beim Karteneditor."
 }

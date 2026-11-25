@@ -30,12 +30,11 @@ const ARM = {
 };
 
 const ARM_VERT = `
-attribute vec3 aPos; attribute vec3 aNormal; attribute vec2 aUv; attribute float aPart;
+attribute vec3 aPos; attribute vec3 aNormal; attribute vec2 aUv;
 uniform mat4 uProj, uView, uModel;
-varying vec3 vNormal; varying vec2 vUv; varying vec3 vPos; varying float vPart;
+varying vec3 vNormal; varying vec2 vUv; varying vec3 vPos;
 void main(){
   vNormal = mat3(uModel) * aNormal;
-  vPart = aPart;
   vUv = aUv;
   vec4 w = uModel * vec4(aPos, 1.0);
   vPos = w.xyz;
@@ -43,9 +42,9 @@ void main(){
 }`;
 // built when the viewport first draws, not at load: V3_ENV is viewer3d.js's,
 // and a dropped viewer3d.js that core.js fetches again arrives after this file ran.
-// 2026-11-25: two programs. Only `full` has the bake lights (armlit, armcycles):
-// Direct3D under ANGLE runs both sides of a branch that reads textures, so the
-// Cycles look's 200-odd lookups cost every pixel even with no object using it.
+// 2026-11-25: two programs. Only `full` has the Pre-render light (armlit.js):
+// Direct3D under ANGLE runs both sides of a branch that reads textures, so its
+// shadow lookups would cost every pixel even with no object under it.
 const armFrag = full => `#extension GL_OES_standard_derivatives : enable
 ${full ? '#define ARM_FULL' : ''}
 #if defined(ARM_FULL) && defined(GL_FRAGMENT_PRECISION_HIGH)
@@ -58,34 +57,36 @@ uniform sampler2D uTex, uNTex, uSTex, uShTex;
 uniform float uHasTex, uUScale, uHi, uSel, uFlip, uXray, uHasN;
 uniform float uCard, uMask, uAmb, uLevel, uLN;
 uniform float uLAmt[4], uPoint[4];
-uniform float uLit, uLitAmb, uLitStr, uLitSoft, uLitSh, uLitN, uHasS, uFlipG, uHasSh;
-uniform float uShScale, uShSpan, uShZmax, uShZspan;
-uniform vec3 uShX, uShY;
-uniform vec2 uShLo;
+uniform float uLit, uLitAmb, uLitSoft, uLitSh, uLitN, uHasS, uFlipG, uHasSh;
 uniform vec3 uLDir[4], uLPos[4];
-uniform vec3 uLitDir, uMaskCol;
+uniform vec3 uMaskCol;
 uniform vec4 uCrop;
 ${V3_ENV}
 #ifdef ARM_FULL
-// armlit._visible: how much of the key light reaches this point past the
-// object's own triangles, from its shadow map (armlit.js armLitShadows)
-float armShadow(float raw){
-  vec2 r = (vec2(dot(vPos, uShX), dot(vPos, uShY)) - uShLo) * uShScale + 1.0;
-  float me = (uShZmax - dot(vPos, uLitDir)) / uShZspan;
-  float bias = uShSpan * (0.004 + 0.03 * (1.0 - clamp(raw, 0.0, 1.0))) / uShZspan;
+// the Pre-render light's lamps (armlit.js armLitLamps): the key light, then up
+// to three more, each a sun (uKDir towards it) or a point (uKPos); each lamp's
+// shadow map is a 512 slot of the object's atlas, set out by uSh*[i]
+uniform float uKN, uKPt[4], uKStr[4];
+uniform vec3 uKDir[4], uKPos[4];
+uniform vec3 uShX[4], uShY[4];
+uniform vec2 uShLo[4];
+uniform float uShScale[4], uShSpan[4], uShZmax[4], uShZspan[4];
+// armlit._visible: how much of a lamp reaches this point past the object's
+// own triangles, from its shadow map (armlit.js armLitShadows)
+float armShadow(float raw, vec3 X, vec3 Y, vec2 lo, float scale, float span, float zmax, float zspan, vec3 L, vec2 slot){
+  vec2 r = (vec2(dot(vPos, X), dot(vPos, Y)) - lo) * scale + 1.0;
+  float me = (zmax - dot(vPos, L)) / zspan;
+  float bias = span * (0.004 + 0.03 * (1.0 - clamp(raw, 0.0, 1.0))) / zspan;
   float reach = uLitSoft * 5.0;
   float seen = 0.0;
   for(int j = 0; j < 5; j++) for(int i = 0; i < 5; i++){
     vec2 d = reach >= 0.5 ? (vec2(float(i), float(j)) / 2.0 - 1.0) * reach : vec2(0.0);
     vec2 c = clamp(floor(r + d), 0.0, 511.0);
-    float z = dot(texture2D(uShTex, (c + 0.5) / 512.0), vec4(1.0, 1.0 / 255.0, 1.0 / 65025.0, 1.0 / 16581375.0));
+    float z = dot(texture2D(uShTex, (slot + c + 0.5) / 1024.0), vec4(1.0, 1.0 / 255.0, 1.0 / 65025.0, 1.0 / 16581375.0));
     seen += z >= me - bias ? 1.0 : 0.0;
   }
   return seen / 25.0;
 }
-${typeof ARM_CY_GLSL === 'string' ? ARM_CY_GLSL : 'varying float vPart; uniform vec4 uCyObj; vec3 cyShade(vec4 b, vec2 st, vec3 n){ return b.rgb; }'}
-#else
-varying float vPart;
 #endif
 void main(){
   // uCrop: a dyed object's own crop of the sheet, (x, y, width, height)
@@ -100,7 +101,7 @@ void main(){
   bool front = !gl_FrontFacing;
   vec3 n = normalize(vNormal) * (front ? 1.0 : uFlip);
 #ifdef ARM_FULL
-  if((uLit > 0.5 && uLit < 1.5 || uLit > 2.5) && uLitN > 0.5){
+  if(uLit > 0.5 && uLit < 1.5 && uLitN > 0.5){
     // the bake's own tangents (armlit.bake_image): along the image's x and down
     // its y, worked out from how the UVs run, here per pixel; green points down
     // the image unless Flip green is ticked
@@ -112,7 +113,6 @@ void main(){
     T = normalize(T - n * dot(T, n)); B = normalize(B - n * dot(B, n));
     vec2 m = texture2D(uNTex, st).xy * 2.0 - 1.0;
     m.y *= uFlipG;
-    if(uLit > 2.5) m *= uCyObj.w;     // TpacTool's _m2_norm: red and green both the other way
     n = normalize(T * m.x + B * m.y + n * sqrt(max(1.0 - dot(m, m), 0.01)));
   }else
 #endif
@@ -131,23 +131,33 @@ void main(){
              + vec3(0.62, 0.7, 0.85) * 0.2 * max(dot(n, normalize(vec3(-0.6, 0.2, -0.7))), 0.0);
   vec3 col = pow(clamp(base.rgb * light, 0.0, 1.0), vec3(0.78));
 #ifdef ARM_FULL
-  if(uLit > 2.5) col = cyShade(base, st, n);   // armcycles.js: the Cycles bake, live
-  else if(uLit > 1.5) col = base.rgb;  // armlit.js: a baked texture, shown as it is
+  if(uLit > 1.5) col = base.rgb;  // armlit.js: a baked texture, shown as it is
   else if(uLit > 0.5){
     // the pre-rendered bake, live: armlit.bake_image's own arithmetic, its
     // spec map (red metal, green gloss, blue AO), normal map and shadow
     vec3 b = pow(base.rgb, vec3(2.2));
     float metal = 0.0, gloss = 0.0, ao = 1.0;
     if(uHasS > 0.5){ vec3 s = texture2D(uSTex, st).rgb; metal = s.r; gloss = s.g; ao = 0.25 + 0.75 * s.b; }
-    float lit = uLitAmb * (0.85 + 0.15 * n.y) * ao, shine = 0.0;
-    if(uLitStr > 0.0){
-      float raw = dot(n, uLitDir), wrap = uLitSoft * 0.5;
+    float lit = uLitAmb * (0.85 + 0.15 * n.y) * ao, shine = 0.0, wrap = uLitSoft * 0.5;
+    for(int i = 0; i < 4; i++){
+      if(float(i) >= uKN) break;
+      vec3 to = uKDir[i];
+      float fall = 1.0;
+      if(uKPt[i] > 0.5){
+        vec3 d = uKPos[i] - vPos;
+        float dist = max(length(d), 1e-6);
+        to = d / dist;
+        fall = 1.0 / (1.0 + 0.08 * dist * dist);   // the card maker's point light
+      }
+      float raw = dot(n, to);
       float ndl = clamp((raw + wrap) / (1.0 + wrap), 0.0, 1.0);
-      float reach = uHasSh > 0.5 && uLitSh > 0.0 ? armShadow(raw) : 1.0;
-      float key = uLitStr * ndl * (1.0 - uLitSh * (1.0 - reach));
+      float reach = uHasSh > 0.5 && uLitSh > 0.0
+        ? armShadow(raw, uShX[i], uShY[i], uShLo[i], uShScale[i], uShSpan[i], uShZmax[i], uShZspan[i], uKDir[i],
+                    vec2(mod(float(i), 2.0), floor(float(i) / 2.0)) * 512.0) : 1.0;
+      float key = uKStr[i] * fall * ndl * (1.0 - uLitSh * (1.0 - reach));
       lit += key;
-      float ndh = clamp(dot(normalize(n + uLitDir), n), 0.0, 1.0);
-      shine = key * gloss * pow(ndh, 4.0 + 60.0 * gloss);
+      float ndh = clamp(dot(normalize(n + to), n), 0.0, 1.0);
+      shine += key * gloss * pow(ndh, 4.0 + 60.0 * gloss);
     }
     vec3 tint = 0.08 + metal * (b - 0.08);
     col = pow(clamp(b * lit + tint * shine, 0.0, 1.0), vec3(1.0 / 2.2));
@@ -345,7 +355,7 @@ function armPaintBar(){
     <span class="armgrp"><span class="armshade" id="armShade">${typeof armShadeHtml === 'function' ? armShadeHtml() : ''}</span>
       <label class="armcheck"><input type="checkbox"${ARM.stats ? ' checked' : ''} onchange="armToggle('stats')"> ${tt('armory.statistics')}</label>
       <label class="armcheck"><input type="checkbox"${ARM.faceOrient ? ' checked' : ''} onchange="armToggle('faceOrient')"> ${tt('armory.face_orientation')}</label>
-      ${typeof armCyBarHtml === 'function' ? armCyBarHtml() : ''}</span>
+      ${typeof armLitBarHtml === 'function' ? armLitBarHtml() : ''}</span>
     <span class="armbarbreak"></span>
     <span class="armgrp"><button class="mini" onclick="armFullView()" title="${esc(tt('armory.full_view_title'))}">⛶ ${tt('armory.full_view')}</button>
       <button class="mini" onclick="armFrameAll()" title="${esc(tt('armory.frame_all_title'))}">${tt('armory.frame_all')}</button></span>
@@ -961,10 +971,10 @@ function armGl(){
     const p = gl.createProgram();
     gl.attachShader(p, sh(gl.VERTEX_SHADER, ARM_VERT));
     gl.attachShader(p, sh(gl.FRAGMENT_SHADER, armFrag(full)));
-    ['aPos', 'aNormal', 'aUv', 'aPart'].forEach((n, i) => gl.bindAttribLocation(p, i, n));
+    ['aPos', 'aNormal', 'aUv'].forEach((n, i) => gl.bindAttribLocation(p, i, n));
     gl.linkProgram(p);
     const loc = {};
-    for(const n of ['aPos', 'aNormal', 'aUv', 'aPart']) loc[n] = gl.getAttribLocation(p, n);
+    for(const n of ['aPos', 'aNormal', 'aUv']) loc[n] = gl.getAttribLocation(p, n);
     for(const n of ARM_UNIFORMS) loc[n] = gl.getUniformLocation(p, n);
     return ARM.progs[full ? 'full' : 'plain'] = {p, loc};
   };
@@ -981,11 +991,9 @@ function armUseProg(full){
 }
 const ARM_UNIFORMS = ['uProj', 'uView', 'uModel', 'uTex', 'uHasTex', 'uUScale', 'uHi', 'uSel', 'uFlip', 'uXray', 'uCrop', 'uNTex', 'uHasN',
                   'uCard', 'uMask', 'uLAmt', 'uAmb', 'uLevel', 'uPoint', 'uLDir', 'uLPos', 'uLN',
-                  'uLit', 'uLitAmb', 'uLitStr', 'uLitSoft', 'uLitDir', 'uMaskCol',
+                  'uLit', 'uLitAmb', 'uLitSoft', 'uMaskCol',
                   'uSTex', 'uShTex', 'uLitSh', 'uLitN', 'uHasS', 'uFlipG', 'uHasSh', 'uShScale', 'uShSpan',
-                  'uShZmax', 'uShZspan', 'uShX', 'uShY', 'uShLo',
-                  'uCyEnv', 'uCyLut', 'uCyAt', 'uCyRows', 'uCyView', 'uCySunN', 'uCyHasAt', 'uCyLutR', 'uCyMix',
-                  'uCyMix2', 'uCyObj', 'uCyAlb', 'uCySun', 'uCySunA', 'uCyAo', 'uCyM1', 'uCyM2'];
+                  'uShZmax', 'uShZspan', 'uShX', 'uShY', 'uShLo', 'uKN', 'uKPt', 'uKStr', 'uKDir', 'uKPos'];
 
 function armUpload(live){
   const gl = armGl();
@@ -1155,8 +1163,6 @@ function armRender(objs, w, h, cam, opts){
   }
   // the bake's live light (armlit.js): each object's shadow map first, off screen
   if(!o.plain && !o.mask && typeof armLitShadows === 'function') armLitShadows(gl, armLitShadowItems(objs, o, 1));
-  // and the Cycles look's shadow atlases (armcycles.js)
-  if(!o.plain && !o.mask && typeof armCyShadows === 'function') armCyShadows(gl, armLitShadowItems(objs, o, 3));
   gl.viewport(0, ARM.glCanvas.height - h, w, h);
   gl.enable(gl.SCISSOR_TEST);
   gl.scissor(0, ARM.glCanvas.height - h, w, h);
@@ -1190,10 +1196,7 @@ function armRender(objs, w, h, cam, opts){
   }
   // the pre-render panel's light on the objects it is about to bake (armlit.js)
   const litOf = !o.plain && typeof armLitMode === 'function' ? armLitMode : () => 0;
-  if(ARM.prog === (ARM.progs.full || {}).p){
-    if(typeof armLitUniforms === 'function') armLitUniforms(gl, L);
-    if(typeof armCyUniforms === 'function') armCyUniforms(gl, L);
-  }
+  if(ARM.prog === (ARM.progs.full || {}).p && typeof armLitUniforms === 'function') armLitUniforms(gl, L);
   if(xray && !wire){ gl.enable(gl.BLEND); gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA); gl.depthMask(false); }
   // Wireframe: the faces only as depth, so the wires behind them hide (with
   // X-ray, not even that)
@@ -1218,7 +1221,6 @@ function armRender(objs, w, h, cam, opts){
     // under the bake's live light: its spec, normal and shadow maps (armlit.js)
     if(typeof armLitBindMaps === 'function') armLitBindMaps(gl, L, ob, litOf(ob));
     else gl.uniform1f(L.uLitN, 0);
-    if(typeof armCyBindObj === 'function') armCyBindObj(gl, L, ob, litOf(ob));
   };
   // the card maker's own move and turn of the whole model (99m), in the
   // game's space, under the page's mirror
@@ -1239,7 +1241,6 @@ function armRender(objs, w, h, cam, opts){
       gl.enableVertexAttribArray(L.aNormal); gl.vertexAttribPointer(L.aNormal, 3, gl.FLOAT, false, 0, 0);
       gl.bindBuffer(gl.ARRAY_BUFFER, posed.glUv);
       gl.enableVertexAttribArray(L.aUv); gl.vertexAttribPointer(L.aUv, 2, gl.FLOAT, false, 0, 0);
-      if(typeof armCyPart === 'function') armCyPart(gl, L, posed, posed.idx, posed.vertices);
       gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, posed.glIdx);
       for(const r of posed.ranges){
         const live = ARM.assets.get(r.pc.asset);
@@ -1266,7 +1267,6 @@ function armRender(objs, w, h, cam, opts){
       gl.enableVertexAttribArray(L.aNormal); gl.vertexAttribPointer(L.aNormal, 3, gl.FLOAT, false, 0, 0);
       gl.bindBuffer(gl.ARRAY_BUFFER, pc.uv && typeof armUvBuffer === 'function' ? armUvBuffer(live, pc) : live.buf.uv);
       gl.enableVertexAttribArray(L.aUv); gl.vertexAttribPointer(L.aUv, 2, gl.FLOAT, false, 0, 0);
-      if(typeof armCyPart === 'function') armCyPart(gl, L, live, live.geo.indices, live.geo.positions.length / 3);
       if(pc.tris || pc.weld || pc.flip){
         const sub = armPieceBuffer(live, pc);
         gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, sub.buf);
@@ -1298,8 +1298,7 @@ function armLitShadowItems(objs, o, mode){
       const model = ob.post ? armMul(top, ob.post) : top;
       const P = posed.outPos || posed.positions;
       posed.ranges.forEach((r, k) => draws.push({model, pos: posed.glPos, idx: posed.glIdx, idxStart: r.start, count: r.count,
-                                                 P: k ? new Float32Array(0) : P, I: null,
-                                                 holder: posed, partI: posed.idx, partN: posed.vertices}));
+                                                 P: k ? new Float32Array(0) : P, I: null}));
     }else{
       const om = armMul(ob.post ? armMul(top, ob.post) : top, armObjMatrix(ob, armPivot(ob)));
       for(const pc of ob.src || []){
@@ -1310,8 +1309,7 @@ function armLitShadowItems(objs, o, mode){
         const model = pc.xf ? armMul(om, pc.xf) : om;
         const sub = pc.tris || pc.weld || pc.flip ? armPieceBuffer(live, pc) : null;
         draws.push({model, pos: live.buf.pos, idx: sub ? sub.buf : live.buf.idx, idxStart: sub ? 0 : g.start,
-                    count: sub ? sub.count : g.count, P: live.geo.positions, I: live.geo.indices, bStart: g.start, bCount: g.count,
-                    holder: live, partI: live.geo.indices, partN: live.geo.positions.length / 3});
+                    count: sub ? sub.count : g.count, P: live.geo.positions, I: live.geo.indices, bStart: g.start, bCount: g.count});
       }
     }
     if(draws.length) items.push({ob, draws, posed: !!posed});
@@ -1333,7 +1331,6 @@ function armDraw(){
   const objs = armVisibleObjects();
   // which objects have PBR maps for the bake's live light (armlit.js)
   if(typeof armLitMapsCheck === 'function') armLitMapsCheck();
-  if(typeof armCyCheck === 'function' && armCyOn()) armCyCheck();
   if(!armRender(objs, w, h, cam, {faceOrient: ARM.faceOrient})) return;
   if(typeof armEditDraw === 'function') armEditDraw();
   if(typeof armOutlineDraw === 'function') armOutlineDraw(objs, cam, w, h);
