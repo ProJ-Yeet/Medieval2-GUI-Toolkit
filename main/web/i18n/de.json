@@ -14520,5 +14520,10 @@
  "settings.base_edit_opt_in": "Bearbeitung des Grundspiels erlauben",
  "settings.base_edit_hint": "Das Grundspiel ist standardmäßig schreibgeschützt. Wenn das Kästchen aktiviert ist, lassen sich im Datenordner Änderungen wie bei jedem Mod vornehmen: Jede Änderung wird dort als lose Datei gespeichert, die das Spiel über den Datenpaketen lädt. Änderungen werden wie gewohnt gesichert und können rückgängig gemacht werden. Die Kingdoms-Kampagnen im Mod-Ordner sind immer bearbeitbar. Einen Mod aus dem Spiel zu erstellen, ist weiterhin der sicherere Weg.",
  "settings.base_edit_on": "Das Grundspiel kann jetzt bearbeitet werden",
- "settings.base_edit_off": "Das Grundspiel ist wieder schreibgeschützt"
+ "settings.base_edit_off": "Das Grundspiel ist wieder schreibgeschützt",
+ "armory.cy_look": "Licht backen",
+ "armory.cy_look_title": "Zeigt jedes Objekt mit Specular- oder Normal-Map an, bevor die Beleuchtung gebacken wird. Cycles berechnet dabei die Weltbeleuchtung, die umgebenden Sonnen, die Selbstschatten jedes Teils, die Metallmischung, die Beleuchtung des Bodens und AgX vor. Die Beleuchtung wird einmalig in Blender gebacken. Deaktiviere die Option beim Modellieren, wenn das Ansichtsfenster langsamer wird.",
+ "armory.cy_look_err": "Die Beleuchtung für das Cycles-Backen konnte nicht vorbereitet werden: {why}",
+ "armory.cy_no_blender": "Blender wurde nicht gefunden. Lege zuerst den Pfad für das Cycles-Backen fest.",
+ "armory.cy_no_float": "Diese Grafikkarte kann die vorgebackene Beleuchtung nicht in Gleitkomma-Texturen speichern."
 }

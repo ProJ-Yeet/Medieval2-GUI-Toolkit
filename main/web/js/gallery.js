@@ -164,7 +164,7 @@ function galFree(m){
   if(gal && gal.gl && m.gpu){
     const gl = gal.gl;
     ['pos', 'nrm', 'uv', 'idx'].forEach(k => gl.deleteBuffer(m.gpu[k]));
-    if(m.gpu.tex) gl.deleteTexture(m.gpu.tex);
+    ['tex', 'spec', 'nmap'].forEach(k => { if(m.gpu[k]) gl.deleteTexture(m.gpu[k]); });
   }
   m.gpu = null;
 }
@@ -231,7 +231,14 @@ async function galLoadExt(m, seq){
   // the game's layout when any object sits on the attachment, or the file is a
   // battle .mesh; a plain .obj or .glb on one sheet keeps u as it is
   const paired = objs.some(o => o.sheets === 'attach' || o.sheets === 'both') || /\.mesh$/i.test(m.name);
-  m.geo = geo; m.tex = tex; m.att = att; m.uScale = paired ? 0.5 : 1.0;
+  // 2026-11-25: a file on one PBR colour texture is drawn as the Cycles bake
+  // will bake it (armcycles.js), its spec and normal maps with it, no shadows
+  const pbr = view.pbr && galCyLook() ? view.pbr : null;
+  const spec = pbr && pbr.spec ? await img(pbr.spec) : null;
+  const nrm = pbr && pbr.normal ? await img(pbr.normal) : null;
+  if(!gal || seq !== gal.seq) return;
+  m.pbr = pbr ? {info: pbr, spec, nrm} : null;
+  m.geo = geo; m.tex = tex; m.att = pbr ? null : att; m.uScale = pbr ? 1.0 : paired ? 0.5 : 1.0;
   m.parts = galParts(geo);
   m.variant = {}; m.hidden = {};
   const tall = geo.max[1] - geo.min[1];
@@ -425,8 +432,122 @@ function galFrame(now){
   if(spin || galVaryOn() || pending) galLoop();
 }
 
+/* --- 2026-11-25: the Cycles bake's look on a PBR tile (armcycles.js) -------------- */
+const galCyLook = () => {
+  if(typeof armCyOn !== 'function' || !armCyOn()) return null;
+  if(!(ARM.cy && ARM.cy.look) && typeof armCyCheck === 'function') armCyCheck();
+  return ARM.cy && ARM.cy.look ? ARM.cy.look : null;
+};
+function galTex(gl, img, data){
+  const t = gl.createTexture();
+  gl.bindTexture(gl.TEXTURE_2D, t);
+  gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
+  if(data) gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, data.w, data.h, 0, gl.RGBA, gl.FLOAT, data.px);
+  else gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, img);
+  const pot = n => n > 0 && (n & (n - 1)) === 0;
+  const w = data ? data.w : img.width, h = data ? data.h : img.height;
+  const mip = !data && pot(w) && pot(h);
+  if(mip) gl.generateMipmap(gl.TEXTURE_2D);
+  const lin = data && !gl.getExtension('OES_texture_float_linear') ? gl.NEAREST : gl.LINEAR;
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, mip ? gl.LINEAR_MIPMAP_LINEAR : lin);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, lin);
+  const wrap = pot(w) && pot(h) ? gl.REPEAT : gl.CLAMP_TO_EDGE;
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, wrap);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, data ? gl.CLAMP_TO_EDGE : wrap);
+  return t;
+}
+// the program and the light in the gallery's own context, made once per light
+function galCy(gl){
+  const lk = galCyLook();
+  if(!lk || !gl.getExtension('OES_texture_float') || !gl.getExtension('OES_standard_derivatives')) return null;
+  if(gal.cy && gal.cy.look === lk) return gal.cy;
+  if(gal.cy && gal.cy.look !== lk){ gl.deleteTexture(gal.cy.env); if(gal.cy.lut) gl.deleteTexture(gal.cy.lut); }
+  const vs = `attribute vec3 aPos; attribute vec3 aNormal; attribute vec2 aUv;
+uniform mat4 uProj, uView, uModel;
+varying vec3 vNormal; varying vec2 vUv; varying vec3 vPos; varying float vPart;
+void main(){ vNormal = mat3(uModel) * aNormal; vUv = aUv; vPart = 0.0;
+  vec4 w = uModel * vec4(aPos, 1.0); vPos = w.xyz; gl_Position = uProj * uView * w; }`;
+  const fs = `#extension GL_OES_standard_derivatives : enable
+#ifdef GL_FRAGMENT_PRECISION_HIGH
+precision highp float;
+#else
+precision mediump float;
+#endif
+varying vec3 vNormal; varying vec2 vUv; varying vec3 vPos;
+uniform sampler2D uTex, uNTex, uSTex;
+uniform float uHasS, uHasN;
+${ARM_CY_GLSL}
+void main(){
+  vec4 base = texture2D(uTex, vUv);
+  if(base.a < 0.35) discard;
+  vec3 n = normalize(vNormal);
+  if(uHasN > 0.5){
+    vec3 dp1 = dFdx(vPos), dp2 = dFdy(vPos);
+    vec2 d1 = dFdx(vUv), d2 = dFdy(vUv);
+    float det = d1.x * d2.y - d2.x * d1.y;
+    det = abs(det) < 1e-12 ? 1e-12 : det;
+    vec3 T = (dp1 * d2.y - dp2 * d1.y) / det, B = (dp2 * d1.x - dp1 * d2.x) / det;
+    T = normalize(T - n * dot(T, n)); B = normalize(B - n * dot(B, n));
+    vec2 m = (texture2D(uNTex, vUv).xy * 2.0 - 1.0) * uCyObj.w;
+    n = normalize(T * m.x + B * m.y + n * sqrt(max(1.0 - dot(m, m), 0.01)));
+  }
+  gl_FragColor = vec4(cyShade(base, vUv, n), 1.0);
+}`;
+  const p = v3Program(gl, vs, fs);
+  if(!p) return null;
+  const loc = {};
+  ['aPos', 'aNormal', 'aUv'].forEach(k => { loc[k] = gl.getAttribLocation(p, k); });
+  ['uProj', 'uView', 'uModel', 'uTex', 'uNTex', 'uSTex', 'uHasS', 'uHasN', 'uCyEnv', 'uCyLut', 'uCyRows', 'uCyView',
+   'uCySunN', 'uCyHasAt', 'uCyLutR', 'uCyMix', 'uCyMix2', 'uCyObj', 'uCyAlb', 'uCySun', 'uCySunA', 'uCyAo']
+    .forEach(k => { loc[k] = gl.getUniformLocation(p, k); });
+  // the world's light, levels stacked and padded to 1024 rows, as armCyUpload has it
+  const e = lk.env, raw = Uint8Array.from(atob(e.data), ch => ch.charCodeAt(0)), f = new Float32Array(raw.buffer);
+  const px = new Float32Array(e.w * 1024 * 4);
+  for(let i = 0; i < e.levels * e.h * e.w; i++){ px[i*4] = f[i*3]; px[i*4+1] = f[i*3+1]; px[i*4+2] = f[i*3+2]; px[i*4+3] = 1; }
+  const cy = gal.cy = {look: lk, p, loc, env: galTex(gl, null, {w: e.w, h: 1024, px}), lut: null};
+  gl.bindTexture(gl.TEXTURE_2D, cy.env);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT);
+  const im = new Image();
+  im.onload = () => { if(gal && gal.cy === cy){ cy.lut = galTex(gl, im); gl.bindTexture(gl.TEXTURE_2D, cy.lut);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR); gal.dirty = true; galLoop(); } };
+  im.src = lk.lut;
+  return cy;
+}
+function galCyUse(gl, m){
+  const cy = galCy(gl);
+  if(!cy || !cy.lut) return null;
+  const L = cy.loc, lk = cy.look, st = lk.settings, info = m.pbr.info;
+  gl.useProgram(cy.p);
+  if(!m.gpu.spec && m.pbr.spec) m.gpu.spec = galTex(gl, m.pbr.spec);
+  if(!m.gpu.nmap && m.pbr.nrm) m.gpu.nmap = galTex(gl, m.pbr.nrm);
+  const unit = (k, t, u) => { gl.activeTexture(gl.TEXTURE0 + u); gl.bindTexture(gl.TEXTURE_2D, t); gl.uniform1i(L[k], u); };
+  unit('uCyEnv', cy.env, 4); unit('uCyLut', cy.lut, 5);
+  if(m.gpu.spec) unit('uSTex', m.gpu.spec, 2);
+  if(m.gpu.nmap) unit('uNTex', m.gpu.nmap, 1);
+  if(m.gpu.tex) unit('uTex', m.gpu.tex, 0);
+  gl.activeTexture(gl.TEXTURE0);
+  gl.uniform1f(L.uHasS, m.gpu.spec ? 1 : 0); gl.uniform1f(L.uHasN, m.gpu.nmap ? 1 : 0);
+  gl.uniform1f(L.uCyRows, 1024);
+  gl.uniform3f(L.uCyLutR, lk.lut_range[0], lk.lut_range[1], lk.lut_range[2]);
+  gl.uniform1f(L.uCyView, lk.view === 'AgX' && st.bake_view !== false ? 1 : 0);
+  gl.uniform4f(L.uCyMix, st.bake_ambient, st.bake_world, st.bake_shadows, st.bake_floor);
+  gl.uniform4f(L.uCyMix2, st.bake_surround_diffuse, lk.consts.metal_other, lk.consts.glossy[0], lk.consts.glossy[1]);
+  const alb = new Float32Array(18); lk.albedo.forEach((a, i) => { alb[i*2] = a[0]; alb[i*2+1] = a[1]; });
+  gl.uniform2fv(L.uCyAlb, alb);
+  const suns = lk.suns.slice(0, 9), sv = new Float32Array(36), sa = new Float32Array(9);
+  suns.forEach((x, i) => { sv.set([x.dir[0], x.dir[1], x.dir[2], x.energy], i * 4); sa[i] = x.angle * Math.PI / 180; });
+  gl.uniform4fv(L.uCySun, sv); gl.uniform1fv(L.uCySunA, sa); gl.uniform1f(L.uCySunN, suns.length);
+  gl.uniform1f(L.uCyHasAt, 0);
+  const metalObj = info.metal >= lk.consts.metal_object;
+  gl.uniform4f(L.uCyObj, metalObj ? 1 : 0, metalObj ? 1 : 0,
+               st.bake_surround_diffuse > 0.02 || info.max_metal > 0.02 ? 1 : 0, info.normal_kind === 'm2' ? -1 : 1);
+  return L;
+}
+
 function galDraw(m, out){
-  const gl = gal.gl, c = gal.canvas, loc = gal.loc, g = m.geo;
+  const gl = gal.gl, c = gal.canvas, g = m.geo;
+  let loc = gal.loc;
   if(!out || !out.clientWidth) return;
   const dpr = Math.min(window.devicePixelRatio || 1, 2);
   const w = Math.round(out.clientWidth * dpr), h = Math.round(out.clientHeight * dpr);
@@ -437,6 +558,10 @@ function galDraw(m, out){
   gl.clearColor(0, 0, 0, 0);
   gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
   gl.useProgram(gal.prog);
+  // a PBR tile under the Cycles look draws with its own program; the same
+  // matrices, and the gallery's own uniforms then go nowhere
+  const cyLoc = m.pbr ? galCyUse(gl, m) : null;
+  if(cyLoc) loc = cyLoc;
   const pitch = 0.25, yaw = gal.yaw;
   const eye = [m.centre[0] + m.dist * Math.cos(pitch) * Math.sin(yaw),
                m.centre[1] + m.dist * Math.sin(pitch),

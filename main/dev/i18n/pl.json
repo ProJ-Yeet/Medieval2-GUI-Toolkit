@@ -15240,5 +15240,10 @@
  "settings.base_edit_opt_in": "Zezwól na edycję gry podstawowej",
  "settings.base_edit_hint": "Gra podstawowa jest domyślnie tylko do odczytu. Po zaznaczeniu pola jej folder danych pozwala wprowadzać zmiany tak jak w każdym modzie: każda zmiana jest tam zapisywana jako luźny plik, który nadpisuje zawartość paczek podczas wczytywania gry; tworzenie kopii zapasowych i cofanie zmian działa jak zwykle. Kampanie Kingdoms w folderze modów są zawsze edytowalne. Utworzenie moda na podstawie gry nadal jest bezpieczniejszym rozwiązaniem.",
  "settings.base_edit_on": "Grę podstawową można teraz edytować",
- "settings.base_edit_off": "Gra podstawowa znów jest tylko do odczytu"
+ "settings.base_edit_off": "Gra podstawowa znów jest tylko do odczytu",
+ "armory.cy_look": "Wypal światło",
+ "armory.cy_look_title": "Wyświetlaj każdy obiekt z mapą specularną lub mapą normalnych przed wypaleniem oświetlenia, ponieważ Cycles wypali oświetlenie świata, słońca w otoczeniu, cienie rzucane przez każdą część na samą siebie, mieszankę metalu, oświetlenie podłoża i AgX. Wypalanie wykonuje się raz w Blenderze. Wyłącz tę opcję podczas modelowania, jeśli spowalnia widok 3D.",
+ "armory.cy_look_err": "Nie udało się przygotować oświetlenia do wypalania w Cycles: {why}",
+ "armory.cy_no_blender": "Nie znaleziono Blendera. Najpierw ustaw jego ścieżkę na potrzeby wypalania w Cycles.",
+ "armory.cy_no_float": "Ta karta graficzna nie może przechowywać wypalonego oświetlenia w teksturach zmiennoprzecinkowych."
 }

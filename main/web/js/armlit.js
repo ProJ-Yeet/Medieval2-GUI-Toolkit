@@ -86,13 +86,18 @@ function armLitToggle(){
 function armLitMode(ob){
   const l = armLit();
   if(l.open && armLitTargets().includes(ob)) return ob.lit && !l.live ? 2 : 1;
-  // closed: an object with PBR maps, not baked yet, shows what the bake will give
-  return !ob.lit && armLitMapsOf(ob) ? 1 : 0;
+  // closed: an object with PBR maps, not baked yet, shows what the bake will give:
+  // the Cycles bake's look (armcycles.js), this bake's light until that is ready;
+  // nothing while the viewport bar's bake light is off
+  if(ob.lit || !armLitMapsOf(ob)) return 0;
+  if(typeof armCyOn === 'function' && !armCyOn()) return 0;
+  return typeof armCyReady === 'function' && armCyReady() ? 3 : 1;
 }
 // the sheet an object is drawn with: under the live light, the colour the
 // bake starts from (what it wore before a bake)
 function armLitSheetOf(ob){
-  if(armLitMode(ob) !== 1) return ob.sheet || null;
+  const mode = armLitMode(ob);
+  if(mode !== 1 && mode !== 3) return ob.sheet || null;
   const m = ARM.litMaps && ARM.litMaps.byId[ob.id];
   if(m && m.colour) return m.colour;
   return ob.lit ? (ob.lit.src || null) : (ob.sheet || null);
@@ -115,7 +120,7 @@ function armLitUniforms(gl, L){
 /* An object under the live light: its spec and normal maps, and its shadow
    map, bound for the shader (armory.js bindTex). The colour is armLitSheetOf. */
 function armLitBindMaps(gl, L, ob, lit){
-  const m = lit === 1 && ARM.litMaps ? ARM.litMaps.byId[ob.id] : null;
+  const m = (lit === 1 || lit === 3) && ARM.litMaps ? ARM.litMaps.byId[ob.id] : null;
   const spec = m && m.spec ? armSheetTex(m.spec) : null;
   const nrm = m && m.normal ? armSheetTex(m.normal) : null;
   gl.uniform1f(L.uHasS, spec ? 1 : 0);

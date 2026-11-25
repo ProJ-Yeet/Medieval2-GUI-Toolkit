@@ -949,7 +949,36 @@ def external_view(path_text: str) -> dict:
             "mesh": path.name, "file_hash": file_hash(path.read_bytes()),
             "skins": [], "skeletons": [], "bones": m.bones,
             "skinned": bool(m.weights), "vertices": m.vertices,
-            "triangles": m.triangles, "objects": objects}
+            "triangles": m.triangles, "objects": objects, "pbr": _pbr_of(objects)}
+
+
+def _pbr_of(objects: list) -> Optional[dict]:
+    """A file on one colour texture with a spec or normal map beside it (named
+    as the Pre-render and Cycles bakes find them): the maps, allowed to be
+    served, and the spec map's metal for the Cycles look's metal mix in a
+    gallery tile (2026-11-25). None for anything else."""
+    files = {o["texture_file"] for o in objects if o.get("texture_file")}
+    if len(files) != 1:
+        return None
+    from . import armlit
+    colour = files.pop()
+    spec, normal = armlit.sibling(colour, "s"), armlit.sibling(colour, "n")
+    if not spec and not normal:
+        return None
+    metal = top = 0.0
+    if spec:
+        try:
+            from PIL import Image
+            import numpy as np
+            red = np.asarray(Image.open(spec).convert("RGB"))[..., 0] / 255.0
+            metal, top = float(red.mean()), float(red.max())
+        except (OSError, ValueError):
+            pass
+    for f in (spec, normal):
+        if f:
+            allow_texture(f)
+    return {"colour": colour, "spec": spec, "normal": normal, "metal": metal, "max_metal": top,
+            "normal_kind": "n" if normal and Path(normal).stem.lower().endswith("_n") else "m2"}
 
 
 # ---------------------------------------------------------------------------

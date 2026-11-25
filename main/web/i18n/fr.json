@@ -14630,5 +14630,10 @@
  "settings.base_edit_opt_in": "Autoriser la modification du jeu de base",
  "settings.base_edit_hint": "Le jeu de base est en lecture seule par défaut. Une fois la case cochée, son dossier de données accepte les modifications comme pour n’importe quel mod : chaque changement y est enregistré sous forme de fichier séparé, que le jeu charge par-dessus ses archives. Les changements sont sauvegardés et peuvent être annulés comme d’habitude. Les campagnes de Kingdoms dans son dossier de mods sont toujours modifiables. Créer un mod à partir du jeu reste la solution la plus sûre.",
  "settings.base_edit_on": "Le jeu de base peut maintenant être modifié",
- "settings.base_edit_off": "Le jeu de base est de nouveau en lecture seule"
+ "settings.base_edit_off": "Le jeu de base est de nouveau en lecture seule",
+ "armory.cy_look": "Cuire l’éclairage",
+ "armory.cy_look_title": "Affiche chaque objet doté d’une carte spéculaire ou d’une carte normale avant la cuisson de l’éclairage. Cycles précalculera l’éclairage du monde, les soleils environnants, les ombres de chaque pièce sur elle-même, le mélange métallique, l’éclairage du sol et AgX. Le calcul est effectué une seule fois dans Blender. Désactivez cette option pendant la modélisation si la fenêtre d’affichage ralentit.",
+ "armory.cy_look_err": "Impossible de préparer l’éclairage pour la cuisson Cycles : {why}",
+ "armory.cy_no_blender": "Blender est introuvable. Définissez d’abord son chemin pour la cuisson Cycles.",
+ "armory.cy_no_float": "Cette carte graphique ne peut pas stocker l’éclairage précalculé dans des textures à virgule flottante."
 }

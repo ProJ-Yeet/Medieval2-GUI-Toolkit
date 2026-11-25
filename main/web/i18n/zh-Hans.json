@@ -13827,5 +13827,10 @@
  "settings.base_edit_opt_in": "允许我编辑原版游戏",
  "settings.base_edit_hint": "原版游戏默认只读。勾选后，其数据文件夹便可像任何模组一样接受修改：每项改动都会作为松散文件保存在该文件夹中，游戏会优先读取这些文件而非数据包；备份和撤销也照常可用。其模组文件夹中的 Kingdoms 战役始终可以编辑。基于游戏创建模组仍然更安全。",
  "settings.base_edit_on": "现在可以编辑原版游戏了",
- "settings.base_edit_off": "原版游戏已恢复为只读"
+ "settings.base_edit_off": "原版游戏已恢复为只读",
+ "armory.cy_look": "烘焙光照",
+ "armory.cy_look_title": "在烘焙前显示带有高光贴图或法线贴图的每个对象，因为 Cycles 烘焙会预先计算场景世界光照、周围的太阳光、每个部件自身的阴影、金属混合效果、地面光照以及 AgX。此光照只需在 Blender 中烘焙一次。如果视口变慢，请在建模时取消勾选此项。",
+ "armory.cy_look_err": "无法为 Cycles 烘焙准备光照：{why}",
+ "armory.cy_no_blender": "未找到 Blender。请先设置其路径，再进行 Cycles 烘焙。",
+ "armory.cy_no_float": "这张显卡无法将烘焙光照存储在浮点贴图中。"
 }

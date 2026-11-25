@@ -13967,5 +13967,10 @@
  "settings.base_edit_opt_in": "Ana oyunun düzenlenmesine izin ver",
  "settings.base_edit_hint": "Ana oyun varsayılan olarak salt okunurdur. Kutuyu işaretlediğinizde, veri klasörü her mod gibi düzenlemeleri kabul eder: her değişiklik buraya bağımsız bir dosya olarak kaydedilir ve oyun bu dosyaları paketlerin üzerine yükler; yedekleme ve geri alma işlemleri de her zamanki gibi çalışır. Mods klasöründeki Kingdoms kampanyaları her zaman düzenlenebilir. Oyundan bir mod oluşturmak hâlâ daha güvenli bir yöntemdir.",
  "settings.base_edit_on": "Ana oyun artık düzenlenebilir",
- "settings.base_edit_off": "Ana oyun yeniden salt okunur durumda"
+ "settings.base_edit_off": "Ana oyun yeniden salt okunur durumda",
+ "armory.cy_look": "Işığı önceden hesapla",
+ "armory.cy_look_title": "Yansıma ya da normal haritası bulunan her nesneyi, ışık henüz önceden hesaplanmamışken gösterin; Cycles'ın ışık ön hesaplaması sahne dünyasının ışığını, çevredeki güneş ışıklarını, her parçanın kendi üzerindeki gölgeleri, metal karışımını, zemin aydınlatmasını ve AgX'i hesaplar. Bu işlem Blender'da bir kez yapılır. Görünüm alanı yavaşlarsa modelleme sırasında bu seçeneğin işaretini kaldırın.",
+ "armory.cy_look_err": "Cycles ışık ön hesaplaması için ışık hazırlanamadı: {why}",
+ "armory.cy_no_blender": "Blender bulunamadı. Önce Cycles ışık ön hesaplaması için Blender'ın yolunu ayarlayın.",
+ "armory.cy_no_float": "Bu grafik kartı, önceden hesaplanmış ışığı kayan noktalı dokularda saklayamıyor."
 }
