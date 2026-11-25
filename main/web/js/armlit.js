@@ -20,8 +20,9 @@
    wore before (null: its source's own) and how it was lit, so a second bake
    starts from the source and Remove puts it back. */
 
+// bake: 'light' (Light Bake, armlit.py) or 'pbr' (PBR Bake, Keyforce Tools' Cycles bake in Blender)
 const ARM_LIT_DEFAULT = {ambient: 0.8, key: true, direction: 30, height: 50, softness: 0.5,
-                         strength: 0.5, shadows: 0.5, flip_green: false, lights: []};
+                         strength: 0.5, shadows: 0.5, flip_green: false, lights: [], bake: 'light'};
 // 2026-11-25: the extra lights (armlit.LAMP_RANGES): a new one, and each slider
 const ARM_LIT_LAMPS_MAX = 3;
 const ARM_LIT_LAMP = {type: 'sun', direction: -120, height: 25, strength: 0.5, distance: 2};
@@ -88,10 +89,10 @@ function armLitToggle(){
 }
 
 /* --- Render mode (2026-11-25) ------------------------------------------------
-   The viewport bar's switch: every object the bake can light is drawn under
-   the Pre-render light, live, and one already baked with its baked texture as
-   it is. Off, the viewport's own light. It replaced a live look at the Cycles
-   bake, whose light could not be edited. */
+   The viewport bar's switch: every object the bake can light is drawn, live,
+   under the light the chosen bake will paint in (Light Bake: these settings;
+   PBR Bake: the Cycles bake's look, armcycles.js), and one already baked with
+   its baked texture as it is. Off, the viewport's own light. */
 const armRenderOn = () => (state.settings || {}).armory_render_mode === true;
 function armRenderToggle(on){
   state.settings = state.settings || {};
@@ -106,18 +107,25 @@ function armLitBarHtml(){
 
 /* --- what the viewport draws ------------------------------------------------- */
 
-// 0: the viewport's own light; 1: the bake's light, live; 2: the baked texture as it is
+const armLitPbr = () => armLitOpts().bake === 'pbr';
+// PBR Bake's light is measured in Blender: asked for only once it is shown
+const armLitPbrWanted = () => armLitPbr() && (armRenderOn() || armLit().open);
+// 0: the viewport's own light; 1: Light Bake's light, live; 2: the baked texture
+// as it is; 3: PBR Bake's (the Cycles look), live, once Blender has measured it
 function armLitMode(ob){
   const l = armLit();
-  if(l.open && armLitTargets().includes(ob)) return ob.lit && !l.live ? 2 : 1;
-  if(!armRenderOn()) return 0;
+  const live = () => armLitPbr() ? (typeof armCyReady === 'function' && armCyReady() ? 3 : 0) : 1;
+  if(l.open && armLitTargets().includes(ob)) return ob.lit && !l.live ? 2 : live();
+  // 2026-11-25: baked, its texture as it is, Render mode or not: the light is in it
   if(ob.lit) return 2;
-  return armLitMapsOf(ob) ? 1 : 0;
+  if(!armRenderOn()) return 0;
+  return armLitMapsOf(ob) ? live() : 0;
 }
 // the sheet an object is drawn with: under the live light, the colour the
 // bake starts from (what it wore before a bake)
 function armLitSheetOf(ob){
-  if(armLitMode(ob) !== 1) return ob.sheet || null;
+  const mode = armLitMode(ob);
+  if(mode !== 1 && mode !== 3) return ob.sheet || null;
   const m = ARM.litMaps && ARM.litMaps.byId[ob.id];
   if(m && m.colour) return m.colour;
   return ob.lit ? (ob.lit.src || null) : (ob.sheet || null);
@@ -158,7 +166,7 @@ function armLitUniforms(gl, L){
 /* An object under the live light: its spec and normal maps, and its shadow
    atlas, bound for the shader (armory.js bindTex). The colour is armLitSheetOf. */
 function armLitBindMaps(gl, L, ob, lit){
-  const m = lit === 1 && ARM.litMaps ? ARM.litMaps.byId[ob.id] : null;
+  const m = (lit === 1 || lit === 3) && ARM.litMaps ? ARM.litMaps.byId[ob.id] : null;
   const spec = m && m.spec ? armSheetTex(m.spec) : null;
   const nrm = m && m.normal ? armSheetTex(m.normal) : null;
   gl.uniform1f(L.uHasS, spec ? 1 : 0);
@@ -324,7 +332,7 @@ function armLitShadows(gl, items){
 /* --- the panel ---------------------------------------------------------------- */
 
 function armLitHtml(){
-  const l = armLit(), o = armLitOpts(), objs = armLitTargets();
+  const l = armLit(), o = armLitOpts(), objs = armLitTargets(), pbr = o.bake === 'pbr';
   const lit = objs.filter(x => x.lit);
   const range = (k, label, title) => { const r = ARM_LIT_RANGES[k]; return `<label class="armrange" title="${esc(title || '')}">
       <span>${label} <span class="count" id="armLitVal_${k}">${o[k]}</span></span>
@@ -332,29 +340,86 @@ function armLitHtml(){
         oninput="armLitSet('${k}', +this.value, true)" onchange="armLitSet('${k}', +this.value)"></label>`; };
   const box = (k, label, title) => `<label class="armcheck" title="${esc(title || '')}"><input type="checkbox"${o[k] ? ' checked' : ''}
       onchange="armLitSet('${k}', this.checked); armPaintObjects()"> ${label}</label>`;
-  return `<div class="armlit">
-    <div class="armsect">${tt('armory.lit')}</div>
-    <div class="count armnote">${tt('armory.lit_intro')}</div>
+  const kind = (k, label, title) => `<button class="mini${o.bake === k ? ' on' : ''}" title="${esc(tt(title))}"${l.busy ? ' disabled' : ''}
+      onclick="armLitSet('bake', '${k}'); armPaintObjects()">${tt(label)}</button>`;
+  const light = `<div class="count armnote">${tt('armory.lit_intro')}</div>
     <div class="armpropsrow">${range('ambient', tt('armory.lit_ambient'), tt('armory.lit_ambient_title'))}</div>
     <div class="armpropsrow">${box('key', tt('armory.lit_key'), tt('armory.lit_key_title'))}</div>
     ${o.key ? `<div class="armpropsrow">${range('direction', tt('armory.lit_direction'), tt('armory.lit_direction_title'))}
       ${range('height', tt('armory.lit_height'), tt('armory.lit_height_title'))}</div>
     <div class="armpropsrow">${range('strength', tt('armory.strength'))}
-      ${range('softness', tt('armory.lit_softness'), tt('armory.lit_softness_title'))}</div>
-    <div class="armpropsrow">${range('shadows', tt('armory.lit_shadows'), tt('armory.lit_shadows_title'))}</div>` : ''}
+      ${range('softness', tt('armory.lit_softness'), tt('armory.lit_softness_title'))}</div>` : ''}
+    <div class="armpropsrow">${range('shadows', tt('armory.lit_shadows'), tt('armory.lit_shadows_title'))}</div>
     ${armLitLampsHtml(o)}
     <div class="armpropsrow">${box('flip_green', tt('armory.lit_flip_green'), tt('armory.lit_flip_green_title'))}</div>
-    <div class="count armnote">${tt('armory.lit_live_note')}</div>
+    <div class="count armnote">${tt('armory.lit_live_note')}</div>`;
+  const cy = ARM.cy || {};
+  const pbrBody = `<div class="count armnote">${tt('armory.lit_pbr_intro')}</div>
+    ${cy.err ? `<div class="count w-bad">${esc(tt('armory.cy_look_err', {why: cy.err}))}</div>` : cy.busy || !cy.ready ? `<div class="count">${tt('armory.cy_measuring')}</div>` : ''}
+    ${armLitKfHtml(l.busy)}`;
+  return `<div class="armlit">
+    <div class="armsect">${tt('armory.lit')}</div>
+    <div class="armpropsrow">${kind('light', 'armory.lit_light_bake', 'armory.lit_light_bake_title')}${kind('pbr', 'armory.lit_pbr_bake', 'armory.lit_pbr_bake_title')}</div>
+    ${pbr ? pbrBody : light}
     <div class="armpropsrow"><span class="count">${ttN('armory.opt_scope', objs.length)}</span><span style="flex:1"></span>
       ${lit.length ? `<button class="mini" onclick="armLitRemove()" title="${esc(tt('armory.lit_remove_title'))}">${tt('armory.lit_remove')}</button>` : ''}
-      <button class="primary" id="armLitGo" onclick="armLitRun()"${objs.length && !l.busy ? '' : ' disabled'}>${l.busy ? tt('armory.working') : tt('armory.lit_bake')}</button></div>
-    <div class="armpropsrow"><span class="count" id="armLitCycles" role="status">${l.cycles ? `${l.cycles.pct}% <progress max="100" value="${l.cycles.pct}"></progress> ${esc(l.cycles.status || '')}` : ''}</span>
+      <button class="primary" id="armLitGo" onclick="${pbr ? 'armLitCycles()' : 'armLitRun()'}"${objs.length && !l.busy ? '' : ' disabled'}>${l.busy ? tt('armory.working') : tt('armory.lit_bake')}</button></div>
+    ${l.cycles ? `<div class="armpropsrow"><span class="count" id="armLitCycles" role="status">${l.cycles.pct}% <progress max="100" value="${l.cycles.pct}"></progress> ${esc(l.cycles.status || '')}</span>
       <span style="flex:1"></span>
-      ${l.cycles && l.cycles.job ? `<button class="mini" onclick="armLitCyclesStop()">${tt('armory.kf_stop')}</button>` : ''}
-      <button class="mini" onclick="armLitCycles()" title="${esc(tt('armory.lit_cycles_title'))}"${objs.length && !l.busy ? '' : ' disabled'}>${tt('armory.lit_cycles')}</button></div>
-    <div class="armpropsrow"><span style="flex:1"></span>
-      <button class="mini" onclick="pbrOpen()" title="${esc(tt('armory.pbr_open_title'))}">${tt('armory.pbr_open')}</button></div>
+      ${l.cycles.job ? `<button class="mini" onclick="armLitCyclesStop()">${tt('armory.kf_stop')}</button>` : ''}</div>` : ''}
   </div>`;
+}
+
+/* PBR Bake's settings: the Manual Bake settings of the TpacTool export dialog
+   (kfOpts().adv, keyforce.ADVANCED), edited here too. The schema is asked of
+   the server once. A change is drawn as soon as the look is measured again. */
+function armLitKfHtml(busy){
+  const k = ARM.kfSchema = ARM.kfSchema || {fields: null, asking: false};
+  if(!k.fields){
+    if(!k.asking){
+      k.asking = true;
+      api.post('/api/armory/keyforce/blender', {}).then(r => { k.fields = r.settings || []; })
+        .catch(() => { k.fields = []; }).finally(() => { k.asking = false; armPaintObjects(); });
+    }
+    return '';
+  }
+  const adv = kfOpts().adv || {}, dis = busy ? ' disabled' : '';
+  const field = f => {
+    const [label, title] = KF_LABELS[f.key] || [f.key, ''];
+    const v = f.key in adv ? adv[f.key] : f.default;
+    const t = esc(title ? tt(title) : '');
+    if(f.kind === 'bool') return `<label class="armcheck" title="${t}"><input type="checkbox"${v ? ' checked' : ''}${dis}
+        onchange="armLitKfSet('${f.key}', this.checked)"> ${tt(label)}</label>`;
+    if(f.kind === 'enum') return `<label title="${t}">${tt(label)} <select${dis} onchange="armLitKfSet('${f.key}', this.value)">
+        ${f.low.map(c => `<option value="${c}"${c === v ? ' selected' : ''}>${KF_CHOICES[c] ? tt(KF_CHOICES[c]) : c}</option>`).join('')}</select></label>`;
+    return `<label class="armrange" title="${t}"><span>${tt(label)} <span class="count" id="armLitKf_${f.key}">${v}</span></span>
+        <input type="range" min="${f.low}" max="${f.high}" step="${f.step}" value="${v}"${dis}
+        oninput="armLitKfSet('${f.key}', +this.value, true)" onchange="armLitKfSet('${f.key}', +this.value)"></label>`;
+  };
+  return Object.keys(KF_GROUPS).map(g => `<div class="armsect">${tt(KF_GROUPS[g])}</div>
+      <div class="armpropsrow" style="flex-wrap:wrap">${k.fields.filter(f => f.group === g).map(field).join('')}</div>`).join('')
+    + (Object.keys(adv).length && !busy ? `<div class="armpropsrow"><span style="flex:1"></span><button class="mini" onclick="armLitKfReset()">${tt('armory.kf_reset')}</button></div>` : '');
+}
+// quiet: a slider on its way (shown, not saved yet)
+function armLitKfSet(key, v, quiet){
+  const o = kfOpts();
+  o.adv = Object.assign({}, o.adv || {}, {[key]: v});
+  state.settings = state.settings || {};
+  state.settings.keyforce_bake = o;
+  const out = typeof document !== 'undefined' && document.getElementById('armLitKf_' + key);
+  if(out) out.textContent = v;
+  if(quiet) return;
+  api.post('/api/settings', {keyforce_bake: o}).catch(() => {});
+  armLit().live = true;
+  armFrame();
+}
+function armLitKfReset(){
+  const o = kfOpts();
+  o.adv = {};
+  state.settings.keyforce_bake = o;
+  api.post('/api/settings', {keyforce_bake: o}).catch(() => {});
+  armPaintObjects();
+  armFrame();
 }
 
 /* 2026-11-25: up to three more lights, each a sun or a point, as the unit card
@@ -735,7 +800,12 @@ function armLitApply(r, st){
       n++;
     }
   }
-  if(n) l.live = false;
+  // 2026-11-25: the baked textures shown, as they are, and Render mode off
+  if(n){
+    l.live = false;
+    if(armRenderOn()) armRenderToggle(false);
+    if(typeof armPaintBar === 'function') armPaintBar();
+  }
   const skipped = (r.skipped || []).map(s => {
     const o = armObj(s.id);
     const name = o ? o.name : s.id;

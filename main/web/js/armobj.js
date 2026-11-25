@@ -100,6 +100,9 @@ function armPaintObjects(){
   if(armSideShut('right')){ el.innerHTML = armStripHtml('right', tt('armory.objects'), p.objects.length); return; }
   const tops = ['armObjList', 'armPropsPane'].map(id => { const x = document.getElementById(id); return x ? x.scrollTop : 0; });
   const gal = armObjGallery(), shut = armPropsShut();
+  // 2026-11-25: the list folds away too, under its own heading (a line above it,
+  // below the Lighting settings); the properties then take the room
+  const listShut = !!(state.settings || {}).armory_objlist_shut;
   el.innerHTML = `<div class="armhead">
       <button class="armfold" onclick="armSideToggle('right')" title="${esc(tt('armory.panel_fold'))}">▸ ${tt('armory.objects')}</button>
       <span class="count">${p.objects.length}</span><span style="flex:1"></span>
@@ -118,12 +121,14 @@ function armPaintObjects(){
     </div>
     ${ARM.optOpen && p.objects.length ? `<div class="armoptbox" id="armOptBox"></div>` : ''}
     ${p.objects.length && typeof armLit === 'function' && armLit().open ? armLitHtml() : ''}
-    <div class="armobjlist" id="armObjList">
+    <div class="armpropshead"><button class="armfold" onclick="armObjSetting('armory_objlist_shut', ${!listShut})" title="${esc(tt('armory.objlist_fold_title'))}">${listShut ? '▸' : '▾'} ${tt('armory.objects')}</button>
+      <span class="count">${p.objects.length}</span></div>
+    ${listShut ? '' : `<div class="armobjlist" id="armObjList">
       ${p.objects.length ? '' : `<div class="empty armempty">${tt('armory.no_objects_yet')}</div>`}
       ${[...groups].map(([name, objs]) => armFoldHtml('g:' + name, name, objs, null)).join('')}
       ${p.collections.map(c => armFoldHtml('c:' + c.id, c.name, p.objects.filter(o => o.coll === c.id), c)).join('')}
-    </div>
-    ${shut ? '' : '<div class="armgrip armgriph armpropsgrip" id="armGripP"></div>'}
+    </div>`}
+    ${shut || listShut ? '' : '<div class="armgrip armgriph armpropsgrip" id="armGripP"></div>'}
     <div class="armpropshead"><button class="armfold" onclick="armObjSetting('armory_props_shut', ${!shut})" title="${esc(tt('armory.props_fold_title'))}">${shut ? '▸' : '▾'} ${tt('armory.properties')}</button>
       <span class="count">${sel.length === 1 ? esc(armFullName(sel[0])) : sel.length ? ttN('armory.n_selected', sel.length) : ''}</span></div>
     ${shut ? '' : `<div class="armpropspane" id="armPropsPane"><div id="armProps">${sel.length === 1 ? armPropsHtml(sel[0]) : sel.length ? armMultiHtml(sel) : `<div class="count armnote">${tt('armory.nothing_selected')}</div>`}</div></div>`}`;

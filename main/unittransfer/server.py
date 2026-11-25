@@ -3453,8 +3453,24 @@ class Handler(BaseHTTPRequestHandler):
                 # each object's colour, spec and normal map, for the viewport's live bake light
                 from . import armlit
                 try:
-                    return self._json(armlit.maps(body.get("project") or {}, body.get("ids") or [], self.registry.get))
+                    out = armlit.maps(body.get("project") or {}, body.get("ids") or [], self.registry.get)
+                    # and what the Cycles bake's metal mix needs of each (cycleslook.py)
+                    from . import cycleslook
+                    for k, v in cycleslook.metal_info(body.get("project") or {}, body.get("ids") or [],
+                                                      self.registry.get).items():
+                        if k in out:
+                            out[k] = dict(out[k], **v)
+                    return self._json(out)
                 except (armory.ArmoryError, mesh.MeshError, KeyError, ValueError, OSError) as e:
+                    return self._err(400, str(e))
+            if u.path == "/api/armory/cycles_look":
+                # the Keyforce Cycles bake's light for the viewport: measured in a
+                # hidden Blender once, then the payload (cycleslook.py)
+                from . import cycleslook
+                try:
+                    st = cycleslook.status()
+                    return self._json(dict(st, look=cycleslook.look(body.get("settings") or {})) if st.get("ready") else st)
+                except (OSError, ValueError, KeyError) as e:
                     return self._err(400, str(e))
             if u.path == "/api/armory/lit":
                 # the pre-rendered bake: a lit colour texture per source texture

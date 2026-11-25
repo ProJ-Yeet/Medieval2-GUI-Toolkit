@@ -51,15 +51,22 @@ A portable install of v2.4.14 fetches this one by itself at the next start.
     X-ray, outlined selection, the Objects panel reworked, UV edge and face
     modes, and the bar in two rows with Sessions, Library and Export;
   * Into a mod picks the unit from card tiles;
-  * the Pre-render panel draws its bake live as it will write it: the spec
-    map, the normal map and each light's soft shadow. Beside the key light
-    it takes up to three more, each a sun or a point as in the card maker,
-    and the bake uses them all;
+  * **Lighting settings** (the panel called Pre-render lighting before)
+    offer two bakes. **Light Bake** is the quick one: the light set there,
+    with up to three more lights beside the key light, each a sun or a
+    point as in the card maker, painted into each colour texture with its
+    spec and normal maps and each light's shadow. **PBR Bake** is the
+    Keyforce Tools add-on's Cycles bake in a hidden Blender, its settings
+    in the panel. After a bake the objects show their baked textures as
+    they are;
   * **Render mode**, in the viewport bar, draws every object the bake can
-    light under the Pre-render panel's light with the panel closed, and a
-    baked object with its baked texture. Off by default; with it off the
-    viewport draws as quickly as before. Import previews of a PBR file use
-    the same light, without shadows.
+    light in the light the chosen bake will paint in, live: Light Bake's
+    own, or for PBR Bake the Cycles bake's look (its world, surround suns,
+    metal mix, light floor and AgX, measured once in your own Blender).
+    Off by default; with it off the viewport draws as quickly as before.
+    Import previews of a PBR file use the chosen bake's light, without
+    shadows;
+  * the list of objects folds away under its own heading.
 
 ## Fixed
 

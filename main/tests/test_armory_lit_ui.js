@@ -21,6 +21,8 @@ const c={ARM:{sel:new Set([1,2]),sheetCache:new Map(),sheetAllowed:new Set(),she
   setTimeout:()=>1,clearTimeout(){}};
 vm.createContext(c);
 vm.runInContext(fs.readFileSync(path.join(__dirname,'../web/js/armlit.js'),'utf8'),c);
+// a top-level const of the page's scripts is read in their scope
+for(const n of ['armRenderOn','armLitPbrWanted']) c[n]=vm.runInContext(n,c);
 const near=(a,b)=>a.every((x,i)=>Math.abs(x-b[i])<1e-6);
 
 (async()=>{
@@ -126,9 +128,10 @@ const near=(a,b)=>a.every((x,i)=>Math.abs(x-b[i])<1e-6);
   assert.ok(toasts.length>said);
   assert.match(toasts.at(-1),/helm/);
 
-  // closed: a baked object is drawn with its lit texture, under the viewport's light
+  // closed: a baked object is drawn with its lit texture as it is (2026-11-25: not
+  // under the viewport's light too), Render mode or not
   c.armLitToggle();
-  assert.equal(c.armLitMode(project.objects[1]),0);
+  assert.equal(c.armLitMode(project.objects[1]),2);
   assert.equal(c.armLitSheetOf(project.objects[1]),'C:/lit/own_lit_2.png');
 
   // 2026-11-25: the maps the bake would use, asked once for what the objects wear
@@ -159,6 +162,40 @@ const near=(a,b)=>a.every((x,i)=>Math.abs(x-b[i])<1e-6);
   assert.equal(c.armLitMode(plain),0);
   c.armRenderToggle(false);
   assert.equal(c.armLitMode(project.objects[2]),0);
+
+  // 2026-11-25: a bake turns Render mode off and shows the baked textures as they are
+  c.armRenderToggle(true);
+  answer={baked:[{source:'C:/belt_d.png',path:'C:/lit/belt_lit_3.png',objects:[3]}],skipped:[]};
+  c.ARM.sel=new Set([3]);
+  await c.armLitRun();
+  assert.equal(c.armRenderOn(),false);
+  assert.equal(JSON.stringify(calls.at(-1)),JSON.stringify({url:'/api/settings',body:{armory_render_mode:false}}));
+  assert.equal(c.armLitMode(project.objects[2]),2);
+  assert.equal(c.armLitSheetOf(project.objects[2]),'C:/lit/belt_lit_3.png');
+  c.armLitRemove([3]);
+  c.ARM.sel=new Set([1,2]);
+
+  // 2026-11-25: two bakes. Light Bake (the default) draws its own light; PBR Bake
+  // draws the Cycles look once Blender has measured it, and its Bake is Blender's
+  assert.equal(c.armLitOpts().bake,'light');
+  assert.match(c.armLitHtml(),/onclick="armLitRun\(\)"/);
+  c.armLitSet('bake','pbr');
+  c.armRenderToggle(true);
+  assert.equal(c.armLitPbrWanted(),true);
+  assert.equal(c.armLitMode(project.objects[2]),0);         // not measured yet: the viewport's own light
+  c.armCyReady=()=>true;
+  assert.equal(c.armLitMode(project.objects[2]),3);
+  assert.equal(c.armLitSheetOf(project.objects[2]),'C:/belt_d.png');
+  const ph=c.armLitHtml();
+  assert.match(ph,/onclick="armLitCycles\(\)"/);
+  assert.doesNotMatch(ph,/armLitSet\('ambient'/);
+  // one bake each: no third button for texture files or a second Cycles one
+  assert.doesNotMatch(ph,/pbrOpen\(\)/);
+  assert.equal((ph.match(/class="primary"/g)||[]).length,1);
+  c.armRenderToggle(false);
+  assert.equal(c.armLitPbrWanted(),false);
+  c.armLitSet('bake','light');
+  delete c.armCyReady;
 
   // taking it off: each object wears what it wore before
   c.armLitRemove([1,2]);
