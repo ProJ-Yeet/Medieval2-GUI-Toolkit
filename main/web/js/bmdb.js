@@ -605,11 +605,35 @@ function bmImpPaint(){
   modal.innerHTML = `<div class="bmimp">
     <h3>${tt('bmdb.imp_title', {mod: esc(m.mod)})}</h3>
     <div class="count">${esc(m.path)}</div>
+    ${m.data && m.step === 'models' ? `<div class="armexprow" style="justify-content:flex-end">
+      <button class="mini${bmImpGallery() ? '' : ' on'}" onclick="bmImpView('list')">${tt('armory.as_list')}</button>
+      <button class="mini${bmImpGallery() ? ' on' : ''}" onclick="bmImpView('gallery')">${tt('armory.as_gallery')}</button></div>` : ''}
     ${m.err ? `<div class="armexperr">${esc(m.err)}</div>` : ''}
     ${m.busy ? `<div class="count">${tt('bmdb.imp_working')}</div>` : ''}
     <div id="bmImpBody">${m.data ? (m.step === 'models' ? bmImpModelsHtml() : bmImpUnitsHtml()) : ''}</div>
-    <div style="text-align:right;margin-top:10px"><button onclick="closeModal()">${tt('common.close')}</button></div>
+    <div style="text-align:right;margin-top:10px"><button onclick="bmImpClose()">${tt('common.close')}</button></div>
   </div>`;
+  bmImpMount();
+}
+/* Each model as a turning tile over its options (the Armory's From disk
+   tiles, gallery.js GAL_EXT: the folder's own .mesh with its main and
+   attachment sheets), or as rows. Gallery unless List was picked. */
+const bmImpGallery = () => (state.settings || {}).bmdb_import_view !== 'list';
+function bmImpView(v){
+  state.settings.bmdb_import_view = v;
+  api.post('/api/settings', {bmdb_import_view: v}).catch(() => {});
+  bmImpPaint();
+}
+const bmImpMeshPath = r => bmImp().data.root.replace(/[\\/]+$/, '') + '/' + r.id;
+function bmImpMount(){
+  const el = document.querySelector('.bmimplist.bmimpgal');
+  if(!el || typeof galMount !== 'function') return;
+  galMount(el, (name, t) => { const id = t.dataset.id; bmImpSet(id, 'on', !bmImp().rows[id].on); });
+}
+// the dialog took the one gallery over: Model entries' own tiles are watched again
+function bmImpClose(){
+  closeModal();
+  if(state.mode === 'bmdb' && typeof galOn === 'function' && galOn() && !galUnits()) galMount(main, bmPrevOpen);
 }
 
 const bmImpFileNote = f => ({new: tt('bmdb.imp_file_new'), same: tt('bmdb.imp_file_same'),
@@ -642,7 +666,10 @@ function bmImpModelsHtml(){
     const notes = [(r.missing_skeletons || []).length ? tt('bmdb.imp_missing_skeletons', {names: esc(r.missing_skeletons.join(', '))}) : '',
                    (r.unknown_factions || []).length ? ttN('bmdb.imp_unknown_factions', r.unknown_factions.length, {names: esc(r.unknown_factions.join(', '))}) : '']
       .filter(Boolean).map(t => `<div class="armexpwarn">${t}</div>`).join('');
-    return `<div class="bmimprow${s.on ? '' : ' off'}">
+    const tile = bmImpGallery() ? `<div class="gtile armimptile${s.on ? ' picked' : ''}" data-mod="${GAL_EXT}"
+        data-name="${esc(bmImpMeshPath(r))}" data-id="${esc(r.id)}" title="${esc(r.id)}"><canvas></canvas>
+        <span class="gname">${esc(r.name)}</span><span class="armimptick">✓</span></div>` : '';
+    return `<div class="bmimprow${s.on ? '' : ' off'}">${tile}
       <label class="armcheck"><input type="checkbox"${s.on ? ' checked' : ''} onchange="bmImpSet('${id}','on',this.checked)">
         <b>${esc(r.name)}</b></label> ${tags}
       <span class="count" title="${esc(r.id)}">${esc(r.folder)}</span>
@@ -659,7 +686,7 @@ function bmImpModelsHtml(){
       ${noBmdb ? `<label>${tt('bmdb.imp_clone_all')}<input list="bmImpEntries" value="${esc(m.clone_all)}"
           onchange="bmImpCloneAll(this.value)"></label>` : ''}
       <span class="count">${tt('bmdb.imp_ticked', {n: on, total: d.models.length})}</span></div>
-    ${entries}<div class="bmimplist">${rows}</div>
+    ${entries}<div class="bmimplist${bmImpGallery() ? ' bmimpgal' : ''}">${rows}</div>
     <div class="armexprow"><button onclick="bmImpPlan()"${on && !m.busy ? '' : ' disabled'}>${tt('bmdb.imp_plan')}</button>
       <button class="primary" onclick="bmImpApply()"${m.plan && m.plan.ok && !m.busy ? '' : ' disabled'}>${tt('bmdb.imp_apply', {n: on})}</button></div>
     ${plan}`;

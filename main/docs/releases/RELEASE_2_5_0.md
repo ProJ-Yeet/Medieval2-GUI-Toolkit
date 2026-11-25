@@ -23,6 +23,9 @@ A portable install of v2.4.14 fetches this one by itself at the next start.
   else: the faction comes out of its ownership and era lines, out of the
   recruit and retrain lines that name it in the buildings file, and out of
   its armies in the campaign files. One Undo for all of it.
+* **Models Editor: Import models from a folder shows each model as a
+  turning tile**, its options under it, with a switch to the old list. A
+  click on a tile ticks or unticks it. Gallery by default.
 * **Animation kits.** A new skeleton from a base, with actions taken from any
   skeleton, slot or mod, bones matched by name or by a map picked from two
   lists; add to a kit made earlier and point the model at it. MilkShape

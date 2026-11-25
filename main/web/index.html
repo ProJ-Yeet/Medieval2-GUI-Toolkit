@@ -735,6 +735,10 @@
   .bmimp .bmimplist{max-height:52vh;overflow:auto;display:flex;flex-direction:column;gap:6px;margin:8px 0}
   .bmimprow{padding:6px 8px;border:1px solid var(--edge);border-radius:6px;background:var(--panel2)}
   .bmimprow.off{opacity:.6}
+  .bmimplist.bmimpgal{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));align-items:start}
+  .bmimpgal .bmimprow .gtile{margin-bottom:6px}
+  .bmimpgal .bmimprow .armexprow{flex-wrap:wrap}
+  .bmimpgal .bmimprow select,.bmimpgal .bmimprow input:not([type=checkbox]){max-width:100%}
   .bmimptag{font-size:11px;padding:0 5px;border-radius:4px;border:1px solid var(--edge)}
   .bmimptag.ok{border-color:#4f9a5d}.bmimptag.warn{border-color:#d9a43a;color:#d9a43a}
   .bmimppics{display:flex;gap:6px;flex-wrap:wrap;margin:4px 0}
