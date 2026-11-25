@@ -1907,7 +1907,7 @@ function cmapFetchLayer(c, code){
     let r;
     try{ r = await fetch(n > 1 ? `${url}&try=${n}` : url, {cache: 'no-store'}); }
     catch(e){
-      if(n < CMAP_LAYER_TRIES){
+      if(n < CMAP_LAYER_TRIES && !e.retried){
         await new Promise(ok => setTimeout(ok, 150 * n));
         return go(n + 1);
       }

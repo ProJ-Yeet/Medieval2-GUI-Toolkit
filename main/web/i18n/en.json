@@ -13232,5 +13232,6 @@
 "eng.animkit.timing_numbers": "the impact frame and turn limits are numbers",
 "eng.animkit.impact_outside": "an impact frame of {n} is outside the animation's frames, 0 to {last}",
 "eng.animkit.turn_outside": "turn limits {lo:g} to {hi:g}: give the least first, both inside -180 to 180 degrees",
-"eng.animkit.extend_no_change": "{name} plays all of this already: nothing would change"
+"eng.animkit.extend_no_change": "{name} plays all of this already: nothing would change",
+"core.fetch_failed_bar": "Part of this screen didn't load: the toolkit's server didn't answer, even after a few tries."
 }

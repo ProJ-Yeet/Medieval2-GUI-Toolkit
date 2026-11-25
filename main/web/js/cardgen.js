@@ -535,7 +535,7 @@ function cgRetry(type, entry, peek){
 async function cgGet(url){
   for(let i = 0; ; i++){
     try{ return await api.get(url); }
-    catch(e){ if(i >= 3 || e && e.deliberate) throw e; await new Promise(ok => setTimeout(ok, 500 * (i + 1))); }
+    catch(e){ if(i >= 3 || e && (e.deliberate || e.retried)) throw e; await new Promise(ok => setTimeout(ok, 500 * (i + 1))); }
   }
 }
 /* Beside the unit, on the same ground, clear of it. */

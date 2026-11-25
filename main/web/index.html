@@ -329,6 +329,11 @@
   .toast{gap:12px;align-items:flex-start;max-width:min(720px,92vw);line-height:1.45;user-select:text}
   .toast.bad{border-color:var(--bad);border-left:4px solid var(--bad)}
   .toast .toasttext{flex:1;white-space:pre-wrap;overflow-wrap:anywhere}
+  .fetchbar{position:fixed;top:12px;left:50%;transform:translateX(-50%);z-index:9999;display:none;
+    gap:12px;align-items:center;background:var(--panel);border:1px solid var(--bad);border-left:4px solid var(--bad);
+    border-radius:6px;padding:8px 12px;max-width:min(720px,92vw);box-shadow:0 4px 16px rgba(0,0,0,.4)}
+  .fetchbar.show{display:flex}
+  .fetchbar .toastx{background:none;border:none;color:var(--dim);cursor:pointer;padding:0 2px;font-size:13px}
   .toast .toastx{background:none;border:none;color:var(--dim);cursor:pointer;padding:0 2px;font-size:13px}
   /* a screen's own code went wrong: one bar, not silence */
   .uibug{position:fixed;left:50%;transform:translateX(-50%);top:62px;z-index:60;display:none;gap:10px;align-items:center;
@@ -4173,6 +4178,7 @@ body.look-editing :is(button,label,legend,h1,h2,h3,.trsechead,.mftab):hover{outl
 <div class="drawer" id="drawer"></div>
 <div class="overlay" id="overlay"><div class="modal" id="modal"></div></div>
 <div class="toast" id="toast"></div>
+<div class="fetchbar" id="fetchbar"></div>
 <!-- The loading bar. Bottom of the window, above everything, on whichever menu
      is open - see `loadbar` in core.js, which drives it from the API client. -->
 <div class="loadbar" id="loadbar">

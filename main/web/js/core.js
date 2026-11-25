@@ -145,6 +145,39 @@ function newLoad(){
 }
 const loadStale=gen=>gen!==_loadGen;
 
+/* 2026-11-25: every request in the page, not only api.get/post, is asked
+   again when nothing answered ("Failed to fetch"). Switching menus fast left
+   panels showing that error: in a burst the server can refuse a connection it
+   answers milliseconds later. Once the tries are spent, onGiveUp shows the
+   Retry bar. An abandoned request and a keepalive beacon are never retried. */
+const FETCH_WAIT=[250,500,1000,2000];
+function fetchRetrying(base,onGiveUp){
+  return async function(input,init){
+    const sig=init&&init.signal;
+    for(let i=0;;i++){
+      try{ return await base(input,init); }
+      catch(e){
+        if((e&&e.name==='AbortError')||(sig&&sig.aborted)||(init&&init.keepalive))throw e;
+        if(i>=FETCH_WAIT.length){ if(e&&typeof e==='object')e.retried=true; onGiveUp(input); throw e; }
+        await new Promise(ok=>setTimeout(ok,FETCH_WAIT[i]));
+      }
+    }
+  };
+}
+window.fetch=window.fetch&&fetchRetrying(window.fetch.bind(window),()=>fetchBarShow());
+// Before startup has finished, init's own screen offers Retry instead.
+let fetchBarArmed=false;
+function fetchBarShow(){
+  const b=document.getElementById('fetchbar'); if(!b||!fetchBarArmed)return;
+  b.innerHTML=`<span>${tt('core.fetch_failed_bar')}</span>
+    <button class="primary" onclick="fetchBarRetry()">${tt('common.retry')}</button>
+    <button class="toastx" title="${tt('common.close')}" onclick="fetchBarHide()">✕</button>`;
+  b.classList.add('show');
+}
+function fetchBarHide(){ const b=document.getElementById('fetchbar'); if(b)b.classList.remove('show'); }
+// render() loads whatever the open screen is still missing
+function fetchBarRetry(){ fetchBarHide(); render(); }
+
 // GET with a few automatic retries - a page's request can be dropped transiently
 // (e.g. during an icon burst, or if the tab was open across a server restart),
 // and we must never hang forever on such a blip. An abandoned request is never
@@ -163,6 +196,7 @@ const api={
           if(isAborted(e)||(o.signal&&o.signal.aborted))throw ABORTED;
           err=e;
           if(e.deliberate)break;   // an answer, not a blip - asking again changes nothing
+          if(e.retried)break;      // fetchRetrying already asked again
           if(i<tries-1) await new Promise(res=>setTimeout(res,apiWait(i)));}
       }
       throw apiFailed(err,u);
@@ -179,7 +213,7 @@ const api={
         try{ r=await fetch(u,{method:'POST',headers:{'Content-Type':'application/json'},body,signal:o.signal}); }
         catch(e){
           if(isAborted(e)||(o.signal&&o.signal.aborted))throw ABORTED;
-          if(i>=tries-1)throw apiFailed(e,u);
+          if(i>=tries-1||e.retried)throw apiFailed(e,u);
           await new Promise(res=>setTimeout(res,apiWait(i)));
           continue;
         }
@@ -569,6 +603,7 @@ async function init(){
       // openBuilding gives up with a message of its own if the line is not there
       if(qJump&&state.bld&&state.bld.line===qBld)bldJumpPool(qJump);
     }
+    fetchBarArmed=true;
   }catch(e){
     // Every line of the startup is inside this try, so the catch used to blame
     // the server for anything that happened in any of them - including a plain
@@ -1825,6 +1860,7 @@ function wire(){
 // the source: that also lets the "new unit" flow reuse the transfer engine with
 // source == dest.
 function applyMode(persist){
+  fetchBarHide();
   syncNav();
   const one=state.mode!=='transfer', edit=state.mode==='edit', bm=state.mode==='bmdb',
         snd=state.mode==='sounds', sbk=state.mode==='soundbanks'||state.mode==='soundscripts', spr=state.mode==='sprites', bld=state.mode==='buildings',

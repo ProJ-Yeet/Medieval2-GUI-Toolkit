@@ -744,6 +744,7 @@ async function armLoadAsset(a){
     }catch(e){
       live.err = errText(e);
       if(e && e.deliberate) break;      // the server said no: asking again changes nothing
+      if(e && e.retried) break;         // fetchRetrying (core.js) already asked again
       await new Promise(ok => setTimeout(ok, 500 * (i + 1)));
     }
   }

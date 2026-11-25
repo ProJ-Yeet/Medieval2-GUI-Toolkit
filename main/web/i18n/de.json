@@ -14496,5 +14496,6 @@
  "armory.lit_light_bake_title": "Der schnelle Bake: Das hier eingestellte Licht wird zusammen mit den Specular- und Normal-Maps sowie dem Schatten jeder Lichtquelle in jede Farbtextur gemalt. Der Render-Modus zeigt das Ergebnis live, während Sie die Einstellungen ändern.",
  "armory.lit_light_bake": "Light Bake",
  "armory.lit_unstack": "Gespiegelte Hälften trennen",
- "armory.lit_unstack_title": "Ein Teil, der dieselben Texel wie ein anderer nutzt (eine Schulterplatte und ihr Spiegelbild oder die beiden Seiten einer Waffe), erhält eigene Texel, damit jeder Teil seine eigene Beleuchtung behält. Die beleuchtete Textur wird so viele Texturblätter hoch erstellt, wie nötig sind, und die UVs des Objekts werden entsprechend verschoben. Entfernen setzt die UVs zurück. Beim Export belegen die Teile dann mehr Platz auf dem Texturblatt des Spiels."
+ "armory.lit_unstack_title": "Ein Teil, der dieselben Texel wie ein anderer nutzt (eine Schulterplatte und ihr Spiegelbild oder die beiden Seiten einer Waffe), erhält eigene Texel, damit jeder Teil seine eigene Beleuchtung behält. Die beleuchtete Textur wird so viele Texturblätter hoch erstellt, wie nötig sind, und die UVs des Objekts werden entsprechend verschoben. Entfernen setzt die UVs zurück. Beim Export belegen die Teile dann mehr Platz auf dem Texturblatt des Spiels.",
+ "core.fetch_failed_bar": "Ein Teil dieses Bildschirms wurde nicht geladen: Der Server des Toolkits hat auch nach mehreren Versuchen nicht geantwortet."
 }

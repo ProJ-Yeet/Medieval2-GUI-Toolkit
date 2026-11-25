@@ -1007,7 +1007,7 @@ const V3_TEX_WAIT = [600, 1200, 2400, 4800];
 async function v3FetchGeo(url){
   for(let i = 0; ; i++){
     try{ return await fetch(url); }
-    catch(e){ if(i >= V3_TEX_WAIT.length) throw e; await new Promise(ok => setTimeout(ok, V3_TEX_WAIT[i])); }
+    catch(e){ if(i >= V3_TEX_WAIT.length || e.retried) throw e; await new Promise(ok => setTimeout(ok, V3_TEX_WAIT[i])); }
   }
 }
 function v3Fetch(rel, want, into, tries){
