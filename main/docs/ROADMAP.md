@@ -1104,7 +1104,8 @@ Still to do:
 
 Built 2026-11-12 (`ROADMAP_ARCHIVE.md`).
 
-**Texture files alone, 2026-11-14, in v2.4.14** (the user: a general baker
+**Texture files alone, 2026-11-14, in v2.4.14; removed 2026-11-25** (the user wanted two bakes in the
+Lighting settings, Light Bake and PBR Bake, and this one deleted). Was (the user: a general baker
 "that can bake any pbr material", "should not require blender", textures
 only first, the mesh version later). `unittransfer/pbrbake.py`,
 `POST /api/armory/pbr_bake`, Pre-render panel > *Bake texture files...*

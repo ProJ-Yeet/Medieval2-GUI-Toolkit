@@ -59,7 +59,8 @@ A portable install of v2.4.14 fetches this one by itself at the next start.
     Keyforce Tools add-on's Cycles bake in a hidden Blender, its settings
     in the panel. After a bake the objects show their baked textures as
     they are. Parts that share texels (head variants, a collar UV'd over
-    the legs) are baked to separate textures, so each keeps its own light;
+    the legs) are baked to separate textures, so each keeps its own light.
+    *Bake texture files...* (a texture set without a model) is gone;
   * **Render mode**, in the viewport bar, draws every object the bake can
     light in the light the chosen bake will paint in, live: Light Bake's
     own, or for PBR Bake the Cycles bake's look (its world, surround suns,

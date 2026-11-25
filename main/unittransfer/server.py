@@ -66,8 +66,6 @@ Unit-editor mode (edits inside ONE mod, see :mod:`unittransfer.edit`)
   POST /api/edit/plan            -> preview an edit / delete
   POST /api/edit/apply           -> apply it (same backups + undo as a transfer)
   POST /api/browse_file          -> native file dialog (mesh/texture import)
-  POST /api/armory/pbr_bake      -> {paths,settings,out_dir?,preview?} -> a lit
-                                    colour texture per PBR texture set, no mesh
   POST /api/armory/keyforce/start  -> {root,lod,size,out?,settings?,glb?} -> {job,out}: Keyforce
                                     Tools' bake of a TpacTool export, hidden Blender
   POST /api/armory/keyforce/status -> {job} -> {running,fraction,status} | {done,...}
@@ -3503,15 +3501,6 @@ class Handler(BaseHTTPRequestHandler):
                         return self._json(keyforce.stop(body.get("job") or ""))
                     return self._json({"path": keyforce.find_blender(), "settings": keyforce.schema()})
                 except (armory.ArmoryError, mesh.MeshError, KeyError, ValueError, OSError) as e:
-                    return self._err(400, str(e))
-            if u.path == "/api/armory/pbr_bake":
-                # the same from texture files alone: any PBR set, no mesh
-                from . import pbrbake
-                try:
-                    return self._json(pbrbake.bake_files(
-                        body.get("paths") or [], body.get("settings") or {},
-                        body.get("out_dir") or None, bool(body.get("preview"))))
-                except (ValueError, OSError) as e:
                     return self._err(400, str(e))
             if u.path == "/api/armory/rig_bones":
                 # 100b: every vertex of the chosen objects on one or two bones

@@ -47,10 +47,9 @@ void main(){
 // light; 'light' has Light Bake's (armlit.js), 'pbr' PBR Bake's Cycles look
 // (armcycles.js). Direct3D under ANGLE runs both sides of a branch that reads
 // textures, so a light compiled in costs every pixel, used or not.
+const ARM_FRAG_DEFS = {plain: [], light: ['ARM_FULL', 'ARM_LIGHT'], pbr: ['ARM_FULL', 'ARM_PBR'], both: ['ARM_FULL', 'ARM_LIGHT', 'ARM_PBR']};
 const armFrag = kind => `#extension GL_OES_standard_derivatives : enable
-${kind === 'plain' ? '' : '#define ARM_FULL'}
-${kind === 'light' || kind === 'both' ? '#define ARM_LIGHT' : ''}
-${kind === 'pbr' || kind === 'both' ? '#define ARM_PBR' : ''}
+${ARM_FRAG_DEFS[kind].map(n => '#define ' + n + '\n').join('')}
 #if defined(ARM_FULL) && defined(GL_FRAGMENT_PRECISION_HIGH)
 precision highp float;
 #else

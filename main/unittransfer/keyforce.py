@@ -13,8 +13,7 @@ Blender, starts one hidden, below-normal-priority Blender per job on
 * :func:`status` - ``{running, fraction, status}`` while it runs, then
   ``{done, results}`` or ``{done, error}``; :func:`stop` kills it.
 
-Not the Blender-free bakes: :mod:`armlit` (project objects) and
-:mod:`pbrbake` (texture files alone) need no Blender.
+Not the Blender-free bake: :mod:`armlit` (project objects) needs no Blender.
 """
 from __future__ import annotations
 
