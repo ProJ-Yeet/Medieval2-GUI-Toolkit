@@ -1112,7 +1112,8 @@ class Registry:
         # The base game itself, read only: a source for transfers and a roster
         # and buildings to look at, its files read out of its packs as the
         # Kingdoms campaigns' are. Its data/ refuses every write (the write
-        # guard); changing it is done in a mod made from it.
+        # guard); changing it is done in a mod made from it, unless Settings'
+        # "Let me edit the base game" is ticked (base_locked).
         game = self.base_root()
         if game is not None and game.name not in out:
             out[game.name] = game
@@ -1124,9 +1125,19 @@ class Registry:
         if game is None or not ((game / "packs").is_dir() or (game / "data").is_dir()):
             return None
         ro = os.path.abspath(game / "data").replace("\\", "/").lower() + "/"
-        if ro not in modfork.READ_ONLY:
-            modfork.READ_ONLY.append(ro)
+        if self.base_locked():
+            if ro not in modfork.READ_ONLY:
+                modfork.READ_ONLY.append(ro)
+        elif ro in modfork.READ_ONLY:
+            modfork.READ_ONLY.remove(ro)
         return game
+
+    @staticmethod
+    def base_locked() -> bool:
+        """False once Settings' "Let me edit the base game" is ticked: its
+        data/ then takes writes (loose files the game reads over its packs)
+        and it is offered as a destination like any mod."""
+        return not config.load_settings().get("edit_base_game")
 
     def is_base(self, name: str) -> bool:
         game = self.base_root()
@@ -2121,8 +2132,9 @@ class Handler(BaseHTTPRequestHandler):
                 # mod: this list is the header dropdown and it has to answer
                 # before anything is read.
                 return self._json([{"name": n, "root": str(p),
-                                    # the base game is never a destination either
-                                    "pack": self.registry.is_pack(n) or self.registry.is_base(n),
+                                    # the base game is not a destination either, unless unlocked
+                                    "pack": self.registry.is_pack(n) or (self.registry.is_base(n)
+                                                                         and self.registry.base_locked()),
                                     "base": self.registry.is_base(n),
                                     "m2ex": modflags.is_m2ex(p),
                                     # 92a: reads descr_model_battle.txt, not the .modeldb

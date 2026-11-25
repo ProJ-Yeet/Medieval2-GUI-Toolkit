@@ -3679,7 +3679,7 @@
  "core.battle_banners": "Estandartes de batalla",
  "core.battle_models": "Modelos de batalla",
  "core.browse_and_edit_export_descr_buildings": "Explorar y editar export_descr_buildings",
- "core.build_tag_tip_2x": "Esta es la compilación {appBuild} de la herramienta.\nLa línea 2.x mantiene el editor del mapa de campaña fuera del menú; la beta lo incluye.\nHacer clic para ver los créditos.",
+ "core.build_tag_tip_2x": "Esta es la compilación {appBuild} del kit de herramientas.\nHaz clic para ver los créditos.",
  "core.build_tag_tip_beta": "Esta es la compilación {appBuild} de la herramienta.\nLa línea beta incluye el editor del mapa de campaña.\nHacer clic para ver los créditos.",
  "core.built_on_the_work_of_and": "Basado en el trabajo de estas personas, a las que se agradece el permiso para tomar como referencia su código",
  "core.campaign_constants": "Constantes de campaña",
@@ -12216,8 +12216,8 @@
  "eng.report.send_failed": "el informe no se envió: {why}; queda guardado",
  "settings.beta": "Funciones beta",
  "settings.beta_opt_in": "Activar las funciones beta",
- "settings.beta_hint": "Muestra lo que aún se está probando: el editor del Mapa de campaña y Armory Studio (con el creador de tarjetas de unidad que dibuja su modelo). Escriben en tu mod como todo lo demás, con copia de seguridad y se pueden deshacer, pero se han usado menos. Desactivado por defecto.",
- "settings.beta_on": "Las funciones beta están activadas: el Mapa de campaña y Armory Studio están en el menú",
+ "settings.beta_hint": "Muestra qué sigue en pruebas: el diseñador guiado de unidades y la pestaña Lua de Scripts. Ambos escriben en tu mod como todo lo demás; sus cambios se guardan y se pueden deshacer, pero se han usado menos. Las funciones beta están desactivadas de forma predeterminada.",
+ "settings.beta_on": "Las funciones beta están activadas: se muestran el diseñador guiado de unidades y la pestaña Lua.",
  "settings.beta_off": "Las funciones beta están desactivadas",
  "eng.modeltext.already_text": "{name} ya lee sus modelos de batalla de {rel}",
  "eng.modeltext.no_modeldb": "{name} no tiene un data/{rel} propio que convertir",
@@ -14980,5 +14980,12 @@
  "cards.gen_sess_copy_title": "Inicia la tarjeta con la cámara, las luces, la pose y el acabado de otra unidad. Sus partes, copias y textura no se copian.",
  "cards.gen_sess_copy_none": "Configuración propia",
  "cards.gen_sess_copy_from": "Configuración de {unit}",
- "eng.armunit.bow_no_skeleton": "el modelo está ponderado a {bones}, y ninguna entrada de soldado de este mod usa un esqueleto con ellos: el arco no se animará"
+ "eng.armunit.bow_no_skeleton": "el modelo está ponderado a {bones}, y ninguna entrada de soldado de este mod usa un esqueleto con ellos: el arco no se animará",
+ "home.base_game_editable": "Juego base, editable",
+ "home.base_game_editable_note": "El juego sin modificar se carga desde sus propios paquetes de datos. La edición está activada en Configuración: los cambios se guardan como archivos sueltos en su carpeta de datos, y el juego los carga por encima de los paquetes.",
+ "settings.base_edit": "Juego base",
+ "settings.base_edit_opt_in": "Permitir la edición del juego base",
+ "settings.base_edit_hint": "El juego base es de solo lectura de forma predeterminada. Al marcar la casilla, su carpeta de datos permite hacer cambios igual que en cualquier mod: cada cambio se guarda allí como un archivo suelto que el juego carga por encima de los paquetes, y se puede respaldar y deshacer como de costumbre. Las campañas de Kingdoms en su carpeta de mods siempre se pueden editar. Crear un mod a partir del juego sigue siendo la opción más segura.",
+ "settings.base_edit_on": "El juego base ya se puede editar",
+ "settings.base_edit_off": "El juego base vuelve a ser de solo lectura"
 }

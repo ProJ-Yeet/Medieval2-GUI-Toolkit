@@ -4345,7 +4345,7 @@
  "core.battle_banners": "Sztandary bitewne",
  "core.battle_models": "Modele bitewne",
  "core.browse_and_edit_export_descr_buildings": "Przeglądaj i edytuj export_descr_buildings",
- "core.build_tag_tip_2x": "To wydanie narzędzia: {appBuild}.\nW linii 2.x edytor Mapy kampanii jest ukryty w menu; zawiera go wersja beta.\nKliknij, aby zobaczyć podziękowania.",
+ "core.build_tag_tip_2x": "To kompilacja {appBuild} zestawu narzędzi.\nKliknij, aby wyświetlić podziękowania.",
  "core.build_tag_tip_beta": "To wydanie narzędzia: {appBuild}.\nLinia beta zawiera edytor Mapy kampanii.\nKliknij, aby zobaczyć podziękowania.",
  "core.built_on_the_work_of_and": "Oparte na pracy poniższych autorów. Dziękujemy im za zgodę na korzystanie z ich kodu jako punktu odniesienia",
  "core.campaign_constants": "Stałe kampanii",
@@ -10202,8 +10202,8 @@
  "settings.deleted_in": "🗑 usunięte w",
  "settings.beta": "Funkcje beta",
  "settings.beta_opt_in": "Włącz funkcje beta",
- "settings.beta_hint": "Pokazuje nadal testowane funkcje: edytor Mapy kampanii i Armory Studio (z generatorem kart jednostek renderującym model). Zapisują zmiany w modzie tak jak pozostałe funkcje, z kopiami zapasowymi i możliwością cofania, ale były rzadziej używane. Domyślnie wyłączone.",
- "settings.beta_on": "Funkcje beta są włączone: Mapa kampanii i Armory Studio są dostępne w menu",
+ "settings.beta_hint": "Pokazuje, co jest jeszcze testowane: kreator jednostek krok po kroku i karta Lua w zakładce Skrypty. Zapisują zmiany w twoim modzie jak wszystkie pozostałe funkcje; zmiany są objęte kopią zapasową i można je cofnąć, ale korzystano z nich rzadziej. Domyślnie wyłączone.",
+ "settings.beta_on": "Funkcje beta są włączone: wyświetlane są kreator jednostek krok po kroku i karta Lua.",
  "settings.beta_off": "Funkcje beta są wyłączone",
  "settings.display": "Wyświetlanie",
  "settings.draws_the_whole_tool_smaller_or": "Zmniejsza lub powiększa cały interfejs. Wartość poniżej 100% pozwala zmieścić edytor budynków i widok kodu obok siebie na ekranie 1080p. Ustawienie zostanie zapamiętane.",
@@ -15233,5 +15233,12 @@
  "cards.gen_gear_no_secondary": "Ta jednostka nie ma broni dodatkowej",
  "cards.gen_sess_copy_title": "Rozpocznij kartę, używając kamery, świateł, pozy i wyglądu końcowego innej jednostki. Jej części, kopie i tekstura nie zostaną skopiowane.",
  "cards.gen_sess_copy_none": "Własne ustawienia",
- "cards.gen_sess_copy_from": "Ustawienia jednostki {unit}"
+ "cards.gen_sess_copy_from": "Ustawienia jednostki {unit}",
+ "home.base_game_editable": "Gra podstawowa, edytowalna",
+ "home.base_game_editable_note": "Niezmodyfikowana gra jest odczytywana z własnych paczek danych. Edycja jest włączona w Ustawieniach: zmiany są zapisywane w folderze danych jako luźne pliki, które gra wczytuje z pierwszeństwem przed zawartością paczek.",
+ "settings.base_edit": "Gra podstawowa",
+ "settings.base_edit_opt_in": "Zezwól na edycję gry podstawowej",
+ "settings.base_edit_hint": "Gra podstawowa jest domyślnie tylko do odczytu. Po zaznaczeniu pola jej folder danych pozwala wprowadzać zmiany tak jak w każdym modzie: każda zmiana jest tam zapisywana jako luźny plik, który nadpisuje zawartość paczek podczas wczytywania gry; tworzenie kopii zapasowych i cofanie zmian działa jak zwykle. Kampanie Kingdoms w folderze modów są zawsze edytowalne. Utworzenie moda na podstawie gry nadal jest bezpieczniejszym rozwiązaniem.",
+ "settings.base_edit_on": "Grę podstawową można teraz edytować",
+ "settings.base_edit_off": "Gra podstawowa znów jest tylko do odczytu"
 }

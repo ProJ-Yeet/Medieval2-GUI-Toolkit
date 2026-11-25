@@ -69,8 +69,30 @@ try:
 finally:
     modfork.READ_ONLY.remove(ro)
 
-print("\n3) this install's base game")
+print("\n2b) Settings' 'Let me edit the base game' lifts the lock")
 from unittransfer import config                                   # noqa: E402
+from unittransfer import server as _server                        # noqa: E402
+real_load = config.load_settings
+try:
+    for editable in (False, True, False):
+        config.load_settings = lambda e=editable: {"med2_root": str(game), "edit_base_game": e}
+        reg = _server.Registry(tmp / "cache")
+        reg.base_root()
+        try:
+            (game / "data" / "edit.txt").write_text("x")
+            wrote = True
+        except modfork.ReadOnlyError:
+            wrote = False
+        (game / "data" / "edit.txt").unlink(missing_ok=True)
+        check(f"ticked={editable}: the base game's data/ {'takes' if editable else 'refuses'} a write",
+              wrote == editable)
+        check(f"  and it {'is' if editable else 'is not'} offered as a destination",
+              reg.is_base("Game") and reg.base_locked() != editable)
+finally:
+    config.load_settings = real_load
+    modfork.READ_ONLY[:] = [p for p in modfork.READ_ONLY if p != ro]
+
+print("\n3) this install's base game")
 real = config.get_med2_root()
 if not real or not (Path(real) / "packs").is_dir():
     print("  (skipped: no packed install is set)")

@@ -3470,7 +3470,7 @@
  "core.battle_banners": "Schlachtbanner",
  "core.battle_models": "Schlachtmodelle",
  "core.browse_and_edit_export_descr_buildings": "export_descr_buildings durchsuchen und bearbeiten",
- "core.build_tag_tip_2x": "Dies ist der Build {appBuild} des Toolkits.\nDie Linie 2.x hält den Editor für die Kampagnenkarte aus dem Menü heraus; die Beta hat ihn.\nKlicken Sie für die Danksagungen.",
+ "core.build_tag_tip_2x": "Dies ist der Build {appBuild} des Toolkits.\nKlicken Sie, um die Danksagungen anzuzeigen.",
  "core.build_tag_tip_beta": "Dies ist der Build {appBuild} des Toolkits.\nDie Beta-Linie enthält den Editor für die Kampagnenkarte.\nKlicken Sie für die Danksagungen.",
  "core.built_on_the_work_of_and": "Aufgebaut auf der Arbeit von, mit Dank für die Erlaubnis, sich an deren Code zu orientieren",
  "core.campaign_constants": "Kampagnenkonstanten",
@@ -11754,8 +11754,8 @@
  "eng.report.send_failed": "der Bericht ist nicht abgegangen: {why}; er ist gespeichert",
  "settings.beta": "Beta-Funktionen",
  "settings.beta_opt_in": "Beta-Funktionen aktivieren",
- "settings.beta_hint": "Zeigt, was noch getestet wird: den Kampagnenkarten-Editor und das Armory Studio (mit dem Einheitenkarten-Macher, der dessen Modell zeichnet). Sie schreiben wie alles andere in deine Mod, gesichert und rückgängig zu machen, wurden aber weniger genutzt. Standardmäßig aus.",
- "settings.beta_on": "Beta-Funktionen sind an: Die Kampagnenkarte und das Armory Studio stehen im Menü",
+ "settings.beta_hint": "Zeigt, was noch getestet wird: den geführten Einheiten-Designer und die Lua-Registerkarte unter Skripte. Beide schreiben wie alles andere in deine Mod; Änderungen werden gesichert und lassen sich rückgängig machen, aber diese Funktionen wurden bisher weniger genutzt. Standardmäßig deaktiviert.",
+ "settings.beta_on": "Beta-Funktionen sind aktiviert: Der geführte Einheiten-Designer und die Lua-Registerkarte werden angezeigt.",
  "settings.beta_off": "Beta-Funktionen sind aus",
  "eng.modeltext.already_text": "{name} liest seine Schlachtmodelle bereits aus {rel}",
  "eng.modeltext.no_modeldb": "{name} hat keine eigene data/{rel} zum Umwandeln",
@@ -14513,5 +14513,12 @@
  "cards.gen_gear_no_secondary": "Diese Einheit hat keine Sekundärwaffe",
  "cards.gen_sess_copy_title": "Beginne die Karte mit Kamera, Beleuchtung, Pose und Darstellung einer anderen Einheit. Deren Teile, Kopien und Textur werden nicht kopiert.",
  "cards.gen_sess_copy_none": "Eigene Einstellungen",
- "cards.gen_sess_copy_from": "Einstellungen von {unit}"
+ "cards.gen_sess_copy_from": "Einstellungen von {unit}",
+ "home.base_game_editable": "Grundspiel, bearbeitbar",
+ "home.base_game_editable_note": "Das unveränderte Spiel wird aus seinen eigenen Datenpaketen gelesen. Die Bearbeitung ist in den Einstellungen aktiviert: Änderungen werden als lose Dateien im Datenordner gespeichert, die das Spiel über den Datenpaketen lädt.",
+ "settings.base_edit": "Grundspiel",
+ "settings.base_edit_opt_in": "Bearbeitung des Grundspiels erlauben",
+ "settings.base_edit_hint": "Das Grundspiel ist standardmäßig schreibgeschützt. Wenn das Kästchen aktiviert ist, lassen sich im Datenordner Änderungen wie bei jedem Mod vornehmen: Jede Änderung wird dort als lose Datei gespeichert, die das Spiel über den Datenpaketen lädt. Änderungen werden wie gewohnt gesichert und können rückgängig gemacht werden. Die Kingdoms-Kampagnen im Mod-Ordner sind immer bearbeitbar. Einen Mod aus dem Spiel zu erstellen, ist weiterhin der sicherere Weg.",
+ "settings.base_edit_on": "Das Grundspiel kann jetzt bearbeitet werden",
+ "settings.base_edit_off": "Das Grundspiel ist wieder schreibgeschützt"
 }

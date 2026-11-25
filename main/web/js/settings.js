@@ -119,6 +119,11 @@ async function openSettings(){
           <b>${tt('settings.beta_opt_in')}</b></label>
         <div class="count" style="margin-top:6px">${tt('settings.beta_hint')}</div>
       </fieldset>
+      <fieldset><legend>${tt('settings.base_edit')}</legend>
+        <label class="chk"><input type="checkbox" id="baseEditChk" ${s.edit_base_game?'checked':''} onchange="baseEditSet(this.checked)">
+          <b>${tt('settings.base_edit_opt_in')}</b></label>
+        <div class="count" style="margin-top:6px">${tt('settings.base_edit_hint')}</div>
+      </fieldset>
       <fieldset><legend>${tt('settings.updates')}</legend>
         <label class="chk"><input type="checkbox" id="autoUpdatesChk" ${s.auto_updates===false?'':'checked'} onchange="updatesSet(this.checked)"> ${tt('settings.updates_auto')}</label>
         <div class="count">${tt('settings.updates_hint')}</div>
@@ -287,6 +292,16 @@ function betaSet(on){
   if(modeOff(modeDef(state.mode))) setAppMode('home');
   else if(state.mode==='home'&&typeof renderHome==='function') renderHome();
   toast(on?tt('settings.beta_on'):tt('settings.beta_off'));
+}
+/* The base game is read only unless this is ticked; the server lifts its
+   write guard and offers it as a destination, so the lists are fetched again. */
+async function baseEditSet(on){
+  state.settings.edit_base_game=!!on;
+  try{ await api.post('/api/settings',{edit_base_game:!!on}); }
+  catch(err){ const box=document.getElementById('baseEditChk');if(box)box.checked=!on;toast(errText(err),6000);return; }
+  await refreshMods(state.src,state.dst);
+  if(state.mode==='home'&&typeof renderHome==='function') renderHome();
+  toast(on?tt('settings.base_edit_on'):tt('settings.base_edit_off'));
 }
 async function setM2exFromSettings(name, on){
   const r = await api.post('/api/m2ex', {mod:name, on:!!on});

@@ -1,11 +1,13 @@
 # STATE - Medieval 2 GUI Toolkit
-_Updated: 2026-11-23 - Armory Studio round of user requests (on master, uncut): Blender-style Edit Mode in the detail view (vertex/edge/face, paths, connected mode, cut or duplicate split), Solid/Wireframe/X-ray, outlined selection with an active object, the Objects panel split with its properties (gallery, drag to collections, M), inline Optimize, the weapon-prefix help, the import's 3D Start from with Back, gallery tiles that retry, Show soldier. Earlier the same day: Delete unit for one faction only. Mylae's editor fetched to bc6d969: nothing to port._
+_Updated: 2026-11-25 - v2.5.0 made ready, not cut: the Campaign Map, Armory Studio and the card maker out of beta; Settings' Let me edit the base game._
 
 **Built 2026-11-25, uncut: card maker and Armory Studio, the user's eleven-item list.** Animation Scale saves the whole skeleton: every action scaled into a new skeleton `<base>_<tag>` as one kit job and one Undo (`animkit.plan_kit(scale=)`), the base untouched; presets Troll 2.1, Dwarf 0.86/0.75/0.86, Goblin 0.89, measured on DaC's own skeletons against MTW2_Mace (`ARM_BODY_SCALES`, armanim.js); the scale stays from one action to the next. Armory's export has a Body scale: the new entry plays a scaled kit of each of its clone's skeletons, made on write unless the mod has it (`armunit._scale_steps`, `NewModel.skeletons`). A baked mesh weighted to `bone_bowoffset`/`bone_bowstring`/`bone_sling` cloned from an entry whose skeletons lack them takes an archer's entry instead (`armunit._bow_fix`). Armory's hover, click and box hit the posed model while an action plays. Card maker: Mounted off stands him on foot, on a foot skeleton carrying his weapon when his entry has no foot set (`animview.foot_skeleton`, `/api/model/foot_set`); a Mount action list beside the rider's; the range sliders end to end; Secondary greyed for a unit with none; one texture choice a texture with its factions listed, in the card and in the picker's preview; a new card can start from another unit's session (camera, lights, pose, finish; not its parts). Report R-20261125-9D61F6 (an export page crash in Firefox, no words, no message logged): the page log now keeps an error's message. Left for next: setups per skeleton type and bulk cards in a gallery (the user's "next update"). Not tried: the game.
 
 **Built 2026-11-24, uncut: card maker and Armory Studio round.** Card maker: one docked Models viewer in the unit picker (Mounted only seats him; a model with foot skeletons only borrows the unit's riding model's skeletons, `cgRideEntry`), an elephant's driver and riders on their `descr_mount.txt` spots (`cgCrewLoad`, `a.crew` in `armAnimPose`) with a Crew row, Camera and Experience overlays, a click again picks the next object or bone under the pointer, the Save menu's card gallery, Apply now, Open in the unit editor, a Mercenary tile and faction names, texture retries and Reload textures. Armory: the bar in boxes, Bones by T-pose, the UV editor's edge/face modes, Show UVs, right-drag pan, the Sheet/M2 view pair, Edit Mode, following the selection; one object to the library (`part`); the pre-render panel draws a 512 px bake preview (`armlit.bake_objects(preview=)`); the TpacTool export button is gone (its dialog code stays: `armLitCycles` reads its settings). The RMCE credit is back (GPLv3). Not tried: the game, the elephant crew's look.
 
 ## Next up
+**Ready 2026-11-25, not cut: v2.5.0**, on the user's word ("make them no longer beta features and now get ready to ship as 2.5 dont ship now"). `__version__` is v2.5.0 and `docs/releases/RELEASE_2_5_0.md` is written; left is build, upload and the Discord post, only when the user says release. In it: the Campaign Map, Armory Studio and the card maker out of beta (no `beta:true` mode left; the toggle keeps the Guided designer and the Lua tab), and Settings' *Let me edit the base game* (`edit_base_game`, `Registry.base_locked` in server.py: lifts the write guard on the game's `data/` and offers it as a destination; the Kingdoms campaigns in `mods/` were never locked). `tests/test_base_game` section 2b.
+
 **Next: major V, the translations**, per `ROADMAP.md`. Major VI (Lua scripts, 120-127) is built, uncut, 2026-11-15: `lua_cli.py`, `luarun.py`, `luaapi.py`, every editor's data, the Scripts screen's Lua tab behind *Opt into beta features*. The tab's editor is CodeMirror 5 (`web/vendor/codemirror`). The guide (`lua/guide.html`) and ten example scripts (`lua/examples`) ship in the zip. Nothing of VI is left.
 
 **Finished 2026-11-14, uncut: Phase 101's last pieces** (101h duplicate animations compared, chosen and merged; 101k one armour-tier panel for the Unit Editor and the Unit Creator; 101l Armory's Install to mod without a bake first; 101m tried in the app, which found and fixed the card maker's art lookup). Also: a renamed transfer's dictionary skips names whose cards are still on disk (user report R-20261113-21FF9B, closed). What 101m leaves for the user is under Phase 101 in `ROADMAP.md`. Left on the schedule: major V, the translations.
@@ -2064,10 +2066,12 @@ path in this file and in the source is relative to. `main/dev/` never ships.
 
 ## ONE RELEASE LINE (from 2026-10-27)
 Every cut is a **v2.x** uploaded `--latest` (latest **v2.4.11**, 2026-11-06),
-carrying all of `master`. The Campaign Map editor and Armory Studio (with the
-card maker) ship in it as `beta:true` modes in `web/js/core.js`, offered only
-once *Opt into beta features* is ticked at the top of Settings. No flag is set
-at release time and `__version__` is the 2.x number.
+carrying all of `master`. A mode still being tested is `beta:true` in
+`web/js/core.js`, offered only once *Opt into beta features* is ticked at the
+top of Settings. Since v2.5.0 no mode is: the Campaign Map editor and Armory
+Studio (with the card maker) are on for everyone, and the toggle shows only the
+Guided designer and the Lua tab. No flag is set at release time and
+`__version__` is the 2.x number.
 
 Until then there were **two lines**: a 2.x with the map (and from v2.4.6
 Armory Studio) set `off:true` while building, and a date-named beta

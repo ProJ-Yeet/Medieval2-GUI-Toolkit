@@ -3628,7 +3628,7 @@
  "core.battle_banners": "Savaş sancakları",
  "core.battle_models": "Savaş modelleri",
  "core.browse_and_edit_export_descr_buildings": "export_descr_buildings dosyasını görüntüleyin ve düzenleyin",
- "core.build_tag_tip_2x": "Aracın {appBuild} sürümünü kullanıyorsunuz.\n2.x serisinde Kampanya Haritası düzenleyicisi menüde yer almaz; beta sürümünde bulunur.\nKatkıda bulunanlar için tıklayın.",
+ "core.build_tag_tip_2x": "Bu, araç setinin {appBuild} derlemesidir.\nKatkıda bulunanları görmek için tıklayın.",
  "core.build_tag_tip_beta": "Aracın {appBuild} sürümünü kullanıyorsunuz.\nBeta serisi Kampanya Haritası düzenleyicisini içerir.\nKatkıda bulunanlar için tıklayın.",
  "core.built_on_the_work_of_and": "Çalışmalarından yararlanılmıştır; kodlarını referans alma izni verdikleri için teşekkür ederiz",
  "core.campaign_constants": "Kampanya sabitleri",
@@ -9138,8 +9138,8 @@
  "settings.deleted_in": "🗑 silindi:",
  "settings.beta": "Beta özellikler",
  "settings.beta_opt_in": "Beta özellikleri etkinleştir",
- "settings.beta_hint": "Hâlâ test edilen özellikleri gösterir: Kampanya Haritası düzenleyicisi ve Armory Studio (modelini çizerek birim kartı oluşturan araç dahil). Diğer tüm özellikler gibi modunuza yazarlar; yedeklenebilir ve geri alınabilirler, ancak daha az kullanılmışlardır. Varsayılan olarak kapalıdır.",
- "settings.beta_on": "Beta özellikler açık: Kampanya Haritası ve Armory Studio menüde",
+ "settings.beta_hint": "Henüz test aşamasında olanları gösterir: adım adım birim tasarım aracı ve Script dosyaları bölümündeki Lua sekmesi. Diğer tüm özellikler gibi modunuza veri yazarlar; bu değişiklikler yedeklenir ve geri alınabilir, ancak daha az kullanılmışlardır. Varsayılan olarak kapalıdır.",
+ "settings.beta_on": "Beta özellikleri açık: adım adım birim tasarım aracı ve Lua sekmesi gösteriliyor.",
  "settings.beta_off": "Beta özellikler kapalı",
  "settings.display": "Görünüm",
  "settings.draws_the_whole_tool_smaller_or": "Tüm arayüzü küçültür veya büyütür. %100'ün altında, bina düzenleyicisi ve kod görünümü 1080p ekranda yan yana sığar. Bir sonraki açılışta hatırlanır.",
@@ -13960,5 +13960,12 @@
  "cards.gen_gear_no_secondary": "Bu birimin ikincil silahı yok",
  "cards.gen_sess_copy_title": "Kartı başka bir birimin kamera, ışık, poz ve görünüm ayarlarıyla başlatın. Parçaları, kopyaları ve dokusu kopyalanmaz.",
  "cards.gen_sess_copy_none": "Kendi ayarları",
- "cards.gen_sess_copy_from": "{unit} biriminin ayarları"
+ "cards.gen_sess_copy_from": "{unit} biriminin ayarları",
+ "home.base_game_editable": "Ana oyun, düzenlenebilir",
+ "home.base_game_editable_note": "Değiştirilmemiş oyun kendi veri paketlerinden okunur. Düzenleme, Ayarlar bölümünde açıktır: değişiklikler veri klasörüne bağımsız dosyalar olarak kaydedilir ve oyun bu dosyaları paketlerin üzerine yükler.",
+ "settings.base_edit": "Ana oyun",
+ "settings.base_edit_opt_in": "Ana oyunun düzenlenmesine izin ver",
+ "settings.base_edit_hint": "Ana oyun varsayılan olarak salt okunurdur. Kutuyu işaretlediğinizde, veri klasörü her mod gibi düzenlemeleri kabul eder: her değişiklik buraya bağımsız bir dosya olarak kaydedilir ve oyun bu dosyaları paketlerin üzerine yükler; yedekleme ve geri alma işlemleri de her zamanki gibi çalışır. Mods klasöründeki Kingdoms kampanyaları her zaman düzenlenebilir. Oyundan bir mod oluşturmak hâlâ daha güvenli bir yöntemdir.",
+ "settings.base_edit_on": "Ana oyun artık düzenlenebilir",
+ "settings.base_edit_off": "Ana oyun yeniden salt okunur durumda"
 }

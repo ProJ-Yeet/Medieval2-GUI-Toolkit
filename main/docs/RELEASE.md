@@ -34,10 +34,12 @@ and beta 2026-09-12c, and it was suspended again the same day. **Do not read
 
 **One release line since 2026-10-27**, on the user's word ("merge the beta
 into the main and make it a toggle in settings. Opt into beta features at the
-top"). Every cut is a `v2.x.y` carrying all of master. The Campaign Map editor
-and Armory Studio (with the card generator) ship in it as `beta:true` modes in
-`web/js/core.js`, offered only to someone who ticks *Opt into beta features*
-at the top of Settings, off by default. There is no `off:true` edit at build
+top"). Every cut is a `v2.x.y` carrying all of master. A mode still being
+tested ships as `beta:true` in `web/js/core.js`, offered only to someone who
+ticks *Opt into beta features* at the top of Settings, off by default. Since
+v2.5.0 no mode is: the Campaign Map editor and Armory Studio (with the card
+generator) left beta then, and the toggle shows only the Guided designer and
+the Lua tab. There is no `off:true` edit at build
 time and no date-named beta any more; the last one was `beta-2026-10-20`.
 
 Carry out every step, in order, and report at the end:

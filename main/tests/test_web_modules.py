@@ -160,10 +160,11 @@ subs = [mid for mid, rest in menu if "sub:true" in rest]
 # `off:true` is a mode that is in the build and offered nowhere; `beta:true`
 # one offered only with Settings' *Opt into beta features* ticked (one release
 # line since 2026-10-27). The map must keep its MODULES entry either way.
+# Since v2.5.0 no mode is beta: the map and Armory Studio are for everyone.
 off = [mid for mid, rest in menu if "off:true" in rest]
 beta = sorted(mid for mid, rest in menu if "beta:true" in rest)
-check(f"the Campaign Map and Armory Studio are the beta features ({beta})",
-      beta == ["armory", "campmap"])
+check(f"no mode is a beta feature, the Campaign Map and Armory Studio included ({beta})",
+      beta == [])
 check("and nothing is switched off outright", not off)
 check(f"MODES parsed: {len(top)} menu modules, {len(subs)} sub modes, "
       f"{len(off)} off", len(top) > 5)
