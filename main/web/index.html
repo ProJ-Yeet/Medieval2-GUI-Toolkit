@@ -59,6 +59,9 @@
   select,input,button,textarea{background:var(--panel2);color:var(--ink);border:1px solid var(--edge);
     border-radius:6px;padding:6px 9px;font-size:13px;font-family:inherit}
   input[type=search]{min-width:150px}
+  /* 2026-11-25: side padding drew the track past where the thumb can go, so
+     no slider reached either end */
+  input[type=range]{padding-left:0;padding-right:0}
   button{cursor:pointer} button:hover{border-color:var(--accent)}
   button.primary{background:var(--accent);color:#1a1a1a;border-color:var(--accent);font-weight:600}
   button.on{background:var(--accent2);color:#fff;border-color:var(--accent2)}

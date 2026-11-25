@@ -314,6 +314,8 @@ if horse is not None:
     check("rigged to two, the first taking the share set",
           back.bones[back.bone_ids[2]] == "bone_head" and back.bones[back.bone_ids[1]] == "bone_torso"
           and abs(back.weights[0] - 0.7) < 1e-6 and abs(back.weights[1] - 0.3) < 1e-6)
+    check("rigged weights are normalized: every vertex sums to 1",
+          all(abs(back.weights[v * 2] + back.weights[v * 2 + 1] - 1) < 1e-6 for v in range(back.vertices)))
     try:
         armory.rig_to_bones(project, [head_i + 1], [], 1.0, None)
         check("no bone is refused", False)

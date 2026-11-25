@@ -507,7 +507,9 @@ function armAnimGeo(o){
   const a = armAnim();
   const sig = JSON.stringify([o.src, o.t, o.r, o.s, o.weights ? o.weights.data.length : 0]);
   let g = a.geos.get(o.id);
-  if(g && g.sig === sig) return g;
+  // 2026-11-25: the weights by identity too: rigging R hand to L hand gives
+  // data of the same length, and the old skin stayed on screen
+  if(g && g.sig === sig && g.wref === o.weights) return g;
   if(g) armAnimFree(g);
   const om = armObjMatrix(o, armPivot(o));
   const pos = [], nrm = [], uv = [], W = [], J = [], bones = [], ranges = [], idx = [];
@@ -563,7 +565,7 @@ function armAnimGeo(o){
   const unweighted = !W.some(w => w > 0) && !bones.some(Boolean);
   const gl = armGl();
   const buf = (data, type, usage) => { const b = gl.createBuffer(); gl.bindBuffer(type, b); gl.bufferData(type, data, usage); return b; };
-  g = {sig, obj: o, vertices: n, positions: new Float32Array(pos), normals: new Float32Array(nrm),
+  g = {sig, wref: o.weights, obj: o, vertices: n, positions: new Float32Array(pos), normals: new Float32Array(nrm),
        weights: new Float32Array(W), joints: new Uint8Array(J), bones, ranges, unweighted,
        outPos: new Float32Array(pos.length), outNrm: new Float32Array(nrm.length), map: null};
   g.glPos = buf(g.positions, gl.ARRAY_BUFFER, gl.DYNAMIC_DRAW);
