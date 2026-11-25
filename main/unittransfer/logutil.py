@@ -52,6 +52,32 @@ log = logging.getLogger(LOGGER_NAME)
 _CONSOLE_FMT = "%(asctime)s  %(message)s"
 
 
+class SharedRotatingFileHandler(RotatingFileHandler):
+    """A rotating server.log that goes on writing when it cannot rotate.
+
+    Two toolkit processes (a second launch, a restart's replacement) share the
+    file, and on Windows a file another process holds open cannot be renamed.
+    Past its size limit every line used to try, fail, print a "--- Logging
+    error ---" traceback and be lost. Now a failed rotation leaves the file as
+    it is, the line is written, and rotation is tried again a minute later.
+    tests/test_log_shared.py
+    """
+    _retry_at = 0.0
+
+    def shouldRollover(self, record):
+        if time.time() < self._retry_at:
+            return False
+        return super().shouldRollover(record)
+
+    def doRollover(self):
+        try:
+            super().doRollover()
+        except OSError:
+            self._retry_at = time.time() + 60
+            if self.stream is None:
+                self.stream = self._open()
+
+
 class ConsoleFormatter(logging.Formatter):
     """The console window as a player reads it: the time, a mark instead of
     the level's name (nothing for news, ⚠ for a warning, ✗ for an error), and
@@ -148,7 +174,7 @@ def setup(verbose: bool = False) -> logging.Logger:
     for d in _candidate_dirs():
         try:
             d.mkdir(parents=True, exist_ok=True)
-            fh = RotatingFileHandler(d / "server.log", maxBytes=MAX_BYTES,
+            fh = SharedRotatingFileHandler(d / "server.log", maxBytes=MAX_BYTES,
                                      backupCount=BACKUP_COUNT, encoding="utf-8")
             fh.setLevel(logging.DEBUG)           # the file keeps everything
             fh.setFormatter(logging.Formatter(_FILE_FMT, datefmt="%Y-%m-%d %H:%M:%S"))
