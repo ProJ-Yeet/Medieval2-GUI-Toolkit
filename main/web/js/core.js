@@ -24,12 +24,23 @@
    (a file may not depend on one loaded after it), and only give up out loud,
    naming the file, once it really will not come. */
 const uiFailedFiles=[];
+/* 2026-11-25: a file that THREW while the page loaded, after one before it was
+   dropped: armory.js missing, armtex.js stops at "ARM is not defined". Running
+   it again cannot mend it - its `const` names, made but never set by the first
+   run, refuse a second - so startUi loads the page again instead. */
+const uiBrokenFiles=[];
 // A resource error does not bubble, so this is a CAPTURING listener on window -
 // the one place that sees it. core.js is first in index.html precisely so this
 // is armed before any of the others are fetched.
 window.addEventListener('error',e=>{
   const t=e.target;
-  if(t&&t.tagName==='SCRIPT'&&t.src)uiFailedFiles.push(t.src);
+  if(t&&t.tagName==='SCRIPT'&&t.src){uiFailedFiles.push(t.src);return;}
+  // only after a drop: a script that throws on its own is its own fault, and
+  // the bug bar (applog.js) says so
+  if(!uiStarted&&uiFailedFiles.length&&e.filename){
+    uiBrokenFiles.push(e.filename);
+    e.stopImmediatePropagation();
+  }
 },true);
 
 const UI_RETRIES=3;
@@ -71,7 +82,7 @@ async function retryDroppedUiFiles(){
 }
 
 function uiLoadFailed(lost){
-  const names=lost.map(s=>s.split('/').pop().split('#')[0]).join(', ');
+  const names=[...new Set(lost.map(s=>s.split('/').pop().split(/[#?]/)[0]))].join(', ');
   main.innerHTML=`<div class="empty">${tt('core.the_tool_did_not_finish_loading',{names:names?`<b>${esc(names)}</b>`:tt('core.part_of_the_interface')})}<br><br>
     <button class="primary" onclick="location.reload()">${tt('core.reload_the_page')}</button></div>`;
 }
@@ -84,6 +95,13 @@ function uiLoadFailed(lost){
 async function startUi(){
   if(uiStarted)return;
   uiStarted=true;
+  if(uiBrokenFiles.length){
+    // once: the same thing twice is not a blip, and must not loop
+    if(!sessionStorage.getItem('uiReloaded')){ sessionStorage.setItem('uiReloaded','1'); return location.reload(); }
+    sessionStorage.removeItem('uiReloaded');
+    return uiLoadFailed([...new Set(uiBrokenFiles)]);
+  }
+  sessionStorage.removeItem('uiReloaded');
   const lost=uiFailedFiles.length?await retryDroppedUiFiles():[];
   if(lost.length)return uiLoadFailed(lost);
   wireKeepPlace();
