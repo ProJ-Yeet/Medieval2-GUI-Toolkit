@@ -53,11 +53,14 @@ const near=(a,b)=>a.every((x,i)=>Math.abs(x-b[i])<1e-6);
   c.armLitLampAdd();c.armLitLampAdd();c.armLitLampAdd();
   assert.equal(c.armLitOpts().lights.length,3);
   assert.equal(c.armLitLamps().length,4);
-  // a light at strength 0 does not shine; the key light off leaves the others
+  // a light at strength 0 does not shine; the key light is built in, never off,
+  // and the normal map is never read with green flipped (2026-11-25)
   c.armLitLamp(2,'strength',0);
   c.armLitSet('key',false,true);
-  assert.equal(c.armLitLamps().length,2);
-  c.armLitSet('key',true,true);
+  assert.equal(c.armLitLamps().length,3);
+  assert.equal(c.armLitOpts().key,true);
+  c.armLitSet('flip_green',true,true);
+  assert.equal(c.armLitOpts().flip_green,false);
   c.armLitLampRemove(2);c.armLitLampRemove(1);
   assert.equal(c.armLitOpts().lights.length,1);
   assert.equal(c.armLitOpts().lights[0].type,'point');
@@ -65,13 +68,18 @@ const near=(a,b)=>a.every((x,i)=>Math.abs(x-b[i])<1e-6);
   // closed: the viewport's own light on everything
   assert.equal(c.armLitMode(project.objects[0]),0);
   const painted=c.paints;
+  assert.equal(c.armRenderOn(),false);
   c.armLitToggle();
   assert.equal(c.paints,painted+1);
+  // 2026-11-25: opening the Lighting settings ticks Render mode
+  assert.equal(c.armRenderOn(),true);
+  assert.equal(JSON.stringify(calls.at(-1)),JSON.stringify({url:'/api/settings',body:{armory_render_mode:true}}));
   // open: the selected objects show the live light, the others stay as they were
   assert.equal(c.armLitMode(project.objects[0]),1);
   assert.equal(c.armLitMode(project.objects[2]),0);
   const html=c.armLitHtml();
-  for(const k of ['ambient','direction','height','softness','strength','shadows','key','flip_green'])
+  for(const k of ['key','flip_green']) assert.ok(!html.includes(`armLitSet('${k}'`),k);
+  for(const k of ['ambient','direction','height','softness','strength','shadows'])
     assert.match(html,new RegExp("armLitSet\\('"+k+"'"),k);
   assert.match(html,/armLitRun\(\)/);
   // the extra light's own sliders, a point's distance among them, its remove and an add
@@ -93,8 +101,8 @@ const near=(a,b)=>a.every((x,i)=>Math.abs(x-b[i])<1e-6);
   answer={baked:[{source:'C:/helm_d.png',path:'C:/lit/helm_d_lit_1.png',objects:[1]},
                  {source:'C:/own.png',path:'C:/lit/own_lit_2.png',objects:[2]}],skipped:[]};
   await c.armLitRun();
-  const sent=calls.at(-1);
-  assert.equal(sent.url,'/api/armory/lit');
+  const sent=calls.findLast(x=>x.url==='/api/armory/lit');
+  assert.ok(sent);
   assert.deepEqual(sent.body.ids,[1,2]);
   assert.equal(sent.body.settings.ambient,1.2);
   // each object wears its lit texture and remembers what it wore before

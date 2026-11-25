@@ -34,9 +34,11 @@ const ARM_LIT_RANGES = {ambient: [0, 2, 0.01], direction: [-180, 180, 1], height
                         softness: [0, 1, 0.01], strength: [0, 3, 0.01], shadows: [0, 1, 0.01]};
 
 function armLit(){ return ARM.lit = ARM.lit || {open: false, live: true, busy: false}; }
+// 2026-11-25: the key light is built in and the normal map is read one way:
+// no switch for either any more (Flip green was for TpacTool's exports)
 function armLitOpts(){
   const s = (state.settings || {}).armory_lit;
-  return Object.assign({}, ARM_LIT_DEFAULT, s && typeof s === 'object' ? s : {});
+  return Object.assign({}, ARM_LIT_DEFAULT, s && typeof s === 'object' ? s : {}, {key: true, flip_green: false});
 }
 // quiet: a slider on its way (drawn, not saved yet)
 function armLitSet(k, v, quiet){
@@ -84,6 +86,11 @@ function armLitToggle(){
   const l = armLit();
   l.open = !l.open;
   l.live = true;
+  // 2026-11-25: opened, the view is the bake's: Render mode ticks itself
+  if(l.open && !armRenderOn()){
+    armRenderToggle(true);
+    if(typeof armPaintBar === 'function') armPaintBar();
+  }
   armPaintObjects();
   armFrame();
 }
@@ -338,20 +345,16 @@ function armLitHtml(){
       <span>${label} <span class="count" id="armLitVal_${k}">${o[k]}</span></span>
       <input type="range" min="${r[0]}" max="${r[1]}" step="${r[2]}" value="${o[k]}"
         oninput="armLitSet('${k}', +this.value, true)" onchange="armLitSet('${k}', +this.value)"></label>`; };
-  const box = (k, label, title) => `<label class="armcheck" title="${esc(title || '')}"><input type="checkbox"${o[k] ? ' checked' : ''}
-      onchange="armLitSet('${k}', this.checked); armPaintObjects()"> ${label}</label>`;
   const kind = (k, label, title) => `<button class="mini${o.bake === k ? ' on' : ''}" title="${esc(tt(title))}"${l.busy ? ' disabled' : ''}
       onclick="armLitSet('bake', '${k}'); armPaintObjects()">${tt(label)}</button>`;
   const light = `<div class="count armnote">${tt('armory.lit_intro')}</div>
     <div class="armpropsrow">${range('ambient', tt('armory.lit_ambient'), tt('armory.lit_ambient_title'))}</div>
-    <div class="armpropsrow">${box('key', tt('armory.lit_key'), tt('armory.lit_key_title'))}</div>
-    ${o.key ? `<div class="armpropsrow">${range('direction', tt('armory.lit_direction'), tt('armory.lit_direction_title'))}
+    <div class="armpropsrow">${range('direction', tt('armory.lit_direction'), tt('armory.lit_direction_title'))}
       ${range('height', tt('armory.lit_height'), tt('armory.lit_height_title'))}</div>
     <div class="armpropsrow">${range('strength', tt('armory.strength'))}
-      ${range('softness', tt('armory.lit_softness'), tt('armory.lit_softness_title'))}</div>` : ''}
+      ${range('softness', tt('armory.lit_softness'), tt('armory.lit_softness_title'))}</div>
     <div class="armpropsrow">${range('shadows', tt('armory.lit_shadows'), tt('armory.lit_shadows_title'))}</div>
     ${armLitLampsHtml(o)}
-    <div class="armpropsrow">${box('flip_green', tt('armory.lit_flip_green'), tt('armory.lit_flip_green_title'))}</div>
     <div class="count armnote">${tt('armory.lit_live_note')}</div>`;
   const cy = ARM.cy || {};
   const pbrBody = `<div class="count armnote">${tt('armory.lit_pbr_intro')}</div>
