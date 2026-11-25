@@ -13941,5 +13941,7 @@
  "armory.lit_pbr_bake_title": "Keyforce Tools eklentisinin Cycles fırınlaması, arka planda çalışan bir Blender'da yapılır: daha yavaştır, ancak eklentinin ayarlandığı görünümü verir. Render modu daha sonra modelleri bu ışıkla gösterir.",
  "armory.lit_pbr_bake": "PBR Bake",
  "armory.lit_light_bake_title": "Hızlı fırınlama: burada ayarlanan ışık, specular ve normal haritaları ve her ışığın gölgesiyle birlikte her renk dokusuna işlenir. Ayarları değiştirirken Render modu sonucu canlı gösterir.",
- "armory.lit_light_bake": "Light Bake"
+ "armory.lit_light_bake": "Light Bake",
+ "armory.lit_unstack": "Aynalanmış yarıları ayır",
+ "armory.lit_unstack_title": "Başka bir parçayla aynı texelleri kullanan bir parça (bir omuzluk ve aynadaki yansıması ya da bir silahın iki yanı) kendi texellerini alır, böylece her parça kendi aydınlatmasını korur. Aydınlatılmış doku, gerektiği kadar doku sayfası yüksekliğinde oluşturulur ve nesnenin UV'leri buna göre taşınır. Kaldırma işlemi UV'leri eski konumuna döndürür. Dışa aktarıldığında parçalar oyunun doku sayfasında daha fazla yer kaplar."
 }

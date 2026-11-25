@@ -6880,9 +6880,20 @@ class Handler(BaseHTTPRequestHandler):
             want = arg("path")
             if not armory.texture_allowed(want):
                 return self._err(403, "not an image this workbench was given")
+            side = 0 if arg("hd") == "1" else self.MODEL_TEXTURE_MAX
+            # 2026-11-25: a lit sheet stacked in layers (armlit Unstack) is that
+            # many sheets tall; each layer keeps the size one sheet would have
+            if side and Path(want).suffix.lower() == ".png":
+                try:
+                    from PIL import Image as _Image
+                    with _Image.open(want) as im:
+                        w, h = im.size
+                    if h > w:
+                        side *= max(1, round(h / w))
+                except OSError:
+                    pass
             try:
-                data = self.registry.icons.png_bytes(
-                    Path(want), 0 if arg("hd") == "1" else self.MODEL_TEXTURE_MAX, strict=True)
+                data = self.registry.icons.png_bytes(Path(want), side, strict=True)
             except icons.ArtUnreadable as exc:
                 return self._err(415, str(exc))
             return self._send(200, data, "image/png")

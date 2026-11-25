@@ -22,7 +22,7 @@
 
 // bake: 'light' (Light Bake, armlit.py) or 'pbr' (PBR Bake, Keyforce Tools' Cycles bake in Blender)
 const ARM_LIT_DEFAULT = {ambient: 0.8, key: true, direction: 30, height: 50, softness: 0.5,
-                         strength: 0.5, shadows: 0.5, flip_green: false, lights: [], bake: 'light'};
+                         strength: 0.5, shadows: 0.5, flip_green: false, lights: [], bake: 'light', unstack: false};
 // 2026-11-25: the extra lights (armlit.LAMP_RANGES): a new one, and each slider
 const ARM_LIT_LAMPS_MAX = 3;
 const ARM_LIT_LAMP = {type: 'sun', direction: -120, height: 25, strength: 0.5, distance: 2};
@@ -355,6 +355,8 @@ function armLitHtml(){
       ${range('softness', tt('armory.lit_softness'), tt('armory.lit_softness_title'))}</div>
     <div class="armpropsrow">${range('shadows', tt('armory.lit_shadows'), tt('armory.lit_shadows_title'))}</div>
     ${armLitLampsHtml(o)}
+    <div class="armpropsrow"><label class="armcheck" title="${esc(tt('armory.lit_unstack_title'))}"><input type="checkbox"${o.unstack ? ' checked' : ''}
+      onchange="armLitSet('unstack', this.checked)"> ${tt('armory.lit_unstack')}</label></div>
     <div class="count armnote">${tt('armory.lit_live_note')}</div>`;
   const cy = ARM.cy || {};
   const pbrBody = `<div class="count armnote">${tt('armory.lit_pbr_intro')}</div>
@@ -689,8 +691,16 @@ function armLitApply(r, st){
       if(!o) continue;
       // what it wore before its first bake, so a second one starts there too
       const src = o.lit ? o.lit.src : (o.sheet || null);
+      const before = o.lit && o.lit.uv_before;
       o.lit = {src, settings: st};
       o.sheet = b.path;
+      // 2026-11-25: Unstack moved its UVs into a layer of the taller sheet; the
+      // ones it had before are kept, for Remove and the next bake
+      const moved = b.uv && b.uv[String(id)];
+      if(moved){
+        o.lit.uv_before = before || (o.src || []).map(pc => pc.uv ? JSON.parse(JSON.stringify(pc.uv)) : null);
+        o.src = (o.src || []).map((pc, k) => moved[String(k)] ? Object.assign({}, pc, {uv: moved[String(k)]}) : pc);
+      }else if(before) armLitUvBack(o, before);
       n++;
     }
   }
@@ -709,12 +719,35 @@ function armLitApply(r, st){
   armRepaint();
 }
 
+// an unstacked object's pieces on the UVs they had before (each a copy: a piece
+// can be shared after a merge or a split)
+function armLitUvBack(o, before){
+  o.src = (o.src || []).map((pc, k) => {
+    const c = Object.assign({}, pc);
+    if(before[k]) c.uv = before[k]; else delete c.uv;
+    return c;
+  });
+}
+// the piece the viewport draws: under the live light an unstacked object shows
+// its source texture, so its UVs from before (kept per bake, so its buffer stays)
+const ARM_LIT_PIECES = new WeakMap();
+function armLitPiece(ob, pc){
+  const before = ob.lit && ob.lit.uv_before;
+  if(!before || armLitMode(ob) !== 1) return pc;
+  let list = ARM_LIT_PIECES.get(ob.lit);
+  if(!list || list.src !== ob.src){
+    list = {src: ob.src, pcs: ob.src.map((p, k) => before[k] ? Object.assign({}, p, {uv: before[k]}) : Object.assign({}, p, {uv: null}))};
+    ARM_LIT_PIECES.set(ob.lit, list);
+  }
+  return list.pcs[ob.src.indexOf(pc)] || pc;
+}
 // each object back in what it wore before the bake; the lit files stay on disk
 function armLitRemove(ids){
   const objs = ids ? ids.map(armObj).filter(Boolean) : armLitTargets();
   for(const o of objs){
     if(!o.lit) continue;
     o.sheet = o.lit.src || null;
+    if(o.lit.uv_before) armLitUvBack(o, o.lit.uv_before);
     delete o.lit;
   }
   armLit().live = true;

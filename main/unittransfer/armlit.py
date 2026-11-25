@@ -77,6 +77,7 @@ def settings_of(raw: Optional[dict]) -> dict:
             out[key] = default
     out["key"] = bool(raw.get("key", True))
     out["flip_green"] = bool(raw.get("flip_green", False))
+    out["unstack"] = bool(raw.get("unstack", False))
     lamps = []
     for one in (raw.get("lights") if isinstance(raw.get("lights"), list) else [])[:LAMPS_MAX]:
         one = one if isinstance(one, dict) else {}
@@ -335,17 +336,29 @@ def bake_image(colour: np.ndarray, spec: Optional[np.ndarray], normal: Optional[
 
 def _source_obj(o: dict) -> dict:
     """The object wearing what it wore before it was baked: a second bake
-    starts from the source again, not from the lit texture."""
-    if o.get("lit"):
-        return dict(o, sheet=(o["lit"] or {}).get("src") or None)
-    return o
+    starts from the source again, not from the lit texture, and on the UVs
+    it had before an unstacked bake moved them (``lit.uv_before``, a piece's
+    ``uv`` each, or None where it had none)."""
+    lit = o.get("lit")
+    if not lit:
+        return o
+    out = dict(o, sheet=lit.get("src") or None)
+    before = lit.get("uv_before")
+    if isinstance(before, list):
+        src = []
+        for k, pc in enumerate(o.get("src") or []):
+            ub = before[k] if k < len(before) else None
+            src.append(dict(pc, uv=ub) if ub else {a: b for a, b in pc.items() if a != "uv"})
+        out["src"] = src
+    return out
 
 
 def gather(project: dict, obj_ids, mod_of, image_of=armbake.default_image_of):
     """The named objects, one job per colour texture they wear: ``(jobs,
     skipped, sheets)``. A job holds the texture's ``path``, its ``normal``
     map, the ``objects`` on it and their triangles: ``pos`` / ``nrm`` / ``uv``
-    (texels, x right, y down) per vertex, ``tris``, ``island`` and ``obj``.
+    (texels, x right, y down) per vertex, ``tris``, ``island`` and ``obj``,
+    and ``vsrc``: each vertex's object, piece number and asset vertex.
     Shared by :func:`bake_objects` and :mod:`keyforce`'s Cycles bake."""
     want = {int(i) for i in obj_ids or []}
     objs = [_source_obj(o) for o in project.get("objects") or [] if o.get("id") in want]
@@ -362,6 +375,13 @@ def gather(project: dict, obj_ids, mod_of, image_of=armbake.default_image_of):
         uvs = np.array(om.uvs, float).reshape(-1, 2)
         found = []           # (path, normal path, vertices, their texels, triangles, island)
         why = ""
+        # each object vertex's piece and asset vertex, for UVs written back (unstack)
+        vsrc = {}
+        for start, count, pc in parts:
+            pi = next((k for k, x in enumerate(o.get("src") or []) if x is pc), -1)
+            used = sorted(set(armory.piece_indices(armory.asset_mesh(assets[pc["asset"]], mod_of), pc)))
+            for j, v in enumerate(used):
+                vsrc[start + j] = (o.get("id"), pi, v)
         for start, count, pc in parts:
             if o.get("sheet"):
                 pc = dict(pc, sheet=o["sheet"])
@@ -394,7 +414,8 @@ def gather(project: dict, obj_ids, mod_of, image_of=armbake.default_image_of):
             skipped.append({"id": o.get("id"), "why": why})
             continue
         job = jobs.setdefault(found[0][0].lower(), dict(path=found[0][0], normal=found[0][1], objects=[],
-                                                        pos=[], nrm=[], uv=[], tris=[], island=[], obj=[], n=0))
+                                                        pos=[], nrm=[], uv=[], tris=[], island=[], obj=[], n=0,
+                                                        vsrc=[], visland=[], u=[]))
         job["objects"].append(o.get("id"))
         for _path, _normal, verts, px, tl, number in found:
             at = {v: job["n"] + k for k, v in enumerate(verts)}
@@ -402,6 +423,9 @@ def gather(project: dict, obj_ids, mod_of, image_of=armbake.default_image_of):
             job["tris"] += [[at[v] for v in tr] for tr in tl]
             job["island"] += [number] * len(tl)
             job["obj"] += [len(job["objects"])] * len(tl)
+            job["vsrc"] += [vsrc.get(v, (o.get("id"), -1, -1)) for v in verts]
+            job["visland"] += [number] * len(verts)
+            job["u"].append(uvs[verts, 0])
             job["n"] += len(verts)
     return jobs, skipped, sheets
 
@@ -464,27 +488,79 @@ def bake_objects(project: dict, obj_ids, mod_of, settings: Optional[dict] = None
         if preview:
             colour, spec, normal = (_shrink(x, int(preview)) for x in (colour, spec, normal))
         pos, nrm, uv = np.concatenate(job["pos"]), np.concatenate(job["nrm"]), np.concatenate(job["uv"])
+        # each vertex's own u, as the object has it (only v changes when unstacking)
+        job_u = np.concatenate(job["u"]) if job.get("u") else np.zeros(len(uv))
         tris, island, obj = np.array(job["tris"], int), np.array(job["island"], int), np.array(job["obj"], int)
-        for group in _apart(uv, tris, obj, colour.shape[1], colour.shape[0]):
+        h0, w0 = colour.shape[:2]
+        visland = np.array(job["visland"], int)
+        for group in _apart(uv, tris, obj, w0, h0):
             pick = np.isin(obj, group)
             ids = [job["objects"][k - 1] for k in group]
-            lit = bake_image(colour, spec, normal, pos=pos, nrm=nrm, uv=uv, tris=tris[pick],
+            # 2026-11-25: Unstack. Islands of this file that would share texels
+            # (a part mirrored onto its other half) each get a layer of their
+            # own: the lit texture is that many sheets tall, and each object's
+            # UVs are written again to reach its layer
+            layer = _layers(uv, tris[pick], island[pick], w0, h0) if st["unstack"] else {}
+            K = max(layer.values(), default=0) + 1
+            c2, s2, n2, uv2 = colour, spec, normal, uv
+            if K > 1:
+                c2, s2, n2 = (np.concatenate([x] * K, 0) if x is not None else None for x in (colour, spec, normal))
+                uv2 = uv.copy()
+                uv2[:, 1] += np.array([layer.get(int(k), 0) for k in visland]) * h0
+            lit = bake_image(c2, s2, n2, pos=pos, nrm=nrm, uv=uv2, tris=tris[pick],
                              island=island[pick], obj=obj[pick], settings=st)
             tag = hashlib.blake2b((str(src).lower() + "|" + ",".join(str(i) for i in sorted(ids))).encode("utf-8"),
                                   digest_size=4).hexdigest()
             out_dir.mkdir(parents=True, exist_ok=True)
-            out = out_dir / f"{src.stem}_lit_{tag}.png"
+            # an unstacked one has a name of its own: the page keeps a texture by its path
+            out = out_dir / f"{src.stem}_lit_{tag}{f'_x{K}' if K > 1 else ''}.png"
             Image.fromarray(lit, "RGBA").save(out)
             if normal is not None and not preview:
                 # the export looks for a sheet's normal map beside it
                 Image.fromarray(normal, "RGBA").save(out.with_name(out.stem + "_norm.png"))
-            baked.append({"source": job["path"], "path": str(out), "objects": ids,
-                          "spec": spec is not None, "normal": normal is not None})
+            one = {"source": job["path"], "path": str(out), "objects": ids,
+                   "spec": spec is not None, "normal": normal is not None}
+            if K > 1:
+                # each object's pieces: {asset vertex: [u, v]}, v into its layer of the taller sheet
+                moved: Dict[str, Dict[str, Dict[str, list]]] = {}
+                for n, (oid, pi, av) in enumerate(job["vsrc"]):
+                    if oid not in ids or pi < 0:
+                        continue
+                    u = float(job_u[n])
+                    moved.setdefault(str(oid), {}).setdefault(str(pi), {})[str(av)] = [u, float(uv2[n, 1] / (K * h0))]
+                one["uv"] = moved
+                one["layers"] = K
+            baked.append(one)
     return {"baked": baked, "skipped": skipped, "settings": st}
 
 
 #: at what fraction of the smaller object's texels two objects count as sharing
 SHARED = 0.02
+
+
+def _layers(uv: np.ndarray, tris: np.ndarray, island: np.ndarray, w: int, h: int) -> Dict[int, int]:
+    """Each island's layer for Unstack: 0, or the first layer up where it
+    shares no texels, the biggest islands placed first (so they stay put)."""
+    hw, hh = max(1, w // 2), max(1, h // 2)
+    half = uv * 0.5
+    masks = {}
+    for k in np.unique(island):
+        t = tris[island == k]
+        cov, _, _ = _cover(half, t, range(len(t)), hw, hh)
+        masks[int(k)] = cov >= 0
+    taken: List[np.ndarray] = []
+    out: Dict[int, int] = {}
+    for k in sorted(masks, key=lambda k: -int(masks[k].sum())):
+        m, n = masks[k], max(int(masks[k].sum()), 1)
+        for L, used in enumerate(taken):
+            if int((used & m).sum()) <= SHARED * n:
+                used |= m
+                out[k] = L
+                break
+        else:
+            out[k] = len(taken)
+            taken.append(m.copy())
+    return out
 
 
 def _apart(uv: np.ndarray, tris: np.ndarray, obj: np.ndarray, w: int, h: int) -> List[List[int]]:

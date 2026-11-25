@@ -239,6 +239,55 @@ f 5/1/2 6/2/2 7/3/2 8/4/2
           and np.ptp(down_img[4:60, 2:30, 0].astype(int)) <= 1)
     check("  the lit textures beside each other's are kept apart by name",
           Path(by[1]["path"]).parent == Path(by[2]["path"]).parent)
+    # 2026-11-25: Unstack. One object whose two faces (one up, one down) share
+    # their texels: off, one light for both; on, each its own layer of a sheet
+    # twice as tall, and the object's UVs written again to reach it
+    (t / "pair.obj").write_text("""
+v 0 0 0
+v 1 0 0
+v 1 0 1
+v 0 0 1
+v 5 0 0
+v 6 0 0
+v 6 0 1
+v 5 0 1
+vt 0 0
+vt 0.5 0
+vt 0.5 1
+vt 0 1
+vn 0 1 0
+vn 0 -1 0
+o both
+f 1/1/1 2/2/1 3/3/1 4/4/1
+f 5/1/2 6/2/2 7/3/2 8/4/2
+""", encoding="utf-8")
+    pair = {"kind": "external", "path": str(t / "pair.obj"), "textures": {"0": str(t / "plate_d.png")}}
+    pkey = armory.asset_key(pair)
+    pproj = {"assets": [pair], "objects": [{"id": 7, "name": "both", "mesh": "both", "src": [{"asset": pkey, "group": 0}]}]}
+    flat = armlit.bake_objects(pproj, [7], None, dict(ambient=0.3, **TOP))
+    check("unstack off: one sheet's height, no UVs written",
+          len(flat["baked"]) == 1 and "uv" not in flat["baked"][0]
+          and np.asarray(Image.open(flat["baked"][0]["path"])).shape[0] == 64)
+    tall = armlit.bake_objects(pproj, [7], None, dict(ambient=0.3, unstack=True, **TOP))
+    tb = tall["baked"][0] if tall["baked"] else {}
+    timg = np.asarray(Image.open(tb["path"]).convert("RGBA")) if tb else GREY
+    check(f"unstack on: two layers, a sheet twice as tall ({tb.get('layers')}, {timg.shape[:2]})",
+          tb.get("layers") == 2 and timg.shape[:2] == (128, 64))
+    check("  written under a name of its own, not over the flat one (the page caches by path)",
+          tb.get("path") != flat["baked"][0]["path"])
+    lit_top, lit_under = int(timg[32, 10, 0]), int(timg[96, 10, 0])
+    check(f"  each face lit as it faces: the layers differ ({lit_top}, {lit_under})", abs(lit_top - lit_under) > 30)
+    moved = (tb.get("uv") or {}).get("7", {}).get("0", {})
+    vs = sorted({round(v, 3) for _u, v in moved.values()})
+    check(f"  every vertex of the piece gets a UV, v into its layer ({vs})",
+          len(moved) == 8 and vs == [0.0, 0.5, 1.0])
+    # a second bake starts from the UVs it had before
+    pproj["objects"][0]["src"][0]["uv"] = moved
+    pproj["objects"][0].update(sheet=tb["path"], lit={"src": None, "uv_before": [None]})
+    again = armlit.bake_objects(pproj, [7], None, dict(ambient=0.3, unstack=True, **TOP))
+    check("  baked again: from the source and the old UVs, the same two layers",
+          again["baked"][0]["layers"] == 2 and again["baked"][0]["uv"] == tb["uv"])
+
     # 2026-11-24: the viewport's preview, the same bake at a small size, kept apart
     prev = armlit.bake_objects(proj, [1], None, dict(ambient=0.3, **TOP), preview=24)
     pp = Path(prev["baked"][0]["path"]) if prev["baked"] else Path("x")

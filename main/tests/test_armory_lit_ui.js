@@ -183,6 +183,48 @@ const near=(a,b)=>a.every((x,i)=>Math.abs(x-b[i])<1e-6);
   c.armLitRemove([3]);
   c.ARM.sel=new Set([1,2]);
 
+  // 2026-11-25: Unstack. The box is there and goes to the bake; the moved UVs go on
+  // each piece (copies), the ones from before are kept, and Remove puts them back
+  assert.match(c.armLitHtml(),/armLitSet\('unstack', this\.checked\)/);
+  assert.equal(c.armLitOpts().unstack,false);
+  c.armLitSet('unstack',true);
+  const belt=project.objects[2], shared={asset:'a',group:0,uv:{5:[0.1,0.2]}};
+  belt.src=[shared,{asset:'a',group:1}];
+  answer={baked:[{source:'C:/belt_d.png',path:'C:/lit/belt_tall.png',objects:[3],layers:2,
+    uv:{3:{0:{5:[0.1,0.1],6:[0.3,0.6]},1:{9:[0.5,0.75]}}}}],skipped:[]};
+  c.ARM.sel=new Set([3]);
+  await c.armLitRun();
+  assert.equal(calls.findLast(x=>x.url==='/api/armory/lit').body.settings.unstack,true);
+  assert.equal(JSON.stringify(belt.src[0].uv),JSON.stringify({5:[0.1,0.1],6:[0.3,0.6]}));
+  assert.equal(JSON.stringify(belt.src[1].uv),JSON.stringify({9:[0.5,0.75]}));
+  assert.notEqual(belt.src[0],shared);                     // a copy: a shared piece keeps its UVs
+  assert.equal(JSON.stringify(shared.uv),JSON.stringify({5:[0.1,0.2]}));
+  assert.equal(JSON.stringify(belt.lit.uv_before),JSON.stringify([{5:[0.1,0.2]},null]));
+  // under the live light it is drawn on its UVs from before
+  c.armLitToggle(); c.armLit().live=true;
+  assert.equal(c.armLitMode(belt),1);
+  assert.equal(JSON.stringify(c.armLitPiece(belt,belt.src[0]).uv),JSON.stringify({5:[0.1,0.2]}));
+  assert.equal(c.armLitPiece(belt,belt.src[1]).uv,null);
+  c.armLitToggle();
+  // a bake without Unstack after one with it: the UVs from before again
+  c.armLitSet('unstack',false);
+  answer={baked:[{source:'C:/belt_d.png',path:'C:/lit/belt_flat.png',objects:[3]}],skipped:[]};
+  await c.armLitRun();
+  assert.equal(JSON.stringify(belt.src[0].uv),JSON.stringify({5:[0.1,0.2]}));
+  assert.equal('uv' in belt.src[1],false);
+  assert.equal(belt.lit.uv_before,undefined);
+  // and Remove after an unstacked bake
+  c.armLitSet('unstack',true);
+  answer={baked:[{source:'C:/belt_d.png',path:'C:/lit/belt_tall.png',objects:[3],layers:2,uv:{3:{1:{9:[0.5,0.75]}}}}],skipped:[]};
+  await c.armLitRun();
+  assert.equal(JSON.stringify(belt.src[1].uv),JSON.stringify({9:[0.5,0.75]}));
+  c.armLitRemove([3]);
+  assert.equal('uv' in belt.src[1],false);
+  assert.equal(JSON.stringify(belt.src[0].uv),JSON.stringify({5:[0.1,0.2]}));
+  belt.src=[];
+  c.armLitSet('unstack',false);
+  c.ARM.sel=new Set([1,2]);
+
   // 2026-11-25: two bakes. Light Bake (the default) draws its own light; PBR Bake
   // draws the Cycles look once Blender has measured it, and its Bake is Blender's
   assert.equal(c.armLitOpts().bake,'light');

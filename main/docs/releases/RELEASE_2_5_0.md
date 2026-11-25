@@ -60,6 +60,10 @@ A portable install of v2.4.14 fetches this one by itself at the next start.
     in the panel. After a bake the objects show their baked textures as
     they are. Parts that share texels (head variants, a collar UV'd over
     the legs) are baked to separate textures, so each keeps its own light.
+    **Unstack mirrored halves** goes further: a part drawn from the same
+    texels as another (a pauldron and its mirror) gets texels of its own,
+    the lit texture as many sheets tall as it needs and the UVs moved to
+    match, so each side keeps its own light; Remove puts the UVs back.
     *Bake texture files...* (a texture set without a model) is gone;
   * **Render mode**, in the viewport bar, draws every object the bake can
     light in the light the chosen bake will paint in, live: Light Bake's

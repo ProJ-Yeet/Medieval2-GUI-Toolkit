@@ -809,6 +809,8 @@
 "armory.stat_vertices": "Vertices {n}",
 "armory.statistics": "Statistics",
 "armory.strength": "Strength",
+"armory.lit_unstack": "Unstack mirrored halves",
+"armory.lit_unstack_title": "A part drawn from the same texels as another (a pauldron and its mirror, the two sides of a weapon) gets texels of its own, so each keeps its own light: the lit texture is made as many sheets tall as it needs, and the object's UVs are moved to match. Remove puts the UVs back. The parts then take more room on the game's sheet when exported.",
 "armory.objlist_fold_title": "Fold the list of objects away; their properties keep the room",
 "armory.cy_measuring": "Measuring the Cycles bake's light in Blender (a few seconds; about half a minute for a world the first time)...",
 "armory.lit_pbr_intro": "Bakes through Blender's Cycles with these settings (the same as the TpacTool export dialog's Manual Bake). The view draws its world, surround suns, metal mix, light floor and AgX live; Cycles' bounced light and denoising show only in the bake.",

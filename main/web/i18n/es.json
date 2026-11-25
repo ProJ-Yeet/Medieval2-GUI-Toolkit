@@ -14960,5 +14960,7 @@
  "armory.lit_pbr_bake_title": "El horneado de Cycles del complemento Keyforce Tools se ejecuta en un Blender en segundo plano: es más lento, pero ofrece el aspecto para el que se ajustó el complemento. El modo de renderizado muestra después los modelos con esa iluminación.",
  "armory.lit_pbr_bake": "PBR Bake",
  "armory.lit_light_bake_title": "El horneado rápido: la luz configurada aquí se pinta en cada textura de color junto con los mapas especular y normal y la sombra de cada luz. El modo de renderizado muestra el resultado en directo mientras cambia los ajustes.",
- "armory.lit_light_bake": "Light Bake"
+ "armory.lit_light_bake": "Light Bake",
+ "armory.lit_unstack": "Separar las mitades reflejadas",
+ "armory.lit_unstack_title": "Una parte que usa los mismos texeles que otra (una hombrera y su reflejo, o los dos lados de un arma) recibe sus propios texeles, para que cada parte conserve su propia iluminación. La textura iluminada se genera con tantas hojas de alto como haga falta, y las UV del objeto se desplazan para ajustarse. La acción de quitarla devuelve las UV a su sitio. Al exportarlas, las partes ocupan más espacio en la hoja de textura del juego."
 }

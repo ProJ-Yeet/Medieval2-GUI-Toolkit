@@ -14603,5 +14603,7 @@
  "armory.lit_pbr_bake_title": "La cuisson Cycles de l'extension Keyforce Tools s'exécute dans une instance de Blender en arrière-plan : elle est plus lente, mais donne le rendu pour lequel l'extension a été réglée. Le mode de rendu affiche ensuite les modèles avec cet éclairage.",
  "armory.lit_pbr_bake": "PBR Bake",
  "armory.lit_light_bake_title": "Cuisson rapide : la lumière réglée ici est intégrée à chaque texture de couleur, avec ses cartes spéculaire et normale et l'ombre de chaque source lumineuse. Le mode de rendu affiche le résultat en direct pendant que vous modifiez les réglages.",
- "armory.lit_light_bake": "Light Bake"
+ "armory.lit_light_bake": "Light Bake",
+ "armory.lit_unstack": "Séparer les moitiés en miroir",
+ "armory.lit_unstack_title": "Une partie qui utilise les mêmes texels qu'une autre (une épaulière et son reflet, ou les deux côtés d'une arme) reçoit ses propres texels, afin que chaque partie conserve son propre éclairage. La texture éclairée est créée sur autant de feuilles de haut que nécessaire, et les UV de l'objet sont déplacés en conséquence. La suppression remet les UV en place. À l'exportation, les parties occupent alors plus de place sur la feuille de texture du jeu."
 }

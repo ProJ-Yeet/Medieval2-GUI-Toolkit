@@ -14494,5 +14494,7 @@
  "armory.lit_pbr_bake_title": "Der Cycles-Bake des Add-ons von Keyforce Tools läuft in einem im Hintergrund gestarteten Blender: langsamer, aber mit dem Look, auf den das Add-on abgestimmt wurde. Der Render-Modus zeigt die Modelle anschließend in diesem Licht.",
  "armory.lit_pbr_bake": "PBR Bake",
  "armory.lit_light_bake_title": "Der schnelle Bake: Das hier eingestellte Licht wird zusammen mit den Specular- und Normal-Maps sowie dem Schatten jeder Lichtquelle in jede Farbtextur gemalt. Der Render-Modus zeigt das Ergebnis live, während Sie die Einstellungen ändern.",
- "armory.lit_light_bake": "Light Bake"
+ "armory.lit_light_bake": "Light Bake",
+ "armory.lit_unstack": "Gespiegelte Hälften trennen",
+ "armory.lit_unstack_title": "Ein Teil, der dieselben Texel wie ein anderer nutzt (eine Schulterplatte und ihr Spiegelbild oder die beiden Seiten einer Waffe), erhält eigene Texel, damit jeder Teil seine eigene Beleuchtung behält. Die beleuchtete Textur wird so viele Texturblätter hoch erstellt, wie nötig sind, und die UVs des Objekts werden entsprechend verschoben. Entfernen setzt die UVs zurück. Beim Export belegen die Teile dann mehr Platz auf dem Texturblatt des Spiels."
 }

@@ -1286,7 +1286,9 @@ function armRender(objs, w, h, cam, opts){
       gl.enableVertexAttribArray(L.aPos); gl.vertexAttribPointer(L.aPos, 3, gl.FLOAT, false, 0, 0);
       gl.bindBuffer(gl.ARRAY_BUFFER, pc.nrm ? armNrmBuffer(live, pc) : live.buf.nrm);
       gl.enableVertexAttribArray(L.aNormal); gl.vertexAttribPointer(L.aNormal, 3, gl.FLOAT, false, 0, 0);
-      gl.bindBuffer(gl.ARRAY_BUFFER, pc.uv && typeof armUvBuffer === 'function' ? armUvBuffer(live, pc) : live.buf.uv);
+      // an unstacked bake's object under the live light draws on its UVs from before (armlit.js)
+      const upc = !o.plain && typeof armLitPiece === 'function' ? armLitPiece(ob, pc) : pc;
+      gl.bindBuffer(gl.ARRAY_BUFFER, upc.uv && typeof armUvBuffer === 'function' ? armUvBuffer(live, upc) : live.buf.uv);
       gl.enableVertexAttribArray(L.aUv); gl.vertexAttribPointer(L.aUv, 2, gl.FLOAT, false, 0, 0);
       if(typeof armCyPart === 'function') armCyPart(gl, L, live, live.geo.indices, live.geo.positions.length / 3);
       if(pc.tris || pc.weld || pc.flip){

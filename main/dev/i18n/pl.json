@@ -15212,5 +15212,7 @@
  "armory.lit_pbr_bake_title": "Wypalanie Cycles dodatku Keyforce Tools odbywa się w Blenderze działającym w tle: jest wolniejsze, ale daje wygląd, do którego dostrojono dodatek. Tryb renderowania pokazuje potem modele w tym oświetleniu.",
  "armory.lit_pbr_bake": "PBR Bake",
  "armory.lit_light_bake_title": "Szybkie wypalanie: ustawione tu światło jest nanoszone na każdą teksturę koloru wraz z mapami specular i normalnymi oraz cieniem każdego światła. Tryb renderowania pokazuje efekt na żywo podczas zmiany ustawień.",
- "armory.lit_light_bake": "Light Bake"
+ "armory.lit_light_bake": "Light Bake",
+ "armory.lit_unstack": "Rozdziel lustrzane połówki",
+ "armory.lit_unstack_title": "Część korzystająca z tych samych texeli co inna (naramiennik i jego lustrzane odbicie albo obie strony broni) otrzymuje własne texele, dzięki czemu każda zachowuje własne oświetlenie. Oświetlona tekstura jest tworzona na tylu arkuszach, ile potrzeba, a współrzędne UV obiektu są odpowiednio przesuwane. Usunięcie przywraca UV na miejsce. Po eksporcie części zajmują więcej miejsca na arkuszu tekstury gry."
 }
