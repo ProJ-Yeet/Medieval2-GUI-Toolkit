@@ -267,8 +267,11 @@ const CG_GEAR_OFF = {primary: /^(secondaryactive|primarypassive|shieldactive)/i,
 function cgGearOff(o){ const re = CG_GEAR_OFF[cg().gear]; return !!(re && re.test(String(o.name || ''))); }
 function cgGearHtml(){
   const g = cg().gear, label = {primary: 'cards.gen_gear_primary', secondary: 'cards.gen_gear_secondary', custom: 'cards.gen_gear_custom'};
+  // 2026-11-25: a unit with no secondary weapon (no secondary skeleton in its
+  // set, no secondary part on the model) has the button greyed
+  const a = armAnim(), none = !(a.set && a.set.secondary) && !cgObjects().some(o => /^secondary/i.test(o.name || ''));
   return `<div class="armexprow" title="${ttA('cards.gen_gear_title')}"><span>${tt('cards.gen_gear')}</span>${['primary','secondary','custom'].map(k =>
-    `<button class="mini${g === k ? ' on' : ''}" onclick="cgGear('${k}')">${tt(label[k])}</button>`).join('')}</div>`;
+    `<button class="mini${g === k ? ' on' : ''}" onclick="cgGear('${k}')"${k === 'secondary' && none && g !== k ? ' disabled' : ''} title="${k === 'secondary' && none ? ttA('cards.gen_gear_no_secondary') : ''}">${tt(label[k])}</button>`).join('')}</div>`;
 }
 /* The set's skeleton for that weapon is played too, when it has one. */
 async function cgGear(mode){
@@ -370,6 +373,23 @@ function cgSessSave(){
     try{ keep.ground = {...keep.ground, pic: ''}; localStorage.setItem(cgSessKey(CG_UNIT.mod, CG_UNIT.unit), JSON.stringify({entry: CG_UNIT.entry, when: Date.now(), c: keep})); }catch(e2){}
   }
 }
+/* 2026-11-25: a new card can start from another unit's settings (camera,
+   lights, pose, finish, size), not its model's own parts, copies or texture. */
+const CG_COPY_SKIP = new Set([...CG_SESS_SKIP, 'unit', 'name', 'off', 'pick', 'oxf', 'gxf', 'dups', 'texFaction', 'crouch', 'mountAct']);
+function cgSessOthers(mod){
+  const pre = cgSessKey(mod, ''), out = [];
+  for(let i = 0; i < localStorage.length; i++){
+    const k = localStorage.key(i);
+    if(k && k.startsWith(pre)){ const s = cgSessGet(mod, k.slice(pre.length)); if(s) out.push({type: k.slice(pre.length), when: s.when || 0}); }
+  }
+  return out.sort((x, y) => y.when - x.when);
+}
+function cgSessCopyHtml(type){
+  const rows = cgSessOthers(state.src).filter(r => r.type !== type);
+  if(!rows.length) return '';
+  return `<select class="mini" title="${ttA('cards.gen_sess_copy_title')}" onchange="CG_UNIT.copyFrom=this.value">
+    <option value="">${tt('cards.gen_sess_copy_none')}</option>${rows.map(r => `<option value="${esc(r.type)}"${CG_UNIT.copyFrom === r.type ? ' selected' : ''}>${esc(tt('cards.gen_sess_copy_from', {unit: r.type}))}</option>`).join('')}</select>`;
+}
 function cgSessDrop(mod, type){ try{ localStorage.removeItem(cgSessKey(mod, type)); }catch(e){} }
 /* how: 'continue' or 'new' from the picker's buttons; 'level' for another
    armour upgrade of the unit already shown. Left out (a double click), a unit
@@ -390,6 +410,12 @@ async function cgUnitLoad(type, model, how){
   c.gxf = {}; c.dups = []; c.texFaction = ''; c.crouch = {};
   c.rig.autoFor = '';
   if(resume){ for(const [k, v] of Object.entries(sess.c || {})) if(!CG_SESS_SKIP.has(k)) c[k] = JSON.parse(JSON.stringify(v)); cg(); CG_WORK.fit = null; }
+  const copy = !resume && CG_UNIT.copyFrom && CG_UNIT.copyFrom !== type ? cgSessGet(mod, CG_UNIT.copyFrom) : null;
+  if(copy){
+    for(const [k, v] of Object.entries(copy.c || {})) if(!CG_COPY_SKIP.has(k)) c[k] = JSON.parse(JSON.stringify(v));
+    c.rig.autoFor = ''; cg(); CG_WORK.fit = null;
+  }
+  CG_UNIT.copyFrom = '';
   CG_WORK.boneSel = ''; CG_WORK.objSel = 0;
   cgPaint();
   const a = {kind: 'entry', mod, entry}, key = armAssetKey(a);
@@ -413,7 +439,7 @@ async function cgUnitLoad(type, model, how){
   CG_UNIT.objects = objects.concat(extras, crew ? crew.objects : []);
   // its own animations, in the held-aside state
   cgUnitAnimIn();
-  ARM.anim = null; const an = armAnim(); CG_UNIT.anim = an; an.fromMod = mod;
+  ARM.anim = null; const an = armAnim(); CG_UNIT.anim = an; an.fromMod = mod; an.mountAct = c.mountAct || '';
   // played by the soldier line's skeletons, as the game does (cgRideEntry)
   const from = await cgRideEntry(u, entry);
   try{ an.list = await cgGet(`/api/model/anims?mod=${enc(mod)}&entry=${enc(from || entry)}`); }catch(e){ an.list = {error: errText(e)}; }
@@ -486,7 +512,7 @@ function cgMountFor(mod, rider, mount){
     if(!row) return null;
     if(!list){ try{ list = await cgGet(`/api/model/anims?mod=${enc(mod)}&entry=${enc(mount)}`); }catch(e){ return null; } }
     const sk = ((list && list.skeletons) || {})[(row.skeleton || '').toLowerCase()];
-    const r = sk && v3aMountRow(sk.actions, slot).row;
+    const r = sk && armAnimMountRow(sk.actions, slot);
     if(!r) return null;
     let data;
     try{ data = await api.get(`/api/model/anim?mod=${enc(mod)}&${r.rel ? `rel=${enc(r.rel)}` : `pack=${enc(r.path)}`}&skel=${enc(row.skeleton)}` + (r.slot != null ? `&slot=${r.slot}` : '')); }
@@ -593,6 +619,7 @@ async function cgPeekV3(pk){
   const v = cgPeekLive(), skins = (v.info && v.info.skins) || [], f = cgOwnerSkin(pk.info, skins);
   const at = f ? skins.findIndex(k => (k.factions || []).map(x => x.toLowerCase()).includes(f)) : -1;
   if(at > 0 && v.skin !== at) v3SetSkin(at);
+  cgPeekHead();
   if(CG_UNIT.mounted) await cgPeekRide(pk); else cgPeekPreload(pk);
 }
 /* The viewer's actions list, or its mounts list, once it has come. */
@@ -641,7 +668,27 @@ async function cgPeekRide(pk){
   const v = await cgPeekWait(pk, v => v.anim && v.anim.list);
   if(!v) return;
   const a = v.anim;
-  if(!CG_UNIT.mounted){ if(a.mount && a.mount.on) v3AnimMountOn(false); return; }
+  if(!CG_UNIT.mounted){
+    if(a.mount && a.mount.on) v3AnimMountOn(false);
+    // 2026-11-25: off the horse he plays his foot set again, not the rider's actions
+    let foot = (a.list.sets || []).findIndex(x => (x.mount || 'none').toLowerCase() === 'none');
+    // a rider with no foot set (most cavalry): the foot skeleton that carries
+    // his weapon, added to the list as a set of its own
+    const rider = ((a.list.sets || [])[a.set] || {}).primary;
+    if(foot < 0 && rider){
+      const r = await cgGet(`/api/model/foot_set?mod=${enc(state.src)}&skel=${enc(rider)}`).catch(() => null);
+      if(cgPeekLive() !== v || CG_UNIT.mounted || !r || !r.set) return;
+      Object.assign(a.list.skeletons, r.skeletons);
+      foot = a.list.sets.push(r.set) - 1;
+    }
+    if(foot >= 0 && foot !== a.set){
+      v3AnimSet(foot);
+      const acts = ((v3AnimSk() || {}).actions || []).filter(x => x.playable);
+      const row = ['stand_a_idle', 'stand_idle', 'idle'].map(n => acts.find(x => x.action.toLowerCase() === n)).find(Boolean) || acts[0];
+      if(row && cgPeekLive() === v) await v3AnimPick(v3AnimKey(row));
+    }
+    return;
+  }
   cgPeekMountEnsure(pk, v);
   // its actions read, none a rider's, and no mount of its unit's: nothing to carry him
   if(!a.mount){ pk.noRide = true; cgPeekHead(); return; }
@@ -680,13 +727,13 @@ function cgPeekHead(){
       ${pk.err ? `<button class="mini" onclick="cgRetry(${t},${esc(JSON.stringify(pk.entry))},true)">${tt('cards.gen_retry')}</button>` : ''}
       ${pk.from ? `<span class="count" title="${ttA('cards.gen_peek_borrow_title')}">${tt('cards.gen_peek_borrow', {entry: esc(pk.from)})}</span>` : ''}
       ${pk.noRide && CG_UNIT.mounted ? `<span class="count">${tt('cards.gen_peek_no_ride')}</span>` : ''}
-      ${cgPeekDocked(pk) ? `<button class="mini" title="${ttA('cards.gen_tex_reload_title')}" onclick="cgPeekTexReload()">${tt('cards.gen_tex_reload')}</button>` : ''}
+      ${cgPeekDocked(pk) ? cgPeekTexHtml() + `<button class="mini" title="${ttA('cards.gen_tex_reload_title')}" onclick="cgPeekTexReload()">${tt('cards.gen_tex_reload')}</button>` : ''}
       ${u.mount ? `<button class="mini${CG_UNIT.mounted ? ' on' : ''}" title="${ttA('cards.gen_peek_mounted_title')}" onclick="cgPeekMount(${!CG_UNIT.mounted})">${tt('cards.gen_peek_mounted')}</button>` : ''}
       ${CG_UNIT.unit ? `<button class="mini" onclick="CG_UNIT.picking=false;cgPaint()">${tt('cards.gen_peek_cancel')}</button>` : ''}
       ${cgSessGet(state.src, pk.type) ? `<span class="count">${tt('cards.gen_sess_found')}</span>
         <button class="primary" title="${ttA('cards.gen_sess_continue_title')}" onclick="cgUnitLoad(${t},null,'continue')">${tt('cards.gen_sess_continue')}</button>
-        <button title="${ttA('cards.gen_sess_new_title')}" onclick="cgUnitLoad(${t},${esc(JSON.stringify(pk.entry))},'new')">${tt('cards.gen_sess_new')}</button>`
-      : `<button class="primary" onclick="cgUnitLoad(${t},${esc(JSON.stringify(pk.entry))},'new')">${tt('cards.gen_peek_use')}</button>`}`
+        ${cgSessCopyHtml(pk.type)}<button title="${ttA('cards.gen_sess_new_title')}" onclick="cgUnitLoad(${t},${esc(JSON.stringify(pk.entry))},'new')">${tt('cards.gen_sess_new')}</button>`
+      : `${cgSessCopyHtml(pk.type)}<button class="primary" onclick="cgUnitLoad(${t},${esc(JSON.stringify(pk.entry))},'new')">${tt('cards.gen_peek_use')}</button>`}`
     : `<span class="count">${tt('cards.gen_peek_none')}</span>`;
 }
 function cgPeekPaint(){
@@ -832,9 +879,22 @@ function cgTexHtml(){
   const skins = (CG_UNIT.skins || []).filter(k => k.exists !== false);
   if(skins.length < 2) return '';
   const c = cg();
+  // 2026-11-25: one choice a texture, its factions said beside it, not every faction a choice
+  const at = c.texFaction ? cgSkinOf(c.texFaction) : -1;
   return cgField(tt('cards.gen_tex'), `<select onchange="cgTexPick(this.value)"><option value="">${tt('cards.gen_tex_default')}</option>
-    ${(CG_UNIT.skins || []).map((k,i) => k.exists === false ? '' : `<optgroup label="${esc(tt('cards.gen_tex_n',{n:i+1}))}">${(k.factions || []).map(f =>
-      `<option value="${esc(f)}"${c.texFaction === f ? ' selected' : ''}>${esc(f)}</option>`).join('')}</optgroup>`).join('')}</select>`, tt('cards.gen_tex_title'));
+    ${(CG_UNIT.skins || []).map((k,i) => k.exists === false || !(k.factions || []).length ? '' : `<option value="${esc(k.factions[0])}"${at === i ? ' selected' : ''}>${esc(cgTexLabel(k, i))}</option>`).join('')}</select>`, tt('cards.gen_tex_title'));
+}
+/* "Texture 2: england, france, ..." */
+function cgTexLabel(k, i){
+  const f = k.factions || [];
+  return `${tt('cards.gen_tex_n',{n:i+1})}: ${f.slice(0, 6).join(', ')}${f.length > 6 ? ` +${f.length - 6}` : ''}`;
+}
+/* The preview's texture, in the unit picker: the viewer's skins, one a texture. */
+function cgPeekTexHtml(){
+  const v = cgPeekLive(), skins = (v && v.info && v.info.skins) || [];
+  if(skins.filter(k => k.exists).length < 2) return '';
+  return `<select class="mini" aria-label="${ttA('cards.gen_tex')}" title="${ttA('cards.gen_tex_title')}" onchange="v3SetSkin(this.value)">${skins.map((k,i) => k.exists
+    ? `<option value="${i}"${v.skin === i ? ' selected' : ''}>${esc(cgTexLabel(k, i))}</option>` : '').join('')}</select>`;
 }
 const cgSkinOf = f => f ? Math.max(0, (CG_UNIT.skins || []).findIndex(k => (k.factions || []).includes(f))) : 0;
 /* The first of the unit's owners (rebels and mercenaries last) that a sheet of
@@ -934,6 +994,8 @@ function cgPoseHtml(){
     ${cgSrc() === 'unit' ? '' : `<select onchange="cgEntry(this.value)"><option value="">${tt('cards.gen_pick_entry')}</option>`}${entries.map(e => `<option value="${esc(armAssetKey(e))}"${(armProj().anim || {}).asset === armAssetKey(e) ? ' selected' : ''}>${esc(armAssetLabel(e))}</option>`).join('')}${cgSrc() === 'unit' ? '' : '</select>'}
     ${Object.keys(skels).length ? `<select onchange="cgSkeleton(this.value)">${Object.keys(skels).map(s => `<option value="${esc(s)}"${s === a.skel.toLowerCase() ? ' selected' : ''}>${esc(s)}</option>`).join('')}</select>` : ''}
     ${c.pose === 'anim' ? `<select onchange="cgAction(this.value)">${actions.filter(x => x.playable).map(x => { const key = x.slot != null ? String(x.slot) : 'a:' + x.action; return `<option value="${esc(key)}"${a.key === key ? ' selected' : ''}>${esc(x.action)}</option>`; }).join('')}</select><input type="range" min="0" max="1000" value="${armAnimFrac()}" oninput="cgScrub(+this.value)">` : ''}
+    ${c.pose === 'anim' && a.mount && (a.mountActs || []).length ? `<label class="cgmountact">${tt('cards.gen_mount_action')}<select onchange="cgMountAction(this.value)">
+      <option value="">${tt('cards.gen_mount_action_match')}</option>${a.mountActs.map(x => `<option value="${esc(x)}"${a.mountAct === x ? ' selected' : ''}>${esc(x)}</option>`).join('')}</select></label>` : ''}
     <div class="count">${esc(c.poseNote || '')}</div><div class="count">${esc(c.poseNote2 || '')}</div>
     ${c.pose === 'rig' ? cgRigHtml() : ''}`) + (c.pose === 'rig' ? cgLibraryHtml() : '');
 }
@@ -1218,6 +1280,8 @@ function cgSet(group,key,value,redraw){
 function cgFitChanged(){ if(cg().fit.auto) CG_WORK.fit = null; }
 async function cgEntry(key){ await armAnimFrom(key); await cgPreparePose(); cgFitChanged(); cgPaint(); }
 async function cgSkeleton(name){ armAnimSkel(name); await cgPreparePose(); cgFitChanged(); cgPaint(); }
+/* The mount's action on its own list: "" plays the one that matches the rider's. */
+async function cgMountAction(v){ const a = armAnim(); cg().mountAct = a.mountAct = v || ''; if(a.key) await cgAction(a.key); }
 async function cgAction(key){ await armAnimPick(key); armAnim().playing = false; cgFitChanged(); cgPaint(); }
 function cgScrub(value){ const a = armAnim(); a.playing = false; a.t = armAnimLength()*value/1000; cgFitChanged(); cgDraw(); }
 async function cgPreparePose(){ await cgPoseAnim(); cgPoseAuto(); }

@@ -28,7 +28,7 @@ import re
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
-from . import edit, edu, campstrat, stratchar
+from . import animkit, animpack, animslot, edit, edu, campstrat, stratchar
 from . import i18n as _i18n
 from .transfer import TransferOptions, apply_transfer, plan_transfer
 
@@ -36,6 +36,9 @@ from .transfer import TransferOptions, apply_transfer, plan_transfer
 ROLES = ("heavy_infantry", "spear", "pike", "archer", "crossbow", "javelin", "cavalry")
 #: What a template sets on a new unit.
 TEMPLATE_FIELDS = ("class", "formation", "attributes", "mount")
+#: Bones only an archer's skeleton has. A bow or sling weighted to them on a
+#: melee skeleton is weighted to nothing the game knows, and the bow breaks.
+BOW_BONES = ("bone_bowoffset", "bone_bowstring", "bone_sling")
 
 
 class InstallError(ValueError):
@@ -187,7 +190,111 @@ def _new_model(req: dict, templates: Dict[str, dict], assign: str = "") -> dict:
     nm = {"name": name, "clone_from": clone, "dest_dir": folder, "mesh_all_lods": True,
           "assign_to": assign, "replace": bool(req.get("replace"))}
     nm.update(baked_files(req.get("bake_folder") or "", req.get("stem") or ""))
+    if req.get("skeletons"):
+        nm["skeletons"] = dict(req["skeletons"])
     return nm
+
+
+def weighted_bones(mesh_path) -> set:
+    """The bones a baked ``.mesh`` weights any vertex to, lower case."""
+    from . import mesh
+    try:
+        m = mesh.read_mesh(mesh_path)
+    except (mesh.MeshError, OSError):
+        return set()
+    out, ids, w = set(), m.bone_ids, m.weights
+    for v in range(len(w) // 2):
+        for wi, bi in ((0, 2), (1, 1)):          # the weights pair with bytes 2 and 1
+            if w[v * 2 + wi] > 0 and v * 4 + bi < len(ids) and ids[v * 4 + bi] < len(m.bones):
+                out.add(m.bones[ids[v * 4 + bi]].lower())
+    return out
+
+
+def _clone_of(mod, req: dict, templates: Dict[str, dict], choice: str) -> str:
+    """The entry a new entry would be cloned from, as :func:`_new_model` and
+    the plan pick it."""
+    c = (req.get("clone_from") or "").strip().lower()
+    t = templates.get(req.get("template") or "")
+    if not c and t:
+        c = t["clone_from"]
+    if not c and choice != "skip" and req.get("unit") in mod.edu.by_type():
+        c = mod.edu.by_type()[req["unit"]].soldier_model.lower()
+    return c
+
+
+def _bow_fix(mod, req: dict, templates: Dict[str, dict], choice: str) -> Tuple[dict, str]:
+    """A model weighted to a bow's bones cloned from an entry whose skeletons
+    have none (a melee mesh made an archer) takes the skeletons of an entry
+    that has them: the archer template's when it does, else the first soldier
+    entry of the mod's that does. Returns the request and what was done."""
+    try:
+        files = baked_files(req.get("bake_folder") or "", req.get("stem") or "")
+    except InstallError:
+        return req, ""
+    bow = weighted_bones(files["mesh_src"]) & set(BOW_BONES)
+    if not bow:
+        return req, ""
+    packs, _whose = animpack.packs_for(mod.data)
+    if packs is None or packs.skels is None:
+        return req, ""
+    seen: Dict[str, set] = {}
+
+    def bones(name):
+        if name.lower() not in seen:
+            sk = packs.skeleton(name) if packs.skels.first(name) is not None else None
+            seen[name.lower()] = {b.name.lower() for b in sk.bones} if sk else set()
+        return seen[name.lower()]
+
+    def fits(entry):
+        e = mod.modeldb.by_name().get((entry or "").lower())
+        return e is not None and any(bow <= bones(s) for s in e.skeletons())
+
+    clone = _clone_of(mod, req, templates, choice)
+    if not clone or fits(clone):
+        return req, ""
+    names = [templates["archer"]["clone_from"]] if "archer" in templates else []
+    names += [u.soldier_model for u in mod.edu.units if u.soldier_model]
+    pick = next((n.lower() for n in names if fits(n)), "")
+    if not pick:
+        return req, _i18n.msg("eng.armunit.bow_no_skeleton",
+                              "the model is weighted to {bones}, and no soldier entry of this mod plays a skeleton with them: the bow will not animate",
+                              bones=", ".join(sorted(bow)))
+    return dict(req, clone_from=pick), _i18n.msg(
+        "eng.armunit.bow_skeleton",
+        "the model is weighted to {bones}, which {clone}'s skeletons have not got: it takes {pick}'s skeletons, an archer's, so the bow animates",
+        bones=", ".join(sorted(bow)), clone=clone, pick=pick)
+
+
+def _scale_steps(mod, req: dict, clone: str) -> Tuple[List[dict], Dict[str, str]]:
+    """The body scale (``scale``, x y z, and ``scale_tag``): each skeleton the
+    clone plays, scaled whole into ``<skeleton>_<tag>`` unless the mod's pack
+    has that already. Returns the kit steps and the renaming for the entry."""
+    sc = req.get("scale")
+    if not sc:
+        return [], {}
+    try:
+        nums = [float(v) for v in sc]
+    except (TypeError, ValueError):
+        nums = []
+    if len(nums) != 3 or not all(v > 0 for v in nums):
+        raise InstallError(_i18n.msg("eng.armunit.scale_numbers", "the body scale is three numbers above 0"))
+    tag = re.sub(r"[^A-Za-z0-9_-]", "", str(req.get("scale_tag") or "")) \
+        or "x" + "_".join(f"{v:g}" for v in dict.fromkeys(nums)).replace(".", "p")
+    e = mod.modeldb.by_name().get(clone)
+    if e is None:
+        return [], {}
+    try:
+        packs = animslot._own(mod.data)
+    except (animslot.SlotError, animpack.PackError) as exc:
+        raise InstallError(str(exc)) from None
+    steps, names = [], {}
+    for s in dict.fromkeys(e.skeletons()):
+        name = f"{s}_{tag}"[:63]
+        if packs.skels.first(name) is None:
+            steps.append({"kind": "skeleton", "scale": nums,
+                          "plan": animkit.plan_kit(mod, s, name, [], scale=nums)})
+        names[s.lower()] = name
+    return steps, names
 
 
 def _unit_request(mod, unit_type: str, req: dict, templates: Dict[str, dict],
@@ -270,6 +377,24 @@ def _plan_install(mod, req: dict) -> dict:
     choice = req.get("choice") or "skip"
     templates = role_templates(mod)
     entry = (req.get("entry") or "").strip().lower()
+    note, kits = "", []
+    if not entry:
+        # a bow on a melee skeleton, and the body scale: the entry's skeletons
+        req, note = _bow_fix(mod, req, templates, choice)
+        kits, names = _scale_steps(mod, req, _clone_of(mod, req, templates, choice))
+        if names:
+            req = dict(req, skeletons=names)
+    planned = _plan_steps(mod, req, choice, templates, entry)
+    planned["req"] = req
+    if note:
+        warn = getattr(planned["steps"][-1]["plan"], "warnings", None)
+        if isinstance(warn, list):
+            warn.insert(0, note)
+    planned["steps"] = kits + planned["steps"]
+    return planned
+
+
+def _plan_steps(mod, req: dict, choice: str, templates: Dict[str, dict], entry: str) -> dict:
     if entry:
         # an entry the mod has (a folder's import): it needs a unit to wear it
         if entry not in mod.modeldb.by_name():
@@ -315,6 +440,15 @@ def apply_install(mod_of, mod_name: str, req: dict, invalidate=None, facts_of=No
     if not shown["ok"]:
         raise InstallError("; ".join(e for st in shown["steps"] for e in st["errors"]))
     records = []
+    # the scaled skeletons first, each planned again after the one before it
+    # (they append to the same packs), then the steps as planned
+    for st in [s for s in planned["steps"] if s["kind"] == "skeleton"]:
+        kp = animkit.plan_kit(mod, st["plan"].base, st["plan"].name, [], scale=st["scale"])
+        if not kp.ok:
+            raise InstallError("; ".join(kp.payload()["errors"]))
+        records.append(animkit.apply_kit(kp))
+    planned["steps"] = [s for s in planned["steps"] if s["kind"] != "skeleton"]
+    req = planned.get("req", req)
     def character_step():
         if req.get("character_target"):
             cp = _character_plan(mod_of(mod_name), req, facts_of)

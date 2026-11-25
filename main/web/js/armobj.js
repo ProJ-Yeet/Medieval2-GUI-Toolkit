@@ -1257,6 +1257,23 @@ function armScreenTris(only){
   const out = [];
   const objs = only ? [only] : armVisibleObjects();
   for(const o of objs){
+    // 2026-11-25: posed by an action, it is hit where it is drawn, not where it
+    // stood (the hover lit the part that had been there). Only the object is
+    // asked for then (hover, click, box), so the triangles are the posed ones'
+    const posed = !only && typeof armAnimGeoFor === 'function' ? armAnimGeoFor(o) : null;
+    if(posed){
+      const m = armMul(vp, o.post ? armMul(ARM_MIRROR, o.post) : ARM_MIRROR), P = posed.outPos, I = posed.idx;
+      const proj = v => {
+        const x = P[v*3], y = P[v*3+1], z = P[v*3+2], cw = m[3]*x + m[7]*y + m[11]*z + m[15];
+        return cw <= 1e-6 ? null : [((m[0]*x + m[4]*y + m[8]*z + m[12]) / cw * 0.5 + 0.5) * w,
+          (1 - ((m[1]*x + m[5]*y + m[9]*z + m[13]) / cw * 0.5 + 0.5)) * h, (m[2]*x + m[6]*y + m[10]*z + m[14]) / cw, v];
+      };
+      for(let j = 0; j + 2 < I.length; j += 3){
+        const a = proj(I[j]), b = proj(I[j + 1]), c = proj(I[j + 2]);
+        if(a && b && c) out.push([o, 0, j / 3, a, b, c]);
+      }
+      continue;
+    }
     const om = armMul(ARM_MIRROR, armObjMatrix(o, armPivot(o)));
     (o.src || []).forEach((pc, pi) => {
       const live = ARM.assets.get(pc.asset);

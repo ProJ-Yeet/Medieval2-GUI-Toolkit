@@ -45,7 +45,10 @@ function appLog(kind, what, extra){
   // two frames to settle (a page fitting itself to the window), not a fault
   window.addEventListener('error', e => { if(e.message && !/ResizeObserver loop/.test(e.message)){ appLog('error', e.message, {at: `${(e.filename || '').split('/').pop()}:${e.lineno}`}); uiBugBar(e.message); } });
   window.addEventListener('unhandledrejection', e => {
-    appLog('error', (e.reason && (e.reason.stack || e.reason.message)) || e.reason);
+    // Firefox's stack leaves out the message (R-20261125-9D61F6 came with a
+    // stack and no idea what threw), so the message goes first when missing
+    const er = e.reason, st = er && er.stack, msg = er && er.message;
+    appLog('error', st ? (msg && !st.includes(msg) ? `${er.name ? er.name + ': ' : ''}${msg}\n${st}` : st) : (msg || er));
     // a request that failed has its own message where it was asked; a page
     // being left mid-request is not a fault
     const r = e.reason;

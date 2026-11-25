@@ -104,6 +104,52 @@ class InstallTests(unittest.TestCase):
                 if slot.endswith("#3"):
                     self.assertEqual(field["armour_ug_levels"], "0, 1, 2")
 
+    def test_bow_weights_take_an_archer_skeleton(self):
+        # 2026-11-25: a melee mesh made an archer exported on the melee skeleton,
+        # so its bow weights named bones the game did not know and it broke
+        data = self.root / "data"
+        db = data / "unit_models/battle_models.modeldb"
+        s = lambda v: f"{len(v)} {v}"
+        text = db.read_text(encoding=modeldb.ENCODING).replace(" 3 0 0 0 0 4 0 0", " 3 0 0 0 0 5 0 0", 1)
+        text += entry("bowmen").replace(s("MTW2_Spear") + " " + s("MTW2_Spear_Secondary"),
+                                        s("MTW2_Bow_String") + " " + s("MTW2_Spear_Secondary"))
+        db.write_text(text, encoding=modeldb.ENCODING)
+        with open(data / "export_descr_unit.txt", "a", encoding="latin-1") as f:
+            f.write("\ntype Bows\ndictionary bows\ncategory infantry\nclass missile\n"
+                    "soldier bowmen, 40, 0, 1\nownership england\n")
+        bake = Path(self.tmp.name) / "bake"
+        bake.mkdir()
+        (bake / "fresh.mesh").write_bytes(b"fixture")
+        body = ["bone_pelvis", "bone_rhand"]
+        bones = {"mtw2_spear": body, "mtw2_spear_secondary": body,
+                 "mtw2_bow_string": body + ["bone_bowoffset", "bone_bowstring"]}
+        packs = SimpleNamespace(skels=SimpleNamespace(first=lambda n: n.lower() in bones or None),
+                                skeleton=lambda n: SimpleNamespace(bones=[SimpleNamespace(name=b) for b in bones[n.lower()]]))
+        req = dict(choice="add", unit="Guard", name="baked", clone_from="old", bake_folder=str(bake), stem="fresh")
+        with patch.object(armunit.animpack, "packs_for", lambda _d: (packs, "mod")):
+            with patch.object(armunit, "weighted_bones", lambda _p: {"bone_pelvis", "bone_bowstring"}):
+                p = armunit.plan_install(Mod(self.root), req)
+                shown = armunit.payload(p)
+                self.assertTrue(shown["ok"], shown)
+                self.assertEqual(p["req"]["clone_from"], "bowmen")
+                self.assertTrue(any("bowmen" in w for w in shown["steps"][-1]["warnings"]))
+            with patch.object(armunit, "weighted_bones", lambda _p: {"bone_pelvis"}):
+                p = armunit.plan_install(Mod(self.root), req)
+                self.assertEqual(p["req"]["clone_from"], "old")
+
+    def test_new_entry_plays_renamed_skeletons(self):
+        bake = Path(self.tmp.name) / "bake"
+        bake.mkdir()
+        (bake / "fresh.mesh").write_bytes(b"fixture")
+        req = dict(choice="skip", name="big", clone_from="old", bake_folder=str(bake), stem="fresh",
+                   skeletons={"mtw2_spear": "MTW2_Spear_troll"})
+        p = armunit.plan_install(Mod(self.root), req)
+        self.assertTrue(armunit.payload(p)["ok"], armunit.payload(p))
+        armunit.apply_install(lambda _: Mod(self.root), "mod", req)
+        e = Mod(self.root).modeldb.by_name()["big"]
+        self.assertEqual([(a.primary_skeleton, a.secondary_skeleton) for a in e.animations],
+                         [("MTW2_Spear_troll", "MTW2_Spear_Secondary")])
+
     def test_baked_entry_overwrites_existing_only_when_asked(self):
         bake = Path(self.tmp.name) / "bake"
         bake.mkdir()

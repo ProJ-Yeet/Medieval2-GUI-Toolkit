@@ -907,6 +907,7 @@ function armExpModStepTitle(st, m){
   if(st.kind === 'character') return tt('armory.exp_step_character');
   if(st.kind === 'transfer') return tt('armory.exp_step_duplicate');
   if(st.kind === 'bmdb') return tt('armory.exp_step_entry');
+  if(st.kind === 'skeleton') return tt('armory.exp_step_skeleton');
   if(m.choice === 'new') return tt('armory.exp_step_new_unit_edit', {unit: st.on});
   return tt('armory.exp_step_unit_edit');
 }
@@ -1052,7 +1053,7 @@ function armExpModHtml(){
       if(m.choice !== 'new') sk += `<div class="count armnote">${tt('armory.exp_template_fields_new_only')}</div>`;
     }
   }
-  main += armExpSec('skel', tt('armory.exp_skeletons_from'), sk);
+  main += armExpSec('skel', tt('armory.exp_skeletons_from'), sk + armExpBodyScaleHtml());
   main += armExpSec('character', tt('armory.exp_sec_character'), armExpCharacterHtml());
   let write = `<div class="armexprow"><button onclick="armExpModPlan()">${tt('armory.exp_plan')}</button>
       <button class="primary" onclick="armExpModApply()"${armExp().busy ? ' disabled' : ''}>${tt('armory.exp_write')}</button>
@@ -1195,7 +1196,26 @@ function armExpModBody(){
           template: src === 'role' ? m.template : '', clone_from: src === 'unit' ? '' : (m.clone_from || '').trim().toLowerCase(),
           unit: m.unit, assign_to: m.assign_to || armExpAssignDefault(), replace: !!m.replace, character_target: m.characterTarget || null,
           new_type: m.new_type.trim(), new_name: m.new_name.trim(),
-          bake_folder: e.done ? e.done.folder : e.folder, stem: e.stem};
+          bake_folder: e.done ? e.done.folder : e.folder, stem: e.stem, ...armExpBodyScale()};
+}
+/* The body scale: the entry plays each of its skeletons scaled whole, a kit
+   per skeleton made on write unless the mod has it already (armunit
+   _scale_steps), so a troll exported from a man's mesh moves as a troll.
+   "anim" is the scale set in the animation panel's Scale. */
+function armExpBodyScale(){
+  const k = armExpMod().bodyScale || '';
+  if(ARM_BODY_SCALES[k]) return {scale: ARM_BODY_SCALES[k], scale_tag: k};
+  const a = ARM.anim;
+  if(k === 'anim' && a && a.scale && a.scale.some(v => +v !== 1)) return {scale: a.scale.map(Number), scale_tag: a.scalePreset || ''};
+  return {};
+}
+function armExpBodyScaleHtml(){
+  const m = armExpMod(), a = ARM.anim, own = a && a.scale && a.scale.some(v => +v !== 1);
+  const opt = (v, label) => `<option value="${v}"${(m.bodyScale || '') === v ? ' selected' : ''}>${esc(label)}</option>`;
+  return `<div class="armexprow"><label title="${ttA('armory.exp_body_scale_title')}">${tt('armory.exp_body_scale')}<select onchange="armExpModSet('bodyScale', this.value)">
+    ${opt('', tt('armory.exp_body_scale_none'))}
+    ${Object.keys(ARM_BODY_SCALES).map(k => opt(k, `${armBodyLabel(k)} (${ARM_BODY_SCALES[k].join(' / ')})`)).join('')}
+    ${own ? opt('anim', tt('armory.exp_body_scale_anim', {scale: a.scale.join(' / ')})) : ''}</select></label></div>`;
 }
 function armExpModSet(k, v, live){
   const m = armExpMod();

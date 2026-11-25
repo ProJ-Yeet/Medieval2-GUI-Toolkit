@@ -43,7 +43,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
-from . import animloose, animpack, animslot, casanim, skelslots
+from . import animedit, animloose, animpack, animslot, casanim, skelslots
 from . import i18n as _i18n
 
 DEFAULT_SLOT = animslot.DEFAULT_SLOT
@@ -67,6 +67,8 @@ class Change:
     #: 128g: the slot's impact frame and turn limits (degrees), when set
     impact_frame: Optional[int] = None
     turn: Optional[Tuple[float, float]] = None
+    #: the action's pivots and position keys scaled, x y z (a troll from a man)
+    scale: Optional[Tuple[float, float, float]] = None
 
     @classmethod
     def from_dict(cls, d: dict) -> "Change":
@@ -136,6 +138,10 @@ class KitPlan:
     def ok(self) -> bool:
         return not self.errors and not any(r.errors for r in self.rows) and bool(self.skeleton_bytes)
 
+    def summary(self) -> str:
+        """Lines for a plan shown among others (Armory's install steps)."""
+        return "\n".join([f"skeleton {self.name} from {self.base}: {len(self.rows)} action(s)"] + self.notes)
+
     @property
     def appends(self) -> List[KitRow]:
         return [r for r in self.rows if r.data and not r.reuse]
@@ -182,7 +188,7 @@ def carry(mod, packs: animpack.Packs, base: animpack.PackedSkeleton, slot: int,
         raw = src.anims.read_entry(e)
         row.source = f"{who}: {_se.name} / {_label(sslot_i)}" + (" (vanilla's packs)" if whose == "vanilla" else "")
         nq = e.rot_bones or len(ssk.bones)
-        if not change.bone_map and animslot._same_bones(ssk, base, nq):
+        if not change.bone_map and not change.scale and animslot._same_bones(ssk, base, nq):
             row.data, row.scale = raw, e.scale
             row.loose_anim = animloose.to_cas(raw, base.bone_table(), e.scale, sslot.path, bone_scale=base.scale)
         else:
@@ -200,11 +206,15 @@ def carry(mod, packs: animpack.Packs, base: animpack.PackedSkeleton, slot: int,
                 for t in anim.tracks[1:]:
                     if t.name.lower() in renamed:
                         t.name = renamed[t.name.lower()]
+            if change.scale:
+                anim = animedit.apply_edits(anim, {"scale": list(change.scale)})
             moved, missing = animslot.onto(anim, base, animslot._rot_bones(packs, base, slot))
             shift = animslot.root_shift(anim, base)
             if shift:
                 row.notes.append(shift)
-            if missing:
+            if change.scale and not missing:
+                pass                              # a scale of its own skeleton: nothing to say
+            elif missing:
                 row.notes.append(_i18n.msg("eng.animkit.carried_bone_by_bone",
                                            "carried bone by bone; {n} bone(s) it does not reach hold their bind pose: {names}",
                                            n=len(missing), names=", ".join(missing[:6]) + ("..." if len(missing) > 6 else "")))
@@ -237,14 +247,16 @@ def _turn(deg: float) -> int:
 
 def plan_kit(mod, base: str, name: str, changes: List[Change], sources: Optional[Dict[str, object]] = None,
              keep_rebuildable: bool = True, extend: bool = False, entry: str = "",
-             entry_skeleton: str = "") -> KitPlan:
+             entry_skeleton: str = "", scale=None) -> KitPlan:
     """The new skeleton ``name``: ``base`` with ``changes`` made, in order.
     With ``extend`` (128g), ``name`` is a skeleton of the mod's own pack
     already, a kit made earlier, and the changes are made to it in place:
     ``base`` is ignored. With ``entry``, that model entry's
     ``entry_skeleton`` (its first body skeleton when not given) is pointed at
     ``name``, as a port does. ``sources`` maps a change's ``source`` mod name
-    to its mod. Writes nothing."""
+    to its mod. With ``scale`` (x, y, z), every action ``base`` plays is
+    scaled into the new skeleton, the changes given or not: the whole pack
+    at a troll's or a dwarf's size, as one job. Writes nothing."""
     if extend:
         base = name
     p = KitPlan(mod=mod, base=base, name=name, keep_rebuildable=keep_rebuildable, extend=extend)
@@ -258,6 +270,22 @@ def plan_kit(mod, base: str, name: str, changes: List[Change], sources: Optional
     except (animslot.SlotError, animpack.PackError) as e:
         p.errors.append(str(e))
         return p
+    if scale is not None:
+        try:
+            sc = tuple(float(v) for v in scale)
+        except (TypeError, ValueError):
+            sc = ()
+        if len(sc) != 3 or not all(0 < v < 100 for v in sc):
+            p.errors.append(_i18n.msg("eng.animkit.scale_numbers", "the scale is three numbers above 0"))
+            return p
+        if sc == (1.0, 1.0, 1.0):
+            p.errors.append(_i18n.msg("eng.animkit.scale_one", "a scale of 1 is the base itself"))
+            return p
+        given = {c.slot for c in changes}
+        changes = [Change(slot=c.slot, clear=c.clear, source=c.source, skeleton=c.skeleton,
+                          source_slot=c.source_slot, bone_map=c.bone_map, impact_frame=c.impact_frame,
+                          turn=c.turn, scale=None if c.clear else sc) for c in changes]
+        changes += [Change(slot=i, scale=sc) for i, _s in sk.filled() if i not in given]
     if extend:
         if len(packs.skels.find(name)) > 1:
             p.notes.append(_i18n.msg("eng.animslot.the_skeleton_pack_lists_more_than", "the skeleton pack lists {name} more than once; the first copy, the one the game plays, is the one changed", name=name))

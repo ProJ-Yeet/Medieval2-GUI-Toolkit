@@ -224,9 +224,10 @@ async function armAnimPick(key){
   a.data = data;
   a.orig = data;
   a.source = {mod:from, rel:row.rel || '', skeleton:a.skel, slot:row.slot, weapons:w};
-  a.scale = [1,1,1]; a.scalePlan = null; a.scaleBusy = false; a.scaleMsg = '';
+  // the scale stays from one action to the next: it is the man's, not the action's
+  a.scale = a.scale || [1,1,1]; a.scalePlan = null; a.scaleBusy = false; a.scaleMsg = '';
   a.saveAs = (row.rel || 'animations/action.cas').replace(/\.cas$/i,'') + '_scaled.cas';
-  a.packName = (row.path || row.rel || 'action').replace(/^.*[\\/]/,'').replace(/\.cas$/i,'') + '_scaled';
+  a.packName = '';
   a.saveTarget = sk.packed && row.slot != null && a.list.packs && a.list.packs !== 'vanilla' ? 'pack' : 'loose';
   if(!row.rel) a.saveTarget = 'pack';
   a.bind = v3aBind(data);
@@ -236,8 +237,21 @@ async function armAnimPick(key){
   a.geos.forEach(g => { g.map = null; });
   armAnimPaint();
   armAnimLoop();
+  if(armAnimScaleEdits().scale) armAnimScalePreview();
 }
 
+/* Body scales measured on DaC's own skeletons against a man's (MTW2_Mace):
+   MTW2_Troll_Fast_Javelin is a man at 2.1 all round, the MTW2_Goblin_*
+   skeletons 0.89, the MTW2_Dwarf_* ones 0.75 tall and 0.86 wide. */
+const ARM_BODY_SCALES = {troll: [2.1, 2.1, 2.1], dwarf: [0.86, 0.75, 0.86], goblin: [0.89, 0.89, 0.89]};
+const armBodyLabel = k => ({troll: tt('armory.body_troll'), dwarf: tt('armory.body_dwarf'), goblin: tt('armory.body_goblin')})[k] || k;
+function armBodyScaleTag(scale, preset){
+  return preset || 'x' + [...new Set(scale.map(Number))].map(v => String(v).replace('.', 'p')).join('_');
+}
+function armAnimKitName(){
+  const a = armAnim();
+  return a.packName || `${a.source ? a.source.skeleton : a.skel}_${armBodyScaleTag(a.scale || [1,1,1], a.scalePreset)}`.slice(0, 63);
+}
 function armAnimScaleEdits(){
   const scale=armAnim().scale || [1,1,1];
   return scale.some(v=>+v !== 1) ? {scale:scale.map(Number)} : {};
@@ -254,27 +268,42 @@ function armAnimScaleHtml(){
   // min is a whole step (0.01), so the arrows walk 0.99, 1, 1.01 and never 1.001
   const input=(i,value)=>`<input type="number" min="0.01" step="0.01" value="${esc(value)}" style="width:64px" onchange="armAnimScaleSet(${i},this.value)"${a.scaleBusy ? ' disabled' : ''}>`;
   return `<details class="armanimscale"${a.scaleOpen ? ' open' : ''} ontoggle="armAnim().scaleOpen=this.open"><summary title="${esc(tt('armory.anim_scale_note'))}">${tt('armory.anim_scale')}</summary>
+    <label>${tt('armory.anim_scale_preset')}<select onchange="armAnimScalePreset(this.value)"${a.scaleBusy ? ' disabled' : ''}>
+      <option value="">${tt('armory.anim_scale_custom')}</option>
+      ${Object.keys(ARM_BODY_SCALES).map(k => `<option value="${k}"${a.scalePreset === k ? ' selected' : ''}>${armBodyLabel(k)} (${ARM_BODY_SCALES[k].join(' / ')})</option>`).join('')}</select></label>
     <label>${tt('armory.anim_scale')}${input(-1,scale.every(v=>v===scale[0]) ? scale[0] : '')}</label>
     <details${a.scaleAxes ? ' open' : ''} ontoggle="armAnim().scaleAxes=this.open"><summary>${tt('armory.anim_scale_axes')}</summary>
       ${['X','Y','Z'].map((axis,i)=>`<label>${axis}${input(i,scale[i])}</label>`).join('')}</details>
     <label>${tt('armory.anim_scale_target')}<select onchange="armAnimScaleOption('saveTarget',this.value)">
       ${a.source.slot != null ? `<option value="pack"${a.saveTarget === 'pack' ? ' selected' : ''}>${tt('armory.anim_scale_pack')}</option>` : ''}
       ${a.source.rel ? `<option value="loose"${a.saveTarget === 'loose' ? ' selected' : ''}>${tt('armory.anim_scale_loose')}</option>` : ''}</select></label>
-    <label>${tt('armory.anim_scale_name')}<input value="${esc(a.saveTarget === 'pack' ? a.packName : a.saveAs)}"
+    <label>${tt(a.saveTarget === 'pack' ? 'armory.anim_scale_skeleton_name' : 'armory.anim_scale_name')}<input value="${esc(a.saveTarget === 'pack' ? armAnimKitName() : a.saveAs)}"
       onchange="armAnimScaleOption(armAnim().saveTarget === 'pack' ? 'packName' : 'saveAs',this.value)"></label>
-    <button onclick="armAnimScaleSave()"${a.scaleBusy || !armAnimScaleEdits().scale ? ' disabled' : ''}>${tt('armory.anim_scale_save')}</button>
-    ${a.scalePlan ? `<pre class="count">${esc(a.scalePlan.target || '')}\n${esc((a.scalePlan.notes || []).join('\n'))}</pre>` : ''}
+    ${a.saveTarget === 'pack' ? `<div class="count">${tt('armory.anim_scale_pack_note')}</div>` : ''}
+    <button onclick="armAnimScaleSave()"${a.scaleBusy || !armAnimScaleEdits().scale ? ' disabled' : ''}>${tt(a.saveTarget === 'pack' ? 'armory.anim_scale_save_pack' : 'armory.anim_scale_save')}</button>
+    ${a.scalePlan ? `<pre class="count">${esc(a.scalePlan.target || a.scalePlan.name || '')}\n${esc((a.scalePlan.notes || []).join('\n'))}</pre>` : ''}
     ${a.scaleMsg ? `<div class="count">${esc(a.scaleMsg)}</div>` : ''}</details>`;
 }
 function armAnimScaleOption(key,value){
   const a=armAnim(); a[key]=value; a.scalePlan=null; a.scaleMsg=''; armAnimPaint();
+}
+function armAnimScalePreset(key){
+  const a=armAnim();
+  a.scalePreset=key || '';
+  if(key && ARM_BODY_SCALES[key]){ a.scale=ARM_BODY_SCALES[key].slice(); a.scalePlan=null; a.scaleMsg=''; armAnimScalePreview(); }
+  else armAnimPaint();
 }
 async function armAnimScaleSet(axis,value){
   const a=armAnim(), n=Number(value);
   if(!a.source || !Number.isFinite(n) || n<=0){ a.scaleMsg=tt('armory.anim_scale_invalid'); armAnimPaint(); return; }
   const scale=(a.scale || [1,1,1]).slice();
   if(axis<0) scale.fill(n); else scale[axis]=n;
-  a.scale=scale; a.scalePlan=null; a.scaleMsg='';
+  a.scale=scale; a.scalePlan=null; a.scaleMsg=''; a.scalePreset='';
+  return armAnimScalePreview();
+}
+async function armAnimScalePreview(){
+  const a=armAnim();
+  if(!a.source) return;
   const source=a.source, serial=a.scaleSerial=(a.scaleSerial || 0)+1;
   if(!armAnimScaleEdits().scale){
     a.data=a.orig; a.travel=v3aTravel(a.data); a.carried=v3aCarried(a.data);
@@ -292,9 +321,31 @@ async function armAnimScaleSet(axis,value){
   }catch(err){ if(a.source === source && a.scaleSerial === serial) a.scaleMsg=errText(err); }
   finally{ if(a.source === source && a.scaleSerial === serial){ a.scaleBusy=false; armAnimPaint(); } }
 }
+/* "Into the pack": every action of the skeleton scaled into a new one (a
+   kit, animkit.plan_kit's scale), so the man keeps his size in all of them
+   and every unit on the old skeleton stays as it was. One job, one Undo. */
+async function armAnimScaleSaveSkeleton(){
+  const a=armAnim(), source=a.source;
+  const body={mod:source.mod, base:source.skeleton, name:armAnimKitName(), scale:a.scale.map(Number),
+              changes:[], keep_rebuildable:true};
+  a.scaleBusy=true; a.scaleMsg=tt('v3anim.reading_both_packs'); armAnimPaint();
+  try{
+    const r=await api.post('/api/model/skeleton/kit_plan',body);
+    if(a.source !== source) return;
+    if(r.error || !r.plan || !r.plan.ok) throw new Error(r.error || tt('armory.anim_scale_no_plan'));
+    a.scalePlan=r.plan; a.scaleMsg=''; armAnimPaint();
+    if(!confirm(tt('armory.anim_scale_pack_confirm',{name:body.name,base:body.base,n:r.plan.rows.length}))) return;
+    const w=await api.post('/api/model/skeleton/kit_apply',body);
+    if(w.error) throw new Error(w.error);
+    if(typeof activity === 'function') activity(tt('v3kit.made'), w.summary);
+    a.scalePlan=null; a.scaleMsg=tt('armory.anim_scale_pack_saved',{name:body.name});
+  }catch(err){ if(a.source === source) a.scaleMsg=errText(err); }
+  finally{ if(a.source === source){ a.scaleBusy=false; armAnimPaint(); } }
+}
 async function armAnimScaleSave(){
   const a=armAnim();
   if(!a.source || a.scaleBusy || !armAnimScaleEdits().scale) return;
+  if(a.saveTarget === 'pack') return armAnimScaleSaveSkeleton();
   const body=armAnimScaleBody(), source=a.source;
   a.scaleBusy=true; a.scaleMsg=''; armAnimPaint();
   try{
@@ -386,6 +437,14 @@ async function armAnimRider(){
   for(const e of armAnimEntries()) if(await armAnimMountOf(armAssetKey(e))) return e;
   return null;
 }
+/* 2026-11-25: the mount's own action, picked by hand (the card maker's
+   Animation section), in place of the one that matches the rider's; and the
+   mount's actions kept for that list. */
+function armAnimMountRow(actions, slot){
+  const a = armAnim(), playable = (actions || []).filter(x => x.playable);
+  a.mountActs = playable.map(x => x.action);
+  return (a.mountAct && playable.find(x => x.action === a.mountAct)) || v3aMountRow(actions, slot).row;
+}
 async function armAnimMountLoad(key, slot){
   const found = await armAnimMountOf(key);
   if(!found) return null;
@@ -393,7 +452,7 @@ async function armAnimMountLoad(key, slot){
   let list, data;
   try{ list = await api.get(`/api/model/anims?mod=${enc(asset.mod)}&entry=${enc(asset.entry)}`); }catch(e){ return null; }
   const sk = ((list && list.skeletons) || {})[(row.skeleton || '').toLowerCase()];
-  const r = sk && v3aMountRow(sk.actions, slot).row;
+  const r = sk && armAnimMountRow(sk.actions, slot);
   if(!r) return null;
   const q = r.rel ? `rel=${enc(r.rel)}` : `pack=${enc(r.path)}`;
   try{ data = await api.get(`/api/model/anim?mod=${enc(asset.mod)}&${q}&skel=${enc(row.skeleton)}` + (r.slot != null ? `&slot=${r.slot}` : '')); }

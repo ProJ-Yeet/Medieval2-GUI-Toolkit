@@ -3004,6 +3004,15 @@ class Handler(BaseHTTPRequestHandler):
                 packs, whose = animpack.packs_for(self.registry.get((q.get("mod") or [""])[0]).data)
                 return self._json({"packs": whose, "names": packs.skeleton_names()
                                    if packs is not None and packs.skels is not None else []})
+            if u.path == "/api/model/foot_set":
+                # 2026-11-25: a rider off his horse, on the foot skeleton that
+                # carries his weapon (animview.foot_skeleton), as a set to play
+                data = self.registry.get((q.get("mod") or [""])[0]).data
+                foot = animview.foot_skeleton(data, (q.get("skel") or [""])[0])
+                if not foot:
+                    return self._json({"set": None, "skeletons": {}})
+                return self._json(dict(animview.sets_view(data, [{"mount": "none", "primary": foot, "secondary": ""}]),
+                                       set={"mount": "none", "primary": foot, "secondary": "", "foot": True}))
             if u.path == "/api/model/skeleton_bones":
                 # 128g: a skeleton's bones, for the kitbash panel's bone map
                 packs, whose = animpack.packs_for(self.registry.get((q.get("mod") or [""])[0]).data)
@@ -4881,7 +4890,8 @@ class Handler(BaseHTTPRequestHandler):
             plan = animkit.plan_kit(mod, base, str(body.get("name") or ""), changes, sources,
                                     keep_rebuildable=bool(body.get("keep_rebuildable", True)),
                                     extend=bool(body.get("extend")), entry=str(body.get("entry") or ""),
-                                    entry_skeleton=str(body.get("entry_skeleton") or ""))
+                                    entry_skeleton=str(body.get("entry_skeleton") or ""),
+                                    scale=body.get("scale"))
         except (animkit.KitError, animslot.SlotError, animpack.PackError, casanim.AnimError) as e:
             return {"error": str(e)}
         out = {"plan": plan.payload()}

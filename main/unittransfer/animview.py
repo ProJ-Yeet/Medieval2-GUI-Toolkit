@@ -140,6 +140,30 @@ def entry_view(data_dir, entry) -> dict:
     return sets_view(data_dir, sets)
 
 
+#: A rider's weapon, by a word of his skeleton's name, and the foot skeletons
+#: that carry it, tried in order (vanilla's and the mods' common names).
+_FOOT_BY_WEAPON = (("crossbow", ("MTW2_Crossbow",)), ("bow", ("MTW2_Bowman", "MTW2_Fast_Bowman")),
+                   ("javelin", ("MTW2_Javelinman", "MTW2_Fast_Javelin")), ("lance", ("MTW2_Spear",)),
+                   ("spear", ("MTW2_Spear",)), ("sword", ("MTW2_Swordsman", "MTW2_Fast_Swordsman")),
+                   ("axe", ("MTW2_Mace",)), ("mace", ("MTW2_Mace",)))
+
+
+def foot_skeleton(data_dir, rider: str) -> str:
+    """The foot skeleton a rider stands on when he is shown off his horse (the
+    card maker's Mounted off, 2026-11-25): his own name without its rider's
+    mark (MTW2_HR_Crossbow is MTW2_Crossbow), else one carrying his weapon,
+    else a man with a mace. '' when the packs have none of them."""
+    packs, _whose = packs_for(data_dir)
+    if packs is None or packs.skels is None:
+        return ""
+    have = {n.lower(): n for n in packs.skeleton_names()}
+    low = (rider or "").lower()
+    tries = [re.sub(r"_hr(?=_|$)|(?<=_)hr_|_horse|_mounted|_rider|_cav(alry)?(?=_|$)", "", low)]
+    tries += [n for word, names in _FOOT_BY_WEAPON if word in low for n in names]
+    tries += ["MTW2_Mace", "MTW2_Swordsman", "MTW2_Spear"]
+    return next((have[t.lower()] for t in tries if t and t.lower() != low and t.lower() in have), "")
+
+
 def sets_view(data_dir, sets: List[dict]) -> dict:
     """The picker for any list of skeleton sets: each skeleton's actions once,
     the weapon skeletons' included."""

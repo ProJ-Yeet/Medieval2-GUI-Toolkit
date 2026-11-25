@@ -312,5 +312,33 @@ r = h._anim_kit("kit_plan", {"mod": "Dest", "name": "Kit_Api2", "base": "MTW2_Sp
                              "changes": [{"slot": IDLE, "impact_frame": 2, "turn": [-20, 20]}]})
 check("kit_plan takes entry, impact_frame and turn", r.get("plan", {}).get("ok") and r["plan"]["entry"] == entry)
 
+# ---- 7) the whole pack scaled -----------------------------------------------------------
+print("\n7) every action of a skeleton scaled into a new one")
+before = shas(dest)
+p = animkit.plan_kit(dest, "MTW2_Spear", "MTW2_Spear_troll", [], scale=[2.1, 2.1, 2.1])
+filled = [i for i, _s in spear.filled()]
+check(f"planned with no changes given: every filled slot ({len(filled)}) scaled",
+      p.ok and sorted(r.slot for r in p.rows) == sorted(filled) and p.appends)
+res = animkit.apply_kit(p)
+pk = animpack.for_data(dest.data)
+big, walk0 = pk.skeleton("MTW2_Spear_troll"), pk.skeleton("MTW2_Spear")
+check("the base is untouched and the new skeleton plays new entries",
+      big.slots[WALK].path != walk0.slots[WALK].path and walk0.slots[WALK].path == spear.slots[WALK].path)
+e0 = animpack.resolve_slot(pk.anims, walk0.slots[WALK].path, walk0.scale)
+e1 = animpack.resolve_slot(pk.anims, big.slots[WALK].path, big.scale)
+from unittransfer import animloose  # noqa: E402
+a0 = animloose.to_cas(pk.anims.read_entry(e0), walk0.bone_table(), e0.scale, e0.name, bone_scale=walk0.scale)
+a1 = animloose.to_cas(pk.anims.read_entry(e1), big.bone_table(), e1.scale, e1.name, bone_scale=big.scale)
+t0 = next(t for t in a0.tracks[1:] if t.pos_keys)
+t1 = next(t for t in a1.tracks if t.name == t0.name)
+ratio = max(abs(v) for v in t1.pos[:3]) / max(1e-6, max(abs(v) for v in t0.pos[:3]))
+check(f"its walk's position keys are 2.1 times the base's ({ratio:.3f})", abs(ratio - 2.1) < 0.05)
+transfer.undo(res["id"])
+check("one Undo takes the whole scaled skeleton out", shas(Mod(dest.root)) == before)
+p = animkit.plan_kit(dest, "MTW2_Spear", "MTW2_Spear_one", [], scale=[1, 1, 1])
+check("a scale of 1: refused", not p.ok)
+r = h._anim_kit("kit_plan", {"mod": "Dest", "name": "Kit_Scaled", "base": "MTW2_Mace", "scale": [0.89, 0.89, 0.89]})
+check("kit_plan takes scale with no changes", r.get("plan", {}).get("ok"))
+
 print(f"\n{sum(ok)}/{len(ok)} checks passed")
 sys.exit(0 if all(ok) else 1)

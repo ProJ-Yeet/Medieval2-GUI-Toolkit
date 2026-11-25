@@ -133,6 +133,9 @@ class NewModel:
     raw_entry: str = ""
     files: Dict[str, str] = field(default_factory=dict)
     replace: bool = False             # put it in place of the mod's entry of that name
+    # the clone's animation skeletons renamed, {old lower: new}: a scaled kit
+    # of each (Armory's body scale) played in their place
+    skeletons: Dict[str, str] = field(default_factory=dict)
 
 
 @dataclass
@@ -298,6 +301,8 @@ def request_from_dict(d: dict) -> EditRequest:
                              assign_to=(n.get("assign_to") or "").strip(),
                              raw_entry=n.get("raw_entry") or "",
                              files={str(k): str(v) for k, v in (n.get("files") or {}).items()},
+                             skeletons={str(k).lower(): str(v) for k, v in (n.get("skeletons") or {}).items()
+                                        if k and v},
                              replace=bool(n.get("replace", False)))
                     for n in (d.get("new_models") or [])],
         card_src=(d.get("card_src") or "").strip(),
@@ -1619,6 +1624,13 @@ def _plan_new_model(plan: EditPlan, mod: Mod, nm: NewModel,
 
     raw = modeldb.rename_entry_raw(clone.raw, nm.name)
     raw = modeldb.rewrite_paths_indexed(raw, index_map, pad=clone.first_entry_pad)
+    if nm.skeletons:
+        anims = [modeldb.Animation(a.mount_type or "none",
+                                   nm.skeletons.get((a.primary_skeleton or "").lower(), a.primary_skeleton or ""),
+                                   nm.skeletons.get((a.secondary_skeleton or "").lower(), a.secondary_skeleton or ""))
+                 for a in clone.animations]
+        raw = modeldb.rewrite_animations(raw, anims, pad=clone.first_entry_pad)
+        plan.changes.append(f"'{nm.name}': plays " + ", ".join(sorted(set(nm.skeletons.values()))))
     if att_records:
         raw = modeldb.add_attach_records(raw, att_tex_rel, att_norm_rel or norm_rel or att_tex_rel,
                                          pad=clone.first_entry_pad)

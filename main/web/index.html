@@ -3914,6 +3914,8 @@ body.look-editing :is(button,label,legend,h1,h2,h3,.trsechead,.mftab):hover{outl
   .cgobjxf{display:flex;flex-direction:column;gap:4px;border:1px solid var(--edge);border-radius:6px;padding:4px 6px}
   .cgobjlist .cur{outline:2px solid var(--accent);outline-offset:-2px}
   .cgrange input{min-width:0}
+  /* 2026-11-25: end to end, without the browser's own margin (a white gap at each end) */
+  .cgctl input[type=range]{margin:0;width:100%;box-sizing:border-box}
   /* one row the column's own height: the view takes what its bar leaves (a
      fixed 30px less was short of the bar, and the column scrolled a few pixels) */
   .cgout{display:grid;grid-template-columns:minmax(0,1fr) 300px;grid-template-rows:minmax(0,1fr);gap:12px;align-items:stretch;min-width:0;overflow:auto}
