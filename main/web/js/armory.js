@@ -1378,7 +1378,7 @@ function armImportPaint(){
       <button class="mftab${imp.tab === 'mod' ? ' on' : ''}" onclick="armImportTab('mod')">${tt('armory.from_a_mod')}</button>
       <button class="mftab${imp.tab === 'file' ? ' on' : ''}" onclick="armImportTab('file')">${tt('armory.from_a_file')}</button>
       <button class="mftab${imp.tab === 'library' ? ' on' : ''}" onclick="armImportTab('library')">${tt('armory.from_the_library')}</button>
-      ${imp.tab === 'file' ? '' : `<span style="flex:1"></span>
+      ${imp.tab === 'file' && !(imp.disk && imp.disk.folder) ? '' : `<span style="flex:1"></span>
         <button class="mini${armImpGallery() ? '' : ' on'}" onclick="armImportView('list')">${tt('armory.as_list')}</button>
         <button class="mini${armImpGallery() ? ' on' : ''}" onclick="armImportView('gallery')">${tt('armory.as_gallery')}</button>`}
     </div>
@@ -1470,7 +1470,9 @@ async function armImportCatalogue(){
     try{ ARM.catalogue[mod] = await api.get('/api/armory/catalogue?mod=' + enc(mod)); }
     catch(e){ const el = document.getElementById('armImpRows'); if(el) el.innerHTML = `<div class="w-bad">${esc(errText(e))}</div>`; return; }
   }
-  if(state.armImp.mod !== mod) return;
+  // the From disk tab shares #armImpRows: a catalogue that came in after the
+  // switch is not painted over the folder's models
+  if(state.armImp.mod !== mod || state.armImp.tab !== 'mod') return;
   const f = document.getElementById('armImpFilt');
   if(f) f.innerHTML = armImpFiltHtml();
   armImportRows();

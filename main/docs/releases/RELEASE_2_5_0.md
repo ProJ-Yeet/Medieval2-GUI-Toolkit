@@ -51,6 +51,13 @@ A portable install of v2.4.14 fetches this one by itself at the next start.
 
 ## Fixed
 
+* **Armory Studio's import from a folder showed the wrong textures.** Each
+  tile wore its first object's sheet over the whole model, so an export
+  whose first object was a bag or a cape showed its attachment sheet
+  everywhere. A tile now puts on the main and attachment sheets as a model
+  entry's tile does. The From disk tab has the List and Gallery switch too
+  (Gallery by default), and a mod's list that finished loading after you
+  moved to From disk no longer paints over the folder.
 * **An error in Firefox was logged with no message**, so a report from it
   said nothing. The page log now keeps the message.
 

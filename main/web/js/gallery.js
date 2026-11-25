@@ -207,17 +207,31 @@ function galPump(){
 
 /* A tile whose data-mod is GAL_EXT draws a model file from disk, data-name
    being its path: Armory Studio's folder import and the asset library's files.
-   Read through the import's own routes, its first object's texture on it. */
+   Read through the import's own routes. Its sheets are put on as a model
+   entry's are (galLoad below): the main sheet and the attachment glued side
+   by side, u halved, since a battle model's UVs run 0..2 across the pair. It
+   used to be the FIRST object's texture over the whole model, and an export
+   whose first object is a bag wore its attachment sheet everywhere. */
 const GAL_EXT = '@ext';
 async function galLoadExt(m, seq){
   const view = await api.get('/api/armory/external?path=' + enc(m.name), 2);
   const r = await fetch('/api/armory/geometry?ext=' + enc(view.id), {cache: 'no-store'});
   if(!r.ok) throw new Error(String(r.status));
   const geo = v3Parse(await r.arrayBuffer());
-  const file = ((view.objects || []).find(o => o.texture_file) || {}).texture_file;
-  const tex = file ? await galImage('/api/armory/texture?path=' + enc(file)) : null;
+  const objs = (view.objects || []).filter(o => o.texture_file);
+  const pick = want => (objs.find(o => want.includes(o.sheets)) || {}).texture_file || '';
+  const mainFile = pick(['main', 'both']) || (objs[0] || {}).texture_file || '';
+  const attFile = pick(['attach']);
+  const img = f => galImage('/api/armory/texture?path=' + enc(f));
+  const tex = mainFile ? await img(mainFile) : null;
+  const glued = attFile && attFile.toLowerCase() !== mainFile.toLowerCase();
+  const att = glued ? await img(attFile) : null;
+  if((mainFile && !tex) || (glued && !att)) throw new Error('texture');
   if(!gal || seq !== gal.seq) return;
-  m.geo = geo; m.tex = tex; m.att = null; m.uScale = 1.0;
+  // the game's layout when any object sits on the attachment, or the file is a
+  // battle .mesh; a plain .obj or .glb on one sheet keeps u as it is
+  const paired = objs.some(o => o.sheets === 'attach' || o.sheets === 'both') || /\.mesh$/i.test(m.name);
+  m.geo = geo; m.tex = tex; m.att = att; m.uScale = paired ? 0.5 : 1.0;
   m.parts = galParts(geo);
   m.variant = {}; m.hidden = {};
   const tall = geo.max[1] - geo.min[1];
