@@ -28,7 +28,9 @@ const ARM_CY_SUN = 512, ARM_CY_AO = 128, ARM_CY_W = 2048;
 const ARM_CY_SUNS = 9, ARM_CY_DIRS = 16;
 const ARM_CY_H = 3 * ARM_CY_SUN + ARM_CY_AO;      // three rows of four suns, then one row of sixteen
 
-const armCyOn = () => (state.settings || {}).armory_bake_look !== false;
+// 2026-11-25: off unless ticked; the shading and shadow atlases slowed the viewport.
+// The import previews draw the look whatever this says (gallery.js galCyLook).
+const armCyOn = () => (state.settings || {}).armory_bake_look === true;
 function armCyToggle(on){
   state.settings = state.settings || {};
   state.settings.armory_bake_look = !!on;

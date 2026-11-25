@@ -13829,7 +13829,7 @@
  "settings.base_edit_on": "现在可以编辑原版游戏了",
  "settings.base_edit_off": "原版游戏已恢复为只读",
  "armory.cy_look": "烘焙光照",
- "armory.cy_look_title": "在烘焙前显示带有高光贴图或法线贴图的每个对象，因为 Cycles 烘焙会预先计算场景世界光照、周围的太阳光、每个部件自身的阴影、金属混合效果、地面光照以及 AgX。此光照只需在 Blender 中烘焙一次。如果视口变慢，请在建模时取消勾选此项。",
+ "armory.cy_look_title": "显示每个对象的高光贴图或法线贴图效果，此时尚未烘焙；Cycles 烘焙会将世界环境光、周围的太阳光、各部分自身的阴影、金属混合效果、地面照明和 AgX 一并烘焙。在你的 Blender 中只需烘焙一次。此选项默认关闭，勾选后可能会拖慢视口；导入 PBR 文件时的预览始终会显示该效果。",
  "armory.cy_look_err": "无法为 Cycles 烘焙准备光照：{why}",
  "armory.cy_no_blender": "未找到 Blender。请先设置其路径，再进行 Cycles 烘焙。",
  "armory.cy_no_float": "这张显卡无法将烘焙光照存储在浮点贴图中。"

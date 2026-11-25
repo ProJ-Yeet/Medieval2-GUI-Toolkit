@@ -19,14 +19,13 @@ for(const f of ['armlit.js','armcycles.js'])
 // a top-level const of the page's scripts is read in their scope
 for(const n of ['armCyOn','armCyBasis']) c[n]=vm.runInContext(n,c);
 
-// on unless the user turned it off, and remembered
-assert.equal(c.armCyOn(),true);
-c.armCyToggle(false);
+// off until the user ticks it, and remembered
 assert.equal(c.armCyOn(),false);
-assert.equal(JSON.stringify(calls.at(-1)),JSON.stringify({url:'/api/settings',body:{armory_bake_look:false}}));
-assert.match(c.armCyBarHtml(),/armCyToggle\(this\.checked\)/);
-assert.doesNotMatch(c.armCyBarHtml(),/checked onchange/);
+assert.doesNotMatch(c.armCyBarHtml(),/ checked/);
 c.armCyToggle(true);
+assert.equal(c.armCyOn(),true);
+assert.equal(JSON.stringify(calls.at(-1)),JSON.stringify({url:'/api/settings',body:{armory_bake_look:true}}));
+assert.match(c.armCyBarHtml(),/armCyToggle\(this\.checked\)/);
 
 // two triangles sharing an edge are one part; a third apart is another
 const parts=c.armCyPartsOf(new Uint16Array([0,1,2, 1,2,3, 4,5,6]),7);

@@ -14632,7 +14632,7 @@
  "settings.base_edit_on": "Le jeu de base peut maintenant être modifié",
  "settings.base_edit_off": "Le jeu de base est de nouveau en lecture seule",
  "armory.cy_look": "Cuire l’éclairage",
- "armory.cy_look_title": "Affiche chaque objet doté d’une carte spéculaire ou d’une carte normale avant la cuisson de l’éclairage. Cycles précalculera l’éclairage du monde, les soleils environnants, les ombres de chaque pièce sur elle-même, le mélange métallique, l’éclairage du sol et AgX. Le calcul est effectué une seule fois dans Blender. Désactivez cette option pendant la modélisation si la fenêtre d’affichage ralentit.",
+ "armory.cy_look_title": "Affiche chaque objet avec une carte spéculaire ou une carte normale avant le précalcul de l'éclairage; Cycles précalculera l'éclairage du monde, les lumières solaires environnantes, les ombres de chaque élément sur lui-même, le mélange métallique, l'éclairage du sol et AgX. Le précalcul est effectué une seule fois dans votre installation de Blender. L'option reste désactivée tant que vous ne cochez pas la case, car elle peut ralentir la vue 3D; les aperçus lors de l'importation d'un fichier PBR l'affichent toujours.",
  "armory.cy_look_err": "Impossible de préparer l’éclairage pour la cuisson Cycles : {why}",
  "armory.cy_no_blender": "Blender est introuvable. Définissez d’abord son chemin pour la cuisson Cycles.",
  "armory.cy_no_float": "Cette carte graphique ne peut pas stocker l’éclairage précalculé dans des textures à virgule flottante."

@@ -14989,7 +14989,7 @@
  "settings.base_edit_on": "El juego base ya se puede editar",
  "settings.base_edit_off": "El juego base vuelve a ser de solo lectura",
  "armory.cy_look": "Hornear iluminación",
- "armory.cy_look_title": "Muestra cada objeto con un mapa especular o un mapa de normales antes de hornear la iluminación, porque el horneado de Cycles precalculará la iluminación del mundo, los soles del entorno, las sombras que cada parte proyecta sobre sí misma, la mezcla metálica, la iluminación del suelo y AgX. Se hornea una sola vez en tu instalación de Blender. Desactiva esta opción mientras modelas si la ventana gráfica se ralentiza.",
+ "armory.cy_look_title": "Muestra cada objeto con un mapa especular o un mapa de normales antes de hornear la iluminación; Cycles horneará la iluminación del mundo, las luces solares que lo rodean, las sombras de cada parte sobre sí misma, la mezcla metálica, la iluminación del suelo y AgX. El horneado se realiza una sola vez en la instalación de Blender. La opción permanece desactivada hasta que marques la casilla, ya que puede ralentizar la ventana gráfica; las vistas previas al importar un archivo PBR siempre la muestran.",
  "armory.cy_look_err": "No se pudo preparar la iluminación para el horneado de Cycles: {why}",
  "armory.cy_no_blender": "No se encontró Blender. Configura primero su ruta para el horneado de Cycles.",
  "armory.cy_no_float": "Esta tarjeta gráfica no puede almacenar la iluminación horneada en texturas de coma flotante."

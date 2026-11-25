@@ -233,7 +233,7 @@ async function galLoadExt(m, seq){
   const paired = objs.some(o => o.sheets === 'attach' || o.sheets === 'both') || /\.mesh$/i.test(m.name);
   // 2026-11-25: a file on one PBR colour texture is drawn as the Cycles bake
   // will bake it (armcycles.js), its spec and normal maps with it, no shadows
-  const pbr = view.pbr && galCyLook() ? view.pbr : null;
+  const pbr = view.pbr && await galCyLookWait() ? view.pbr : null;
   const spec = pbr && pbr.spec ? await img(pbr.spec) : null;
   const nrm = pbr && pbr.normal ? await img(pbr.normal) : null;
   if(!gal || seq !== gal.seq) return;
@@ -434,10 +434,21 @@ function galFrame(now){
 
 /* --- 2026-11-25: the Cycles bake's look on a PBR tile (armcycles.js) -------------- */
 const galCyLook = () => {
-  if(typeof armCyOn !== 'function' || !armCyOn()) return null;
-  if(!(ARM.cy && ARM.cy.look) && typeof armCyCheck === 'function') armCyCheck();
+  if(typeof armCyCheck !== 'function') return null;
+  if(!(ARM.cy && ARM.cy.look)) armCyCheck();
   return ARM.cy && ARM.cy.look ? ARM.cy.look : null;
 };
+// a tile waits for the light (the first time, Blender measures it), but not
+// past an error; the viewport's toggle no longer asks for it ahead of time
+async function galCyLookWait(){
+  for(let i = 0; i < 240; i++){
+    const lk = galCyLook();
+    if(lk) return lk;
+    if(!ARM.cy || ARM.cy.err) return null;
+    await new Promise(r => setTimeout(r, 500));
+  }
+  return null;
+}
 function galTex(gl, img, data){
   const t = gl.createTexture();
   gl.bindTexture(gl.TEXTURE_2D, t);

@@ -453,7 +453,7 @@
 "armory.external_file": "a file on disk",
 "armory.face_orientation": "Face orientation",
 "armory.cy_look": "Bake light",
-"armory.cy_look_title": "Draw each object with a spec or normal map, not baked yet, as the Cycles bake will bake it: the bake's world, its surround suns, each part's shadows on itself, the metal mix, the light floor and AgX. Measured in your Blender once. Untick it while modelling if the viewport slows down.",
+"armory.cy_look_title": "Draw each object with a spec or normal map, not baked yet, as the Cycles bake will bake it: the bake's world, its surround suns, each part's shadows on itself, the metal mix, the light floor and AgX. Measured in your Blender once. Off until ticked, as it can slow the viewport; import previews of a PBR file always show it.",
 "armory.cy_look_err": "The Cycles bake's light could not be got ready: {why}",
 "armory.cy_no_blender": "Blender was not found. Set its path for the Cycles bake first.",
 "armory.cy_no_float": "this graphics card cannot hold the bake's light in float textures",

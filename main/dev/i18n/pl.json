@@ -15242,7 +15242,7 @@
  "settings.base_edit_on": "Grę podstawową można teraz edytować",
  "settings.base_edit_off": "Gra podstawowa znów jest tylko do odczytu",
  "armory.cy_look": "Wypal światło",
- "armory.cy_look_title": "Wyświetlaj każdy obiekt z mapą specularną lub mapą normalnych przed wypaleniem oświetlenia, ponieważ Cycles wypali oświetlenie świata, słońca w otoczeniu, cienie rzucane przez każdą część na samą siebie, mieszankę metalu, oświetlenie podłoża i AgX. Wypalanie wykonuje się raz w Blenderze. Wyłącz tę opcję podczas modelowania, jeśli spowalnia widok 3D.",
+ "armory.cy_look_title": "Wyświetlaj każdy obiekt z mapą specularną lub mapą normalnych przed wypaleniem oświetlenia; Cycles wypali oświetlenie świata, otaczające światła słoneczne, cienie rzucane przez każdą część na nią samą, mieszankę metalu, oświetlenie podłoża i AgX. Wypalanie odbywa się tylko raz w programie Blender. Opcja pozostaje wyłączona, dopóki jej nie zaznaczysz, ponieważ może spowalniać widok 3D; podglądy podczas importu pliku PBR zawsze ją pokazują.",
  "armory.cy_look_err": "Nie udało się przygotować oświetlenia do wypalania w Cycles: {why}",
  "armory.cy_no_blender": "Nie znaleziono Blendera. Najpierw ustaw jego ścieżkę na potrzeby wypalania w Cycles.",
  "armory.cy_no_float": "Ta karta graficzna nie może przechowywać wypalonego oświetlenia w teksturach zmiennoprzecinkowych."
