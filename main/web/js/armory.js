@@ -280,17 +280,15 @@ function armPaintBar(){
     <span class="armgrp"><span class="armshade" id="armShade">${typeof armShadeHtml === 'function' ? armShadeHtml() : ''}</span>
       <label class="armcheck"><input type="checkbox"${ARM.stats ? ' checked' : ''} onchange="armToggle('stats')"> ${tt('armory.statistics')}</label>
       <label class="armcheck"><input type="checkbox"${ARM.faceOrient ? ' checked' : ''} onchange="armToggle('faceOrient')"> ${tt('armory.face_orientation')}</label></span>
+    <span class="armbarbreak"></span>
     <span class="armgrp"><button class="mini" onclick="armFullView()" title="${esc(tt('armory.full_view_title'))}">⛶ ${tt('armory.full_view')}</button>
       <button class="mini" onclick="armFrameAll()" title="${esc(tt('armory.frame_all_title'))}">${tt('armory.frame_all')}</button></span>
     <span class="armgrp" id="armEditBox">${armEditBoxHtml()}</span>
     <button class="mini" onclick="armTexOpen()" title="${esc(tt('armory.textures_title'))}">🖼 ${tt('armory.textures')}</button>
     <span class="armgrp" id="armSelTools">${typeof armSelToolsHtml === 'function' ? armSelToolsHtml() : ''}</span>
-    <span class="armbarbreak"></span>
     <button class="mini primary" onclick="armSessSaveCurrent()">${tt('common.save')}</button>
     <button class="mini" onclick="armSessOpen()" title="${esc(tt('armory.sess_button_title'))}">${tt('armory.sess_button')}</button>
     <button class="mini" onclick="armLibOpen()" title="${esc(tt('armory.lib_open_title'))}">${tt('armory.lib_open')}</button>
-    <button class="mini" onclick="armNew()">${tt('armory.new_project')}</button>
-    <button class="mini" onclick="reportOpen('armory')" title="${esc(tt('armory.report_title'))}">🐞 ${tt('armory.report')}</button>
     <button class="mini primary" onclick="armExportOpen()"${p.objects.length ? '' : ' disabled'} title="${esc(tt('armory.export_title'))}">${tt('armory.export_button')}</button>`;
 }
 /* 2026-11-24: the object's edit modes side by side, Detail view and UV edit. */
@@ -315,15 +313,6 @@ function armObjTris(o){
 /* An object holds pieces: a whole group of an asset, or some of its
    triangles (a split, 95f), each with a matrix of its own once merged. */
 const armUses = (o, key, group) => (o.src || []).some(pc => pc.asset === key && (group == null || pc.group === group));
-
-function armNew(){
-  if(armProj().objects.length && !confirm(tt('armory.new_project_confirm'))) return;
-  state.armProj = null;
-  state.armExp = null;               // the last project's export names stay with it
-  ARM.sel.clear();
-  armSave();
-  renderArmory();
-}
 
 /* --- the assets panel ------------------------------------------------------ */
 
