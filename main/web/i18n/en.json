@@ -3309,6 +3309,7 @@
 "core.armory_studio_3d_by_mreedmm": "<a href=\"https://github.com/muhamadridhomm/armorystudio3d\" target=\"_blank\" style=\"color:var(--accent2)\">Armory Studio 3D</a> by <b>Mreedmm</b>",
 "core.blender_toolkit_by_wk_and_projyeet": "<a href=\"https://github.com/WK-313/Medieval-2-Blender-Toolkit\" target=\"_blank\" style=\"color:var(--accent2)\">Medieval 2 Blender Toolkit</a> by <b>WK</b> and <b>ProJYeet</b>",
 "core.gui_toolkit_source_link": "<a href=\"https://github.com/ProJ-Yeet/medieval2-gui-toolkit\" target=\"_blank\" style=\"color:var(--accent2)\">Medieval II GUI Toolkit</a> on GitHub",
+"core.jopero": "Jopero",
 "core.source_code": "Source code",
 "core.ssr_unit_builder_by_lupinemaverick": "<a href=\"https://github.com/lupinemaverick/stainless-steel-reforged-unit-builder\" target=\"_blank\" style=\"color:var(--accent2)\">Stainless Steel: Reforged Unit Builder</a> by <b>Lupinemaverick</b>, built on the MUG Unit Builder v1.5 and the MUG Unit Creation Guide",
 "core.armory_studio_hint": "build a model out of the parts of others, from any installed mod or a file",
@@ -3474,6 +3475,7 @@
 "one": "{open} {count} thing to look at",
 "other": "{open} {count} things to look at"
 },
+"core.toolkit_icon": "Toolkit icon",
 "core.transfer_selected": "Transfer selected ({selected_n})",
 "core.transfer_to": "Transfer to “{dst}” →",
 "core.twmapreader_by_withwnar": "<a href=\"https://www.twcenter.net/threads/tw-map-reader-v2-24-1-jul-2015-update.438278/\" target=\"_blank\" style=\"color:var(--accent2)\">TWMapReader</a> by <b>Withwnar</b>",

@@ -671,6 +671,8 @@ taught everyone, this tool included, how these files actually work.
 
 **Testing** Jayzinski, TheHolyPilgrim, Espartan, Anhlego, Lupinemaverick and empire3376
 
+**Toolkit icon** Jopero
+
 ## License
 
 The toolkit is free software under the GNU General Public License v3.0: see

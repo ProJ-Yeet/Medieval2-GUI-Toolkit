@@ -13812,5 +13812,7 @@
  "core.source_code": "源代码",
  "core.unofficial_fan_tool": "非官方粉丝工具，并非由 SEGA 或 Creative Assembly 制作、批准或支持。Total War 与 Medieval II: Total War 是其各自所有者的商标。",
  "core.blender_toolkit_by_wk_and_projyeet": "<a href=\"https://github.com/WK-313/Medieval-2-Blender-Toolkit\" target=\"_blank\" style=\"color:var(--accent2)\">Medieval 2 Blender Toolkit</a>，作者 <b>WK</b> 与 <b>ProJYeet</b>",
- "core.gui_toolkit_source_link": "GitHub 上的 <a href=\"https://github.com/ProJ-Yeet/medieval2-gui-toolkit\" target=\"_blank\" style=\"color:var(--accent2)\">Medieval II GUI Toolkit</a>"
+ "core.gui_toolkit_source_link": "GitHub 上的 <a href=\"https://github.com/ProJ-Yeet/medieval2-gui-toolkit\" target=\"_blank\" style=\"color:var(--accent2)\">Medieval II GUI Toolkit</a>",
+ "core.toolkit_icon": "工具包图标",
+ "core.jopero": "Jopero"
 }

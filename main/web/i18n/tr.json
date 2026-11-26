@@ -13951,5 +13951,7 @@
  "core.source_code": "Kaynak kodu",
  "core.unofficial_fan_tool": "Resmi olmayan bir hayran aracıdır; SEGA veya Creative Assembly tarafından yapılmamış, onaylanmamış ya da desteklenmemektedir. Total War ve Medieval II: Total War, sahiplerinin ticari markalarıdır.",
  "core.blender_toolkit_by_wk_and_projyeet": "<b>WK</b> ve <b>ProJYeet</b> tarafından <a href=\"https://github.com/WK-313/Medieval-2-Blender-Toolkit\" target=\"_blank\" style=\"color:var(--accent2)\">Medieval 2 Blender Toolkit</a>",
- "core.gui_toolkit_source_link": "GitHub'da <a href=\"https://github.com/ProJ-Yeet/medieval2-gui-toolkit\" target=\"_blank\" style=\"color:var(--accent2)\">Medieval II GUI Toolkit</a>"
+ "core.gui_toolkit_source_link": "GitHub'da <a href=\"https://github.com/ProJ-Yeet/medieval2-gui-toolkit\" target=\"_blank\" style=\"color:var(--accent2)\">Medieval II GUI Toolkit</a>",
+ "core.toolkit_icon": "Toolkit simgesi",
+ "core.jopero": "Jopero"
 }

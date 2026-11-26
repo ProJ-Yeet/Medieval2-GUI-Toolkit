@@ -2252,6 +2252,10 @@ async function openCredits(){
         ${tt('core.jayzinski_theholypilgrim_espartan_anhlego_lupine')}
       </div>
       <div style="margin-top:14px">
+        <div class="lbl" style="margin-bottom:4px">${tt('core.toolkit_icon')}</div>
+        <b>${tt('core.jopero')}</b>
+      </div>
+      <div style="margin-top:14px">
         <div class="lbl" style="margin-bottom:4px">${tt('core.support')}</div>
         <div class="sociallinks">${socialLinks()}</div>
       </div>

@@ -2074,6 +2074,9 @@ class Handler(BaseHTTPRequestHandler):
             if u.path.startswith("/vendor/"):
                 # 125: third-party files the page loads on demand (CodeMirror 5)
                 return self._web_asset(u.path)
+            if u.path == "/favicon.ico":
+                # 2026-11-26: Jopero's icon, which a browser asks for on its own
+                return self._web_asset("/img/guitoolkit.ico")
             if u.path.startswith("/img/"):
                 # 2026-11-24: the card maker's experience and unit count overlay
                 return self._web_asset(u.path)
@@ -6467,7 +6470,7 @@ class Handler(BaseHTTPRequestHandler):
     #: served from disk, so this stays deliberately short.
     WEB_TYPES = {".js": "application/javascript; charset=utf-8",
                  ".css": "text/css; charset=utf-8",
-                 ".svg": "image/svg+xml", ".png": "image/png",
+                 ".svg": "image/svg+xml", ".png": "image/png", ".ico": "image/x-icon",
                  ".json": "application/json; charset=utf-8"}
 
     def _web_asset(self, url_path: str, stamped: bool = False):

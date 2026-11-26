@@ -14613,5 +14613,7 @@
  "core.source_code": "Code source",
  "core.unofficial_fan_tool": "Un outil de fan non officiel, ni créé, ni approuvé, ni soutenu par SEGA ou Creative Assembly. Total War et Medieval II: Total War sont des marques de leurs propriétaires respectifs.",
  "core.blender_toolkit_by_wk_and_projyeet": "<a href=\"https://github.com/WK-313/Medieval-2-Blender-Toolkit\" target=\"_blank\" style=\"color:var(--accent2)\">Medieval 2 Blender Toolkit</a> par <b>WK</b> et <b>ProJYeet</b>",
- "core.gui_toolkit_source_link": "<a href=\"https://github.com/ProJ-Yeet/medieval2-gui-toolkit\" target=\"_blank\" style=\"color:var(--accent2)\">Medieval II GUI Toolkit</a> sur GitHub"
+ "core.gui_toolkit_source_link": "<a href=\"https://github.com/ProJ-Yeet/medieval2-gui-toolkit\" target=\"_blank\" style=\"color:var(--accent2)\">Medieval II GUI Toolkit</a> sur GitHub",
+ "core.toolkit_icon": "Icône du toolkit",
+ "core.jopero": "Jopero"
 }
