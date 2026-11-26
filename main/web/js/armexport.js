@@ -1102,21 +1102,36 @@ function armExpRoleRows(){ const el = document.getElementById('armExpRoleRows');
 
 /* --- the side: the source model, and this one playing its animations ------- */
 
+/* What the source viewer shows (2026-11-26): with the unit's own soldier
+   chosen, the unit as the game shows it, its first armour_ug_models entry
+   (Falas Lords is falas_lords; its soldier line orc_key_host_upg0 only
+   lends the skeletons), played by the soldier line's skeletons. */
+function armExpViewEntry(){
+  const m = armExpMod(), entry = armExpSrcEntry();
+  if(armExpSrc() !== 'unit') return entry;
+  const u = ((m.data || {}).units || []).find(x => x.type === m.unit);
+  return (u && (u.ug || [])[0] || entry).toLowerCase();
+}
 function armExpSide(){
   const el = document.getElementById('armExpSide');
   if(!el) return;
-  const m = armExpMod(), entry = armExpSrcEntry(), a = ARM.expAnim || {};
+  const m = armExpMod(), entry = armExpSrcEntry(), view = armExpViewEntry(), a = ARM.expAnim || {};
   const shut = k => (ARM.expShut || []).includes(k);
-  if(el.dataset.entry !== entry || el.dataset.shut !== String(shut('side_src')) || !el.childElementCount){
-    el.dataset.entry = entry; el.dataset.shut = String(shut('side_src'));
-    el.innerHTML = armExpSec('side_src', entry ? tt('armory.exp_side_source', {entry: esc(entry)}) : tt('armory.exp_side_source_none'),
+  if(el.dataset.entry !== entry + '|' + view || el.dataset.shut !== String(shut('side_src')) || !el.childElementCount){
+    el.dataset.entry = entry + '|' + view; el.dataset.shut = String(shut('side_src'));
+    el.innerHTML = armExpSec('side_src', view ? tt('armory.exp_side_source', {entry: esc(view)}) : tt('armory.exp_side_source_none'),
         `<div class="armexpv3" id="armExpV3"></div>`)
-      + armExpSec('side_mine', tt('armory.exp_side_mine'), `<canvas class="armexpmine" id="armExpMine" width="320" height="400"></canvas>
+      + armExpSec('side_mine', tt('armory.exp_side_mine'), `<canvas class="armexpmine" id="armExpMine" width="320" height="300"></canvas>
+        <div class="count">${tt('viewer3d.drag_to_turn_wheel_to_zoom')}</div>
         <div class="armexprow"><select id="armExpAct" onchange="armExpAnimPick(this.value)"></select>
           <button class="mini" id="armExpPlay" onclick="armExpAnimPlay()">▶</button></div>
         <div class="count" id="armExpAnimNote"></div>`);
-    if(entry && !shut('side_src') && typeof v3Mount === 'function'){ if(typeof v3 !== 'undefined' && v3 && v3.host === 'armExpV3') v3 = null; v3Mount('armExpV3', m.target, entry); }
-    ARM.expAnimFor = null;
+    if(view && !shut('side_src') && typeof v3Mount === 'function'){
+      if(typeof v3 !== 'undefined' && v3 && v3.host === 'armExpV3') v3 = null;
+      v3Mount('armExpV3', m.target, view, view !== entry ? entry : undefined);
+    }
+    ARM.expAnimFor = null; ARM.expCam = null;
+    armExpMineControls(document.getElementById('armExpMine'));
   }
   if(!shut('side_mine')) armExpAnimLoad(entry);
 }
@@ -1178,15 +1193,50 @@ function armExpSideDrop(){
   if(ARM.expAnimHeld){ ARM.anim = ARM.expAnimHeld.anim; ARM.expAnimHeld = null; armFrame(); }
   if(typeof v3 !== 'undefined' && v3 && v3.host === 'armExpV3' && typeof v3Unmount === 'function') v3Unmount();
 }
+/* 2026-11-26: this model is turned as the source viewer turns its own
+   (viewer3d.js): the same orbit, framing and perspective, drag to turn,
+   wheel to zoom, right-drag to pan. */
+function armExpMineControls(cv){
+  if(!cv) return;
+  let last = null, pan = false;
+  cv.addEventListener('contextmenu', e => e.preventDefault());
+  cv.addEventListener('pointerdown', e => { last = [e.clientX, e.clientY]; pan = e.button === 2 || e.shiftKey; cv.setPointerCapture(e.pointerId); });
+  cv.addEventListener('pointerup', e => { last = null; try{ cv.releasePointerCapture(e.pointerId); }catch(err){} });
+  cv.addEventListener('pointermove', e => {
+    const c = ARM.expCam;
+    if(!last || !c) return;
+    const dx = e.clientX - last[0], dy = e.clientY - last[1];
+    last = [e.clientX, e.clientY];
+    if(pan){
+      const k = c.dist / 500;
+      c.centre[0] -= dx * k * Math.cos(c.yaw); c.centre[2] += dx * k * Math.sin(c.yaw); c.centre[1] += dy * k;
+    }else{
+      c.yaw -= dx * 0.01;
+      c.pitch = Math.max(-1.5, Math.min(1.5, c.pitch + dy * 0.01));
+    }
+  });
+  cv.addEventListener('wheel', e => {
+    if(!ARM.expCam) return;
+    e.preventDefault();
+    ARM.expCam.dist = Math.max(0.05, ARM.expCam.dist * (e.deltaY > 0 ? 1.12 : 0.89));
+  }, {passive: false});
+}
 function armExpMineDraw(cv){
   const objs = armVisibleObjects();
   if(!objs.length) return;
   const w = cv.width, h = cv.height;
   armAnimPose(objs);
-  const [lo, hi] = cgBounds(objs), center = lo.map((v, i) => (v + hi[i]) / 2);
-  const height = Math.max(0.1, hi[1] - lo[1]) * 1.25, width = height * w / h;
-  const target = [-center[0], center[1], center[2]], eye = [target[0] + 6, target[1] + 2, target[2] + 8];
-  const cam = {proj: [2 / width, 0, 0, 0, 0, 2 / height, 0, 0, 0, 0, -0.01, 0, 0, 0, 0, 1], view: v3LookAt(eye, target, [0, 1, 0]), eye};
+  let c = ARM.expCam;
+  if(!c){
+    // framed once, as the viewer frames a soldier, so a playing action
+    // does not move the camera
+    const [lo, hi] = cgBounds(objs), center = lo.map((v, i) => (v + hi[i]) / 2);
+    const tall = hi[1] - lo[1], wide = Math.max(hi[0] - lo[0], hi[2] - lo[2]);
+    c = ARM.expCam = {yaw: 0.6, pitch: 0.25, dist: (Math.max(tall, wide / 2) || 1) * 1.12, centre: [-center[0], center[1], center[2]]};
+  }
+  const cp = Math.cos(c.pitch), sp = Math.sin(c.pitch);
+  const eye = [c.centre[0] + c.dist * cp * Math.sin(c.yaw), c.centre[1] + c.dist * sp, c.centre[2] + c.dist * cp * Math.cos(c.yaw)];
+  const cam = {proj: v3Perspective(0.9, w / h, Math.max(0.01, c.dist / 100), c.dist * 10), view: v3LookAt(eye, c.centre, [0, 1, 0]), eye};
   const light = {amount: 1, ambient: 0.35, level: 1, point: false, dir: [0.45, 0.75, 0.5]};
   if(!armRender(objs, w, h, cam, {plain: true, card: true, light, bg: [0.13, 0.15, 0.18]})) return;
   cv.getContext('2d').drawImage(ARM.glCanvas, 0, 0, w, h, 0, 0, w, h);

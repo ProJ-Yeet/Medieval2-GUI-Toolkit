@@ -3782,9 +3782,10 @@ body.look-editing :is(button,label,legend,h1,h2,h3,.trsechead,.mftab):hover{outl
   .armtexthumb{width:72px;height:72px;object-fit:contain;background:#111;border-radius:4px}
   .armtexthumb.bad{opacity:.3}
   /* 2026-11-23: export step 4 in folding parts, the models beside them */
-  .armexpmod{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:12px;align-items:start}
+  .armexpmod{display:grid;grid-template-columns:minmax(0,1fr) 680px;gap:12px;align-items:start}
   .armexpmodmain{min-width:0;display:flex;flex-direction:column;gap:6px}
-  .armexpside{display:flex;flex-direction:column;gap:6px;position:sticky;top:0}
+  .armexpside{display:flex;flex-direction:row;gap:6px;position:sticky;top:0;align-items:flex-start}
+  .armexpside>.armexpsec{flex:1;min-width:0}  /* 2026-11-26: the two models side by side */
   .armexpsec{border:1px solid var(--edge);border-radius:7px;background:var(--panel2)}
   .armexpsec>summary{cursor:pointer;font-weight:600;color:var(--accent);padding:6px 9px}
   .armexpsecbody{padding:0 9px 8px;display:flex;flex-direction:column;gap:5px}
@@ -3800,7 +3801,8 @@ body.look-editing :is(button,label,legend,h1,h2,h3,.trsechead,.mftab):hover{outl
   .armexpv3 .v3wrap.dock{flex-wrap:nowrap;height:auto}
   .armexpv3 .v3wrap.dock .v3stage{flex:none;height:300px;min-height:200px}
   .armexpv3 .v3wrap.dock .v3side{max-height:calc(24vh / var(--uiz))}
-  .armexpmine{width:100%;height:auto;border-radius:6px;background:#22272e}
+  .armexpmine{width:100%;height:300px;border-radius:6px;background:#22272e;cursor:grab;touch-action:none}
+  @container page (max-width:1500px){.armexpmod{grid-template-columns:minmax(0,1fr) 340px}.armexpside{flex-direction:column}.armexpside>.armexpsec{width:100%}}
   @container page (max-width:1000px){.armexpmod{grid-template-columns:1fr}}
   .armtexmeta{display:flex;flex-direction:column;gap:2px;flex:1;min-width:0}
   .armtexmeta b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -3876,6 +3878,7 @@ body.look-editing :is(button,label,legend,h1,h2,h3,.trsechead,.mftab):hover{outl
   .armexpsheets{display:flex;flex-direction:column;gap:8px}
   .armexpsheet{display:flex;flex-direction:column;gap:3px}
   .armexpsheet canvas{width:480px;height:480px;max-width:100%;border:1px solid var(--edge);border-radius:4px;image-rendering:pixelated;cursor:pointer}
+  .armexplist[hidden]{display:none}  /* its display:flex beat [hidden]: the list stayed and pushed the sheets below */
   .armexpuv.nolist .armexpsheets{flex-direction:row;flex-wrap:wrap}
   .armexpuv.nolist .armexpsheet canvas{width:min(620px,36vw);height:auto;aspect-ratio:1}
   .armexptable tr.armexpsel td{background:rgba(255,214,64,.12)}

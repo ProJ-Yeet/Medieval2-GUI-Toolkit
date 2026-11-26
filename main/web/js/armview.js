@@ -328,12 +328,14 @@ function armXformMove(e){
   armXformUpdate();
   return true;
 }
+// a game axis by Blender's letter for it, Z up (2026-11-26)
+const ARM_AXIS_NAME = 'XZY';
 function armXformKey(e){
   const x = ARM.xform, k = e.key;
   e.preventDefault();
   if(k === 'Escape') return armXformEnd(false);
   if(k === 'Enter') return armXformEnd(true);
-  const ax = {x: 0, y: 1, z: 2}[k.toLowerCase()];
+  const ax = {x: 0, y: 2, z: 1}[k.toLowerCase()];  // Blender's letters, Z up
   if(ax !== undefined){ x.axis = x.axis === ax ? null : ax; return armXformUpdate(); }
   if(/^[0-9.]$/.test(k) || (k === '-' && !x.typed)){ x.typed += k; return armXformUpdate(); }
   if(k === 'Backspace'){ x.typed = x.typed.slice(0, -1); return armXformUpdate(); }
@@ -368,7 +370,7 @@ function armXformUpdate(){
     // other way in the game's space about y and z; a typed angle is the
     // game's own
     v = m3axis(axis, typed != null || axis === 0 ? deg : -deg);
-    x.value = `${'XYZ'[axis]} ${deg.toFixed(1)}°`;
+    x.value = `${ARM_AXIS_NAME[axis]} ${deg.toFixed(1)}°`;
   }else{
     let f = 1;
     if(typed != null) f = typed;
@@ -405,8 +407,9 @@ function armPaintSliders(){
     armFrame();
     return;
   }
-  const row = (kind, label, vals, step) => `<div class="armslrow"><b>${label}</b>${[0, 1, 2].map(i =>
-    `<label>${'XYZ'[i]}<input type="number" step="${step}" value="${o ? armRound(vals[i], 1000) : ''}"${o ? '' : ' disabled'}
+  // X, Y, Z as Blender shows them, Z up: the game's x, z, y
+  const row = (kind, label, vals, step) => `<div class="armslrow"><b>${label}</b>${[0, 2, 1].map(i =>
+    `<label>${ARM_AXIS_NAME[i]}<input type="number" step="${step}" value="${o ? armRound(vals[i], 1000) : ''}"${o ? '' : ' disabled'}
       onchange="armSlider('${kind}', ${i}, this.value)" onwheel="armSliderWheel(event, '${kind}', ${i}, ${step})"></label>`).join('')}</div>`;
   el.innerHTML = `<div class="armfoothead"><button class="armfold" onclick="armFootToggle()" title="${esc(tt('armory.foot_fold_title'))}">▾ ${tt('armory.foot_tools')}</button></div>
     <div class="armslwrap"><div class="armsliders">
@@ -530,7 +533,7 @@ function armOverlay95g(ctx, w, h){
   ctx.textBaseline = 'top';
   if(x){
     const verb = {grab: tt('armory.key_grab'), rotate: tt('armory.key_rotate'), scale: tt('armory.key_scale')}[x.kind];
-    const axis = x.axis == null ? '' : ` · ${'XYZ'[x.axis]}`;
+    const axis = x.axis == null ? '' : ` · ${ARM_AXIS_NAME[x.axis]}`;
     const line = `${verb}${axis}: ${x.typed ? x.typed + ' ✎' : x.value}  ${tt('armory.xform_hint')}`;
     ctx.fillStyle = 'rgba(15,17,21,.82)';
     ctx.fillRect(8 * dpr, h - 30 * dpr, ctx.measureText(line).width + 16 * dpr, 22 * dpr);
@@ -629,9 +632,11 @@ function armBonesDraw(ctx, w, h){
    with X, Y or Z use: Y is up. A click on a ball looks down that axis at the
    model, a drag on the gizmo orbits. */
 const ARM_GIZMO = {r: 46, ball: 9, pad: 14};
+// 2026-11-26: named as Blender names them, Z up: the game's y is Blender's Z
+// and its z Blender's Y (the view mirrors x, so no sign changes)
 const ARM_GIZMO_AXES = [
-  {axis: 0, sign: 1, label: 'X', col: '#e8555f'}, {axis: 1, sign: 1, label: 'Y', col: '#7cc843'}, {axis: 2, sign: 1, label: 'Z', col: '#4f8fe8'},
-  {axis: 0, sign: -1, label: '', col: '#e8555f'}, {axis: 1, sign: -1, label: '', col: '#7cc843'}, {axis: 2, sign: -1, label: '', col: '#4f8fe8'},
+  {axis: 0, sign: 1, label: 'X', col: '#e8555f'}, {axis: 2, sign: 1, label: 'Y', col: '#7cc843'}, {axis: 1, sign: 1, label: 'Z', col: '#4f8fe8'},
+  {axis: 0, sign: -1, label: '', col: '#e8555f'}, {axis: 2, sign: -1, label: '', col: '#7cc843'}, {axis: 1, sign: -1, label: '', col: '#4f8fe8'},
 ];
 /* The gizmo's centre and the balls, in CSS pixels of the view. */
 function armGizmoLayout(){
