@@ -66,6 +66,16 @@ SHOTS = [
          setup="setAppMode('buildings')", wait=".faction-group, .bldcard"),
     dict(name="campaign-map", title="Campaign Map",
          setup="setAppMode('campmap')", wait="canvas", settle=9000),
+    # 2026-11-26, for v2.5: the two screens that left beta with the map.
+    # Armory Studio opens on whatever workspace it last had.
+    dict(name="armory-studio", title="Armory Studio",
+         setup="setAppMode('armory')", wait="canvas", settle=9000),
+    # The card maker on the mod's first unit, posed and textured.
+    dict(name="card-maker", title="Unit card maker",
+         setup="setAppMode('cards'); cardsSub('generate')", wait=".upk, canvas",
+         then="(async()=>{while(!(CG_UNIT.units&&CG_UNIT.units.list&&CG_UNIT.units.list.length))"
+              "await new Promise(r=>setTimeout(r,300));cgUnitLoad(CG_UNIT.units.list[0].type);})()",
+         then_wait="canvas", settle=12000),
     dict(name="factions", title="Factions",
          setup="setAppMode('factions')", wait=".trwrap"),
     dict(name="traits", title="Traits",
@@ -98,6 +108,8 @@ def main(argv=None) -> int:
                                               "(default: whatever the tool lists first)")
     ap.add_argument("--only", nargs="*", default=[], help="just these shot names")
     ap.add_argument("--port", type=int, default=0)
+    ap.add_argument("--channel", default="", help="an installed browser to drive instead "
+                                                  "of Playwright's own Chromium, e.g. msedge")
     args = ap.parse_args(argv)
 
     try:
@@ -121,7 +133,7 @@ def main(argv=None) -> int:
     try:
         wait_for_port(port, proc)
         with sync_playwright() as p:
-            browser = p.chromium.launch()
+            browser = p.chromium.launch(channel=args.channel or None)
             page = browser.new_page(viewport=VIEWPORT, device_scale_factor=1)
             page.goto(f"http://127.0.0.1:{port}/", wait_until="networkidle")
             page.wait_for_function("typeof setAppMode === 'function'", timeout=60000)

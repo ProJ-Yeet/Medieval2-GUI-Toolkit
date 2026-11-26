@@ -8,6 +8,22 @@ skeletons.
 
 A portable install of v2.4.14 fetches this one by itself at the next start.
 
+## Tutorial
+
+The video tutorial for the unit card maker and Armory Studio is on YouTube:
+[watch it here](https://youtu.be/zbhfqkFte4Q).
+
+Questions, reports and what people are making: [Discord](https://discord.gg/htkpNjk5yq).
+The source and every release: [GitHub](https://github.com/ProJ-Yeet/Medieval2-GUI-Toolkit).
+
+![The campaign map editor](https://github.com/ProJ-Yeet/Medieval2-GUI-Toolkit/releases/download/v2.5.0/campaign-map.png)
+
+![Armory Studio](https://github.com/ProJ-Yeet/Medieval2-GUI-Toolkit/releases/download/v2.5.0/armory-studio.png)
+
+![The unit card maker posing a Gondor Bodyguard](https://github.com/ProJ-Yeet/Medieval2-GUI-Toolkit/releases/download/v2.5.0/card-maker.png)
+
+![A pose from the pose library, with the Experience overlay on the card](https://github.com/ProJ-Yeet/Medieval2-GUI-Toolkit/releases/download/v2.5.0/card-maker-experience.png)
+
 ## New
 
 * **Out of beta: the Campaign Map editor, Armory Studio and the unit card
@@ -73,6 +89,11 @@ A portable install of v2.4.14 fetches this one by itself at the next start.
     Import previews of a PBR file use the chosen bake's light, without
     shadows;
   * the list of objects folds away under its own heading.
+* **The toolkit has an icon**, by Jopero, on its browser tab.
+* **Credits** add the Medieval 2 Blender Toolkit by WK and ProJYeet and the
+  toolkit's own source on GitHub (GPLv3), and say the toolkit is an
+  unofficial fan tool, not made, approved or supported by SEGA or Creative
+  Assembly.
 
 ## Fixed
 
@@ -83,6 +104,8 @@ A portable install of v2.4.14 fetches this one by itself at the next start.
   entry's tile does. The From disk tab has the List and Gallery switch too
   (Gallery by default), and a mod's list that finished loading after you
   moved to From disk no longer paints over the folder.
+* **The card maker's Add owner list showed only checkboxes**, no faction
+  names: the Find box's width rule stretched every row's checkbox too.
 * **An error in Firefox was logged with no message**, so a report from it
   said nothing. The page log now keeps the message.
 
