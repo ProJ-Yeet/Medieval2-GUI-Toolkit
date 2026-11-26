@@ -203,7 +203,9 @@ rem 2 declined, anything else a failure.
 :make_shortcut
 set "SC_ICON=%~dp0web\img\guitoolkit.ico"
 if exist "%~dp0main\web\img\guitoolkit.ico" set "SC_ICON=%~dp0main\web\img\guitoolkit.ico"
-set "SC_TARGET=%~dp0Launch-Medieval2-GUI-Toolkit.bat"
+rem %CD% is this folder (the cd at the top); a name after a backslash is
+rem one the release build's check of named files can read.
+set "SC_TARGET=%CD%\Launch-Medieval2-GUI-Toolkit.bat"
 set "SC_WORK=%~dp0"
 set "SC_DIR=%UT_SHORTCUT_DIR%"
 set "SC_ANSWER=%UT_SHORTCUT_ANSWER%"
