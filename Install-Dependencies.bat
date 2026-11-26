@@ -76,6 +76,7 @@ if %errorlevel%==0 (
     echo.
     echo Nothing to do - you can run Launch-Medieval2-GUI-Toolkit.bat now.
     echo.
+    call :make_shortcut
     pause
     exit /b 0
 )
@@ -102,6 +103,7 @@ echo ============================================================
 echo  Done. You can run Launch-Medieval2-GUI-Toolkit.bat now.
 echo ============================================================
 echo.
+call :make_shortcut
 pause
 endlocal
 exit /b 0
@@ -183,6 +185,41 @@ echo Adding it to your PATH ^(your account only - no administrator needed^)...
 powershell -NoProfile -Command "$d='%PYDIR%'; $cur=[Environment]::GetEnvironmentVariable('Path','User'); if(-not $cur){$cur=''}; $parts=[System.Collections.Generic.List[string]]($cur.Split(';',[StringSplitOptions]::RemoveEmptyEntries)); foreach($a in @($d,(Join-Path $d 'Scripts'))){ if($parts -notcontains $a){ $parts.Add($a) } }; [Environment]::SetEnvironmentVariable('Path',($parts -join ';'),'User')" >nul 2>nul
 if errorlevel 1 echo   ^(couldn't save it permanently - using it for this run only^)
 set "PATH=%PYDIR%;%PYDIR%\Scripts;%PATH%"
+exit /b
+
+rem A desktop shortcut to the launcher wearing the toolkit's icon (Jopero's),
+rem made only if the player says yes in a popup. A .bat cannot carry an icon
+rem and a shortcut in the zip would point at the folder it was made in, so it
+rem is made here, on the player's own machine. Once there it is refreshed on
+rem every run without asking again, so it follows the folder if it was moved.
+rem The icon is main\web\img in the repository and web\img in the release zip.
+rem The desktop comes from Windows, since OneDrive moves it. For the tests,
+rem UT_SHORTCUT_DIR puts it somewhere else and UT_SHORTCUT_ANSWER (yes/no)
+rem stands in for the popup. Paths go to PowerShell through the environment,
+rem so a folder name with a quote in it cannot break it. Exit codes: 0 made,
+rem 2 declined, anything else a failure.
+:make_shortcut
+set "SC_ICON=%~dp0web\img\guitoolkit.ico"
+if exist "%~dp0main\web\img\guitoolkit.ico" set "SC_ICON=%~dp0main\web\img\guitoolkit.ico"
+set "SC_TARGET=%~dp0Launch-Medieval2-GUI-Toolkit.bat"
+set "SC_WORK=%~dp0"
+set "SC_DIR=%UT_SHORTCUT_DIR%"
+set "SC_ANSWER=%UT_SHORTCUT_ANSWER%"
+powershell -NoProfile -Command "$d=$env:SC_DIR; if(-not $d){$d=[Environment]::GetFolderPath('Desktop')}; $p=Join-Path $d 'Medieval 2 GUI Toolkit.lnk'; if(-not (Test-Path -LiteralPath $p)){ $a=$env:SC_ANSWER; if(-not $a){ Add-Type -AssemblyName System.Windows.Forms; $r=[System.Windows.Forms.MessageBox]::Show('Put a Medieval 2 GUI Toolkit shortcut on your desktop?', 'Medieval 2 GUI Toolkit', 'YesNo', 'Question'); $a=if($r -eq 'Yes'){'yes'}else{'no'} }; if($a -ne 'yes'){ exit 2 } }; $s=(New-Object -ComObject WScript.Shell).CreateShortcut($p); $s.TargetPath=$env:SC_TARGET; $s.WorkingDirectory=$env:SC_WORK; if(Test-Path -LiteralPath $env:SC_ICON){$s.IconLocation=$env:SC_ICON+',0'}; $s.Description='Medieval 2 GUI Toolkit'; $s.Save()" >nul 2>nul
+if errorlevel 3 goto shortcut_failed
+if errorlevel 2 (
+    echo No desktop shortcut made.
+    echo.
+    exit /b
+)
+if errorlevel 1 goto shortcut_failed
+echo A "Medieval 2 GUI Toolkit" shortcut is on your desktop.
+echo.
+exit /b
+:shortcut_failed
+echo ^(Couldn't make the desktop shortcut - start the tool with
+echo  Launch-Medieval2-GUI-Toolkit.bat instead.^)
+echo.
 exit /b
 
 rem Fetch and run the official python.org installer. Per-user, so no UAC prompt:

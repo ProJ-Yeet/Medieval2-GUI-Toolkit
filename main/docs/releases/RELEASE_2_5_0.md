@@ -89,7 +89,10 @@ The source and every release: [GitHub](https://github.com/ProJ-Yeet/Medieval2-GU
     Import previews of a PBR file use the chosen bake's light, without
     shadows;
   * the list of objects folds away under its own heading.
-* **The toolkit has an icon**, by Jopero, on its browser tab.
+* **The toolkit has an icon**, by Jopero, on its browser tab and on a
+  desktop shortcut: Install-Dependencies.bat asks in a popup whether to put
+  a shortcut to the launcher on your desktop, and makes it only on a yes.
+  An install that updated itself gets it by running that file once.
 * **Credits** add the Medieval 2 Blender Toolkit by WK and ProJYeet and the
   toolkit's own source on GitHub (GPLv3), and say the toolkit is an
   unofficial fan tool, not made, approved or supported by SEGA or Creative
