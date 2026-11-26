@@ -45,7 +45,7 @@ Then, in this order:
    prompt. It asks before downloading anything. On the portable build both are
    already inside the folder, so it will usually just say there is nothing to
    do - run it anyway, because that is the answer you want to have seen before
-   the next step rather than after it. At the end it asks in a popup whether
+   the next step rather than after it. First it asks in a popup whether
    to put a shortcut to the launcher, with the toolkit's icon, on your desktop.
 2. **Run `Launch-Medieval2-GUI-Toolkit.bat`.** This is the one you use from then on.
 

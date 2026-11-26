@@ -20,6 +20,10 @@ echo  Medieval 2 GUI Toolkit - installing dependencies
 echo ============================================================
 echo.
 
+rem First, before Python: the portable build needs none, and a player who
+rem says no to installing it should still be offered the shortcut.
+call :make_shortcut
+
 call :find_python
 if defined PY goto have_python
 
@@ -76,7 +80,6 @@ if %errorlevel%==0 (
     echo.
     echo Nothing to do - you can run Launch-Medieval2-GUI-Toolkit.bat now.
     echo.
-    call :make_shortcut
     pause
     exit /b 0
 )
@@ -103,7 +106,6 @@ echo ============================================================
 echo  Done. You can run Launch-Medieval2-GUI-Toolkit.bat now.
 echo ============================================================
 echo.
-call :make_shortcut
 pause
 endlocal
 exit /b 0
