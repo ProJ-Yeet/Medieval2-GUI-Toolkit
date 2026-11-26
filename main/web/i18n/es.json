@@ -14963,5 +14963,8 @@
  "armory.lit_light_bake": "Light Bake",
  "armory.lit_unstack": "Separar las mitades reflejadas",
  "armory.lit_unstack_title": "Una parte que usa los mismos texeles que otra (una hombrera y su reflejo, o los dos lados de un arma) recibe sus propios texeles, para que cada parte conserve su propia iluminación. La textura iluminada se genera con tantas hojas de alto como haga falta, y las UV del objeto se desplazan para ajustarse. La acción de quitarla devuelve las UV a su sitio. Al exportarlas, las partes ocupan más espacio en la hoja de textura del juego.",
- "core.fetch_failed_bar": "No se cargó parte de esta pantalla: el servidor del kit de herramientas no respondió tras varios intentos."
+ "core.fetch_failed_bar": "No se cargó parte de esta pantalla: el servidor del kit de herramientas no respondió tras varios intentos.",
+ "eng.armory.active_no_weights": "El objeto activo no tiene pesos de huesos que ofrecer.",
+ "eng.armory.own_source": "Un objeto no puede tomar pesos de huesos de s? mismo.",
+ "armory.transfer_from_active_title": "Varios seleccionados: copia los pesos de huesos del objeto activo (el último en que se hizo clic, cuyo nombre aparece arriba a la izquierda de la vista) en cada uno de los demás objetos seleccionados, como hace Blender al transferir los pesos de huesos; después, suavízalos cinco veces como hace el kit de Blender. Los pesos de huesos anteriores no se conservan; Deshacer los recupera. Por muy separados que estén, cada vértice recibe pesos de huesos: primero se ajusta al tamaño y la posición del objeto activo cualquier objeto alejado de este. Un escudo o un arma acaba en un hueso."
 }

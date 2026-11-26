@@ -17,11 +17,13 @@
   * unit cards (95m): a card saved as the game names it, the outline's growth
     and the finish's colour steps.
 """
+import base64
 import io
 import json
 import shutil
 import sys
 import zipfile
+from array import array
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -361,6 +363,45 @@ def strip(xs, bones_of, y=0.0):
 def tops(res):
     w, ids, names = res
     return [names[ids[v * 4 + 2]] for v in range(len(ids) // 4)]
+
+
+# 2026-11-26: several selected, the active object alone gives its weights
+# shield 3 far from shield 1 and on a bone shield 1 lacks: the active
+# object's weights come across as Blender's do, with no 5 cm reach and no
+# keep-your-own; a target out of reach is first fitted onto the active
+# object's box, so an arm twice as long a metre off still gives its far
+# end the hand (plain nearest would give every vertex the elbow)
+parts = {1: strip([0.0, 0.01], lambda x: "bone_head"), 2: strip([0.0, 0.01], lambda x: "bone_torso"),
+         3: strip([0.0, 0.01], lambda x: "bone_pelvis", y=1.0),
+         4: strip([i * 0.02 for i in range(11)], lambda x: "bone_rhand" if x > 0.12 else "bone_relbow", y=1.0),
+         5: strip([i * 0.01 for i in range(11)], lambda x: "bone_head")}
+proj = {"objects": [{"id": i, "name": "body", "mesh": f"m{i}"} for i in parts]}
+seen = []
+real_om, real_tw = armory.object_mesh, armory.transfer_weights
+armory.object_mesh = lambda o, a, m: parts[o["id"]]
+armory.transfer_weights = lambda tm, srcs, **kw: (seen.append([s.bones[0] for s in srcs]), real_tw(tm, srcs, **kw))[1]
+try:
+    from_active = armory.transfer_for(proj, 1, "face", None, source_ids=[3])
+    armory.transfer_for(proj, 1, "face", None)
+    from_arm = armory.transfer_for(proj, 5, "face", None, source_ids=[4])
+    try:
+        armory.transfer_for(proj, 1, "face", None, source_ids=[1])
+        own_src = False
+    except armory.ArmoryError:
+        own_src = True
+finally:
+    armory.object_mesh, armory.transfer_weights = real_om, real_tw
+check(f"from the active object only; with none named, from every other ({seen})",
+      seen[0] == ["bone_pelvis"] and seen[1] == ["bone_torso", "bone_pelvis", "bone_relbow", "bone_head"])
+check("an object is not its own source", own_src)
+check(f"and every vertex takes the active object's bone, a metre away ({from_active['bones']})",
+      tops((array("f", base64.b64decode(from_active["data"])[:from_active["n"] * 8]),
+            base64.b64decode(from_active["data"])[from_active["n"] * 8:], from_active["bones"]))
+      == ["bone_pelvis"] * from_active["n"])
+arm_tops = tops((array("f", base64.b64decode(from_arm["data"])[:from_arm["n"] * 8]),
+                 base64.b64decode(from_arm["data"])[from_arm["n"] * 8:], from_arm["bones"]))
+check(f"and from one on several bones a metre away, fitted: elbow at one end, hand at the other ({arm_tops[0]}, {arm_tops[-1]})",
+      arm_tops[0] == "bone_relbow" and arm_tops[-1] == "bone_rhand")
 
 
 src = strip([i * 0.01 for i in range(11)], lambda x: "bone_rhand" if x > 0.05 else "bone_relbow")

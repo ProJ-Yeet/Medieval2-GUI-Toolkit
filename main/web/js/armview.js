@@ -520,6 +520,8 @@ function armSoldierStats(objs){
   }
   return {min, max, avg, count};
 }
+// the active object's outline colour, for its name on the overlay
+const armActiveCss = () => `rgb(${ARM_COL.active.slice(0, 3).map(v => Math.round(v * 255)).join(',')})`;
 function armOverlay95g(ctx, w, h){
   const x = ARM.xform;
   const dpr = w / (ARM.view.getBoundingClientRect().width || w);
@@ -562,8 +564,19 @@ function armOverlay95g(ctx, w, h){
     ctx.fillRect(8 * dpr, 8 * dpr, width, lh * (lines.length + 1) + 10 * dpr);
     ctx.fillStyle = '#e6e9ee';
     lines.forEach((l, i) => ctx.fillText(l, 16 * dpr, 13 * dpr + i * lh));
+    if(act && ARM.sel.size > 1){ ctx.fillStyle = armActiveCss(); ctx.fillText(lines[0], 16 * dpr, 13 * dpr); }
     ctx.fillStyle = level === 'ok' ? '#5cc98a' : level === 'high' ? '#e0b341' : '#e06c6c';
     ctx.fillText(badge, 16 * dpr, 13 * dpr + lines.length * lh);
+  }else if(ARM.sel.size > 1){
+    // 2026-11-26: several selected, the active one named top left, in its colour
+    const act = armObj(ARM.active);
+    if(act){
+      const line = tt('armory.active_short', {name: armFullName(act)});
+      ctx.fillStyle = 'rgba(15,17,21,.78)';
+      ctx.fillRect(8 * dpr, 8 * dpr, ctx.measureText(line).width + 16 * dpr, 22 * dpr);
+      ctx.fillStyle = armActiveCss();
+      ctx.fillText(line, 16 * dpr, 13 * dpr);
+    }
   }
   ctx.restore();
   armBonesDraw(ctx, w, h);

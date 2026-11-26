@@ -14606,5 +14606,8 @@
  "armory.lit_light_bake": "Light Bake",
  "armory.lit_unstack": "Séparer les moitiés en miroir",
  "armory.lit_unstack_title": "Une partie qui utilise les mêmes texels qu'une autre (une épaulière et son reflet, ou les deux côtés d'une arme) reçoit ses propres texels, afin que chaque partie conserve son propre éclairage. La texture éclairée est créée sur autant de feuilles de haut que nécessaire, et les UV de l'objet sont déplacés en conséquence. La suppression remet les UV en place. À l'exportation, les parties occupent alors plus de place sur la feuille de texture du jeu.",
- "core.fetch_failed_bar": "Une partie de cet écran n’a pas été chargée : le serveur de la boîte à outils n’a pas répondu malgré plusieurs tentatives."
+ "core.fetch_failed_bar": "Une partie de cet écran n’a pas été chargée : le serveur de la boîte à outils n’a pas répondu malgré plusieurs tentatives.",
+ "armory.transfer_from_active_title": "Plusieurs objets sélectionnés : copier les poids des os de l’objet actif (le dernier cliqué, dont le nom apparaît en haut à gauche de la vue) sur chaque autre objet sélectionné, comme avec la commande Blender « Transfer Weights » (transférer les poids des os), puis les lisser cinq fois comme dans le kit Blender. Les anciens poids des os ne sont pas conservés ; Annuler les rétablit. Quelle que soit leur distance, chaque sommet reçoit les poids des os : tout objet éloigné de l’objet actif est d’abord ajusté à sa taille et à sa position. Un bouclier ou une arme se retrouve sur un os.",
+ "eng.armory.active_no_weights": "L?objet actif n?a aucun poids des os ? fournir.",
+ "eng.armory.own_source": "Un objet ne peut pas prendre de poids des os ? partir de lui-m?me."
 }

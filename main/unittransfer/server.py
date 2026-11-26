@@ -3417,7 +3417,8 @@ class Handler(BaseHTTPRequestHandler):
                 try:
                     return self._json(armory.transfer_for(
                         body.get("project") or {}, body.get("id"),
-                        body.get("mode") or "face", self.registry.get))
+                        body.get("mode") or "face", self.registry.get,
+                        source_ids=body.get("sources")))
                 except (armory.ArmoryError, mesh.MeshError, KeyError) as e:
                     return self._err(400, str(e))
             if u.path in ("/api/armory/sheet/edit", "/api/armory/sheet/copy", "/api/armory/sheet/export"):

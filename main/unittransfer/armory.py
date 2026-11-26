@@ -29,6 +29,7 @@ gone through an ``.obj`` is told apart from a part that merely shares a name.
 from __future__ import annotations
 
 import base64
+import copy
 import hashlib
 import io
 import json
@@ -1930,10 +1931,34 @@ def project_assets(project: dict) -> Dict[str, dict]:
     return {asset_key(a): a for a in project.get("assets") or []}
 
 
-def transfer_for(project: dict, obj_id: int, mode: str, mod_of) -> dict:
+def _fitted_onto(target: mesh.MeshFile, sources: Sequence[mesh.MeshFile],
+                 reach: float = 0.05) -> mesh.MeshFile:
+    """``target`` as it is when its box is within ``reach`` of the sources'
+    box, else a copy moved and scaled, axis by axis, onto that box: the
+    centre onto the centre, each extent onto the sources' own."""
+    boxes = [m.bounds() for m in sources if m.vertices]
+    if not boxes or not target.vertices:
+        return target
+    slo = [min(b[0][k] for b in boxes) for k in range(3)]
+    shi = [max(b[1][k] for b in boxes) for k in range(3)]
+    tlo, thi = target.bounds()
+    if all(tlo[k] <= shi[k] + reach and thi[k] >= slo[k] - reach for k in range(3)):
+        return target
+    scale = [(shi[k] - slo[k]) / (thi[k] - tlo[k]) if thi[k] - tlo[k] > 1e-9 else 1.0 for k in range(3)]
+    p = target.positions
+    moved = copy.copy(target)
+    moved.positions = array("f", (slo[k] + (p[i] - tlo[k]) * scale[k]
+                                  for i in range(len(p)) for k in (i % 3,)))
+    return moved
+
+
+def transfer_for(project: dict, obj_id: int, mode: str, mod_of,
+                 source_ids: Optional[Sequence[int]] = None) -> dict:
     """The page's *Transfer weights* on one object, from every other visible
-    object in the model that has weights. The answer is stored on the object
-    as ``weights`` (base64 of the weights then the bone bytes)."""
+    object in the model that has weights, or with ``source_ids`` from those
+    alone (several selected: the active one gives, as in Blender). The answer
+    is stored on the object as ``weights`` (base64 of the weights then the
+    bone bytes)."""
     assets = project_assets(project)
     objs = project.get("objects") or []
     target = next((o for o in objs if o.get("id") == obj_id), None)
@@ -1955,9 +1980,21 @@ def transfer_for(project: dict, obj_id: int, mode: str, mod_of) -> dict:
     tops = {max(d, key=d.get).lower() for d in own if d}
     whole = all(d and max(d.values()) >= 0.999 for d in own)
     named = f"{target.get('name') or ''} {target.get('mesh') or ''}"
-    rigid = bool(_RIGID_PART.search(named)) or (len(tops) == 1 and whole)
+    # a part on one bone stays on one, unless an active object was chosen to
+    # give it its weights: then only a shield or a weapon does
+    rigid = bool(_RIGID_PART.search(named)) or (source_ids is None and len(tops) == 1 and whole)
     sources = []
-    for o in objs:
+    if source_ids is not None:
+        if obj_id in source_ids:
+            raise ArmoryError(_i18n.msg("eng.armory.own_source", "an object cannot take weights from itself"))
+        for o in objs:
+            if o.get("id") in source_ids:
+                om = object_mesh(o, assets, mod_of)
+                if has_weights(om):
+                    sources.append(om)
+        if not sources:
+            raise ArmoryError(_i18n.msg("eng.armory.active_no_weights", "the active object has no weights to give"))
+    for o in objs if source_ids is None else ():
         if o is target or o.get("hidden"):
             continue
         # a body part takes nothing from a shield or a weapon: the spear in
@@ -1967,7 +2004,16 @@ def transfer_for(project: dict, obj_id: int, mode: str, mod_of) -> dict:
         om = object_mesh(o, assets, mod_of)
         if has_weights(om):
             sources.append(om)
-    w, ids, bones = transfer_weights(tm, sources, mode=mode, own=own, rigid=rigid)
+    if source_ids is None:
+        w, ids, bones = transfer_weights(tm, sources, mode=mode, own=own, rigid=rigid)
+    else:
+        # the active object given (2026-11-26): its weights come across as
+        # Blender's Data Transfer and the Blender kit bring them, with no
+        # reach and no keep-your-own, so a source on one bone is copied whole
+        # (shields 1 and 3 kept theirs, shield 2 was over 5 cm off); a target
+        # out of reach is first fitted onto the source's box, so far apart the
+        # weights still land where they would on the source
+        w, ids, bones = transfer_weights(_fitted_onto(tm, sources), sources, mode=mode, rigid=rigid)
     return {"n": tm.vertices, "bones": bones, "mode": mode, "rigid": rigid,
             "data": base64.b64encode(w.tobytes() + ids).decode("ascii")}
 

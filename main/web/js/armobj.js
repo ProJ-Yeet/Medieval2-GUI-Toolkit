@@ -740,11 +740,13 @@ function armSecToggle(key, open){
   state.settings.armory_props_closed = list;
   api.post('/api/settings', {armory_props_closed: list}).catch(() => {});
 }
-/* Transfer weights, with the selection's active object named beside it. */
+/* Transfer weights, with the selection's active object named beside it.
+   Several selected: the active one gives, the others take (2026-11-26). */
 function armWeightsRowHtml(go){
   const act = armObj(ARM.active) || armSelected()[0];
+  const title = ARM.sel.size > 1 ? tt('armory.transfer_from_active_title') : tt('armory.transfer_weights_title');
   return `<div class="armpropsrow"><select id="armWMode">${['face', 'vertex', 'edge'].map(m => `<option value="${m}">${esc(armWModeLabel(m))}</option>`).join('')}</select>
-      <button class="mini" id="armWGo" onclick="${go}" title="${esc(tt('armory.transfer_weights_title'))}">${tt('armory.transfer_weights')}</button>
+      <button class="mini" id="armWGo" onclick="${go}" title="${esc(title)}">${tt('armory.transfer_weights')}</button>
       ${act ? `<span class="count armactive" title="${esc(tt('armory.active_title'))}">${tt('armory.active_short', {name: esc(armFullName(act))})}</span>` : ''}</div>`;
 }
 
@@ -808,15 +810,18 @@ function armMultiDye(kind, v){
   }
   armRepaint();
 }
-// Each in turn, from the model as it stands, then one save: one Undo step
+// From the active object onto each other selected one, as Blender's Transfer
+// Weights does, then one save: one Undo step
 async function armMultiTransfer(){
   const mode = (document.getElementById('armWMode') || {}).value || 'face';
+  const act = armObj(ARM.active) || armSelected()[0];
+  if(!act) return;
   const btn = document.getElementById('armWGo');
   if(btn){ btn.disabled = true; btn.textContent = tt('armory.working'); }
   let done = 0;
-  for(const o of armSelected()){
+  for(const o of armSelected().filter(x => x.id !== act.id)){
     try{
-      const r = await api.post('/api/armory/transfer_weights', {project: armProj(), id: o.id, mode});
+      const r = await api.post('/api/armory/transfer_weights', {project: armProj(), id: o.id, mode, sources: [act.id]});
       if(r.error) throw new Error(r.error);
       o.weights = r; done++;
     }catch(e){ toast(`${o.mesh}: ${errText(e)}`, 6000); }

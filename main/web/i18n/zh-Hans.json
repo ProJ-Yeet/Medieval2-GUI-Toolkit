@@ -13805,5 +13805,8 @@
  "armory.lit_light_bake": "Light Bake",
  "armory.lit_unstack": "拆分镜像的两半",
  "armory.lit_unstack_title": "与另一部分使用相同贴图像素的部分（例如肩甲及其镜像，或武器的两侧）会获得各自的贴图像素，这样每一部分都能保留自己的光照。带光照的贴图会按需扩展到相应的页数高度，并相应移动物体的 UV。移除后会将 UV 恢复原位。导出时，这些部分会在游戏贴图页上占用更多空间。",
- "core.fetch_failed_bar": "此屏幕的部分内容未能加载：工具包服务器多次尝试后仍未响应。"
+ "core.fetch_failed_bar": "此屏幕的部分内容未能加载：工具包服务器多次尝试后仍未响应。",
+ "eng.armory.active_no_weights": "活动对象没有可供传递的骨骼权重。",
+ "eng.armory.own_source": "对象不能从自身获取骨骼权重。",
+ "armory.transfer_from_active_title": "已选择多个对象：按照 Blender 的 Transfer Weights 转移操作，将活动对象（最后点击的对象，名称显示在视图左上角）的骨骼权重复制到其余每个已选对象，然后再按 Blender 工具包方式平滑五次。原有的骨骼权重不会保留；撤消可恢复。无论对象相距多远，每个顶点都会获得骨骼权重：远离活动对象的对象会先调整到活动对象的大小和位置。盾牌或武器最终只绑定到一根骨骼。"
 }

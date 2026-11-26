@@ -13944,5 +13944,8 @@
  "armory.lit_light_bake": "Light Bake",
  "armory.lit_unstack": "Aynalanmış yarıları ayır",
  "armory.lit_unstack_title": "Başka bir parçayla aynı texelleri kullanan bir parça (bir omuzluk ve aynadaki yansıması ya da bir silahın iki yanı) kendi texellerini alır, böylece her parça kendi aydınlatmasını korur. Aydınlatılmış doku, gerektiği kadar doku sayfası yüksekliğinde oluşturulur ve nesnenin UV'leri buna göre taşınır. Kaldırma işlemi UV'leri eski konumuna döndürür. Dışa aktarıldığında parçalar oyunun doku sayfasında daha fazla yer kaplar.",
- "core.fetch_failed_bar": "Bu ekranın bir kısmı yüklenmedi: araç setinin sunucusu birkaç denemeye rağmen yanıt vermedi."
+ "core.fetch_failed_bar": "Bu ekranın bir kısmı yüklenmedi: araç setinin sunucusu birkaç denemeye rağmen yanıt vermedi.",
+ "eng.armory.active_no_weights": "Etkin nesnede aktarılacak kemik ağırlıkları yok.",
+ "eng.armory.own_source": "Bir nesne kemik ağırlıklarını kendisinden alamaz.",
+ "armory.transfer_from_active_title": "Birden çok nesne seçili: Blender’ın Transfer Weights aktarımında yaptığı gibi, etkin nesnenin kemik ağırlıkları’nı (son tıklanan, adı görünümün sol üstünde yazan nesne) seçili diğer her nesneye kopyalayın, sonra Blender kitinde olduğu gibi beş kez düzeltin. Eski kemik ağırlıkları saklanmaz; Geri Al onları geri koyar. Aralarındaki mesafe ne olursa olsun her köşe noktası kemik ağırlıkları alır: etkin nesneden uzaktaki nesne önce onun boyutuna ve konumuna uydurulur. Bir kalkan veya silah tek bir kemik üzerinde sonuçlanır."
 }

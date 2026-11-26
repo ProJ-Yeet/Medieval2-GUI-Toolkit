@@ -14497,5 +14497,8 @@
  "armory.lit_light_bake": "Light Bake",
  "armory.lit_unstack": "Gespiegelte Hälften trennen",
  "armory.lit_unstack_title": "Ein Teil, der dieselben Texel wie ein anderer nutzt (eine Schulterplatte und ihr Spiegelbild oder die beiden Seiten einer Waffe), erhält eigene Texel, damit jeder Teil seine eigene Beleuchtung behält. Die beleuchtete Textur wird so viele Texturblätter hoch erstellt, wie nötig sind, und die UVs des Objekts werden entsprechend verschoben. Entfernen setzt die UVs zurück. Beim Export belegen die Teile dann mehr Platz auf dem Texturblatt des Spiels.",
- "core.fetch_failed_bar": "Ein Teil dieses Bildschirms wurde nicht geladen: Der Server des Toolkits hat auch nach mehreren Versuchen nicht geantwortet."
+ "core.fetch_failed_bar": "Ein Teil dieses Bildschirms wurde nicht geladen: Der Server des Toolkits hat auch nach mehreren Versuchen nicht geantwortet.",
+ "armory.transfer_from_active_title": "Mehrere ausgewählt: Kopieren Sie die Knochengewichte des aktiven Objekts (das zuletzt angeklickte Objekt, dessen Name oben links in der Ansicht steht) auf jedes andere ausgewählte Objekt, wie beim Blender-Befehl „Transfer Weights“: Knochengewichte übertragen. Glätten Sie sie dann fünfmal, wie das Blender-Kit es tut. Die alten Knochengewichte bleiben nicht erhalten; Rückgängig stellt sie wieder her. Unabhängig vom Abstand erhält jeder Vertex Knochengewichte: Ein Objekt, das vom aktiven Objekt entfernt ist, wird zuerst an dessen Größe und Position angepasst. Ein Schild oder eine Waffe kommt auf einem Knochen heraus.",
+ "eng.armory.active_no_weights": "Das aktive Objekt hat keine Knochengewichte abzugeben.",
+ "eng.armory.own_source": "Ein Objekt kann keine Knochengewichte von sich selbst ?bernehmen."
 }

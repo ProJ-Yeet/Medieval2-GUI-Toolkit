@@ -15215,5 +15215,8 @@
  "armory.lit_light_bake": "Light Bake",
  "armory.lit_unstack": "Rozdziel lustrzane połówki",
  "armory.lit_unstack_title": "Część korzystająca z tych samych texeli co inna (naramiennik i jego lustrzane odbicie albo obie strony broni) otrzymuje własne texele, dzięki czemu każda zachowuje własne oświetlenie. Oświetlona tekstura jest tworzona na tylu arkuszach, ile potrzeba, a współrzędne UV obiektu są odpowiednio przesuwane. Usunięcie przywraca UV na miejsce. Po eksporcie części zajmują więcej miejsca na arkuszu tekstury gry.",
- "core.fetch_failed_bar": "Nie udało się wczytać części tego ekranu: serwer zestawu narzędzi nie odpowiedział mimo kilku prób."
+ "core.fetch_failed_bar": "Nie udało się wczytać części tego ekranu: serwer zestawu narzędzi nie odpowiedział mimo kilku prób.",
+ "eng.armory.active_no_weights": "Aktywny obiekt nie ma wag ko?ci do przekazania.",
+ "eng.armory.own_source": "Obiekt nie mo?e pobiera? wag ko?ci z samego siebie.",
+ "armory.transfer_from_active_title": "Zaznaczono kilka obiektów: skopiuj wagi kości aktywnego obiektu (ostatnio klikniętego, którego nazwa widnieje w lewym górnym rogu widoku) do każdego innego zaznaczonego obiektu, tak jak polecenie Blender Transfer Weights: przenieść wagi kości, a następnie wygładzić je pięć razy jak w zestawie Blendera. Stare wagi kości nie są zachowywane; wagi kości przywraca Cofnij. Niezależnie od odległości każdy wierzchołek otrzymuje wagi kości: obiekt oddalony od aktywnego jest najpierw dopasowywany do jego rozmiaru i położenia. Tarcza lub broń trafia na jedną kość."
 }
