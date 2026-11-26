@@ -576,6 +576,56 @@ function armUniqueMesh(type, mesh){
   const stem = mesh.replace(/_\d+$/, '');
   for(let i = 2; ; i++) if(!taken.has(`${stem}_${i}`)) return `${stem}_${i}`;
 }
+/* The merged object's weights (2026-11-26): each object's own where it has
+   them, its source's where it has none, one after another as the merged
+   object lays its vertices out (piece by piece, each piece's vertices in
+   index order, as armAnimGeo and armory.object_mesh count them). None of
+   them with weights of its own: null, the source's as before. A sword copy
+   rigged to the left hand lost its rig in a merge and swung about the
+   right hand, out of sight. */
+function armMergedWeights(objs){
+  if(!objs.some(o => o.weights)) return null;
+  const bones = [], W = [], ids = [];
+  const boneOf = name => { let i = bones.indexOf(name); if(i < 0){ i = bones.length; bones.push(name); } return i; };
+  const modes = new Set();
+  for(const o of objs){
+    // the object's vertices from its sources, as armAnimGeo lays them out
+    const rows = [];
+    for(const pc of o.src || []){
+      const live = ARM.assets.get(pc.asset);
+      if(!live || !live.geo) return null;      // not loaded: nothing to count by
+      const flat = [];
+      armPieceEach(live, pc, v => flat.push(v));
+      const g = live.geo;
+      for(const v of [...new Set(flat)].sort((x, y) => x - y)){
+        rows.push(g.weights && g.joints
+          ? [g.weights[v*2], g.weights[v*2+1], (g.bones || [])[g.joints[v*2]] || '', (g.bones || [])[g.joints[v*2+1]] || '']
+          : [0, 0, '', '']);
+      }
+    }
+    const own = o.weights;
+    if(own && own.n === rows.length){
+      modes.add(own.mode);
+      const raw = Uint8Array.from(atob(own.data), c => c.charCodeAt(0));
+      const wf = new Float32Array(raw.buffer.slice(0, own.n * 8)), oi = raw.subarray(own.n * 8);
+      for(let v = 0; v < own.n; v++)
+        rows[v] = [wf[v*2], wf[v*2+1], own.bones[oi[v*4+2]] || '', own.bones[oi[v*4+1]] || ''];
+    }else modes.add('');
+    for(const [w0, w1, b0, b1] of rows){
+      W.push(w0, w1);
+      ids.push(0, boneOf(b1), boneOf(b0), 0);
+    }
+  }
+  const n = W.length / 2;
+  const bytes = new Uint8Array(n * 12);
+  bytes.set(new Uint8Array(new Float32Array(W).buffer));
+  bytes.set(ids, n * 8);
+  let s = '';
+  for(let i = 0; i < bytes.length; i += 0x8000) s += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+  // rigged all through stays "rigged"; anything else reads as weights of its own
+  const mode = modes.size === 1 && modes.has('rig') ? 'rig' : [...modes].find(Boolean) || 'face';
+  return {n, bones, mode, data: btoa(s)};
+}
 /* Merged objects keep each piece where it stood: the piece takes its old
    object's whole matrix as its own, and the new object starts at rest. */
 function armMerge(){
@@ -592,7 +642,7 @@ function armMerge(){
   }
   const merged = {id: p.nextId++, src, name: first.name, mesh: first.mesh, flag: first.flag,
                   hidden: false, coll: first.coll, t: [0, 0, 0], r: [0, 0, 0], s: [1, 1, 1],
-                  material: first.material, dye: first.dye, weights: null};
+                  material: first.material, dye: first.dye, weights: armMergedWeights(objs)};
   const at = p.objects.indexOf(first);
   p.objects = p.objects.filter(o => !ARM.sel.has(o.id));
   p.objects.splice(Math.min(at, p.objects.length), 0, merged);
@@ -698,7 +748,7 @@ function armPropsHtml(o){
     `)}
     ${armSecHtml('weights', tt('armory.weights'), `
     <div class="armpropsrow"><span class="count">${!o.weights ? tt('armory.weights_from_source')
-      : o.weights.mode === 'rig' ? tt('armory.weights_rigged', {bones: (o.weights.bones || []).join(' + ')})
+      : o.weights.mode === 'rig' ? tt('armory.weights_rigged', {bones: (o.weights.bones || []).filter(Boolean).join(' + ')})
       : tt('armory.weights_own', {mode: armWModeLabel(o.weights.mode)})}</span></div>
     ${armWeightsRowHtml(`armTransferWeights(${o.id})`)}
     ${o.weights ? `<div class="armpropsrow"><button class="mini" onclick="armClearWeights(${o.id})">${tt('armory.clear_weights')}</button></div>` : ''}

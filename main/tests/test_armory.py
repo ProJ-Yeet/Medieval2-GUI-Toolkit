@@ -619,6 +619,28 @@ console.log(JSON.stringify({meshLow: +meshLow.toFixed(3), footY: +dots[1].toFixe
     check(f"the skeleton is lowered with the posed model it plays ({gotd or out2d.stderr[-200:]})",
           gotd and abs(gotd["footY"] - (0.05 - 0.96)) < 1e-3)
 
+    # 2026-11-26: Merge keeps each object's weights. A sword copy rigged to
+    # the left hand merged into the right-hand sword fell back on the
+    # source's right-hand weights and flew off while an action played.
+    probe = stub + "function toast(){}" + js + (ROOT / "web" / "js" / "armobj.js").read_text(encoding="utf-8") + r""";
+ARM.assets = new Map([['a', {geo: {indices: [0, 1, 2], groups: [{start: 0, count: 3}],
+  weights: new Float32Array([1, 0, 1, 0, 1, 0]), joints: new Uint8Array([0, 0, 0, 0, 0, 0]), bones: ['bone_rhand']}}]]);
+const enc = (W, ids) => { const b = new Uint8Array(W.length * 4 + ids.length); b.set(new Uint8Array(new Float32Array(W).buffer)); b.set(ids, W.length * 4);
+  return Buffer.from(b).toString('base64'); };
+const o1 = {src: [{asset: 'a', group: 0}], weights: null};
+const o2 = {src: [{asset: 'a', group: 0}], weights: {n: 3, mode: 'rig', bones: ['bone_lhand'], data: enc([1, 0, 1, 0, 1, 0], [0,0,0,0, 0,0,0,0, 0,0,0,0])}};
+const w = armMergedWeights([o1, o2]);
+const raw = Buffer.from(w.data, 'base64'), ids = raw.subarray(w.n * 8);
+const firsts = [...Array(w.n).keys()].map(v => w.bones[ids[v * 4 + 2]]);
+console.log(JSON.stringify({n: w.n, firsts, none: armMergedWeights([o1, {src: o1.src, weights: null}])}));
+"""
+    (tmp / "probe_merge.js").write_text(probe, encoding="utf-8")
+    outm = subprocess.run([node, str(tmp / "probe_merge.js")], capture_output=True, text=True, timeout=60)
+    gotm = __import__("json").loads(outm.stdout or "null") or {}
+    check(f"Merge keeps each object's weights, the source's where it had none ({gotm or outm.stderr[-300:]})",
+          gotm.get("n") == 6 and gotm.get("firsts") == ["bone_rhand"] * 3 + ["bone_lhand"] * 3
+          and gotm.get("none") is None)
+
     # armory.js loads even when viewer3d.js has not arrived yet: core.js
     # fetches a dropped file again, but only after the files behind it ran,
     # and armory.js dying on V3_ENV left the Armory Studio button dead
