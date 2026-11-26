@@ -174,7 +174,10 @@ async function armAnimFrom(key){
   if(!key) return armAnimPaint();
   const asset = p.assets.find(x => armAssetKey(x) === key);
   armAnimPaint();
-  try{ a.list = await api.get(`/api/model/anims?mod=${enc(asset.mod)}&entry=${enc(asset.entry)}`); }
+  // 2026-11-26: a model pulled from a unit moves as the unit's soldier line
+  // does (Falas Lords' falas_lords lists a bow skeleton the game never plays)
+  const unit = asset.unit ? `&unit=${enc(asset.unit)}` : '';
+  try{ a.list = await api.get(`/api/model/anims?mod=${enc(asset.mod)}&entry=${enc(asset.entry)}${unit}`); }
   catch(e){ a.list = {error: errText(e)}; }
   const set = (a.list.sets || [])[0];
   a.skel = set ? (set.primary || set.secondary || '') : Object.keys(a.list.skeletons || {})[0] || '';

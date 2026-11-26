@@ -14,6 +14,19 @@ class AnimationRouteTests(unittest.TestCase):
             self.assertEqual(handler._anim_edit(action, body), {"ok": True})
             handler._anim_pack.assert_called_with(packed, body)
 
+    def test_a_unit_animates_from_its_soldier_line(self):
+        # 2026-11-26: Falas Lords pulled from its armour_ug_models entry
+        # (falas_lords, on a bow skeleton) moves as its soldier line does
+        # (orc_key_host_upg0, a swordsman), the one entry the engine animates
+        from types import SimpleNamespace as NS
+        from unittransfer import animview
+        mod = NS(edu=NS(units=[NS(type="Falas Lords", soldier_model="Orc_Key_Host_Upg0"),
+                               NS(type="Other", soldier_model="")]))
+        self.assertEqual(animview.soldier_of(mod, "falas lords"), "orc_key_host_upg0")
+        self.assertIsNone(animview.soldier_of(mod, "Other"))
+        self.assertIsNone(animview.soldier_of(mod, "Nobody"))
+        self.assertIsNone(animview.soldier_of(mod, ""))
+
 
 if __name__ == '__main__':
     unittest.main()

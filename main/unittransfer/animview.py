@@ -130,6 +130,22 @@ def skeleton_view(data_dir, name: str, packs: Optional[animpack.Packs],
             "playable": sum(1 for r in rows if r["playable"])}
 
 
+def soldier_of(mod, unit_type: str):
+    """The model entry a unit's soldier line names, lower case, or None.
+
+    The soldier line's entry is the only one the engine animates a unit
+    from; an armour_ug_models entry is a mesh swap whose own skeletons are
+    never played (2026-11-26: Falas Lords' falas_lords lists a bow skeleton,
+    its soldier orc_key_host_upg0 a swordsman's)."""
+    want = (unit_type or "").strip().lower()
+    if not want:
+        return None
+    for u in mod.edu.units:
+        if (u.type or "").lower() == want:
+            return (u.soldier_model or "").lower() or None
+    return None
+
+
 def entry_view(data_dir, entry) -> dict:
     """What the viewer's picker offers for a modeldb entry: its skeleton sets,
     and each skeleton's actions once."""

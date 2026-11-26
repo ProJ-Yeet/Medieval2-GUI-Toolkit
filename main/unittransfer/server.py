@@ -6760,6 +6760,10 @@ class Handler(BaseHTTPRequestHandler):
                               "application/octet-stream")
 
         entry = mod.modeldb.by_name().get((q.get("entry") or [""])[0].lower())
+        if path == "/api/model/anims" and (q.get("unit") or [""])[0]:
+            # a model pulled from a unit moves as the unit's soldier line does
+            soldier = animview.soldier_of(mod, (q.get("unit") or [""])[0])
+            entry = (mod.modeldb.by_name().get(soldier) if soldier else None) or entry
         if entry is None:
             return self._err(404, f"no model entry {(q.get('entry') or [''])[0]!r}"
                                   f" in {name}")
