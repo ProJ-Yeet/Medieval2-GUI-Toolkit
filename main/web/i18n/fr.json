@@ -14609,5 +14609,8 @@
  "core.fetch_failed_bar": "Une partie de cet écran n’a pas été chargée : le serveur de la boîte à outils n’a pas répondu malgré plusieurs tentatives.",
  "armory.transfer_from_active_title": "Plusieurs objets sélectionnés : copier les poids des os de l’objet actif (le dernier cliqué, dont le nom apparaît en haut à gauche de la vue) sur chaque autre objet sélectionné, comme avec la commande Blender « Transfer Weights » (transférer les poids des os), puis les lisser cinq fois comme dans le kit Blender. Les anciens poids des os ne sont pas conservés ; Annuler les rétablit. Quelle que soit leur distance, chaque sommet reçoit les poids des os : tout objet éloigné de l’objet actif est d’abord ajusté à sa taille et à sa position. Un bouclier ou une arme se retrouve sur un os.",
  "eng.armory.active_no_weights": "L?objet actif n?a aucun poids des os ? fournir.",
- "eng.armory.own_source": "Un objet ne peut pas prendre de poids des os ? partir de lui-m?me."
+ "eng.armory.own_source": "Un objet ne peut pas prendre de poids des os ? partir de lui-m?me.",
+ "core.gui_toolkit_repo_by_wk_and_projyeet": "<a href=\"https://github.com/ProJ-Yeet/medieval2-gui-toolkit\" target=\"_blank\" style=\"color:var(--accent2)\">Medieval II GUI Toolkit</a> par <b>WK</b> et <b>ProJYeet</b>",
+ "core.source_code": "Code source",
+ "core.unofficial_fan_tool": "Un outil de fan non officiel, ni créé, ni approuvé, ni soutenu par SEGA ou Creative Assembly. Total War et Medieval II: Total War sont des marques de leurs propriétaires respectifs."
 }

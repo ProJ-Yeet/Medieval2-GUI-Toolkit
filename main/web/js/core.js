@@ -2223,6 +2223,10 @@ async function openCredits(){
         <div>${tt('core.mreedmm_armory_studio')}</div>
       </div>
       <div style="margin-bottom:14px">
+        <div class="lbl" style="margin-bottom:4px">${tt('core.source_code')}</div>
+        <div>${tt('core.gui_toolkit_repo_by_wk_and_projyeet')}</div>
+      </div>
+      <div style="margin-bottom:14px">
         <div class="lbl" style="margin-bottom:4px">${tt('core.built_on_the_work_of_and')}</div>
         <!-- Tool by Creator, and the TOOL NAME is the link. Two of these used to carry a bare URL off to the side instead, which read as a second, lesser thing on the row and made the name itself dead text. The work is what is being credited, so the work is what you click. -->
         <div>${tt('core.m2tw_editor_by_mylae')}</div>
@@ -2250,6 +2254,7 @@ async function openCredits(){
         <div class="lbl" style="margin-bottom:4px">${tt('core.support')}</div>
         <div class="sociallinks">${socialLinks()}</div>
       </div>
+      <div class="count" style="margin-top:14px;line-height:1.5">${tt('core.unofficial_fan_tool')}</div>
     </div>
     <div style="padding:0 16px 16px;text-align:right">
       <button class="primary" onclick="closeModal()">${tt('common.close')}</button>

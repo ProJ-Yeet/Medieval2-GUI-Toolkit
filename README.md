@@ -648,6 +648,8 @@ are created as they are needed and are not in the repository.
 
 **Co-developed by** Demir (Campaign map) and Mreedmm (Armory Studio)
 
+**Source code** [Medieval II GUI Toolkit](https://github.com/ProJ-Yeet/medieval2-gui-toolkit) by WK and ProJYeet
+
 **Built on the work of, and thanking them for permission to take reference from
 their code**
 
@@ -673,6 +675,9 @@ taught everyone, this tool included, how these files actually work.
 The toolkit is free software under the GNU General Public License v3.0: see
 [LICENSE](LICENSE). [NOTICE](NOTICE) names the GPLv3 projects earlier versions
 took code from, and their authors.
+
+An unofficial fan tool, not made, approved or supported by SEGA or Creative
+Assembly. Total War and Medieval II: Total War are trademarks of their owners.
 
 ## Changelog
 
