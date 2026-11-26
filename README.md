@@ -648,7 +648,7 @@ are created as they are needed and are not in the repository.
 
 **Co-developed by** Demir (Campaign map) and Mreedmm (Armory Studio)
 
-**Source code** [Medieval II GUI Toolkit](https://github.com/ProJ-Yeet/medieval2-gui-toolkit) by WK and ProJYeet
+**Source code** [Medieval II GUI Toolkit](https://github.com/ProJ-Yeet/medieval2-gui-toolkit) on GitHub, under the GPLv3
 
 **Built on the work of, and thanking them for permission to take reference from
 their code**
@@ -662,6 +662,7 @@ their code**
 * [Rome and Medieval Campaign Editor](https://github.com/Pfadfinder-Adam/RTW-M2TW-Campaign-Editor) by Pfadfinder-Adam (Master Oogway): the design of several features
   (the script builder, the family tree, the game log, the report relay among them) follows it;
   versions up to v2.4.11 used parts of its code under the GPLv3, see [NOTICE](NOTICE)
+* [Medieval 2 Blender Toolkit](https://github.com/WK-313/Medieval-2-Blender-Toolkit) by WK and ProJYeet
 
 **Sponsored by** FeatherLeaf and Lupinemaverick
 

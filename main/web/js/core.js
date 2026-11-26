@@ -2224,7 +2224,7 @@ async function openCredits(){
       </div>
       <div style="margin-bottom:14px">
         <div class="lbl" style="margin-bottom:4px">${tt('core.source_code')}</div>
-        <div>${tt('core.gui_toolkit_repo_by_wk_and_projyeet')}</div>
+        <div>${tt('core.gui_toolkit_source_link')} · ${tt('core.gplv3')}</div>
       </div>
       <div style="margin-bottom:14px">
         <div class="lbl" style="margin-bottom:4px">${tt('core.built_on_the_work_of_and')}</div>
@@ -2236,6 +2236,7 @@ async function openCredits(){
         <div>${tt('core.armory_studio_3d_by_mreedmm')}</div>
         <div>${tt('core.ssr_unit_builder_by_lupinemaverick')}</div>
         <div>${tt('core.rmce_by_pfadfinder_adam')} · ${tt('core.gplv3')}</div>
+        <div>${tt('core.blender_toolkit_by_wk_and_projyeet')}</div>
       </div>
       <div style="margin-bottom:14px">
         <div class="lbl" style="margin-bottom:4px">${tt('core.sponsored_by')}</div>

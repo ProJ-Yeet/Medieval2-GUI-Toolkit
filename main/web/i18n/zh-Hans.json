@@ -13809,7 +13809,8 @@
  "eng.armory.active_no_weights": "活动对象没有可供传递的骨骼权重。",
  "eng.armory.own_source": "对象不能从自身获取骨骼权重。",
  "armory.transfer_from_active_title": "已选择多个对象：按照 Blender 的 Transfer Weights 转移操作，将活动对象（最后点击的对象，名称显示在视图左上角）的骨骼权重复制到其余每个已选对象，然后再按 Blender 工具包方式平滑五次。原有的骨骼权重不会保留；撤消可恢复。无论对象相距多远，每个顶点都会获得骨骼权重：远离活动对象的对象会先调整到活动对象的大小和位置。盾牌或武器最终只绑定到一根骨骼。",
- "core.gui_toolkit_repo_by_wk_and_projyeet": "<a href=\"https://github.com/ProJ-Yeet/medieval2-gui-toolkit\" target=\"_blank\" style=\"color:var(--accent2)\">Medieval II GUI Toolkit</a>，作者 <b>WK</b> 与 <b>ProJYeet</b>",
  "core.source_code": "源代码",
- "core.unofficial_fan_tool": "非官方粉丝工具，并非由 SEGA 或 Creative Assembly 制作、批准或支持。Total War 与 Medieval II: Total War 是其各自所有者的商标。"
+ "core.unofficial_fan_tool": "非官方粉丝工具，并非由 SEGA 或 Creative Assembly 制作、批准或支持。Total War 与 Medieval II: Total War 是其各自所有者的商标。",
+ "core.blender_toolkit_by_wk_and_projyeet": "<a href=\"https://github.com/WK-313/Medieval-2-Blender-Toolkit\" target=\"_blank\" style=\"color:var(--accent2)\">Medieval 2 Blender Toolkit</a>，作者 <b>WK</b> 与 <b>ProJYeet</b>",
+ "core.gui_toolkit_source_link": "GitHub 上的 <a href=\"https://github.com/ProJ-Yeet/medieval2-gui-toolkit\" target=\"_blank\" style=\"color:var(--accent2)\">Medieval II GUI Toolkit</a>"
 }

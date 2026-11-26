@@ -14501,7 +14501,8 @@
  "armory.transfer_from_active_title": "Mehrere ausgewählt: Kopieren Sie die Knochengewichte des aktiven Objekts (das zuletzt angeklickte Objekt, dessen Name oben links in der Ansicht steht) auf jedes andere ausgewählte Objekt, wie beim Blender-Befehl „Transfer Weights“: Knochengewichte übertragen. Glätten Sie sie dann fünfmal, wie das Blender-Kit es tut. Die alten Knochengewichte bleiben nicht erhalten; Rückgängig stellt sie wieder her. Unabhängig vom Abstand erhält jeder Vertex Knochengewichte: Ein Objekt, das vom aktiven Objekt entfernt ist, wird zuerst an dessen Größe und Position angepasst. Ein Schild oder eine Waffe kommt auf einem Knochen heraus.",
  "eng.armory.active_no_weights": "Das aktive Objekt hat keine Knochengewichte abzugeben.",
  "eng.armory.own_source": "Ein Objekt kann keine Knochengewichte von sich selbst ?bernehmen.",
- "core.gui_toolkit_repo_by_wk_and_projyeet": "<a href=\"https://github.com/ProJ-Yeet/medieval2-gui-toolkit\" target=\"_blank\" style=\"color:var(--accent2)\">Medieval II GUI Toolkit</a> von <b>WK</b> und <b>ProJYeet</b>",
  "core.source_code": "Quellcode",
- "core.unofficial_fan_tool": "Ein inoffizielles Fan-Tool, nicht von SEGA oder Creative Assembly erstellt, genehmigt oder unterstützt. Total War und Medieval II: Total War sind Marken ihrer jeweiligen Inhaber."
+ "core.unofficial_fan_tool": "Ein inoffizielles Fan-Tool, nicht von SEGA oder Creative Assembly erstellt, genehmigt oder unterstützt. Total War und Medieval II: Total War sind Marken ihrer jeweiligen Inhaber.",
+ "core.blender_toolkit_by_wk_and_projyeet": "<a href=\"https://github.com/WK-313/Medieval-2-Blender-Toolkit\" target=\"_blank\" style=\"color:var(--accent2)\">Medieval 2 Blender Toolkit</a> von <b>WK</b> und <b>ProJYeet</b>",
+ "core.gui_toolkit_source_link": "<a href=\"https://github.com/ProJ-Yeet/medieval2-gui-toolkit\" target=\"_blank\" style=\"color:var(--accent2)\">Medieval II GUI Toolkit</a> auf GitHub"
 }
